@@ -1,43 +1,33 @@
 # Atlas architecture and technology reassessment
 
-Current design update: [ADR-0014](../../adr/0014-build-dedicated-atlas-systems.md) selects dedicated Atlas systems over an infrastructure-first framework. The [system design](../../architecture/system-design.md) records SDK modes, private Object storage, Asset-owned scheduling and client-independent Plugin Operations. Core starts before Assets connect and stays running throughout the mission. Restart and Reset are primarily development actions outside missions. Start, Stop and Restart retain records and logs; Reset clears them. Execution continuity across Core restart is outside scope. Earlier research proposals do not override these decisions.
+Research date: 20 September 2026. Timestamp: 2026-09-20T15:35:31-04:00. This folder retains the source investigation, alternatives and proposed experiments; it is not the current implementation plan.
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+## Status and authority
 
+Reports combine observations of the pinned Modernization revision with successor proposals and later research corrections. Their recommendations, experiment gates and “open” questions reflect that investigation; some have since been settled. An accepted direction does not establish that a proposed tool or experiment has been selected or validated.
 
-Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
+For current planning, read the [operating model](../../architecture/operating-model.md), [responsibility map](../../architecture/system-outline.md) and [system design](../../architecture/system-design.md). The [documentation guide](../../agents/domain.md) defines ownership. Use these decision pointers when a report touches:
 
-Scope clarification: the current [Core system outline](../../architecture/system-outline.md) separates the `Atlas Core/` folder from sibling Protocol and SDK deliverables, keeps Entities/Tasks/Objects as the API pillars, and excludes the Command Interface from the Core system. Earlier research groupings are background proposals, not a folder specification.
+| Subject | Successor authority |
+| --- | --- |
+| Selected stack and generation tools | [ADR-0016](../../adr/0016-use-go-sqlite-and-openapi-tooling.md) |
+| Docker deployment and Plugin containers | [ADR-0017](../../adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
+| Runtime retention, Reset, updates and mission continuity | [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) |
+| Plugin ownership and Operations | [ADR-0002](../../adr/0002-core-manages-installed-plugins.md), [stopping and faults](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md), [local administration](../../architecture/system-design.md#local-administration) |
+| Commands, tasking and results | [ADR-0004](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md), [reconciliation](../../adr/0007-reconcile-asset-tasks-after-disconnection.md), [scan completion](../../adr/0008-complete-scan-tasks-when-required-results-are-available.md), [Object visibility](../../adr/0009-expose-objects-only-when-ready.md) |
+| Releases and client compatibility | [ADR-0001](../../adr/0001-release-core-sdk-and-protocol-together.md), [ADR-0005](../../adr/0005-allow-compatible-client-versions.md) |
+| Generation and architecture | [ADR-0011](../../adr/0011-generate-shared-contracts-with-minimal-customization.md), [ADR-0014](../../adr/0014-build-dedicated-atlas-systems.md) |
+| SDK, access, storage privacy and publication ownership | [System design](../../architecture/system-design.md) |
 
-Planning update: [ADR-0001](../../adr/0001-release-core-sdk-and-protocol-together.md) accepts one release workflow and matching Core, SDK and Protocol versions, including unchanged components. [Compatible client versions are now accepted](../../adr/0005-allow-compatible-client-versions.md); each release documents a supported client-version range and rejects unsupported clients; exact ranges and checks remain implementation choices. The [system outline](../../architecture/system-outline.md) is the current planning entry point; module and subsystem assignments in these research notes remain proposals. Permanent Plugins and combined backend/UI extensions are also under consideration, so lifetime alone does not determine placement.
+Accepted successor decisions govern over research alternatives. Keep source observations pinned and correct factual errors where found; avoid copying new policy into every report. The [comparison register](../../architecture/modernization-differences.md) records confirmed differences. Requested implementation and experiment specifications belong in [GitHub Issues](../../agents/issue-tracker.md).
 
-Research date: 20 September 2026. Status: recommendations for a simpler successor, not an approved implementation plan.
+## Research navigation
 
-Research timestamp: 2026-09-20T15:35:31-04:00
-
-The clarified direction is a Core system of permanent modules plus optional extensions for temporary mission capabilities. Those extensions belong in separate repositories and must be removable without adding their specialized implementation or dependencies to Core. Most of the expensive machinery comes from responsibilities Atlas chose to own: plugin distribution, deployment recovery, cross-store content consistency, schema generation, and synchronized client replicas. Replacing individual libraries is a smaller opportunity.
-
-The maintained [differences table](../../architecture/modernization-differences.md) separates confirmed successor changes from behavior being carried forward.
-
-## What the user has decided
-
-- Breaking changes are acceptable when they simplify the system.
-- The first deployment has one server with field devices connecting to it.
-- Temporary capabilities for one flight, test, or system integration need a separate repository and removable extension mechanism. Permanent capabilities may still belong in Core modules.
-
-The need for optional extensions is now concrete. Their execution, packaging and installation mechanism remains open; the old Plugin catalog and updater are not automatically required. See [temporary mission extensions](11-mission-extensions.md) for the clarification and the removal test.
-
-## Start here
-
-Read [temporary mission extensions](11-mission-extensions.md) first for the latest scope clarification.
-
-1. [System map and feature disposition](01-system-map.md): what exists, how data flows, what is deferred, and what should be kept or reconsidered.
-2. [Simpler system options](08-system-options.md): modular Go server, modular TypeScript server, and retained managed Plugins compared on the same responsibilities.
-3. [Decision and experiment backlog](09-decision-backlog.md): the decisions in order, the smallest useful experiments, and what would count as evidence.
-
-The [adversarial generation review](12-protocol-generation-adversarial-review.md) evaluates whether broader Protocol generation would reduce maintenance, including counterarguments and a comparison that could disprove the benefit.
-
-Detailed research:
+- [System map](01-system-map.md): inspected features and flows.
+- [System options](08-system-options.md): alternative successor shapes.
+- [Decision and experiment backlog](09-decision-backlog.md): research proposals to reassess against accepted decisions before scheduling work.
+- [Mission extensions](11-mission-extensions.md): the original removable-extension motivation and design proposals, followed by the accepted Plugin decisions above.
+- [Adversarial generation review](12-protocol-generation-adversarial-review.md): arguments, counterarguments and an unexecuted comparison for Protocol generation.
 
 | Area | Report | Main question |
 | --- | --- | --- |
@@ -49,7 +39,7 @@ Detailed research:
 | Installation and releases | [Deployment and tooling](07-deployment-tooling.md) | What can one supported operator path replace? |
 | Dependency coverage | [Technology ledger](10-technology-coverage.md) and [JSON inventory](dependency-inventory.json) | What was examined, at what version, and what remains indirect or out of scope? |
 
-## Recommendations to carry into design
+## Research synthesis
 
 **Keep permanent modules and temporary extensions distinct.** Use ordinary internal calls for Core-owned capabilities. Use a narrow external contract for mission-specific code in separate repositories. A temporary processor remains an extension even when it publishes current-run Atlas data. Independent ownership and removal now justify that separation; they do not automatically justify the old catalog or installer.
 
@@ -67,7 +57,7 @@ Detailed research:
 
 **Treat smaller library changes as follow-up choices.** Standard Go routing/logging, package-manager changes, and test-runner choices matter less than the preceding decisions. Useful dependencies should stay when replacing them would mean owning more behavior. The subsystem reports record individual dispositions and alternatives.
 
-## Disagreements and conditions
+### Disagreements and conditions
 
 The storage assessment gives SQLite a serious place in the comparison because the existing versioned write path is already serialized. The runtime assessment favors retaining Go because its transaction, cancellation and execution behavior would otherwise need to be ported. Neither claim determines the other choice. Go can use either database, and a modular architecture does not settle storage.
 
@@ -100,7 +90,3 @@ The dependency review covers direct technologies in the requested areas and the 
 Protocol verification ran in `/private/tmp/atlas-core-reassessment-20260920/packages/protocol` with `GOCACHE=/private/tmp/atlas-protocol-go-cache`. Both commands exited 0. The artifact check reported that Protocol examples, Go contracts, and generated artifacts are current.
 
 Local documentation links, source file paths and source line-anchor ranges were checked against the snapshot. The inventory parses as JSON. Whitespace checks include the new untracked files as well as the tracked README. External web links were used during research but were not all rechecked as a separate link audit.
-
-## Document use
-
-[CONTEXT.md](../../../CONTEXT.md) contains vocabulary only. This folder holds evidence and proposals. Accepted hard-to-reverse choices should be recorded in `docs/adr/` when decided. Implementation specifications belong in GitHub Issues under [the repository convention](../../agents/issue-tracker.md). No issues, pull requests, commits, application changes, or accepted architecture decisions were created by this review.

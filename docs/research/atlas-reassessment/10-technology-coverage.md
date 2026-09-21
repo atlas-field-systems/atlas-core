@@ -1,9 +1,6 @@
 # Technology coverage ledger
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
-
-
-Scope update: the user needs removable mission-specific extensions in separate repositories alongside permanent Core modules. See [temporary mission extensions](11-mission-extensions.md). Earlier proposals to absorb integrations apply to permanent capabilities; the old extension-management machinery remains open for simplification.
+Research record: historical evidence and proposals. Read the [status and decision pointers](README.md#status-and-authority) before using this report for successor planning.
 
 Baseline: `8edee4e2743fbf0f85c16dfe638d9222141cf279`, reviewed 20 September 2026. Versions below are source declarations, not recommendations to install those versions.
 
@@ -11,7 +8,6 @@ Research date: 2026-09-20
 Research timestamp: 2026-09-20T15:35:31-04:00
 
 This ledger makes scope explicit. The companion notes assess direct architectural choices and credible alternatives. The JSON inventory records indirect declarations and the full monorepo lockfile so dependencies are not silently hidden. It is not a vulnerability scan, license audit, or proof that every transitive package deserves to remain.
-
 ## Coverage
 
 - Core and Protocol: both Go manifests, including indirect requirements.

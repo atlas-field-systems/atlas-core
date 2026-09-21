@@ -1,18 +1,16 @@
 # Dedicated Atlas systems and shared contracts
 
-Status: accepted direction. [ADR-0014](../adr/0014-build-dedicated-atlas-systems.md) supersedes the infrastructure-first plan. [ADR-0011](../adr/0011-generate-shared-contracts-with-minimal-customization.md) retains the generation policy. No language, database, generator or runtime implementation is selected here.
+Status: accepted direction. [ADR-0014](../adr/0014-build-dedicated-atlas-systems.md) supersedes the infrastructure-first plan. [ADR-0011](../adr/0011-generate-shared-contracts-with-minimal-customization.md) retains the generation policy. [ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md) selects the technology stack and [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) selects Docker deployment. These are accepted choices, not completed implementations.
 
-The [Modernization comparison](modernization-differences.md) records each confirmed difference, with old-source evidence and the successor decision.
+This document owns collaboration rules and interface boundaries. Linked ADRs own the detailed behavioral decisions; the [system outline](system-outline.md) owns the responsibility map. Choices explicitly marked open remain implementation work. The [Modernization comparison](modernization-differences.md) records source differences.
 
 ## Architecture
 
-Build the dedicated responsibilities in the [Core system outline](system-outline.md): Entities, Tasks, Objects, Plugins, Identity and access, Synchronization, and System operations. Organize their implementations around the Atlas behavior they own. These responsibilities do not imply separate services, processes or databases.
+Build the dedicated responsibilities in the [Core system outline](system-outline.md), following [ADR-0014](../adr/0014-build-dedicated-atlas-systems.md). Each module owns its behavior and private data access. Collaborators call explicit interfaces rather than reaching into each other's tables. Keep transactions spanning those interfaces explicit and practical; internal calls can be ordinary code calls.
 
-Atlas still needs infrastructure for storage connections, transactions, API serving, configuration and logging. Share concrete utilities where the implemented workflows benefit. A reusable infrastructure platform, universal module lifecycle and routine module replacement are not objectives. Abstractions must simplify actual Atlas work; do not build a separate framework in anticipation of rebuilding the application on it.
+Storage connections, transactions, API serving, configuration and logging can share concrete utilities. Shared facilities do not establish separate services or a reusable module framework.
 
-Each module owns its behavior and private data access. Collaborating modules call explicit interfaces rather than reaching into each other's tables. Keep transactions that span those interfaces explicit and practical. Ordinary code interfaces are sufficient; internal calls do not need network requests, serialization or Plugin machinery.
-
-Protocol defines shared external resources, operations, messages, errors and observable guarantees. Core implements those guarantees, and SDK exposes them to consumers. Protocol is not the private database schema or a specification of every internal function. Public wire types can be used directly where they fit; a small explicit conversion is appropriate where internal meaning differs.
+[Protocol](../adr/0011-generate-shared-contracts-with-minimal-customization.md) owns shared external contracts. Core implements their guarantees; SDK exposes consumer access. Public wire types may be used directly where they fit, with a small explicit conversion where internal meaning differs.
 
 ## SDK as the supported entry point
 
@@ -26,15 +24,19 @@ Core remains responsible for authentication, authorization, Task transitions, Ob
 
 ## Local administration
 
-The CLI and TUI share a local management implementation for Core lifecycle, Reset, updates and installed Plugin management. They do not call the public API or SDK for these actions. Keep internal coordination private and choose its mechanism during implementation; this decision does not require a new management service or public administrative protocol.
+The CLI and TUI share a local management implementation for Core lifecycle, Reset, updates and installed Plugin management. They use private internal coordination, not the public API or SDK. Local tooling can start Core when it is stopped. Core's Plugins module owns its lifecycle policy; local tools coordinate with it instead of duplicating the rules.
 
-Core's Plugins module retains ownership of Plugin lifecycle rules and active-work protection. Local tooling coordinates with that owner instead of implementing a second set of rules. It can start Core when Core is stopped. Plugin lifecycle changes while Core runs must still leave unrelated Plugins and Asset connections available.
+Plugin installation, removal, updates, configuration, enable/disable, start/stop/restart and force stop have no public API endpoints or SDK methods and are outside public Protocol generation. Public consumers can discover Plugin capabilities/status, invoke Operations, query outcomes and request Operation cancellation. Canceling an Operation is distinct from stopping its Plugin. This supersedes the earlier Command Interface Plugin restart action; that application can still display faults.
 
-Public SDK consumers retain Plugin capability discovery/status, Operation invocation, outcome queries and Operation cancellation. They cannot install, update, remove, configure, enable/disable, restart or force-stop Plugin processes. These internal management controls are outside the public Protocol generation scope. Local administrative actions still contribute to activity history under the existing retention policy.
+Local administrative actions contribute to [activity history](#activity-history). [ADR-0002](../adr/0002-core-manages-installed-plugins.md) defines independent Plugin lifecycles, and [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) defines active-work protection.
+
+Use the private Docker integration described in [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md). Its host-versus-Core placement, coordination channel and installation/update workflows remain open; no separate management service is required.
 
 ## Identity and access
 
-All authenticated operators have full control. Core uses fixed caller boundaries, without operator roles or configurable per-Plugin data permissions:
+Every authenticated SDK client, including an Asset or Plugin, may read all operational data through the public API. A valid API key permits full-picture snapshots and replay as well as individual resource, Object and Operation reads. There are no per-Asset or per-Plugin read filters. Clients still choose basic API access or opt-in synchronization; permission to see everything does not require downloading everything.
+
+All authenticated operators have full control. Existing execution-report and local-administration boundaries remain below. The proposed additional caller-scoped Operation retry and upload-handle ownership rules are not adopted; submission identity retains its existing dataset scope:
 
 - Each Asset has its own authenticated identity. Asset credentials cannot act as another Asset or administer Core. Core checks that an execution report comes from the Asset assigned to the Task; a claimed Asset ID in a request is not sufficient. Apply this check on every path that can record Asset execution, including any generic resource mutation path.
 - Plugins use ordinary SDK operational APIs across sources, including creating and canceling Tasks with existing Commands. They cannot impersonate an Asset's execution reports. Plugin credentials cannot manage Atlas credentials, change Core configuration, control Core lifecycle, or install/manage Plugins. Plugin installation/configuration and Core/Plugin process lifecycle are local CLI/TUI controls, absent from the public API and SDK. Credential administration remains separate from Plugin operational access.
@@ -44,42 +46,86 @@ Plugins are trusted code with broad operational access, not isolated tenants. Th
 
 ## Objects hide storage
 
-Clients identify Objects and access their content through Core APIs exposed by the SDK. Physical buckets, filesystem paths and storage-provider details stay inside the Objects implementation. They are not public Object fields or Plugin integration requirements.
+Clients identify Objects and access their content through Core APIs exposed by the SDK. Physical buckets, filesystem paths and storage-provider details stay inside the Objects implementation, outside public Object fields and Plugin integration requirements.
 
-Objects become visible only when their required content is usable. Storage may change without changing that client promise. Stop/Start and Restart retain metadata, content and logs; Reset clears operational state and logs while preserving installation setup. Large uploads must resume from confirmed progress after a client reconnects within the same Core run, without retransmitting the entire Object. Partial uploads remain private until ready, and Reset wipes transfer state. Ordinary Stop/Start and Restart preserve stored transfer state; reattaching an active transfer across a Core restart is outside scope. Neither the storage backend nor the resumable transfer mechanism is selected by this decision.
+[ADR-0009](../adr/0009-expose-objects-only-when-ready.md) owns ready-only visibility, private staging and same-run upload resumption. [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md) owns retention and Reset cleanup across metadata, content and transfer state. Objects implements these guarantees independently of the selected storage provider.
+
+[ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md) selects SQLite and private local Object files. The resumable-transfer mechanism remains open.
 
 ## Core tasking and Asset execution
 
-Core owns Command definitions, validation of tasking requests, recorded operator instructions, Task lifecycle records and reconciliation of Asset reports. It preserves the seven agreed Task statuses and required-result completion rules. Cancellation remains requested until a final outcome is confirmed; completion with required results is allowed before confirmed Canceled, and confirmed Canceled never becomes Completed. The [reconciliation decision](../adr/0007-reconcile-asset-tasks-after-disconnection.md) defines that boundary.
+Tasks implements the [Core-owned Command boundary](../adr/0004-core-owns-commands-and-assets-execute-tasks.md), [Task reconciliation](../adr/0007-reconcile-asset-tasks-after-disconnection.md) and [scan result/status contract](../adr/0008-complete-scan-tasks-when-required-results-are-available.md). It validates Command/target contracts and uses [Identity and access](#identity-and-access) for assigned-Asset reporting.
 
-The Asset operating system owns scheduling, queue order, execution, interruption and connected/offline behavior. Do not carry the old immediate-start deadline, server-selected execution order or live execution-readiness gate into Task creation merely because Modernization has them. Issuing a valid Task to a disconnected Asset must remain possible. Core validates the target, supported Commands and reporting Asset without claiming the Asset is ready to execute now. Registration/fencing machinery from Modernization is not a required subsystem; reject unauthorized, duplicate or obsolete reports through the smallest contract that enforces these guarantees.
+The Asset OS owns scheduling, queue order, execution, interruption and connected/offline behavior. Any new Core rule must support a Core-owned guarantee rather than prescribe Asset scheduling. Check-in exchanges current instructions and reported outcomes; it is not a generic workflow or patch language.
 
-Document this ownership in the tasking contract. Any new Core rule must support a Core-owned guarantee rather than prescribe Asset scheduling. Task check-in communicates current instructions and reported outcomes; it is not a generic workflow or patch language.
+Registration/fencing machinery from Modernization is not a required subsystem. Reject unauthorized, duplicate or obsolete reports through the smallest contract satisfying these guarantees. Exact reconciliation messages remain open.
 
 ## Plugin Operations
 
-Core owns accepted Plugin Operation attempts and retains their records until Reset. Acceptance returns an identifier through which the caller can retrieve state and outcome and request cancellation. Closing or disconnecting the initiating client does not cancel the work. The SDK preserves submission identity across retries so a lost acceptance response returns the original Operation; an explicit rerun creates a new attempt. Exact wire fields remain implementation design work. See [Operation submission and effects](../adr/0002-core-manages-installed-plugins.md).
+[ADR-0002](../adr/0002-core-manages-installed-plugins.md) owns accepted attempts, submission retry identity and retained effects. [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) owns stopping and fault outcomes. Plugins implements these contracts separately from Tasks. Use Plugin packaging for an internal capability only when it needs the independently managed extension lifecycle.
 
-Use this lifecycle for long processing without requiring the caller to keep an HTTP request open. Do not inherit Modernization's request-bound 25-second limit as a universal Operation limit. Plugins remain separate from taskable Assets and do not acquire Asset Commands or Tool Asset identities. They may initiate Tasks for Assets using existing Core-defined Commands through the SDK; no per-invocation operator approval is required.
+SDK helpers manage submission identity and outcome queries; the server remains responsible for acceptance and recorded outcomes. Operations can run beyond an individual HTTP request. [Identity and access](#identity-and-access) allows trusted Plugins to use operational data across sources and issue Asset Tasks, while reserving execution reporting for the assigned Asset and administration for its designated interfaces.
 
-A fault is reported for manual attention. Restarting a Plugin does not rerun a failed Operation; rerun is explicit. Known effects survive failure and are associated with the Operation; deliberate reruns may produce additional results. Planned stops cease admission and ingestion before finite work finishes or is canceled; an uncooperative Plugin can be explicitly force-stopped. See [Plugin stopping](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Core Stop/Start and Restart preserve Operation records; Reset wipes them along with other operational data and logs. Execution continuity across a whole-Core restart is outside scope. This requires no automatic recovery platform. Internal modules use Plugin packaging only when the capability needs that independently managed extension lifecycle.
+Removing a Plugin withdraws its capability and any UI contribution; retained results follow their own lifecycle.
 
-Installed Plugins are trusted user-built extensions with access to operational data, including data created by other sources. Do not introduce per-Plugin data grants or an operator-only gate on Task creation. The [fixed access boundaries](#identity-and-access) reserve administration for operators and execution reports for the assigned Asset. Normal Core validation and within-run consistency rules still apply to Plugin requests.
+[ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) selects a separate Docker container per installed Plugin. Invocation fields, Plugin manifest/distribution details and any UI contribution contract remain open. If supported, Core may expose contribution metadata or serve static assets; the external Command Interface owns rendering, navigation, map interaction and resource views. UI delivery is not a selected implementation.
 
 ## Change publication
 
-The module making a change supplies its public representation. This ownership rule is accepted. Shared publication code records and delivers that representation in an order consistent with committed state. For example, Tasks describes a Task status change; delivery code does not inspect private Task tables to reconstruct its meaning.
+The module making a change supplies its public representation. This ownership rule is accepted. The write-owning module commits its mutation and change record together. Shared publication code delivers committed records in an order consistent with state. For example, Tasks describes a Task status change; delivery code does not inspect private Task tables to reconstruct its meaning.
 
 This keeps a useful shared delivery function small. It does not establish a general event bus or require every internal call to emit an event. Preserve consistency between resource changes and their published records within the current run.
 
+## Detectable synchronization gaps
+
+Core must not silently drop committed changes while allowing a consumer to treat its picture as current. When a slow consumer, expired replay history or another delivery gap prevents complete replay, make that condition detectable through the synchronization contract. The SDK marks its picture stale and obtains a fresh snapshot with a consistent continuation point before treating it as current again.
+
+Buffer sizes, transport signaling and replay retention remain implementation choices. Full-picture read access is available to every authenticated SDK client; automatic synchronization is still opt-in. Dataset changes additionally follow [the Reset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary).
+
+## Activity history
+
+Core records who issued or canceled Tasks and who changed Plugins, credentials or configuration. System operations is the proposed home for a shared recording/query facility; Identity and access supplies actor identity, and each owning module supplies action meaning and affected resources. The facility must not infer business actions from diagnostic log strings. The external Command Interface may render the history.
+
+Record activity consistently with the action. Useful details include actor, action, target, time and outcome; exact fields and mechanism remain open. Store credential identifiers and safe change descriptions rather than secrets. [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md) defines retention and cleanup for both activity history and separate diagnostic logs.
+
+## Basic operational protections
+
+Identify the actor for local administrative actions in activity history, including actions performed through CLI/TUI while Core is stopped. The local identity and recording mechanism remain implementation choices and follow the existing Reset retention boundary; they do not require operator roles or another public administration API.
+
+Protect retained credentials with restrictive access to their storage and provide local replacement/revocation where applicable. Keep credentials and provider secrets out of activity history, diagnostic logs and returned error details. Error messages should explain the failure without reproducing secret-bearing inputs or raw provider responses.
+
+Bound request sizes, upload resource use and concurrent/in-flight work. Exceeding a bound must produce an explicit refusal or failure rather than unbounded resource growth or a false success. Numeric limits and enforcement mechanisms follow the measured workload; they do not restore the old universal 25-second Operation timeout.
+
 ## Generation and testing
 
-Generate repeated contract representations with supported tooling and a small configuration. Keep generated files disposable and business behavior in separate handwritten files. Avoid output patches, endpoint-specific templates and wrapper APIs that repeat generated operations. A narrow handwritten binding is preferable when generation requires disproportionate customization. Count reusable generator extensions as maintained code and justify them by the independent work they remove.
+Follow [ADR-0011](../adr/0011-generate-shared-contracts-with-minimal-customization.md) for generation policy. Count reusable generator extensions as maintained code and justify them by the independent work they remove. Measure simplicity by independently maintained decisions and effort to change behavior; remove superseded implementations after verification.
 
-Use a pinned toolchain and deterministic regeneration. Test independently authored wire examples, public behavior, supported compatibility and real API/storage integration. Generated snapshots are not the sole oracle. Focus coverage on the actual promises: offline Task reconciliation within one run, ready-only Objects with resumable same-run uploads, Plugin-initiated Asset Tasks, Plugin Operations surviving caller disconnection, Stop/Start and Restart retention plus Reset cleanup with retained setup, basic SDK access without full-picture synchronization, assigned-Asset report checks, allowed Plugin Task issuance and the absence of public Plugin management endpoints/SDK methods, and local management respecting active-work protection.
+Use a pinned toolchain and deterministic regeneration. Independently authored wire examples, public behavior, supported compatibility and real API/storage integration are the test oracles, rather than generated snapshots alone.
 
-The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) separates retained state from execution resumption. Test that Start, Stop and Restart retain data/logs and that Reset removes them while preserving setup. The field workflow is setup, Asset connection and a mission with Core continuously available. Restart and Reset are primarily development actions outside missions. Active-work recovery across a whole-Core restart is outside scope. Updating Core to a new release performs Reset, clearing operational data and logs while preserving installation setup and Plugin artifacts. Operational-data migrations are excluded; backup and restore functionality is excluded.
+| Promise | Validation focus |
+| --- | --- |
+| [Task reconciliation](../adr/0007-reconcile-asset-tasks-after-disconnection.md) and [scan completion](../adr/0008-complete-scan-tasks-when-required-results-are-available.md) | Allowed transitions, terminal outcomes and cancellation; completion report and ready Objects in both arrival orders |
+| [Object availability and transfer](../adr/0009-expose-objects-only-when-ready.md) | Private partial uploads, same-run resumption, ready-only publication and continued uploads without reopening Canceled Tasks |
+| [Plugin attempts](../adr/0002-core-manages-installed-plugins.md) and [stopping](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) | Caller disconnection, lost acceptance responses, retained effects and protected local lifecycle changes |
+| [Runtime lifecycle](../adr/0015-separate-start-stop-restart-and-reset.md) | Retention and interrupted-work classification; Reset cleanup; writing-release mismatch refusal; rejection of old-dataset submissions with discovery still available |
+| [Client and setup compatibility](../adr/0005-allow-compatible-client-versions.md) | Supported versions, unsupported-client rejection and retained configuration/Plugin checks |
+| [SDK modes](#sdk-as-the-supported-entry-point) and [access boundaries](#identity-and-access) | Full-picture reads for every authenticated client with optional synchronization; allowed Plugin Task issuance; assigned-Asset reports on every mutation path; no public Plugin management methods/endpoints |
+| [Change publication](#change-publication), [synchronization gaps](#detectable-synchronization-gaps) and [activity history](#activity-history) | Consistent committed changes and attributed actions; slow consumers detect gaps and rebuild a current picture |
+| [Operational protections](#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
 
-The first runnable workflow is one Asset Task producing one ready Object followed by one Plugin Operation. Add lost-response, cancellation and Plugin-stop cases as those behaviors are implemented. This tests the accepted contracts without making every failure scenario a prerequisite to starting implementation.
+The [selected stack](../adr/0016-use-go-sqlite-and-openapi-tooling.md) must also pass a representative generation check without output patches, and [Docker deployment](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) must preserve the lifecycle guarantees across container changes.
 
-Reset safety uses a dataset identifier retained across Restart and changed on Reset. SDK consumers discard their old picture and pending submissions when it changes; Core rejects old-dataset mutations and work submissions, plus replay or transfer-resume requests using obsolete dataset handles; discovery remains available for fresh synchronization. See [lifecycle](../adr/0015-separate-start-stop-restart-and-reset.md). Release startup validates retained configuration and Plugin compatibility, reports invalid configuration, and leaves incompatible Plugins installed but disabled. Supported client-version ranges and rejection behavior follow [compatibility](../adr/0005-allow-compatible-client-versions.md).
+### MVP integration checks
+
+The [initial MVP](operating-model.md#initial-mvp) selects simple Move To, independent Elevation Lookup and a separate Object fixture. Exercise them through the SDK against real Core APIs and storage, with a simulated Asset and the example Plugin in its own container.
+
+| Scenario | Acceptance evidence |
+| --- | --- |
+| Move To | Create an Asset, issue a destination Task, deliver it to the assigned Asset and record its reported outcome without requiring an Object. Exercise cancellation and offline issuance/cancellation followed by check-in, using the accepted Task transitions. |
+| Elevation Lookup | Discover the Plugin capability, invoke it for a known fixture position and retrieve the expected elevation. Verify that caller disconnection does not cancel accepted work and that retrying a lost acceptance response retrieves the same Operation. |
+| Object transfer | Interrupt and resume an upload within the same Core run; keep the partial Object invisible, then download and compare the ready content. |
+| Plugin lifecycle | Use local management to stop/start the example Plugin while Core remains available. Exercise active-work protection with controlled test timing rather than a slow production algorithm. |
+| Stop/Start and Restart | Outside active Asset execution, retain records, ready Objects, setup and logs. Verify unfinished Core-owned work follows the linked lifecycle decision, without automatic rerun. |
+| Reset | Clear operational data, content, transfer state, activity history and Atlas-managed logs; retain startup setup. Verify a new dataset and rejection of obsolete submissions. |
+
+These are acceptance scenarios, not completed tests. Add them alongside the relevant implementation. Keep the broader scan-result ordering tests in the validation table above for the later scan workflow; do not force Move To and Elevation Lookup into a Task-to-Object-to-Plugin chain.

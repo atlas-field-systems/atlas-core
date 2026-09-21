@@ -1,9 +1,6 @@
 # Atlas Plugins reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
-
-
-Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
+Research record: historical evidence and proposals. Read the [status and decision pointers](README.md#status-and-authority) before using this report for successor planning.
 
 Research date: 2026-09-20
 Research timestamp: 2026-09-20T15:35:31-04:00
@@ -19,7 +16,6 @@ The source snapshot supplied for this review is Atlas Modernization commit
 repository links below use that supplied SHA. The destination worktree already
 contains the parent task's other reports. This task changed only this note. No
 source, issue, pull request, or commit was changed.
-
 ## Requirement clarification
 
 The user needs temporary capabilities for a single flight, test, or specialized system, maintained in separate repositories and removable afterward. That establishes a concrete purpose for optional extensions alongside permanent Core modules. The prior internal-module default below is narrowed accordingly: publishing Atlas data does not make a temporary processor a Core-owned capability. See [temporary mission extensions](11-mission-extensions.md) for the revised recommendation and removal test.

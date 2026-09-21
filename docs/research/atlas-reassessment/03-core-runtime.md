@@ -1,7 +1,6 @@
 # Atlas Core runtime reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
-
+Research record: historical evidence and proposals. Read the [status and decision pointers](README.md#status-and-authority) before using this report for successor planning.
 
 Research date: 2026-09-20
 Research timestamp: 2026-09-20T15:35:31-04:00
@@ -9,7 +8,6 @@ Research timestamp: 2026-09-20T15:35:31-04:00
 Status: provisional research, based on the verified source checkout at `8edee4e2743fbf0f85c16dfe638d9222141cf279`. These recommendations are options for the reassessment, not accepted design decisions.
 
 The first version is one server with field devices connecting to it. Breaking changes are acceptable when they make the system easier to understand. Third-party identity is not a requirement. Plugin deployment and trust are still open questions, so this note treats a modular monolith as the organizing hypothesis and treats process isolation as a capability to earn later.
-
 ## What Core is today
 
 Core is a Go HTTP service with a small number of long lived background loops. Startup loads and validates configuration, opens PostgreSQL, ensures the schema, initializes optional object storage, builds the feed and task services, and starts the plugin registry. The server sets bounded HTTP read, write, header, and idle timeouts. Shutdown cancels the runtime context, asks `http.Server` to drain for ten seconds, and closes the feed hub. The wiring is visible in [`main.go`](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/cmd/atlas_core/main.go#L92-L101), [`main.go`](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/cmd/atlas_core/main.go#L204-L241), and [`main.go`](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/cmd/atlas_core/main.go#L306-L346).

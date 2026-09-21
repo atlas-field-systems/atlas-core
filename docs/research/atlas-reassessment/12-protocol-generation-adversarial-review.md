@@ -1,11 +1,9 @@
 # Adversarial review of Protocol-driven generation
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
-
+Research record: historical evidence and proposals. Read the [status and decision pointers](README.md#status-and-authority) before using this report for successor planning.
 
 Research date: 20 September 2026.
 Status: concept review, with its bounded direction now accepted in [ADR-0011](../../adr/0011-generate-shared-contracts-with-minimal-customization.md). The user requires minimal customization, substantial independent testing and low maintenance complexity. No generator, schema language or broader generated implementation has been selected. No implementation experiment was run.
-
 ## Verdict
 
 More generation is likely to reduce Atlas maintenance when it removes repeated declarations of the same public contract. It does not establish that fewer generated-versus-handwritten lines means less technical debt. The maintenance target is fewer independent authored decisions per ordinary change, including schema conventions, generator code, templates, configuration, adapters and tests.

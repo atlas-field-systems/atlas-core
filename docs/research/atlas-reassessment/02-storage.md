@@ -1,7 +1,6 @@
 # Storage reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
-
+Research record: historical evidence and proposals. Read the [status and decision pointers](README.md#status-and-authority) before using this report for successor planning.
 
 - Review date: 2026-09-20
 - Review timestamp: 2026-09-20T15:35:31-04:00
@@ -11,7 +10,6 @@ Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restar
 This is an outside recommendation against the immutable snapshot. It does not change the accepted architecture or claim benchmark results. The source has meaningful storage tests, but it does not have a sustained write benchmark or a filesystem-versus-object-store benchmark.
 
 The first-version planning constraints are one Core server with field devices connecting to it, and permission to make breaking changes during extraction. The report does not assume a distributed deployment. The former Plugin shape is also open for reconsideration: a Plugin can become an internal Core module when its responsibilities and trust boundary fit there, and managed Plugin distribution or a separate Source Gateway process is optional. Source credentials still need explicit ownership and must not become generic storage state.
-
 ## Recommendation at a glance
 
 Keep the current ordering, feed, object publication, and recovery semantics while extracting the system. Prototype two smaller deployment profiles before committing to a replacement:

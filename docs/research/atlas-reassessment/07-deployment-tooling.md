@@ -1,9 +1,6 @@
 # Deployment, CLI, build, test, and release reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
-
-
-Scope update: the user needs removable mission-specific extensions in separate repositories alongside permanent Core modules. See [temporary mission extensions](11-mission-extensions.md). Earlier proposals to absorb integrations apply to permanent capabilities; the old extension-management machinery remains open for simplification.
+Research record: historical evidence and proposals. Read the [status and decision pointers](README.md#status-and-authority) before using this report for successor planning.
 
 Research date: 2026-09-20
 Research timestamp: 2026-09-20T15:35:31-04:00
@@ -38,7 +35,6 @@ are separate containers at all. The present documents encode independent Plugin 
 catalog trust, and release workflows, but the reassessment question is open: those former
 Plugins may be subsystems inside Core modules. Keeping that lifecycle without a demonstrated
 field-device need would preserve a large amount of distribution and trust machinery.
-
 ## Current deployment shape
 
 The npm workspace is deliberately broad. The root package uses npm workspaces and a lockfile

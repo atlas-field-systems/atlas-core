@@ -1,13 +1,11 @@
 # SDK technology reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
-
+Research record: historical evidence and proposals. Read the [status and decision pointers](README.md#status-and-authority) before using this report for successor planning.
 
 **Assessment date:** 2026-09-20
 **Research timestamp:** 2026-09-20T15:35:31-04:00
 **Source:** Atlas Modernization `main` at [`8edee4e2743fbf0f85c16dfe638d9222141cf279`](https://github.com/the-Drunken-coder/Atlas-Modernization/tree/8edee4e2743fbf0f85c16dfe638d9222141cf279). The local input was the verified source export at `/private/tmp/atlas-core-reassessment-20260920`.
 **Status labels:** `[Fact]` is directly visible in the source, `[Allegation]` comes from a problem report and is checked below, `[Proposal]` is a successor design, `[Unknown]` needs an experiment or a product decision.
-
 ## Verdict
 
 The successor should have a small, dependency-free TypeScript client for external consumers and a separate optional synchronization session. The first deployment has one Core server and field devices, so the SDK does not need to be a universal integration bus, an offline database, a plugin framework, or a second application state system.
