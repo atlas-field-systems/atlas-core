@@ -28,7 +28,7 @@ Publishing an Entity or processing an Asset Task result does not make the produc
 
 ## Smallest architecture to compare
 
-Start by testing an explicitly configured external program or container from a separate repository. Use the SDK for all ordinary Atlas API interaction, including Object upload and download. Add a Plugin-specific interface only for behavior Atlas must manage, such as capability discovery, invocation, cancellation, or health. A standalone processor that only reads inputs and publishes results may need no private Plugin protocol at all.
+Start by testing an explicitly configured external program or container from a separate repository. Use the SDK for all ordinary Atlas API interaction, including Object upload and download. Keep Plugin-specific coordination limited to behavior Atlas manages, such as capability discovery, invocation, cancellation and health. Installation/configuration and process lifecycle controls remain internal to local CLI/TUI administration, outside the public API and SDK. A standalone processor that only reads inputs and publishes results may need no private Plugin protocol at all.
 
 This is a proposal, not a requirement to use containers or a specific transport. Compare it with an in-process package if that really removes its dependencies from the normal Core build and deployment. The external-program approach is a strong candidate when the processor needs its own language or scientific dependencies.
 

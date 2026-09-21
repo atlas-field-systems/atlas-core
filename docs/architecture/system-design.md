@@ -16,7 +16,7 @@ Protocol defines shared external resources, operations, messages, errors and obs
 
 ## SDK as the supported entry point
 
-All external applications, Assets and Plugins are expected to use the SDK to interact with Core. A health-check client, Command Interface and data-processing Plugin use the same supported SDK, with behavior appropriate to their needs.
+External operational API consumers, including applications, Assets and Plugins, use the SDK to interact with Core. The local CLI/TUI administers the installation through internal management interfaces and does not use the SDK or public API. A health-check client, Command Interface and data-processing Plugin use the same supported SDK, with behavior appropriate to their needs.
 
 Provide basic API access without starting a synchronized replica. Applications that need a maintained shared picture opt into synchronization and caching through the SDK. An application's role does not select its mode automatically. The SDK should make both uses clear without duplicating endpoint definitions or requiring a second client library outside it. The exact configuration and API shape remain to be designed. All external API interaction goes through the SDK, including Object upload and download.
 
@@ -24,12 +24,20 @@ Keep the Core API small and explicit. The SDK owns client-side conveniences such
 
 Core remains responsible for authentication, authorization, Task transitions, Object readiness and committed-state consistency at its API boundary. The SDK is the supported client entry point, not a substitute for those server responsibilities.
 
+## Local administration
+
+The CLI and TUI share a local management implementation for Core lifecycle, Reset, updates and installed Plugin management. They do not call the public API or SDK for these actions. Keep internal coordination private and choose its mechanism during implementation; this decision does not require a new management service or public administrative protocol.
+
+Core's Plugins module retains ownership of Plugin lifecycle rules and active-work protection. Local tooling coordinates with that owner instead of implementing a second set of rules. It can start Core when Core is stopped. Plugin lifecycle changes while Core runs must still leave unrelated Plugins and Asset connections available.
+
+Public SDK consumers retain Plugin capability discovery/status, Operation invocation, outcome queries and Operation cancellation. They cannot install, update, remove, configure, enable/disable, restart or force-stop Plugin processes. These internal management controls are outside the public Protocol generation scope. Local administrative actions still contribute to activity history under the existing retention policy.
+
 ## Identity and access
 
 All authenticated operators have full control. Core uses fixed caller boundaries, without operator roles or configurable per-Plugin data permissions:
 
 - Each Asset has its own authenticated identity. Asset credentials cannot act as another Asset or administer Core. Core checks that an execution report comes from the Asset assigned to the Task; a claimed Asset ID in a request is not sufficient. Apply this check on every path that can record Asset execution, including any generic resource mutation path.
-- Plugins use ordinary SDK operational APIs across sources, including creating and canceling Tasks with existing Commands. They cannot impersonate an Asset's execution reports. Plugin credentials cannot manage Atlas credentials, change Core configuration, control Core lifecycle, or install/manage Plugins. Those administrative actions require authenticated operator authority.
+- Plugins use ordinary SDK operational APIs across sources, including creating and canceling Tasks with existing Commands. They cannot impersonate an Asset's execution reports. Plugin credentials cannot manage Atlas credentials, change Core configuration, control Core lifecycle, or install/manage Plugins. Plugin installation/configuration and Core/Plugin process lifecycle are local CLI/TUI controls, absent from the public API and SDK. Credential administration remains separate from Plugin operational access.
 - SDK method availability does not grant permission. Core enforces authorization at the API boundary. Keep enrollment simple; credential formats, setup mechanics and route bindings remain implementation choices.
 
 Plugins are trusted code with broad operational access, not isolated tenants. These API rules do not promise host-process sandboxing. A trusted Plugin may receive provider credentials for its own integration. A credential broker or Source Gateway is optional; Atlas does not promise that provider secrets are always hidden from Plugins. Datastream delivery is not a selected successor capability.
@@ -68,7 +76,7 @@ This keeps a useful shared delivery function small. It does not establish a gene
 
 Generate repeated contract representations with supported tooling and a small configuration. Keep generated files disposable and business behavior in separate handwritten files. Avoid output patches, endpoint-specific templates and wrapper APIs that repeat generated operations. A narrow handwritten binding is preferable when generation requires disproportionate customization. Count reusable generator extensions as maintained code and justify them by the independent work they remove.
 
-Use a pinned toolchain and deterministic regeneration. Test independently authored wire examples, public behavior, supported compatibility and real API/storage integration. Generated snapshots are not the sole oracle. Focus coverage on the actual promises: offline Task reconciliation within one run, ready-only Objects with resumable same-run uploads, Plugin-initiated Asset Tasks, Plugin Operations surviving caller disconnection, Stop/Start and Restart retention plus Reset cleanup with retained setup, basic SDK access without full-picture synchronization, assigned-Asset report checks, allowed Plugin Task issuance and denied Plugin administration.
+Use a pinned toolchain and deterministic regeneration. Test independently authored wire examples, public behavior, supported compatibility and real API/storage integration. Generated snapshots are not the sole oracle. Focus coverage on the actual promises: offline Task reconciliation within one run, ready-only Objects with resumable same-run uploads, Plugin-initiated Asset Tasks, Plugin Operations surviving caller disconnection, Stop/Start and Restart retention plus Reset cleanup with retained setup, basic SDK access without full-picture synchronization, assigned-Asset report checks, allowed Plugin Task issuance and the absence of public Plugin management endpoints/SDK methods, and local management respecting active-work protection.
 
 The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) separates retained state from execution resumption. Test that Start, Stop and Restart retain data/logs and that Reset removes them while preserving setup. The field workflow is setup, Asset connection and a mission with Core continuously available. Restart and Reset are primarily development actions outside missions. Active-work recovery across a whole-Core restart is outside scope. Updating Core to a new release performs Reset, clearing operational data and logs while preserving installation setup and Plugin artifacts. Operational-data migrations are excluded; backup and restore functionality is excluded.
 
