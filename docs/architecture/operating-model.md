@@ -2,7 +2,16 @@
 
 Atlas is primarily for one operator, with any additional operators equally trusted to observe Entities, task Assets and use Plugins to process operational data or gather external information. The shared operational picture is for direct use by those operators. Atlas does not require a separate review-and-publish layer for Plugin detections.
 
-Expected use is local Asset coordination for a few hours at a time, rather than continuous coordination over months. Operational data and logs persist through Start, Stop and Restart. Reset is the usual fresh-start action and clears both. Restart is mainly useful during development. "Session" describes expected usage, not a new API resource.
+Expected use is local Asset coordination for a few hours at a time, rather than continuous coordination over months. Operational data and logs persist through Start, Stop and Restart. Restart and Reset are primarily development actions, outside field missions. Reset is the usual development fresh-start action and clears both. "Session" describes expected usage, not a new API resource.
+
+## Field workflow
+
+1. Arrive at a site.
+2. Set up and start Atlas Core.
+3. Connect the Assets.
+4. Run the mission with Core continuously available.
+
+Core is not restarted, reset or updated while Assets are connected or participating in a mission. An Asset temporarily losing radio contact does not end that mission or make a Core restart part of the supported workflow. Restart and Reset are primarily for development. Continuing an active mission across a whole-Core restart is outside scope, including active Task reconciliation, Plugin execution and upload reattachment. This is an operating assumption, not a claim that hardware or processes cannot fail and not a requirement to build a recovery platform.
 
 ## Expected workload
 
@@ -24,7 +33,7 @@ Every authenticated operator has full control. The first version does not implem
 
 Atlas Core runs on a server throughout an operating session, independently of connected clients. The Command Interface is a client: closing it or losing the operator connection does not stop Core or an accepted Plugin Operation. An operator can reconnect during that Core run to obtain the processing result. Field Assets can independently lose contact, including when they leave radio range. Those disconnections do not mean the Atlas server is offline.
 
-This is the normal deployment and operating model. Ordinary Core Stop/Start and Restart preserve records and logs. Preserving records is separate from resuming interrupted execution; the latter still needs an explicit contract. A Plugin crash while Core remains running follows the manual fault/restart policy below.
+Ordinary Core Stop/Start and Restart preserve records and logs for inspection and development. That retention does not require resuming execution across a Core restart; mission continuity across that event is outside scope. A Plugin crash while Core remains running follows the manual fault/restart policy below.
 
 ## Local operation and disposable data
 
@@ -32,7 +41,7 @@ An installed Atlas system works without internet access when operators and Asset
 
 Start, Stop and Restart retain Entity/Track state, Tasks, Object metadata and content, movement/activity history, Plugin Operation records, synchronization records, stored upload state and diagnostic logs. Reset clears those Atlas-owned records and logs. See [the lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md).
 
-Core normally remains running while Assets operate. Start reapplies retained installation setup; first use initializes empty storage. Reset starts fresh operational state while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Clients must not silently repopulate cleared state after Reset. The client and active-work contracts across whole-Core lifecycle changes remain to be designed. Updating Core to a new release performs Reset, including clearing operational data and Atlas-managed logs. Operational-data migrations are excluded. Backup and restore functionality is excluded.
+Core stays running throughout the mission. Start reapplies retained installation setup; first use initializes empty storage. Reset starts fresh operational state while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Clients reconnecting after a development Reset must discard obsolete cached state and must not replay old pending writes into the cleared data. The reset procedure and SDK behavior need a small explicit contract; live-mission Reset and active-work recovery across Core restart are outside scope. Updating Core to a new release performs Reset, including clearing operational data and Atlas-managed logs. Operational-data migrations are excluded. Backup and restore functionality is excluded.
 
 ## Tasks across a disconnection
 
@@ -68,7 +77,7 @@ Clients and Plugins use SDK Object APIs without depending on physical storage pa
 
 ## Details for module planning
 
-- Lifecycle: preserve operational data and logs through Start, Stop and Restart; clear them on Reset while keeping installation setup. Separate retained records from automatic execution resumption. Updates to a new Core release perform Reset; operational-data migrations are excluded.
+- Lifecycle: preserve operational data and logs through Start, Stop and Restart; clear them on Reset while keeping installation setup. Keep record retention separate from execution continuity, which is outside scope across a Core restart. Updates to a new Core release perform Reset; operational-data migrations are excluded.
 
 - Core tasking: the detailed reconciliation contract for operator instructions and Asset reports. Cancellation requested and late-completion behavior are settled; Asset scheduling and interruption policies are outside scope.
 - Task results: Asset-provided progress details and failure reasons. The successful scan completion boundary, Failed status and Object visibility only when ready are settled.

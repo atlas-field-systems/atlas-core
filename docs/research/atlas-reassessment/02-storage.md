@@ -1,6 +1,6 @@
 # Storage reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 - Review date: 2026-09-20
@@ -142,7 +142,7 @@ These successor requirements follow the accepted [lifecycle](../../adr/0015-sepa
 - Supported synchronization must handle snapshot/write races, missed changes and reconnects without exposing stale resource state. Cursor and ordering mechanisms remain implementation choices.
 - Retain Task records, Object metadata/content, histories, Plugin Operation records and logs across ordinary Stop/Start and Restart. Retaining a record does not automatically resume its execution.
 - Publish an Object only when its required content is usable. Protect content still referenced by retained metadata from cleanup and prevent replacement/delete races from removing the current content.
-- Resume large uploads after a same-run connection loss. Retain stored transfer state across Stop/Start and Restart; define reattachment separately from that retention promise.
+- Resume large uploads after a same-run connection loss. Retain stored transfer state across Stop/Start and Restart; active transfer reattachment across Core restart is outside scope.
 - Prevent stale references or clients from restoring cleared data after Reset. A permanent never-reused-path scheme is a historical implementation mechanism, not an accepted public storage contract.
 - Reset clears operational metadata, content, activity history, transfer/sync state and Atlas-managed diagnostic logs. Installed selections, credentials, configuration, software and Plugin artifacts survive.
 - Start validates the availability of retained metadata and content; it must not silently expose unusable Objects. The number of stores remains undecided; backup and restore functionality is excluded.

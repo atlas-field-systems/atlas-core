@@ -1,6 +1,6 @@
 # Deployment, CLI, build, test, and release reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Scope update: the user needs removable mission-specific extensions in separate repositories alongside permanent Core modules. See [temporary mission extensions](11-mission-extensions.md). Earlier proposals to absorb integrations apply to permanent capabilities; the old extension-management machinery remains open for simplification.
@@ -403,7 +403,7 @@ Evaluate one documented installation path with a representative Core/SDK/Protoco
 
 The lifecycle acceptance gate creates operational records, Object content, activity history and diagnostic logs. Stop and Start, then Restart, and verify that they remain available. Reset and verify that they are cleared while installed Plugin selections, credentials, configuration, software and Plugin artifacts survive. Test retained-state startup and fresh initialization separately. No paired backup restoration is required by this gate.
 
-Published evidence should identify the tested source revision, artifact versions, configuration and lifecycle outcomes. Backup and restore functionality is excluded. Interrupted-execution resumption needs its own contract. The version-update gate must perform Reset, clearing operational data/logs while preserving setup and Plugin artifacts; operational-data migrations are excluded.
+Published evidence should identify the tested source revision, artifact versions, configuration and lifecycle outcomes. Backup and restore functionality is excluded. Mission execution continuity across Core restart is outside scope. The version-update gate must perform Reset, clearing operational data/logs while preserving setup and Plugin artifacts; operational-data migrations are excluded.
 
 ### Official external references consulted
 
