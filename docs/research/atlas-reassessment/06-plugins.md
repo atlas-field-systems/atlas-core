@@ -311,8 +311,9 @@ The successor constraints below are distinct from the historical placement mecha
    not prove runtime behavior or enforce egress.
 2. Plugin identity and discovery need explicit contracts. The source uses
    configured IDs and matching manifests; successor discovery mechanics remain open.
-3. Source connector configuration owns external origin, secret, route policy,
-   egress, limits, retry, cache, rate, and circuit behavior.
+3. The integration owns source-specific access and provider configuration.
+   Trusted Plugins may receive provider credentials. Brokering is optional;
+   the successor does not require a Source Gateway or promise secret isolation.
 4. Core owns durable resources, Tasks, validation, idempotency, feed writes,
    and public error semantics.
 5. Plugins are not Assets or Task targets. They may issue existing Core-defined
@@ -343,8 +344,8 @@ These are proposed experiments, not accepted ADRs.
 Use Building Scan as a deletion test. Build two throwaway implementations with
 the same `MapArea` input, spatial result, provenance, attribution, truncation,
 and controlled source fixture. One is a Core-owned source adapter and typed
-operation. One is the existing Plugin path. Keep Source Gateway policy in both
-cases where source credentials or egress rules apply.
+operation. One is the existing Plugin path. Compare how each supplies the
+integration with provider credentials; a Source Gateway is not required.
 
 Record exact lines of code, build dependencies, startup time, memory, failure
 behavior, request latency, cancellation time, operator steps, release steps,
@@ -442,9 +443,9 @@ Acceptance requires an independent Plugin release and lifecycle change without u
 ## Recommendation for this reassessment
 
 Preserve an optional extension mechanism for temporary mission capabilities alongside the modular Core. Begin with a responsibility and failure-domain comparison for one
-source-backed feature and one field-device Task. Keep the Source Gateway's
-credential, egress, and request policy boundary available independently of
-where the adapter executes.
+source-backed feature and one field-device Task. Trusted Plugins may receive
+their provider credentials. Introduce credential brokering only for a concrete
+integration requirement; do not inherit a mandatory Source Gateway.
 
 Use a Core subsystem for capabilities Atlas intends to support permanently. Keep temporary mission capabilities in separate repositories, even when they share Core resource contracts. Keep the managed Plugin path when
 measured work shows a need for independent failure, dependency, resource,

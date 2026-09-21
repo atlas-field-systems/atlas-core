@@ -84,18 +84,22 @@ _Avoid_: Atlas Task, Asset Command, Datastream, arbitrary endpoint
 A system outside Atlas from which a Plugin obtains data.
 _Avoid_: Plugin, Datastream
 
-**Source connector**:
-Atlas-managed access to one External source. The Plugin owns the source-specific meaning of the data.
-_Avoid_: Plugin, data model
-
-**Source Gateway**:
-The Atlas component through which Plugins use Source connectors without receiving External source credentials.
-_Avoid_: Edge Gateway, data normalizer
-
-**Datastream**:
-A named data product published by a Plugin for clients to consume without exposing an External source directly.
-_Avoid_: Core change feed, External API
-
 **Plugin release**:
 An immutable version of one Plugin that can be published and installed independently of a Core release, subject to its declared contracts.
 _Avoid_: Core release, running Plugin
+
+## Historical source vocabulary
+
+These terms describe Modernization research. They do not name required successor components or selected capabilities.
+
+**Source connector**:
+In Modernization, Atlas-managed access to one External source. The Plugin owns the source-specific meaning of the data.
+_Avoid_: Plugin, data model
+
+**Source Gateway**:
+In Modernization, the component through which Plugins use Source connectors without receiving External source credentials.
+_Avoid_: Edge Gateway, data normalizer
+
+**Datastream**:
+In the Modernization model, a named data product published by a Plugin for clients to consume without exposing an External source directly.
+_Avoid_: Core change feed, External API

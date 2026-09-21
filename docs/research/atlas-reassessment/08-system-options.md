@@ -35,7 +35,7 @@ Proposed ownership, to test against the first workflows:
 | Module | Owns | Small external interface | What callers should not have to know |
 | --- | --- | --- | --- |
 | Operational picture | Entity identity, current observations, optional movement history | Report observation, read/query Entity, import/inspect history | JSONB layout, clock locks, history indexes |
-| Tasking | Commands, Task state transitions, runtime identity and delivery | Request work, register ready runtime, signal delivery and reconcile runtime-scoped work, report outcome, cancel | Row locks, fencing, queue bookkeeping |
+| Tasking | Commands, recorded instructions, delivery and Task outcomes | Issue a Task, receive current instructions, report outcome as the assigned Asset, request cancellation | Persistence, duplicate-report handling, reconciliation mechanics |
 | Content | Object metadata and bytes | Store, read, reference, delete content | Upload intents, physical paths, cleanup retries |
 | Integrations | Source-specific queries and ingestion | Invoke a Plugin Operation or manage ingestion; publish through the SDK | Upstream credentials, parsing, provider-specific retry behavior |
 | Access | Operator and machine identity and authorization | Authenticate and authorize named actions | Cookie/session storage, key hashes, throttle records |

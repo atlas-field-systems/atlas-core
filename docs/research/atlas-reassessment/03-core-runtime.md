@@ -73,7 +73,7 @@ There are three credential shapes:
 
 The current access model is intentionally coarse: any valid API credential can mutate any Asset. `Atlas-Runtime-ID` is execution fencing. It proves that a request claims to come from the currently registered runtime, but it is not a credential and is not Asset authorization. The tasking implementation plan says this explicitly and defers per-Asset authorization: [`commands-and-tasking-implementation-plan.md`](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking-implementation-plan.md#L117-L121).
 
-That is acceptable for the first one-server deployment if the deployment boundary is trusted. It becomes the wrong model when multiple operators, tenants, or independently administered field groups share one Core. Reopening it would require a system-wide subject and scope model across ordinary HTTP, feed snapshots and subscriptions, task creation and cancellation, runtime registration, SDK cache hydration, and object access. It should not be added as a middleware-only patch. Third-party auth is not needed to make that change; Core could issue and validate its own subjects first.
+That coarse source boundary is superseded for Asset reporting. The successor authenticates each Asset, accepts execution reports only for its assigned Tasks, and prevents generic mutation paths from bypassing that rule. Plugin credentials retain operational access but cannot impersonate Assets or call administrative APIs. See [the fixed access boundaries](../../architecture/system-design.md#identity-and-access). This does not require operator permission tiers, a tenant system or a particular authentication provider.
 
 One exact decision is worth reopening now because it affects auditability even under the coarse model: Tasks intentionally do not record which operator or client created or cancelled them. The Protocol says so at rule 10 ([`commands-and-tasking.md`](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md#L37-L49)) and lists fine-grained tasking provenance as deferred ([`commands-and-tasking.md`](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md#L680-L693)). Provenance is not the same as authorization. A minimal `created_by` and `cancelled_by` subject reference could improve incident reconstruction without introducing per-Asset permissions. The tradeoff is schema and retention work, anonymous device clients, and a decision about whether a deployment key is a useful actor identity. The smallest experiment is an audit-only field in a fixture or local branch, with acceptance based on operator reconstruction of a task race and no change to authorization.
 
@@ -170,7 +170,7 @@ These are the highest-value provisional questions, ordered by likely simplificat
 6. **Logger.** Run the isolated zerolog to slog experiment if standard-library consolidation matters. Do not make it a prerequisite for the runtime redesign.
 7. **Actions seams.** Extract change-log and retention ownership first if the package continues to grow. Avoid splitting concrete domain actions into interfaces until a consumer or test proves the seam.
 
-The following are not good candidates to reopen merely for simplicity: Go itself, context cancellation, PostgreSQL-specific pgx, Argon2id, WebSocket support, durable feed ordering, runtime generation fencing, bounded task reconciliation, or origin validation. They encode the guarantees that make a disconnected field-device system operable.
+Preserve observable consistency, authenticated report authority, cancellation and same-run reconciliation. The source language, libraries, transport and runtime-generation mechanism remain candidates to evaluate, not requirements. The successor does not inherit runtime registration or readiness gates merely to reuse Modernization machinery.
 
 ## Narrow experiments and gates
 
@@ -184,7 +184,7 @@ The following are not good candidates to reopen merely for simplicity: Go itself
 | zerolog to slog | Middleware, one handler, one background loop | Equivalent structured output, request IDs, error fields, no secrets, benchmark, no wrapper |
 | Task provenance | Audit-only actor fields in a fixture or isolated schema branch | Reconstruct create/cancel races, define anonymous/device actor semantics, quantify migration and retention cost |
 | Runtime shutdown accounting | Wait for feed, Plugin, storage, and task loops under blocked dependencies | Bounded shutdown with race detection and no goroutine leak; retain current cancellation if this adds more machinery than evidence justifies |
-| Real task path | One real catalog Command, one field-runtime implementation, restart and ambiguous transport cases | Durable lifecycle, stale-runtime fencing, cancellation semantics, reconnect reconciliation, and operator-readable audit trail |
+| Real task path | One real Command and Asset, with ambiguous responses and radio reconnection while Core stays running | Assigned-Asset report authority, duplicate/obsolete report handling, confirmed-cancellation rules and activity history |
 
 ## Unknowns that block stronger conclusions
 
