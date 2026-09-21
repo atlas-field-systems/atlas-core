@@ -1,6 +1,6 @@
 # Atlas Plugins reassessment
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -306,27 +306,29 @@ outside it. See the [specifications](https://webassembly.org/specs/).
 
 ## Trust and lifecycle invariants
 
-The following facts should remain separate in any placement:
+The successor constraints below are distinct from the historical placement mechanisms in this assessment:
 
 1. A catalog signature authenticates release bytes and image identity. It does
    not prove runtime behavior or enforce egress.
-2. A configured ID and matching manifest identify a runtime. Core does not scan
-   the network or accept self-registration.
+2. Plugin identity and discovery need explicit contracts. The source uses
+   configured IDs and matching manifests; successor discovery mechanics remain open.
 3. Source connector configuration owns external origin, secret, route policy,
    egress, limits, retry, cache, rate, and circuit behavior.
 4. Core owns durable resources, Tasks, validation, idempotency, feed writes,
    and public error semantics.
-5. A Tool Asset is an ordinary Asset with Protocol-authored Commands. A Plugin
-   manifest cannot add Commands.
-6. A synchronous Operation cannot become a hidden durable job. Long-running
-   behavior needs a Task with cancellation and runtime fencing.
+5. Plugins are not Assets or Task targets. They may issue existing Core-defined
+   Commands as Tasks to Assets, but cannot introduce Asset Commands.
+6. Long Plugin work uses a Core-owned Operation attempt with queryable state,
+   explicit cancellation and an outcome. It continues after caller disconnection.
+   The old synchronous/Tool Task model is historical. Restart preserves records;
+   automatic resumption of interrupted execution is not implied.
 7. A Datastream name does not provide a transport, replay guarantee, ordering,
    or retention policy.
 8. Installed, enabled, and runtime-available are different states. A runtime
    outage must not silently delete installed state.
-9. Current trusted Plugin private HTTP has no caller authentication. Expanding
-   trust requires network identity or authenticated local transport, not only a
-   new header.
+9. The source trusted Plugin private HTTP interface has no caller authentication.
+   This is historical evidence, not a selected successor transport policy. Installed
+   successor Plugins are trusted user-built extensions; credential mechanisms remain open.
 
 An in-process Core module can preserve invariants 3 through 8 while removing
 private process and catalog states. A managed Plugin preserves them across a

@@ -6,11 +6,11 @@ Read [what Atlas is for](docs/architecture/operating-model.md) for the operating
 
 The implementation direction is [dedicated Atlas systems](docs/architecture/system-design.md), with shared utilities where needed, Protocol-generated bindings, minimal generator customization and independent tests. All external consumers are expected to use the SDK, choosing basic API access or maintained shared-picture synchronization as their application needs.
 
-Core also [manages installed Plugins](docs/adr/0002-core-manages-installed-plugins.md) and [records activity history for the current run](docs/adr/0013-start-each-core-run-with-empty-data.md) for Task and administrative actions.
+Core also [manages installed Plugins](docs/adr/0002-core-manages-installed-plugins.md) and [retains activity history until Reset](docs/adr/0015-separate-start-stop-restart-and-reset.md) for Task and administrative actions.
 
 Core [owns Commands and Assets execute Tasks](docs/adr/0004-core-owns-commands-and-assets-execute-tasks.md); Plugins expose Operations, process data and gather external sources. [Compatible client versions](docs/adr/0005-allow-compatible-client-versions.md) are allowed, and [planned Plugin stops and updates protect active work](docs/adr/0006-protect-active-plugin-work-during-lifecycle-changes.md).
 
-Expected use is a few hours of local coordination at a time. An installed system [works without internet access](docs/adr/0010-operate-without-internet-access.md), [starts every Core run with empty data](docs/adr/0013-start-each-core-run-with-empty-data.md) and supports Plugin lifecycle changes without restarting Core. Installed Plugin selections, credentials and configuration survive as startup setup. Core is assumed to remain running while Assets operate; restart ends that operating session rather than preserving continuity.
+Expected use is a few hours of local coordination at a time. An installed system [works without internet access](docs/adr/0010-operate-without-internet-access.md). [Start, Stop and Restart preserve data and logs; Reset clears them](docs/adr/0015-separate-start-stop-restart-and-reset.md). Reset is the usual fresh-start action; Restart is mainly for development. Updates to a new Core release perform Reset; operational-data migrations are excluded. Installed Plugin selections, credentials and configuration survive. Plugin lifecycle changes do not require restarting Core.
 
 The [differences from Atlas Modernization](docs/architecture/modernization-differences.md) table compares confirmed successor changes against the inspected source revision.
 

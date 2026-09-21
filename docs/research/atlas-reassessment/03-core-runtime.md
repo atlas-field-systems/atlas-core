@@ -1,6 +1,6 @@
 # Atlas Core runtime reassessment
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Research date: 2026-09-20
@@ -109,11 +109,11 @@ The current Plugin design deliberately moves a lot of machinery into Core: confi
 For the first version, those boundaries may be solving a deployment problem before the product has one. A simpler organizing hypothesis is:
 
 - Core is a modular monolith with explicit internal modules for feed, tasking, source connectors, and future capabilities;
-- each module owns its domain rules and exposes a narrow Go interface to neighboring modules;
+- each module owns its domain rules and exposes a narrow code interface to neighboring modules; Go interfaces apply only to the Go candidate;
 - a module is not automatically a process, network client, or independently versioned package;
 - a capability moves outside the process only when it needs fault containment, a separate credential boundary, a separate release cadence, a hostile dependency, or an operational scale profile that the monolith cannot safely carry.
 
-Under that hypothesis, the current Plugin registry is a candidate subsystem, not a permanent architectural tier. The fixed `/plugins` public surface and private HTTP protocol can remain as an adapter for capabilities that eventually earn isolation. For an in-process first-party capability, the manifest and health monitor are likely accidental overhead. The open question is whether the system has any current capability that needs process isolation. Trust is undecided, so do not assume either trusted or hostile Plugins in the core design.
+That earlier placement hypothesis does not reopen accepted Core-managed Plugins. The current design retains dedicated internal modules alongside removable, trusted user-built Plugins. Core owns installed Plugin lifecycle; process/container and discovery mechanisms remain implementation choices. Startup preserves and reapplies installed Plugin selections, credentials and configuration and keeps Plugin artifacts. Start, Stop and Restart preserve operational data and logs. Reset clears operational records, content and Atlas-managed logs while keeping setup and artifacts. See [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md).
 
 The narrow experiment is to implement one representative former Plugin capability as an internal module behind the same domain interface, without deleting the external adapter. Compare:
 

@@ -1,6 +1,6 @@
 # Adversarial review of Protocol-driven generation
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Research date: 20 September 2026.

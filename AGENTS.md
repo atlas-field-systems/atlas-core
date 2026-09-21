@@ -14,7 +14,7 @@ This repository uses a single-context domain-doc layout. See `docs/agents/domain
 
 ## Runtime data
 
-Every Core start begins a clean run: restart wipes operational state, including Object content and activity history. Preserve installed Plugin selections, credentials and configuration as startup setup. Read `docs/adr/0013-start-each-core-run-with-empty-data.md` before changing startup, storage or client synchronization. Initialize the current schema from empty storage; do not add data migrations, cross-run retention, backup/restore or a preserve-data restart mode. Core is assumed not to restart while Assets operate. Cross-restart continuation is outside scope; do not add a run-identity/recovery protocol for it without a changed requirement.
+Start, Stop and Restart preserve operational data and logs. Reset clears Atlas-owned operational records, Object content, activity history, transfer state and diagnostic logs while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Read `docs/adr/0015-separate-start-stop-restart-and-reset.md` before changing lifecycle, storage, logs or client synchronization. Retaining records does not authorize automatic rerun of work or a backup/restore system. Updating Core to a new release performs Reset; ordinary same-release restarts preserve state. Do not add version-to-version operational-data migrations.
 
 ## Architecture differences
 
@@ -27,6 +27,6 @@ Before changing Protocol, generators, module interfaces, storage ownership or sh
 - Author shared contract facts in Protocol and regenerate their representations. Generated files are disposable: never hand-edit or post-process them. Keep business implementations in separate files behind generated interfaces.
 - Prefer supported generator output and a small configuration. Avoid endpoint-specific templates, duplicate wrapper APIs and patches that recreate the maintenance removed by generation. If a required case does not fit, simplify the contract/tool choice or keep that binding handwritten; explain the tradeoff before expanding generator machinery.
 - Build dedicated Atlas responsibilities with ordinary module interfaces and private data access. Share utilities for concrete needs; do not design a reusable framework or module replacement system.
-- Test the promises independently of the generator: cross-language wire examples, public module behavior, within-run consistency, clean restart and supported compatibility. Generated snapshots alone do not establish correctness. Require deterministic regeneration and focused integration tests.
+- Test the promises independently of the generator: cross-language wire examples, public module behavior, operational consistency, Stop/Start and Restart retention, Reset cleanup and supported compatibility. Generated snapshots alone do not establish correctness. Require deterministic regeneration and focused integration tests.
 - All external consumers should use the SDK; basic API access must not require full-picture synchronization. Keep physical Object storage private and execution scheduling on the Asset OS.
 - Measure simplicity by independently maintained decisions and effort to change Atlas behavior. Prefer one working implementation and remove superseded code after verification.

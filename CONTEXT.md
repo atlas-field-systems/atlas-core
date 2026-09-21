@@ -25,7 +25,7 @@ A published edition of Core with its corresponding SDK and Protocol editions.
 _Avoid_: Plugin release, deployment instance
 
 **Activity history**:
-The current-run record of who issued or cancelled Atlas Tasks and who changed Plugins, credentials or configuration.
+The record of who issued or cancelled Atlas Tasks and who changed Plugins, credentials or configuration, retained until Reset.
 _Avoid_: diagnostic logs, movement history, complete telemetry history
 
 ## Resources and tasking

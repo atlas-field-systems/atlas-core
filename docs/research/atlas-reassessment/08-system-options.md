@@ -1,6 +1,6 @@
 # A simpler Core system
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -80,7 +80,7 @@ Evidence and old decision conflicts are detailed in [the Plugin assessment](06-p
 
 ## Keep the domain distinctions that still earn their cost
 
-An Operation is a bounded query. A Task is durable work with an execution lifecycle. That distinction can survive the removal of Plugins. Renaming every query as a Task would burden simple reads; disguising long-running execution as a request/response Operation would lose lifecycle and recovery behavior.
+A Command defines behavior an Asset supports; a Task requests its execution by that Asset. A Plugin Operation is a separate invocation with a Core-owned identifier, queryable state and outcome, and explicit cancellation. It may perform long processing and continue after caller disconnection. Long Plugin work remains an Operation and does not require a Tool Asset. See [the accepted lifecycle](../../architecture/system-design.md#plugin-operations).
 
 Likewise, a current Entity view, retained movement history, content bytes, and a recoverable change feed have different retention and consistency needs. Organizing them as modules should make those differences explicit rather than force one universal resource abstraction over all of them.
 
@@ -94,7 +94,7 @@ Build no production architecture from a diagram alone. Compare candidates with t
 2. A real source integration answers a bounded query, fails cleanly, and can be cancelled.
 3. One real Command reaches one Asset runtime; restart fences the old runtime; completion and cancellation have defined outcomes.
 4. Run a temporary processor from a separate repository, remove it, and prove Core and retained results remain usable without that repository or its dependencies.
-5. Restart the server and prove retained state survives. If the slice stores bytes, crash and restore the storage pair as well.
+5. Verify that Stop/Start and Restart preserve operational metadata, content, history and logs. Then Reset and verify they are cleared while installation setup and Plugin artifacts survive. Backup/restore is not a selected requirement; interrupted-execution resumption needs its own contract.
 
 Measure setup steps, required processes, configuration and secrets, independently maintained contracts, custom recovery states, and code a feature author must touch. Also measure latency and throughput against a declared workload. Do not choose the shorter implementation if it quietly stops handling deletion races or uncertain Task outcomes.
 

@@ -1,6 +1,6 @@
 # Temporary mission extensions
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -45,7 +45,7 @@ Use a specialized signal-report processor as the first extension experiment:
 5. Verify that current-run results and provenance remain readable after Plugin removal. Separately restart Core and verify that all operational data is wiped. Keep extension identity, version, relevant settings and input references when reproducibility requires them.
 6. Archive the extension's source and enough build/dependency information to identify what ran. Archiving source alone does not guarantee a future rebuild or continued compatibility with a later Core.
 
-The acceptance rule is that removing the extension removes its specialized implementation and dependency burden from normal Atlas development. Results can remain during the same Core run after Plugin removal. Every Core restart wipes operational data; independent Plugin lifecycle changes do not themselves restart or reset Core.
+The acceptance rule is that removing the extension removes its specialized implementation and dependency burden from normal Atlas development. Results remain after Plugin removal and ordinary Core Stop/Start or Restart. Reset clears operational data and Atlas-managed logs; independent Plugin lifecycle changes do not themselves restart or reset Core.
 
 ## Avoid moving the same coupling into Protocol
 

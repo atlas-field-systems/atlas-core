@@ -1,6 +1,6 @@
 # Deployment, CLI, build, test, and release reassessment
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Scope update: the user needs removable mission-specific extensions in separate repositories alongside permanent Core modules. See [temporary mission extensions](11-mission-extensions.md). Earlier proposals to absorb integrations apply to permanent capabilities; the old extension-management machinery remains open for simplification.
@@ -256,30 +256,16 @@ current one-file notes contract is close to that boundary.
 
 ## Invariants for a first Core server
 
-These constraints should remain true across any CLI or module redesign:
+Accepted successor requirements apply to any candidate deployment:
 
-* Core is one Go server with an explicit HTTP/WebSocket and field-device protocol boundary.
-* The host-side CLI is an adapter over one typed, headless deployment manager. Direct commands,
-  an interactive UI, and future automation call that manager rather than duplicate lifecycle
-  logic.
-* The first supported deployment is one host and one Compose project. The Core process has no
-  Docker socket access. Compose manages service lifecycle; host supervision invokes the CLI.
-* PostgreSQL and MinIO are a paired durable store. Production uses external, named volumes and
-  does not enable destructive database recreation. Recovery evidence identifies both stores.
-* API, PostgreSQL, and MinIO bind to loopback by default. Public ingress is an optional host
-  concern and never exposes database or object-store ports.
-* A deployment persists immutable image identity, platform, Docker engine identity, project
-  identity, and service state. Start verifies the intended image before accepting traffic.
-* Compose templates and generated configuration are retained and hash-checked. A failed update
-  leaves a journal and a recoverable prior state.
-* The package supports Node 24 and the documented Linux/macOS consumer platforms. A package
-  installation test on macOS does not claim a Docker deployment test on macOS.
-* Release identity is exact source SHA, immutable tag, candidate manifest, image digest, tarball
-  hashes, and acceptance evidence. Publication never overwrites a conflicting tag, image, npm
-  version, or sealed asset.
-* If first-party modules are in Core, their version, image/configuration, migration, and
-  recovery identity is part of the Core release. An external module remains a separate trust
-  boundary only when a measured requirement demands it.
+- One Core server serves field devices and one or two operators. The implementation language, transport, packaging and storage remain open.
+- Start, Stop and Restart retain operational data and logs. Reset clears operational records, Object content, history and Atlas-managed logs while preserving installed selections, credentials, configuration, software and Plugin artifacts.
+- Startup reapplies retained setup. First use or post-Reset startup initializes what is absent without making every startup destructive.
+- Core owns installed Plugin lifecycle. Independent Plugin lifecycle changes leave Core and unrelated Plugins available and protect active work as defined in ADR-0006.
+- Installed local operation must not require internet access. Individual integrations retain their own external dependencies.
+- Core/SDK/Protocol release together at matching versions, with supported runtime compatibility defined separately.
+
+Named volumes and non-destructive storage mounts are compatible implementation choices, not requirements to keep PostgreSQL, MinIO, Compose, Go or Node. The source's paired backup/restore and deployment-journal machinery remain historical evidence. Ordinary restart retention alone does not select a backup system or automatic interrupted-work resumption. Updates to a new Core release perform Reset, so operational-data migrations are excluded.
 
 ## Design issues and decision gates
 
@@ -413,24 +399,11 @@ decision:
 
 ## Suggested first implementation slice
 
-The lowest-risk first slice is a single published Core image, one `atlas-core` package, one
-Compose topology, PostgreSQL and MinIO durable volumes, direct command mode, and optional host
-ingress. Keep the typed manager and image/storage verification. Keep Ink until measurements show
-a problem. Move the Python launcher to a clearly marked source-checkout path. Run one module as an
-in-tree subsystem experiment before committing to separate Plugin containers, a remote catalog,
-or independent Plugin release state.
+Evaluate one documented installation path with a representative Core/SDK/Protocol workflow before choosing the packaging stack. Compare the retained source deployment with simpler candidates using the same observable behavior. Core-managed trusted Plugins are accepted; the source's host-only Plugin management is not the successor requirement.
 
-The first release gate should exercise a clean Linux host and a real field-device protocol
-workload. It should create or adopt durable storage, verify image identity and platform, start
-healthy services, execute representative reads and writes, restart the host-managed supervisor,
-cancel an update, recover from a failed operation, restore paired storage, and uninstall or
-retain the package without deleting data accidentally. The published evidence should be one
-manifest tying the source SHA, Core image, npm package, configuration/schema version, migration
-state, and recovery test to the same release.
+The lifecycle acceptance gate creates operational records, Object content, activity history and diagnostic logs. Stop and Start, then Restart, and verify that they remain available. Reset and verify that they are cleared while installed Plugin selections, credentials, configuration, software and Plugin artifacts survive. Test retained-state startup and fresh initialization separately. No paired backup restoration is required by this gate.
 
-That path keeps the deployment boundary simple while leaving room for external modules later.
-It also makes each future addition answer a concrete question: does it improve field operation,
-failure isolation, recovery, or release safety enough to justify another runtime and lifecycle?
+Published evidence should identify the tested source revision, artifact versions, configuration and lifecycle outcomes. Keep any backup/export trial or interrupted-execution resumption experiment explicitly separate from the accepted retention contract. The version-update gate must perform Reset, clearing operational data/logs while preserving setup and Plugin artifacts; operational-data migrations are excluded.
 
 ### Official external references consulted
 

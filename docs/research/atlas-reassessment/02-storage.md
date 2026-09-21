@@ -1,6 +1,6 @@
 # Storage reassessment
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 - Review date: 2026-09-20
@@ -136,21 +136,19 @@ Official comparison sources: [SQLite transaction concurrency](https://www.sqlite
 
 ## Behavioral invariants to preserve
 
-These are the contract, independent of the chosen database or blob backend:
+These successor requirements follow the accepted [lifecycle](../../adr/0015-separate-start-stop-restart-and-reset.md), independent of the selected database or content backend:
 
-- A committed resource write has exactly one globally ordered version and one durable event. A rejected transaction changes neither.
-- A client can hydrate a consistent snapshot, drain `changed-since`, reconnect, and recover from a cursor gap without losing or duplicating a committed event.
-- Event order is commit order. The transport is allowed to drop a client; durable recovery must repair the client.
-- Entity and Object versions remain monotonic and protect cache, ETag, and `If-Match` behavior.
-- Task assignment and lifecycle data remain durable and retained according to the Task contract. Task events retain their immutable Asset ID for routing.
-- Object metadata is not acknowledged as complete until its blob is durably published and the metadata transaction commits.
-- A blob that has no committed metadata may be collected after lease expiry and orphan grace. A blob still referenced by current metadata must never be collected.
-- Object replacement cannot delete the newly referenced path. A failed delete is durable, retryable, and visible to reconciliation.
-- Object paths are never reused after deletion. If path tombstones are bounded or compacted later, the replacement must prove equivalent collision safety.
-- A missing production blob store fails readiness. Production startup cannot silently pair restored metadata with an empty bucket.
-- Database and blob backups restore as a matched pair with a known application/schema compatibility point.
-- SDK and former Plugin caches remain disposable projections. Internal modules do not bypass Core storage, and source credentials remain owned by the responsible module.
-- Geometry and movement semantics remain protocol semantics. Changing JSONB, PostGIS, or column layout must not silently change coordinate order, altitude datum, sparse samples, retention, or backfill behavior.
+- Commit resource changes consistently with their published records. Rejected transactions publish no mutation.
+- Supported synchronization must handle snapshot/write races, missed changes and reconnects without exposing stale resource state. Cursor and ordering mechanisms remain implementation choices.
+- Retain Task records, Object metadata/content, histories, Plugin Operation records and logs across ordinary Stop/Start and Restart. Retaining a record does not automatically resume its execution.
+- Publish an Object only when its required content is usable. Protect content still referenced by retained metadata from cleanup and prevent replacement/delete races from removing the current content.
+- Resume large uploads after a same-run connection loss. Retain stored transfer state across Stop/Start and Restart; define reattachment separately from that retention promise.
+- Prevent stale references or clients from restoring cleared data after Reset. A permanent never-reused-path scheme is a historical implementation mechanism, not an accepted public storage contract.
+- Reset clears operational metadata, content, activity history, transfer/sync state and Atlas-managed diagnostic logs. Installed selections, credentials, configuration, software and Plugin artifacts survive.
+- Start validates the availability of retained metadata and content; it must not silently expose unusable Objects. This does not prescribe paired backup/restore or a particular number of stores.
+- SDK caches remain projections. Plugins use SDK/Core APIs, not private storage. Preserve public geometry, movement and observation-time meanings when changing internal layout.
+
+Matched-pair backups, version-to-version migrations and the old deletion outbox are historical mechanisms or separate proposals, not requirements established by ordinary restart retention. Updates to a new Core release perform Reset; operational-data migrations are excluded.
 
 ## Prioritized experiments and acceptance gates
 
@@ -172,19 +170,19 @@ Acceptance: no lost or duplicate committed events; no version gaps after success
 
 Implement only in a throwaway prototype or isolated branch. Reuse the current `objectStorage` interface ([object storage contract, lines 10–16](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/internal/actions/object_storage_contract.go#L10-L16)). Use a per-object immutable path, write to a temporary file in the same filesystem, fsync, atomically rename, and fsync the directory where the platform requires it. Keep upload intents, deletion fences, and the outbox until crash testing proves a smaller protocol.
 
-Acceptance: kill Core after every upload phase; inject disk-full, permission, delayed read, delayed rename, and deletion failures; run concurrent readers and replacements; restart and reconcile; restore from a quiesced database plus blob-directory backup; verify byte-for-byte content checksums; prove the same metadata/feed ledger as MinIO. Measure operator steps and restore time. A filesystem prototype fails if it needs undocumented manual cleanup or cannot prove the current orphan/live-reference invariants.
+Acceptance: inject disk-full, permission, delayed read, delayed rename and deletion failures; run concurrent readers and replacements; verify that published Objects remain usable. Test Stop/Start and Restart retention, then Reset cleanup with setup and artifacts preserved. Check content integrity and publication consistency. Interruptions must produce explicit outcomes rather than false completion. Do not make backup restoration or automatic execution recovery an acceptance requirement.
 
 ### P1: Explicit object integrity
 
 Add a prototype-only checksum path using a standard full-object checksum, independent of ETag. Exercise small single PUT and large multipart upload, interrupted upload, download verification, and metadata-only update. MinIO's API documents automatic multipart behavior and AWS documents ETag limitations.
 
-Acceptance: a modified or truncated blob is detected before Core returns success to a caller; the recovery path can delete or quarantine an unreferenced corrupt blob; old objects without a checksum have an explicit migration policy.
+Acceptance: a modified or truncated blob is detected before Core returns success to a caller; the recovery path can delete or quarantine an unreferenced corrupt blob; the prototype does not silently make a checksum field or a migration strategy part of the public contract.
 
 ### P2: SQLite metadata prototype
 
-Port only enough of the current contract to run the P0 workload. Start with a single Core process and one writer coordinator. Replace PostgreSQL-only SQL intentionally: row locks, advisory locks, JSONB operators, `jsonb_to_recordset`, `LISTEN/NOTIFY`, migration catalog introspection, `FOR UPDATE SKIP LOCKED`, timestamp intervals, and `infinity` timestamps all require decisions. Use SQLite WAL and the Online Backup API, and include the `-wal` state in crash/backup tests.
+Port only enough of the current contract to run the P0 workload. Start with a single Core process and one writer coordinator. Replace PostgreSQL-only SQL intentionally: row locks, advisory locks, JSONB operators, `jsonb_to_recordset`, `LISTEN/NOTIFY`, migration catalog introspection, `FOR UPDATE SKIP LOCKED`, timestamp intervals, and `infinity` timestamps all require decisions. If testing SQLite WAL, account for its storage files in retention and Reset tests. The Online Backup API is optional research, not a selected product capability.
 
-Acceptance: one process is enforced; two simultaneous Core processes fail closed; all feed and object recovery invariants pass under crash and restart; p99 latency is no worse than the P0 baseline at expected scale; backup restore produces a coherent database plus blob set; WAL checkpoint starvation and disk-full behavior are bounded; no PostgreSQL-only semantic leak remains in the adapter.
+Acceptance: one process is enforced; two simultaneous Core processes fail closed; retained metadata/content remain coherent through ordinary Stop/Start and Restart and Reset clears the operational stores/logs while preserving setup; p99 latency is no worse than the P0 baseline at expected scale; WAL checkpoint starvation and disk-full behavior are bounded; no PostgreSQL-only semantic leak remains in the adapter.
 
 ### P2: Cleanup isolation
 

@@ -1,6 +1,6 @@
 # SDK technology reassessment
 
-Current reset contract: [ADR-0013](../../adr/0013-start-each-core-run-with-empty-data.md) supersedes earlier durability and cross-run retention recommendations. Every Core start wipes operational data. Data migrations, preserve-data restart and backup/restore are excluded from the successor; historical source observations below remain evidence, not requirements.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 **Assessment date:** 2026-09-20
@@ -115,7 +115,7 @@ The official MDN documentation describes WebSocket as bidirectional and capable 
 
 MDN describes SSE as one-way: the client receives server events but cannot send events to the server. It also documents automatic reconnect and `id` and `retry` fields. See [Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#receiving_events_from_the_server) and [event fields](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#fields).
 
-`[Decision]` Keep WebSocket for the Core feed. Subscription filters, authentication, the subscription barrier, and a server-directed handshake are part of the contract. SSE could carry append-only notifications, but replacing the feed with SSE would move subscription state and ordering into a second HTTP protocol. The simulation browser's SSE stream is a separate application event stream and is not a reason to change Core.
+`[Proposal]` Use WebSocket as the comparison baseline for the Core feed. Subscription filters, authentication, the subscription barrier, and a server-directed handshake are part of the contract. SSE could carry append-only notifications, but replacing the feed with SSE would move subscription state and ordering into a second HTTP protocol. The simulation browser's SSE stream is a separate application event stream and is not a reason to change Core.
 
 ### TanStack Query or React Query
 
@@ -129,7 +129,7 @@ It is not a replacement for the SDK's ledger. Query invalidation tells a UI to r
 
 Dexie is a capable IndexedDB wrapper with React live-query helpers. Its official React tutorial documents a singleton database and live queries. See [Dexie React tutorial](https://dexie.org/docs/Tutorial/React).
 
-`[Decision]` Defer persistent SDK storage. The current SDK explicitly has no historical or offline archive and no offline write outbox. A persistent cache would require account partitioning, schema migration, eviction, encryption or token policy, crash recovery, and a clear definition of whether a stored revision is safe to serve. A field device may eventually need this, but it is a product capability, not a cache-library substitution. Do not add Dexie until the outbox identity and idempotency contract exists.
+`[Proposal]` Defer persistent SDK storage. The current SDK explicitly has no historical or offline archive and no offline write outbox. A persistent cache would require account partitioning, schema migration, eviction, encryption or token policy, crash recovery, and a clear definition of whether a stored revision is safe to serve. A field device may eventually need this, but it is a product capability, not a cache-library substitution. Do not add Dexie until the outbox identity and idempotency contract exists.
 
 ### Node and browser platform APIs
 

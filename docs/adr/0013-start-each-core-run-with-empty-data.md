@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: superseded by ADR-0015
 ---
 
 # Start each Core run with empty data
+
+Superseded by [ADR-0015](0015-separate-start-stop-restart-and-reset.md): Start, Stop and Restart preserve data and logs; Reset clears them. The remaining text records the earlier decision and is not current guidance.
 
 Atlas data is disposable and confined to one Core run. Every Core start, including after an update or a process restart, starts with empty operational state; restart and reset are one behavior, with no preserve-data restart mode. The user explicitly selected this assumption to remove cross-run data preservation, migration and recovery complexity.
 

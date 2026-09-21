@@ -2,7 +2,7 @@
 
 Atlas is primarily for one operator, with any additional operators equally trusted to observe Entities, task Assets and use Plugins to process operational data or gather external information. The shared operational picture is for direct use by those operators. Atlas does not require a separate review-and-publish layer for Plugin detections.
 
-Expected use is local Asset coordination for a few hours at a time, rather than continuous coordination over months. Data belongs only to the current run. Restarting Core wipes it; updates and later operating sessions carry no operational data forward. “Session” describes the expected usage here, not a new mission or session resource in the API.
+Expected use is local Asset coordination for a few hours at a time, rather than continuous coordination over months. Operational data and logs persist through Start, Stop and Restart. Reset is the usual fresh-start action and clears both. Restart is mainly useful during development. "Session" describes expected usage, not a new API resource.
 
 ## Expected workload
 
@@ -24,15 +24,15 @@ Every authenticated operator has full control. The first version does not implem
 
 Atlas Core runs on a server throughout an operating session, independently of connected clients. The Command Interface is a client: closing it or losing the operator connection does not stop Core or an accepted Plugin Operation. An operator can reconnect during that Core run to obtain the processing result. Field Assets can independently lose contact, including when they leave radio range. Those disconnections do not mean the Atlas server is offline.
 
-This is the normal deployment and operating model. If Core itself restarts, the next run starts empty. Plugin fault handling and client reconnection occur within a run and do not imply restoring data after a Core restart.
+This is the normal deployment and operating model. Ordinary Core Stop/Start and Restart preserve records and logs. Preserving records is separate from resuming interrupted execution; the latter still needs an explicit contract. A Plugin crash while Core remains running follows the manual fault/restart policy below.
 
 ## Local operation and disposable data
 
 An installed Atlas system works without internet access when operators and Assets can reach Core. Authentication, tasking, Objects and synchronization must not require a cloud service. A Plugin that consumes an external internet service depends on that service separately; its loss does not prevent local Core operation. See [the local operation decision](../adr/0010-operate-without-internet-access.md).
 
-Retain operational records only during the current run. Every Core start clears Entity/Track state, Tasks, Object metadata and content, movement/activity history, Plugin Operation records, synchronization records and temporary uploads. Restart includes reset; there is no restart mode that preserves this data. Version-to-version data migrations and backup/restore are outside the design. See [the reset decision](../adr/0013-start-each-core-run-with-empty-data.md).
+Start, Stop and Restart retain Entity/Track state, Tasks, Object metadata and content, movement/activity history, Plugin Operation records, synchronization records, stored upload state and diagnostic logs. Reset clears those Atlas-owned records and logs. See [the lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md).
 
-The operating assumption is that Core does not restart while Assets are running. Restart ends the operating session; participating clients begin fresh for the next session. Same-run disconnection and reconnection remain supported. Seamless continuation across Core restarts, automatic reconciliation of previous-run reports and a run-identity protocol for that purpose are outside scope. This replaces the earlier requirement to detect and reconcile that lifecycle automatically. Installed Plugin selections, credentials and configuration survive as startup setup. The reset affects operational data, not installed software or the setup needed to start the next run.
+Core normally remains running while Assets operate. Start reapplies retained installation setup; first use initializes empty storage. Reset starts fresh operational state while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Clients must not silently repopulate cleared state after Reset. The client and active-work contracts across whole-Core lifecycle changes remain to be designed. Updating Core to a new release performs Reset, including clearing operational data and Atlas-managed logs. Operational-data migrations are excluded. Backup/restore is not selected.
 
 ## Tasks across a disconnection
 
@@ -50,7 +50,7 @@ The operator issues a scan Task to an Asset. Its hardware determines the result:
 
 Core accepts a Plugin Operation with an identifier for querying its state and outcome or requesting cancellation. A long processing Operation continues when the Command Interface closes or disconnects. Plugin detections intended as Entities appear directly in the shared operational picture without an operator review-and-publish step. Connected operators see those Entities through their Command Interfaces; a returning operator obtains the current picture.
 
-If a Plugin crashes during an Operation, Core first reconciles the recorded outcome. Once the attempt is known to have failed, it stays failed and the operator may explicitly rerun it. Restarting the Plugin does not automatically retry that Operation. The same manual-restart policy applies to continuous-source Plugins. Core reports the fault and supports an operator-requested restart; automatic restart and elaborate recovery orchestration are not required for the first version.
+If a Plugin crashes during an Operation while Core remains running, Core first reconciles the recorded outcome. Once the attempt is known to have failed, it stays failed and the operator may explicitly rerun it. Restarting the Plugin does not automatically retry that Operation. The same manual-restart policy applies to continuous-source Plugins. Core reports the fault and supports an operator-requested restart; automatic restart and elaborate recovery orchestration are not required for the first version.
 
 Installing, updating, removing, enabling or disabling a Plugin must not require restarting Core or stopping unrelated Plugins. Core APIs and Asset connections remain available. Planned stops and updates still respect the agreed active-work policy. This is independent Plugin lifecycle management, not a requirement to replace running code inside the Core process.
 
@@ -64,11 +64,11 @@ For a scan, Completed means execution has finished and its required result is av
 
 Failed records a definitively unsuccessful Task outcome, such as permanent loss of required scan data. A disconnection alone does not establish failure.
 
-Clients and Plugins use SDK Object APIs without depending on physical storage paths or buckets. Large uploads resume from confirmed progress after connection loss within the same Core run. Partial transfer state stays internal; a Core restart discards it with all other operational data. Objects become visible only when ready for use. During a scan-result upload, progress belongs with the Task; Atlas does not list an unavailable or partially uploaded Object. This favors a simpler availability contract over early previews. See [the Object visibility decision](../adr/0009-expose-objects-only-when-ready.md).
+Clients and Plugins use SDK Object APIs without depending on physical storage paths or buckets. Large uploads resume from confirmed progress after connection loss within the same Core run. Partial transfer state stays internal; Reset discards it with all other operational data; ordinary Stop/Start and Restart preserve stored transfer state. Objects become visible only when ready for use. During a scan-result upload, progress belongs with the Task; Atlas does not list an unavailable or partially uploaded Object. This favors a simpler availability contract over early previews. See [the Object visibility decision](../adr/0009-expose-objects-only-when-ready.md).
 
 ## Details for module planning
 
-- Startup: initialize empty operational state and preserve installed Plugin selections, credentials and configuration as startup setup. Core remains running while Assets operate. Data migrations, cross-run preservation and cross-restart client continuity are excluded.
+- Lifecycle: preserve operational data and logs through Start, Stop and Restart; clear them on Reset while keeping installation setup. Separate retained records from automatic execution resumption. Updates to a new Core release perform Reset; operational-data migrations are excluded.
 
 - Core tasking: the detailed reconciliation contract for operator instructions and Asset reports. Cancellation requested and late-completion behavior are settled; Asset scheduling and interruption policies are outside scope.
 - Task results: Asset-provided progress details and failure reasons. The successful scan completion boundary, Failed status and Object visibility only when ready are settled.
