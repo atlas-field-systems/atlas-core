@@ -1,0 +1,4930 @@
+{
+  "source_repository": "https://github.com/the-Drunken-coder/Atlas-Modernization",
+  "source_commit": "8edee4e2743fbf0f85c16dfe638d9222141cf279",
+  "review_date": "2026-09-20",
+  "review_timestamp": "2026-09-20T15:35:31-04:00",
+  "scope_note": "Direct npm dependencies for the extraction scopes plus shared root tooling; all declared Go requirements in the two modules; workflow/image declarations include adjacent CI context. npm lock entries cover the whole source monorepo, not just extraction scopes, and are recorded rather than independently evaluated.",
+  "npm_direct": [
+    {
+      "name": "@vitest/coverage-v8",
+      "version": "5.0.1",
+      "kind": "devDependencies",
+      "manifest": "package.json",
+      "external": true
+    },
+    {
+      "name": "playwright",
+      "version": "1.63.0",
+      "kind": "devDependencies",
+      "manifest": "package.json",
+      "external": true
+    },
+    {
+      "name": "react",
+      "version": "19.2.8",
+      "kind": "devDependencies",
+      "manifest": "package.json",
+      "external": true
+    },
+    {
+      "name": "react-dom",
+      "version": "19.2.8",
+      "kind": "devDependencies",
+      "manifest": "package.json",
+      "external": true
+    },
+    {
+      "name": "@biomejs/biome",
+      "version": "2.5.13",
+      "kind": "devDependencies",
+      "manifest": "packages/sdk/package.json",
+      "external": true
+    },
+    {
+      "name": "@types/node",
+      "version": "26.5.1",
+      "kind": "devDependencies",
+      "manifest": "packages/sdk/package.json",
+      "external": true
+    },
+    {
+      "name": "@vitest/browser-playwright",
+      "version": "5.0.1",
+      "kind": "devDependencies",
+      "manifest": "packages/sdk/package.json",
+      "external": true
+    },
+    {
+      "name": "playwright",
+      "version": "1.63.0",
+      "kind": "devDependencies",
+      "manifest": "packages/sdk/package.json",
+      "external": true
+    },
+    {
+      "name": "typescript",
+      "version": "^7.0.2",
+      "kind": "devDependencies",
+      "manifest": "packages/sdk/package.json",
+      "external": true
+    },
+    {
+      "name": "vitest",
+      "version": "5.0.1",
+      "kind": "devDependencies",
+      "manifest": "packages/sdk/package.json",
+      "external": true
+    },
+    {
+      "name": "@the-drunken-coder/atlas-sdk",
+      "version": "0.1.0",
+      "kind": "dependencies",
+      "manifest": "packages/plugin-runtime/package.json",
+      "external": false
+    },
+    {
+      "name": "@biomejs/biome",
+      "version": "2.5.13",
+      "kind": "devDependencies",
+      "manifest": "packages/plugin-runtime/package.json",
+      "external": true
+    },
+    {
+      "name": "@types/node",
+      "version": "26.5.1",
+      "kind": "devDependencies",
+      "manifest": "packages/plugin-runtime/package.json",
+      "external": true
+    },
+    {
+      "name": "typescript",
+      "version": "^7.0.2",
+      "kind": "devDependencies",
+      "manifest": "packages/plugin-runtime/package.json",
+      "external": true
+    },
+    {
+      "name": "vitest",
+      "version": "5.0.1",
+      "kind": "devDependencies",
+      "manifest": "packages/plugin-runtime/package.json",
+      "external": true
+    },
+    {
+      "name": "ink",
+      "version": "7.1.1",
+      "kind": "dependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "react",
+      "version": "19.2.8",
+      "kind": "dependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "wrap-ansi",
+      "version": "10.0.1",
+      "kind": "dependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "@biomejs/biome",
+      "version": "2.5.13",
+      "kind": "devDependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "@types/node",
+      "version": "^26.5.1",
+      "kind": "devDependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "@types/react",
+      "version": "19.3.0",
+      "kind": "devDependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "typescript",
+      "version": "^7.0.2",
+      "kind": "devDependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "vitest",
+      "version": "^5.0.1",
+      "kind": "devDependencies",
+      "manifest": "surfaces/core-cli/package.json",
+      "external": true
+    },
+    {
+      "name": "@the-drunken-coder/atlas-plugin-runtime",
+      "version": "0.1.0",
+      "kind": "dependencies",
+      "manifest": "plugins/reference/package.json",
+      "external": false
+    },
+    {
+      "name": "@types/node",
+      "version": "26.5.1",
+      "kind": "devDependencies",
+      "manifest": "plugins/reference/package.json",
+      "external": true
+    },
+    {
+      "name": "typescript",
+      "version": "^7.0.2",
+      "kind": "devDependencies",
+      "manifest": "plugins/reference/package.json",
+      "external": true
+    },
+    {
+      "name": "vitest",
+      "version": "^5.0.1",
+      "kind": "devDependencies",
+      "manifest": "plugins/reference/package.json",
+      "external": true
+    },
+    {
+      "name": "@the-drunken-coder/atlas-plugin-runtime",
+      "version": "0.1.0",
+      "kind": "dependencies",
+      "manifest": "plugins/building_scan/package.json",
+      "external": false
+    },
+    {
+      "name": "@the-drunken-coder/atlas-sdk",
+      "version": "0.1.0",
+      "kind": "dependencies",
+      "manifest": "plugins/building_scan/package.json",
+      "external": false
+    },
+    {
+      "name": "@biomejs/biome",
+      "version": "2.5.13",
+      "kind": "devDependencies",
+      "manifest": "plugins/building_scan/package.json",
+      "external": true
+    },
+    {
+      "name": "@types/node",
+      "version": "26.5.1",
+      "kind": "devDependencies",
+      "manifest": "plugins/building_scan/package.json",
+      "external": true
+    },
+    {
+      "name": "typescript",
+      "version": "^7.0.2",
+      "kind": "devDependencies",
+      "manifest": "plugins/building_scan/package.json",
+      "external": true
+    },
+    {
+      "name": "vitest",
+      "version": "5.0.1",
+      "kind": "devDependencies",
+      "manifest": "plugins/building_scan/package.json",
+      "external": true
+    }
+  ],
+  "go_requirements": [
+    {
+      "name": "github.com/coder/websocket",
+      "version": "v1.8.15",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 8,
+      "external": true
+    },
+    {
+      "name": "github.com/go-chi/chi/v5",
+      "version": "v5.3.2",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 9,
+      "external": true
+    },
+    {
+      "name": "github.com/go-chi/cors",
+      "version": "v1.2.2",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 10,
+      "external": true
+    },
+    {
+      "name": "github.com/google/uuid",
+      "version": "v1.6.0",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 11,
+      "external": true
+    },
+    {
+      "name": "github.com/jackc/pgx/v5",
+      "version": "v5.11.0",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 12,
+      "external": true
+    },
+    {
+      "name": "github.com/minio/minio-go/v7",
+      "version": "v7.3.0",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 13,
+      "external": true
+    },
+    {
+      "name": "github.com/rs/zerolog",
+      "version": "v1.35.1",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 14,
+      "external": true
+    },
+    {
+      "name": "github.com/the-drunken-coder/atlas/packages/protocol",
+      "version": "v0.0.0",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 15,
+      "external": false
+    },
+    {
+      "name": "golang.org/x/crypto",
+      "version": "v0.57.0",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 16,
+      "external": true
+    },
+    {
+      "name": "golang.org/x/net",
+      "version": "v0.59.0",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 17,
+      "external": true
+    },
+    {
+      "name": "golang.org/x/text",
+      "version": "v0.42.0",
+      "indirect": false,
+      "manifest": "services/core/go.mod",
+      "line": 18,
+      "external": true
+    },
+    {
+      "name": "github.com/cespare/xxhash/v2",
+      "version": "v2.3.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 24,
+      "external": true
+    },
+    {
+      "name": "github.com/dustin/go-humanize",
+      "version": "v1.0.1",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 25,
+      "external": true
+    },
+    {
+      "name": "github.com/jackc/pgpassfile",
+      "version": "v1.0.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 26,
+      "external": true
+    },
+    {
+      "name": "github.com/jackc/pgservicefile",
+      "version": "v0.0.0-20240606120523-5a60cdf6a761",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 27,
+      "external": true
+    },
+    {
+      "name": "github.com/jackc/puddle/v2",
+      "version": "v2.2.2",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 28,
+      "external": true
+    },
+    {
+      "name": "github.com/klauspost/compress",
+      "version": "v1.19.2",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 29,
+      "external": true
+    },
+    {
+      "name": "github.com/klauspost/cpuid/v2",
+      "version": "v2.4.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 30,
+      "external": true
+    },
+    {
+      "name": "github.com/klauspost/crc32",
+      "version": "v1.3.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 31,
+      "external": true
+    },
+    {
+      "name": "github.com/mattn/go-colorable",
+      "version": "v0.1.14",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 32,
+      "external": true
+    },
+    {
+      "name": "github.com/mattn/go-isatty",
+      "version": "v0.0.20",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 33,
+      "external": true
+    },
+    {
+      "name": "github.com/minio/crc64nvme",
+      "version": "v1.1.1",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 34,
+      "external": true
+    },
+    {
+      "name": "github.com/minio/md5-simd",
+      "version": "v1.1.2",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 35,
+      "external": true
+    },
+    {
+      "name": "github.com/philhofer/fwd",
+      "version": "v1.2.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 36,
+      "external": true
+    },
+    {
+      "name": "github.com/rs/xid",
+      "version": "v1.6.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 37,
+      "external": true
+    },
+    {
+      "name": "github.com/santhosh-tekuri/jsonschema/v6",
+      "version": "v6.0.3",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 38,
+      "external": true
+    },
+    {
+      "name": "github.com/tinylib/msgp",
+      "version": "v1.6.4",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 39,
+      "external": true
+    },
+    {
+      "name": "github.com/zeebo/xxh3",
+      "version": "v1.1.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 40,
+      "external": true
+    },
+    {
+      "name": "go.yaml.in/yaml/v3",
+      "version": "v3.0.5",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 41,
+      "external": true
+    },
+    {
+      "name": "golang.org/x/sync",
+      "version": "v0.23.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 42,
+      "external": true
+    },
+    {
+      "name": "golang.org/x/sys",
+      "version": "v0.48.0",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 43,
+      "external": true
+    },
+    {
+      "name": "gopkg.in/ini.v1",
+      "version": "v1.67.3",
+      "indirect": true,
+      "manifest": "services/core/go.mod",
+      "line": 44,
+      "external": true
+    },
+    {
+      "name": "github.com/santhosh-tekuri/jsonschema/v6",
+      "version": "v6.0.3",
+      "indirect": false,
+      "manifest": "packages/protocol/go.mod",
+      "line": 7,
+      "external": true
+    },
+    {
+      "name": "golang.org/x/text",
+      "version": "v0.39.0",
+      "indirect": true,
+      "manifest": "packages/protocol/go.mod",
+      "line": 9,
+      "external": true
+    }
+  ],
+  "workflow_and_image_references": [
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/acceptance-cli-platform.yml",
+      "line": 37
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/acceptance-cli-platform.yml",
+      "line": 42
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/acceptance-cli-platform.yml",
+      "line": 88
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/browser-acceptance.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/browser-acceptance.yml",
+      "line": 35
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/browser-acceptance.yml",
+      "line": 54
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/browser-commands.yml",
+      "line": 27
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/browser-commands.yml",
+      "line": 33
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/browser-commands.yml",
+      "line": 55
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/browser-commands.yml",
+      "line": 75
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/browser-commands.yml",
+      "line": 81
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/browser-commands.yml",
+      "line": 103
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/browser-geofeatures.yml",
+      "line": 36
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/browser-geofeatures.yml",
+      "line": 42
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/browser-geofeatures.yml",
+      "line": 61
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/browser-map-windows.yml",
+      "line": 26
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/browser-map-windows.yml",
+      "line": 32
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/browser-map-windows.yml",
+      "line": 53
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/browser-map-windows.yml",
+      "line": 76
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/browser-map-windows.yml",
+      "line": 82
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/browser-map-windows.yml",
+      "line": 103
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/building-scan-acceptance.yml",
+      "line": 28
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/building-scan-acceptance.yml",
+      "line": 34
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/building-scan-acceptance.yml",
+      "line": 48
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 33
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 38
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 44
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 73
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 78
+    },
+    {
+      "kind": "uses",
+      "reference": "golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9",
+      "path": ".github/workflows/ci.yml",
+      "line": 106
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 125
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 130
+    },
+    {
+      "kind": "uses",
+      "reference": "golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9",
+      "path": ".github/workflows/ci.yml",
+      "line": 150
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 178
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 184
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 253
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 258
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 417
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 429
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 434
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 454
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 459
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 473
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 479
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 511
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 517
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 549
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 554
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 560
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/ci.yml",
+      "line": 689
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 694
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 700
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 708
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0",
+      "path": ".github/workflows/ci.yml",
+      "line": 716
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/codeql.yml",
+      "line": 44
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/codeql.yml",
+      "line": 50
+    },
+    {
+      "kind": "uses",
+      "reference": "github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0",
+      "path": ".github/workflows/codeql.yml",
+      "line": 58
+    },
+    {
+      "kind": "uses",
+      "reference": "github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0",
+      "path": ".github/workflows/codeql.yml",
+      "line": 71
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/core-live-transactions.yml",
+      "line": 36
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/core-live-transactions.yml",
+      "line": 41
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/core-live-transactions.yml",
+      "line": 51
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/core-live-transactions.yml",
+      "line": 65
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/core-live-transactions.yml",
+      "line": 70
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/core-live-transactions.yml",
+      "line": 80
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/core-migration-restore.yml",
+      "line": 36
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/core-migration-restore.yml",
+      "line": 42
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/core-migration-restore.yml",
+      "line": 51
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/core-migration-restore.yml",
+      "line": 65
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/core-migration-restore.yml",
+      "line": 71
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/core-migration-restore.yml",
+      "line": 80
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/core-storage-recovery.yml",
+      "line": 36
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/core-storage-recovery.yml",
+      "line": 41
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/core-storage-recovery.yml",
+      "line": 51
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/core-storage-recovery.yml",
+      "line": 65
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/core-storage-recovery.yml",
+      "line": 70
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/core-storage-recovery.yml",
+      "line": 80
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/integration.yml",
+      "line": 43
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/integration.yml",
+      "line": 48
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/integration.yml",
+      "line": 85
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/meshtastic-link-acceptance.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/meshtastic-link-acceptance.yml",
+      "line": 35
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/meshtastic-link-acceptance.yml",
+      "line": 54
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/nightly.yml",
+      "line": 30
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/nightly.yml",
+      "line": 35
+    },
+    {
+      "kind": "uses",
+      "reference": "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0",
+      "path": ".github/workflows/nightly.yml",
+      "line": 48
+    },
+    {
+      "kind": "uses",
+      "reference": "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0",
+      "path": ".github/workflows/nightly.yml",
+      "line": 59
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/nightly.yml",
+      "line": 74
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/nightly.yml",
+      "line": 79
+    },
+    {
+      "kind": "uses",
+      "reference": "zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4",
+      "path": ".github/workflows/nightly.yml",
+      "line": 91
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/nightly.yml",
+      "line": 105
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0",
+      "path": ".github/workflows/nightly.yml",
+      "line": 110
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0",
+      "path": ".github/workflows/prune-old-runs.yml",
+      "line": 23
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/publish-plugin-catalog.yml",
+      "line": 26
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/publish-plugin-catalog.yml",
+      "line": 31
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/publish-plugin-catalog.yml",
+      "line": 44
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0",
+      "path": ".github/workflows/publish-plugin-catalog.yml",
+      "line": 71
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1",
+      "path": ".github/workflows/publish-plugin-catalog.yml",
+      "line": 76
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/reference-plugin-acceptance.yml",
+      "line": 23
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/reference-plugin-acceptance.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/reference-plugin-acceptance.yml",
+      "line": 43
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 48
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 54
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 173
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 190
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 196
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 293
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 314
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 319
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 322
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 325
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 333
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 369
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 386
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 392
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 436
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 464
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 469
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 475
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 481
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 502
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 539
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 544
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 550
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 566
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 586
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 591
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 602
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 608
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 614
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 620
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 684
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 704
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 711
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 762
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 768
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 783
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 790
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 831
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 834
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 862
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 867
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0",
+      "path": ".github/workflows/release-atlas-core.yml",
+      "line": 886
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 38
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 44
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 90
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 96
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 125
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 128
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 162
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 167
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 233
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 256
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 262
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 268
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 288
+    },
+    {
+      "kind": "uses",
+      "reference": "docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 291
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 312
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 421
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 454
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1",
+      "path": ".github/workflows/release-atlas-plugin.yml",
+      "line": 459
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 40
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 46
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 90
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 98
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 116
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 122
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 129
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 154
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0",
+      "path": ".github/workflows/request-atlas-core-release.yml",
+      "line": 178
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/revoke-plugin-catalog.yml",
+      "line": 37
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/revoke-plugin-catalog.yml",
+      "line": 42
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/revoke-plugin-catalog.yml",
+      "line": 55
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0",
+      "path": ".github/workflows/revoke-plugin-catalog.yml",
+      "line": 90
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1",
+      "path": ".github/workflows/revoke-plugin-catalog.yml",
+      "line": 95
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/sdk-acceptance.yml",
+      "line": 23
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/sdk-acceptance.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/sdk-acceptance.yml",
+      "line": 46
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/sdk-auth-conflicts.yml",
+      "line": 23
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/sdk-auth-conflicts.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/sdk-auth-conflicts.yml",
+      "line": 43
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/sdk-objects.yml",
+      "line": 23
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/sdk-objects.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/sdk-objects.yml",
+      "line": 43
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/sdk-recovery.yml",
+      "line": 28
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/sdk-recovery.yml",
+      "line": 34
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/sdk-recovery.yml",
+      "line": 51
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/sdk-tasks.yml",
+      "line": 23
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/sdk-tasks.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/sdk-tasks.yml",
+      "line": 43
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/simulation-acceptance.yml",
+      "line": 23
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/simulation-acceptance.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/simulation-acceptance.yml",
+      "line": 43
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/simulation-browser-acceptance.yml",
+      "line": 29
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/simulation-browser-acceptance.yml",
+      "line": 35
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/simulation-browser-acceptance.yml",
+      "line": 57
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/simulation-scenarios-acceptance.yml",
+      "line": 33
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/simulation-scenarios-acceptance.yml",
+      "line": 39
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/simulation-scenarios-acceptance.yml",
+      "line": 53
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+      "path": ".github/workflows/simulation-scenarios-acceptance.yml",
+      "line": 73
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+      "path": ".github/workflows/simulation-scenarios-acceptance.yml",
+      "line": 79
+    },
+    {
+      "kind": "uses",
+      "reference": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "path": ".github/workflows/simulation-scenarios-acceptance.yml",
+      "line": 95
+    },
+    {
+      "kind": "base-image",
+      "reference": "node:24-alpine AS builder",
+      "path": "plugins/building_scan/Dockerfile",
+      "line": 1
+    },
+    {
+      "kind": "base-image",
+      "reference": "node:24-alpine AS plugin",
+      "path": "plugins/building_scan/Dockerfile",
+      "line": 10
+    },
+    {
+      "kind": "image",
+      "reference": "\"@atlas/plugin-image@\"",
+      "path": "plugins/building_scan/compose.yml",
+      "line": 15
+    },
+    {
+      "kind": "base-image",
+      "reference": "node:24-alpine AS builder",
+      "path": "plugins/reference/Dockerfile",
+      "line": 1
+    },
+    {
+      "kind": "base-image",
+      "reference": "node:24-alpine AS plugin",
+      "path": "plugins/reference/Dockerfile",
+      "line": 10
+    },
+    {
+      "kind": "base-image",
+      "reference": "node:24-alpine AS source",
+      "path": "plugins/reference/Dockerfile",
+      "line": 22
+    },
+    {
+      "kind": "base-image",
+      "reference": "--platform=$BUILDPLATFORM golang:1.27-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS builder",
+      "path": "services/core/docker/Dockerfile",
+      "line": 6
+    },
+    {
+      "kind": "base-image",
+      "reference": "golang:1.27-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS development",
+      "path": "services/core/docker/Dockerfile",
+      "line": 36
+    },
+    {
+      "kind": "base-image",
+      "reference": "development AS source-gateway-development",
+      "path": "services/core/docker/Dockerfile",
+      "line": 75
+    },
+    {
+      "kind": "base-image",
+      "reference": "development AS acceptance",
+      "path": "services/core/docker/Dockerfile",
+      "line": 83
+    },
+    {
+      "kind": "base-image",
+      "reference": "alpine:3.24@sha256:e7c4abb69531cb09e2a2bbb56fad3367ab694865c49df898c1c683185cc4376c AS production",
+      "path": "services/core/docker/Dockerfile",
+      "line": 92
+    },
+    {
+      "kind": "base-image",
+      "reference": "alpine:3.24@sha256:e7c4abb69531cb09e2a2bbb56fad3367ab694865c49df898c1c683185cc4376c AS source-gateway-production",
+      "path": "services/core/docker/Dockerfile",
+      "line": 122
+    },
+    {
+      "kind": "image",
+      "reference": "postgres:15@sha256:1b92e7a80c021647bf70f5d3eb66066a998e4f5cf43c07bb9dc9f729782cf88e",
+      "path": "services/core/docker/docker-compose.production-db.yml",
+      "line": 8
+    },
+    {
+      "kind": "image",
+      "reference": "postgres:15@sha256:1b92e7a80c021647bf70f5d3eb66066a998e4f5cf43c07bb9dc9f729782cf88e",
+      "path": "services/core/docker/docker-compose.production.yml",
+      "line": 75
+    },
+    {
+      "kind": "image",
+      "reference": "quay.io/minio/minio:RELEASE.2024-01-31T20-20-33Z@sha256:4092433a77e510826874b36f369696df43407a763d7f901a61d74e83e6fd95bc",
+      "path": "services/core/docker/docker-compose.production.yml",
+      "line": 97
+    },
+    {
+      "kind": "image",
+      "reference": "quay.io/minio/mc:RELEASE.2024-01-31T08-59-40Z@sha256:c084c9a67c7a9ed5f37cc7f2a905010861aaa882bec76da10352305c9709b6d2",
+      "path": "services/core/docker/docker-compose.production.yml",
+      "line": 119
+    },
+    {
+      "kind": "image",
+      "reference": "cloudflare/cloudflared:2026.5.2@sha256:12ff5c6992a9863db4da270746af7c244bcaee49353039af8104268a18d6c4f0",
+      "path": "services/core/docker/docker-compose.tunnel.yml",
+      "line": 15
+    },
+    {
+      "kind": "image",
+      "reference": "postgres:15@sha256:1b92e7a80c021647bf70f5d3eb66066a998e4f5cf43c07bb9dc9f729782cf88e",
+      "path": "services/core/docker/docker-compose.yml",
+      "line": 76
+    },
+    {
+      "kind": "image",
+      "reference": "quay.io/minio/minio:RELEASE.2024-01-31T20-20-33Z@sha256:4092433a77e510826874b36f369696df43407a763d7f901a61d74e83e6fd95bc",
+      "path": "services/core/docker/docker-compose.yml",
+      "line": 99
+    },
+    {
+      "kind": "image",
+      "reference": "quay.io/minio/mc:RELEASE.2024-01-31T08-59-40Z@sha256:c084c9a67c7a9ed5f37cc7f2a905010861aaa882bec76da10352305c9709b6d2",
+      "path": "services/core/docker/docker-compose.yml",
+      "line": 122
+    },
+    {
+      "kind": "image",
+      "reference": "${ATLAS_CORE_IMAGE:?ATLAS_CORE_IMAGE must be set by the atlas-core CLI}",
+      "path": "surfaces/core-cli/assets/docker-compose.yml",
+      "line": 5
+    },
+    {
+      "kind": "image",
+      "reference": "${ATLAS_CORE_IMAGE:?ATLAS_CORE_IMAGE must be set by the atlas-core CLI}",
+      "path": "surfaces/core-cli/assets/docker-compose.yml",
+      "line": 52
+    },
+    {
+      "kind": "image",
+      "reference": "postgres:15@sha256:1b92e7a80c021647bf70f5d3eb66066a998e4f5cf43c07bb9dc9f729782cf88e",
+      "path": "surfaces/core-cli/assets/docker-compose.yml",
+      "line": 72
+    },
+    {
+      "kind": "image",
+      "reference": "quay.io/minio/minio:RELEASE.2024-01-31T20-20-33Z@sha256:4092433a77e510826874b36f369696df43407a763d7f901a61d74e83e6fd95bc",
+      "path": "surfaces/core-cli/assets/docker-compose.yml",
+      "line": 96
+    },
+    {
+      "kind": "image",
+      "reference": "quay.io/minio/mc:RELEASE.2024-01-31T08-59-40Z@sha256:c084c9a67c7a9ed5f37cc7f2a905010861aaa882bec76da10352305c9709b6d2",
+      "path": "surfaces/core-cli/assets/docker-compose.yml",
+      "line": 120
+    }
+  ],
+  "source_size": [
+    {
+      "scope": "services/core",
+      "files": {
+        "test": 79,
+        "other_source": 91
+      },
+      "lines": {
+        "test": 24553,
+        "other_source": 17755
+      }
+    },
+    {
+      "scope": "packages/protocol",
+      "files": {
+        "other_source": 22,
+        "test": 8,
+        "generated": 7
+      },
+      "lines": {
+        "other_source": 4452,
+        "test": 3276,
+        "generated": 2830
+      }
+    },
+    {
+      "scope": "packages/sdk",
+      "files": {
+        "other_source": 28,
+        "test": 34
+      },
+      "lines": {
+        "other_source": 4996,
+        "test": 11391
+      }
+    },
+    {
+      "scope": "packages/plugin-runtime",
+      "files": {
+        "test": 2,
+        "other_source": 1
+      },
+      "lines": {
+        "test": 1248,
+        "other_source": 677
+      }
+    },
+    {
+      "scope": "surfaces/core-cli",
+      "files": {
+        "other_source": 25,
+        "test": 22
+      },
+      "lines": {
+        "other_source": 19742,
+        "test": 18627
+      }
+    },
+    {
+      "scope": "plugins/reference",
+      "files": {
+        "other_source": 2,
+        "test": 1
+      },
+      "lines": {
+        "other_source": 94,
+        "test": 14
+      }
+    },
+    {
+      "scope": "plugins/building_scan",
+      "files": {
+        "test": 1,
+        "other_source": 2
+      },
+      "lines": {
+        "test": 281,
+        "other_source": 428
+      }
+    }
+  ],
+  "whole_monorepo_npm_lock_entries": [
+    {
+      "path": "node_modules/@adobe/css-tools",
+      "version": "4.5.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@alcalzone/ansi-tokenize",
+      "version": "0.3.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@alcalzone/ansi-tokenize/node_modules/ansi-styles",
+      "version": "6.2.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@asamuzakjp/css-color",
+      "version": "6.0.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@asamuzakjp/dom-selector",
+      "version": "8.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@atlas/atlas-core-release",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@babel/code-frame",
+      "version": "7.29.7",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@babel/helper-string-parser",
+      "version": "7.29.7",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@babel/parser",
+      "version": "7.29.7",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@babel/runtime",
+      "version": "7.29.7",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@babel/types",
+      "version": "7.29.7",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@bcoe/v8-coverage",
+      "version": "1.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/biome",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-darwin-arm64",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-darwin-x64",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-linux-arm64",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-linux-arm64-musl",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-linux-x64",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-linux-x64-musl",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-win32-arm64",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@biomejs/cli-win32-x64",
+      "version": "2.5.13",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blazediff/core",
+      "version": "1.10.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blueprintjs/colors",
+      "version": "5.1.16",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blueprintjs/colors/node_modules/tslib",
+      "version": "2.6.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blueprintjs/core",
+      "version": "6.18.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blueprintjs/core/node_modules/react-popper",
+      "version": "2.3.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blueprintjs/core/node_modules/tslib",
+      "version": "2.6.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blueprintjs/icons",
+      "version": "6.14.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@blueprintjs/icons/node_modules/tslib",
+      "version": "2.6.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@bramus/specificity",
+      "version": "2.4.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@bufbuild/protobuf",
+      "version": "2.15.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cloudflare/kv-asset-handler",
+      "version": "0.5.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cloudflare/unenv-preset",
+      "version": "2.16.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cloudflare/workerd-darwin-64",
+      "version": "1.20260911.1",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cloudflare/workerd-darwin-arm64",
+      "version": "1.20260911.1",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cloudflare/workerd-linux-64",
+      "version": "1.20260911.1",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cloudflare/workerd-linux-arm64",
+      "version": "1.20260911.1",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cloudflare/workerd-windows-64",
+      "version": "1.20260911.1",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cspotcode/source-map-support",
+      "version": "0.8.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@cspotcode/source-map-support/node_modules/@jridgewell/trace-mapping",
+      "version": "0.3.9",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@csstools/color-helpers",
+      "version": "6.1.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@csstools/css-calc",
+      "version": "3.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@csstools/css-color-parser",
+      "version": "4.1.10",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@csstools/css-parser-algorithms",
+      "version": "4.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@csstools/css-syntax-patches-for-csstree",
+      "version": "1.1.8",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@csstools/css-tokenizer",
+      "version": "4.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@emnapi/runtime",
+      "version": "1.11.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/aix-ppc64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/android-arm",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/android-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/android-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/darwin-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/darwin-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/freebsd-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/freebsd-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-arm",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-ia32",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-loong64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-mips64el",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-ppc64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-riscv64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-s390x",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/linux-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/netbsd-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/netbsd-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/openbsd-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/openbsd-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/openharmony-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/sunos-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/win32-arm64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/win32-ia32",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@esbuild/win32-x64",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@exodus/bytes",
+      "version": "1.15.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@floating-ui/core",
+      "version": "1.8.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@floating-ui/dom",
+      "version": "1.8.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@floating-ui/react",
+      "version": "0.27.20",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@floating-ui/react-dom",
+      "version": "2.1.9",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@floating-ui/utils",
+      "version": "0.2.12",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/colour",
+      "version": "1.1.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-darwin-arm64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-darwin-x64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-freebsd-wasm32",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-darwin-arm64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-darwin-x64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-arm",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-arm64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-ppc64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-riscv64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-s390x",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linux-x64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linuxmusl-arm64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-libvips-linuxmusl-x64",
+      "version": "1.3.3",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-arm",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-arm64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-ppc64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-riscv64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-s390x",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linux-x64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linuxmusl-arm64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-linuxmusl-x64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-wasm32",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-webcontainers-wasm32",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-win32-arm64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-win32-ia32",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@img/sharp-win32-x64",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@mapbox/jsonlint-lines-primitives",
+      "version": "2.0.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@mapbox/point-geometry",
+      "version": "1.1.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@mapbox/tiny-sdf",
+      "version": "2.2.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@mapbox/unitbezier",
+      "version": "1.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@mapbox/vector-tile",
+      "version": "3.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@maplibre/geojson-vt",
+      "version": "6.1.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@maplibre/maplibre-gl-style-spec",
+      "version": "26.4.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@maplibre/mlt",
+      "version": "1.3.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@maplibre/vt-pbf",
+      "version": "4.3.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@meshtastic/core",
+      "version": "2.6.7",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@meshtastic/protobufs",
+      "version": "2.8.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@meshtastic/protobufs-firmware",
+      "version": "2.8.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@oxc-project/types",
+      "version": "0.149.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@polka/url",
+      "version": "1.0.0-next.29",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@popperjs/core",
+      "version": "2.11.8",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@poppinss/colors",
+      "version": "4.1.6",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@poppinss/dumper",
+      "version": "0.6.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@poppinss/exception",
+      "version": "1.2.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-android-arm-eabi",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-android-arm64",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-darwin-arm64",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-darwin-x64",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-freebsd-x64",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-linux-arm-gnueabihf",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-linux-arm64-gnu",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-linux-arm64-musl",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-linux-ppc64-gnu",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-linux-s390x-gnu",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-linux-x64-gnu",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-linux-x64-musl",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-openharmony-arm64",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-win32-arm64-msvc",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/binding-win32-x64-msvc",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@rolldown/pluginutils",
+      "version": "1.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/binding-mock",
+      "version": "10.2.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/bindings-cpp",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/bindings-cpp/node_modules/@serialport/parser-delimiter",
+      "version": "12.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/bindings-cpp/node_modules/@serialport/parser-readline",
+      "version": "12.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/bindings-cpp/node_modules/debug",
+      "version": "4.4.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/bindings-interface",
+      "version": "1.2.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-byte-length",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-cctalk",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-delimiter",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-inter-byte-timeout",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-packet-length",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-readline",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-ready",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-regex",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-slip-encoder",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/parser-spacepacket",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/stream",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@serialport/stream/node_modules/debug",
+      "version": "4.4.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@sindresorhus/is",
+      "version": "7.2.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@speed-highlight/core",
+      "version": "1.2.24",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@testing-library/dom",
+      "version": "10.4.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@testing-library/jest-dom",
+      "version": "7.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@testing-library/jest-dom/node_modules/dom-accessibility-api",
+      "version": "0.6.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@testing-library/react",
+      "version": "16.3.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@testing-library/user-event",
+      "version": "14.6.7",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@the-drunken-coder/atlas-building-scan-plugin",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@the-drunken-coder/atlas-command-interface",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@the-drunken-coder/atlas-meshtastic-link",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@the-drunken-coder/atlas-plugin-runtime",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@the-drunken-coder/atlas-reference-plugin",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@the-drunken-coder/atlas-sdk",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@the-drunken-coder/atlas-simulations",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/@types/aria-query",
+      "version": "5.0.4",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/chai",
+      "version": "5.2.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/deep-eql",
+      "version": "4.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/estree",
+      "version": "1.0.9",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/geojson",
+      "version": "7946.0.16",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/node",
+      "version": "26.5.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/node/node_modules/undici-types",
+      "version": "8.9.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/react",
+      "version": "19.3.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@types/react-dom",
+      "version": "19.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-aix-ppc64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-darwin-arm64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-darwin-x64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-freebsd-arm64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-freebsd-x64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-arm",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-arm64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-loong64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-mips64el",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-ppc64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-riscv64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-s390x",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-linux-x64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-netbsd-arm64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-netbsd-x64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-openbsd-arm64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-openbsd-x64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-sunos-x64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-win32-arm64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@typescript/typescript-win32-x64",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitejs/plugin-react",
+      "version": "6.1.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/browser",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/browser-playwright",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/browser/node_modules/ws",
+      "version": "8.21.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/coverage-v8",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/istanbul-lib-coverage",
+      "version": "1.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/istanbul-lib-report",
+      "version": "1.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/mocker",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/pretty-format",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/spy",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/ui",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/@vitest/utils",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ansi-escapes",
+      "version": "7.3.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ansi-regex",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ansi-styles",
+      "version": "5.2.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/aria-query",
+      "version": "5.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/assertion-error",
+      "version": "2.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ast-v8-to-istanbul",
+      "version": "1.0.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ast-v8-to-istanbul/node_modules/js-tokens",
+      "version": "10.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/atlas-core",
+      "version": null,
+      "dev": false,
+      "optional": false,
+      "link": true
+    },
+    {
+      "path": "node_modules/auto-bind",
+      "version": "5.0.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/bidi-js",
+      "version": "1.1.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/blake3-wasm",
+      "version": "2.1.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/camel-case",
+      "version": "4.1.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/capital-case",
+      "version": "1.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/chai",
+      "version": "6.2.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/chalk",
+      "version": "5.6.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/change-case",
+      "version": "4.1.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/classnames",
+      "version": "2.5.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/cli-boxes",
+      "version": "4.0.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/cli-cursor",
+      "version": "4.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/cli-truncate",
+      "version": "6.1.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/code-excerpt",
+      "version": "4.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/constant-case",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/convert-source-map",
+      "version": "2.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/convert-to-spaces",
+      "version": "2.0.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/cookie",
+      "version": "1.1.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/cookie-es",
+      "version": "3.1.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/crc",
+      "version": "4.3.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/css-tree",
+      "version": "3.2.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/css.escape",
+      "version": "1.5.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/csstype",
+      "version": "3.2.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/data-urls",
+      "version": "7.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/debug",
+      "version": "4.4.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/decimal.js",
+      "version": "10.6.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/dequal",
+      "version": "2.0.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/detect-libc",
+      "version": "2.1.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/dom-accessibility-api",
+      "version": "0.5.16",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/dom-helpers",
+      "version": "5.2.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/dot-case",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/earcut",
+      "version": "3.2.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/entities",
+      "version": "8.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/environment",
+      "version": "1.1.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/error-stack-parser-es",
+      "version": "1.0.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/es-module-lexer",
+      "version": "2.3.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/es-toolkit",
+      "version": "1.52.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/esbuild",
+      "version": "0.28.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/escape-string-regexp",
+      "version": "2.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/estree-walker",
+      "version": "3.0.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/expect-type",
+      "version": "1.4.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/false",
+      "version": "0.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/fdir",
+      "version": "6.5.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/fflate",
+      "version": "0.8.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/flatted",
+      "version": "3.4.4",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/fsevents",
+      "version": "2.3.3",
+      "dev": false,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/get-east-asian-width",
+      "version": "1.6.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/gl-matrix",
+      "version": "3.4.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/header-case",
+      "version": "2.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/html-encoding-sniffer",
+      "version": "6.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/indent-string",
+      "version": "4.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ink",
+      "version": "7.1.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ink/node_modules/ansi-styles",
+      "version": "6.2.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ink/node_modules/indent-string",
+      "version": "5.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/is-fullwidth-code-point",
+      "version": "5.1.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/is-in-ci",
+      "version": "2.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/is-potential-custom-element-name",
+      "version": "1.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/js-tokens",
+      "version": "4.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/jsdom",
+      "version": "30.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/jsdom/node_modules/undici",
+      "version": "8.10.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/jsdom/node_modules/whatwg-url",
+      "version": "17.1.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/json-stringify-pretty-compact",
+      "version": "4.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/kdbush",
+      "version": "4.1.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/kleur",
+      "version": "4.1.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-android-arm64",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-darwin-arm64",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-darwin-x64",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-freebsd-x64",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-linux-arm-gnueabihf",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-linux-arm64-gnu",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-linux-arm64-musl",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-linux-x64-gnu",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-linux-x64-musl",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-win32-arm64-msvc",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/lightningcss-win32-x64-msvc",
+      "version": "1.33.0",
+      "dev": true,
+      "optional": true,
+      "link": false
+    },
+    {
+      "path": "node_modules/loose-envify",
+      "version": "1.4.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/lower-case",
+      "version": "2.0.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/lru-cache",
+      "version": "11.5.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/lucide-react",
+      "version": "1.46.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/lz-string",
+      "version": "1.5.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/magic-string",
+      "version": "1.3.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/magicast",
+      "version": "0.5.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/mdn-data",
+      "version": "2.27.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/milsymbol",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/mimic-fn",
+      "version": "2.1.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/min-indent",
+      "version": "1.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/miniflare",
+      "version": "5.20260911.1-alpha",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/minimist",
+      "version": "1.2.8",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/mrmime",
+      "version": "2.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ms",
+      "version": "2.1.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/murmurhash-js",
+      "version": "1.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/nanoid",
+      "version": "3.3.19",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/no-case",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/node-addon-api",
+      "version": "8.3.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/node-gyp-build",
+      "version": "4.8.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/normalize.css",
+      "version": "8.0.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/object-assign",
+      "version": "4.1.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/obug",
+      "version": "2.2.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/onetime",
+      "version": "5.1.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/param-case",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/parse5",
+      "version": "8.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/pascal-case",
+      "version": "3.1.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/patch-console",
+      "version": "2.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/path-case",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/path-to-regexp",
+      "version": "6.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/pathe",
+      "version": "2.0.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/pbf",
+      "version": "5.1.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/picocolors",
+      "version": "1.1.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/picomatch",
+      "version": "4.0.7",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/playwright",
+      "version": "1.63.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/playwright-core",
+      "version": "1.63.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/pngjs",
+      "version": "7.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/postcss",
+      "version": "8.5.28",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/potpack",
+      "version": "2.1.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/pretty-format",
+      "version": "27.5.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/prop-types",
+      "version": "15.8.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/prop-types/node_modules/react-is",
+      "version": "16.13.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/protocol-buffers-schema",
+      "version": "3.6.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/punycode",
+      "version": "2.3.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/quickselect",
+      "version": "3.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/react",
+      "version": "19.2.8",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/react-dom",
+      "version": "19.2.8",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/react-fast-compare",
+      "version": "3.2.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/react-is",
+      "version": "17.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/react-reconciler",
+      "version": "0.33.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/react-router",
+      "version": "8.3.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/react-transition-group",
+      "version": "4.4.5",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/redent",
+      "version": "3.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/require-from-string",
+      "version": "2.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/resolve-protobuf-schema",
+      "version": "2.1.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/restore-cursor",
+      "version": "4.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/rolldown",
+      "version": "1.2.8",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/saxes",
+      "version": "6.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/scheduler",
+      "version": "0.27.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/semver",
+      "version": "7.8.5",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/sentence-case",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/serialport",
+      "version": "13.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/serialport/node_modules/debug",
+      "version": "4.4.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/sharp",
+      "version": "0.35.4",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/sidc-kit",
+      "version": "0.3.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/siginfo",
+      "version": "2.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/signal-exit",
+      "version": "3.0.7",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/sirv",
+      "version": "3.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/slice-ansi",
+      "version": "9.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/slice-ansi/node_modules/ansi-styles",
+      "version": "6.2.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/snake-case",
+      "version": "3.0.4",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/source-map-js",
+      "version": "1.2.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/stack-utils",
+      "version": "2.0.6",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/stackback",
+      "version": "0.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/std-env",
+      "version": "4.2.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/string-width",
+      "version": "8.2.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/strip-ansi",
+      "version": "7.2.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/strip-ansi/node_modules/ansi-regex",
+      "version": "6.3.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/strip-indent",
+      "version": "3.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/supports-color",
+      "version": "10.2.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/symbol-tree",
+      "version": "3.2.4",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tabbable",
+      "version": "6.5.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tagged-tag",
+      "version": "1.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/terminal-size",
+      "version": "4.0.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tinybench",
+      "version": "6.1.4",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tinyexec",
+      "version": "1.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tinyglobby",
+      "version": "0.2.17",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tinyqueue",
+      "version": "3.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tinyrainbow",
+      "version": "3.1.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tldts",
+      "version": "7.4.8",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tldts-core",
+      "version": "7.4.8",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/totalist",
+      "version": "3.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tough-cookie",
+      "version": "6.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tr46",
+      "version": "6.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/tslib",
+      "version": "2.8.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/type-fest",
+      "version": "5.8.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/typescript",
+      "version": "7.0.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/undici",
+      "version": "7.29.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/unenv",
+      "version": "2.0.0-rc.24",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/upper-case",
+      "version": "2.0.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/upper-case-first",
+      "version": "2.0.2",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/vite",
+      "version": "8.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/vitest",
+      "version": "5.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/w3c-xmlserializer",
+      "version": "5.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/warning",
+      "version": "4.0.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/webidl-conversions",
+      "version": "8.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/whatwg-mimetype",
+      "version": "5.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/whatwg-url",
+      "version": "16.0.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/why-is-node-running",
+      "version": "2.3.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/widest-line",
+      "version": "6.0.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/workerd",
+      "version": "1.20260911.1",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/wrangler",
+      "version": "4.131.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/wrap-ansi",
+      "version": "10.0.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/wrap-ansi/node_modules/ansi-styles",
+      "version": "6.2.3",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/ws",
+      "version": "8.21.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/xml-name-validator",
+      "version": "5.0.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/xmlchars",
+      "version": "2.2.0",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/yoga-layout",
+      "version": "3.2.1",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/youch",
+      "version": "4.1.0-beta.10",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "node_modules/youch-core",
+      "version": "0.3.3",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "packages/meshtastic-link/node_modules/tsx",
+      "version": "4.23.13",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "simulations/node_modules/tsx",
+      "version": "4.23.13",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "simulations/node_modules/vite",
+      "version": "8.2.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "surfaces/command-interface/node_modules/maplibre-gl",
+      "version": "6.8.0",
+      "dev": false,
+      "optional": false,
+      "link": false
+    },
+    {
+      "path": "surfaces/command-interface/node_modules/vite",
+      "version": "8.2.2",
+      "dev": true,
+      "optional": false,
+      "link": false
+    }
+  ]
+}
