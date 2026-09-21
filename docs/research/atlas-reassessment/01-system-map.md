@@ -1,6 +1,6 @@
 # Atlas Modernization system map
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -71,9 +71,9 @@ Evidence: [Task ownership and rules](https://github.com/the-Drunken-coder/Atlas-
 
 ### 4. Store and delete Object content
 
-An Object's metadata lives in PostgreSQL and its content lives outside the database. Upload intents, deletion fences, and cleanup retries exist because the two stores cannot share a database transaction. Backups must capture a consistent pair. Replacing MinIO with another S3 server leaves that coordination problem in place. Even local files require a crash and backup contract.
+An Object's metadata lives in PostgreSQL and its content lives outside the database. Upload intents, deletion fences, and cleanup retries exist because the two stores cannot share a database transaction. The source backup procedure captures a consistent pair; Atlas Core excludes backup and restore functionality. Replacing MinIO with another S3 server leaves that coordination problem in place. Even local files require consistent publication and honest handling of interrupted writes.
 
-This is the strongest reason to test the actual Object requirements early. Small bounded content may justify database storage. Large media may justify a separate content store despite the operational work. Decide from size, throughput, retention, and restore requirements rather than familiarity with a vendor.
+This is the strongest reason to test the actual Object requirements early. Small bounded content may justify database storage. Large media may justify a separate content store despite the operational work. Decide from size, throughput, retained-state startup and Reset requirements rather than familiarity with a vendor.
 
 Evidence: [Object upload coordination](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/internal/actions/object_upload.go#L195), [durable storage decision](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/design-decisions/2026-05-29-schema-evolution-without-migrations.md). Detailed alternatives belong in [storage](02-storage.md).
 

@@ -1,6 +1,6 @@
 # Deployment, CLI, build, test, and release reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Scope update: the user needs removable mission-specific extensions in separate repositories alongside permanent Core modules. See [temporary mission extensions](11-mission-extensions.md). Earlier proposals to absorb integrations apply to permanent capabilities; the old extension-management machinery remains open for simplification.
@@ -105,8 +105,8 @@ before carrying it forward.
 | Compose engine | Docker Engine, Docker CLI, Docker Compose >=2.17, Compose health checks and named volumes | **Keep for one server.** Compose expresses the API, source gateway, PostgreSQL, MinIO, and init container topology with health dependencies. The official [Compose services specification](https://docs.docker.com/reference/compose-file/services/) and [profiles](https://docs.docker.com/compose/how-tos/profiles/) describe the primitives used here. Kubernetes, Nomad, or Swarm would add an operator and control-plane requirement before field-device demand exists. |
 | Docker image build | BuildKit/buildx, QEMU for release multi-architecture builds, local `registry:2` for CI acceptance | **Keep in CI; do not require on an operator host.** Release needs native amd64/arm64 evidence and a multi-architecture manifest. QEMU is a release convenience, not a production runtime. The local registry is an isolated test fixture. |
 | Core images | GHCR repository, immutable digest references, OCI revision/version labels | **Keep and enforce.** The package Compose asset resolves an image from `ATLAS_CORE_IMAGE`; lifecycle code verifies image receipts and container identities. A floating tag should be an input to resolution only, never the final persisted identity. |
-| PostgreSQL | Pinned `postgres:15` image, loopback port, external production volume, `pgx` client, `psql`/`pg_dump`/`pg_restore` in tests and recovery tooling | **Keep.** PostgreSQL is a stateful system dependency. Pair its backup and restore with MinIO state. The [PostgreSQL backup guidance](https://www.postgresql.org/docs/current/backup.html) supports treating logical dumps and filesystem/object backup as separate concerns. |
-| MinIO | Pinned 2024-01-31 MinIO server and `mc` init images, `minio-go`, external production volume, bucket bootstrap | **Keep provisionally; test upgrade and backup semantics.** The `mc mirror` operation is a current-state synchronization tool and does not by itself preserve all version history or metadata. If object versioning, retention, or object-lock semantics become part of field recovery, add a focused restore experiment before relying on mirror as a backup. [MinIO `mc mirror`](https://min.io/docs/minio/linux/reference/minio-mc/mc-mirror.html) documents the operation. |
+| PostgreSQL | Pinned `postgres:15` image, loopback port, external production volume, `pgx` client, `psql`/`pg_dump`/`pg_restore` in tests and recovery tooling | **Evaluate as a storage candidate.** Test concurrency, retained-state startup and Reset. Exclude the source backup/restore tooling. |
+| MinIO | Pinned 2024-01-31 MinIO server and `mc` init images, `minio-go`, external production volume, bucket bootstrap | **Compare with local Object storage.** Test content integrity, retained-state startup and Reset. Backup and restore functionality is excluded. |
 | Optional ingress | Cloudflare Tunnel image `cloudflare/cloudflared:2026.5.2`, tunnel token, dedicated bridge in the legacy overlay | **Keep optional and outside Core lifecycle initially.** Cloudflare Tunnel is an outbound connector, so a host service can publish loopback Core without exposing the Docker socket or adding public ports. [Cloudflare Tunnel overview](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/) and [run parameters](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/run-parameters/) support this boundary. Choose either host-managed or Compose-managed tunnel ownership; the current two paths must not both be called supported production. |
 | Python operational scripts | Python 3 standard library scripts for `atlas.py`, Compose environment generation, live tests, coverage, and recovery selection | **Constrain as developer and CI tooling.** There is no Python runtime dependency in the published Core npm package. Keep the scripts while migration is underway, run `py_compile`, Ruff, and focused tests, and label `atlas.py` as legacy if `atlas-core` becomes the supported operator path. |
 | Python style tool | Ruff 0.15.22 in CI, `services/core/scripts/ruff.toml` | **Keep for the scripts that remain.** Do not add a second Python framework or package manager solely for these standard-library utilities. |
@@ -242,7 +242,7 @@ release guide states that publication is serialized and matching external state 
 [`RELEASING.md` lines 88-139](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-core/RELEASING.md#L88-L139)
 
 If Core absorbs first-party modules, the release manifest should become the one system identity:
-source SHA, Core image digest, npm tarball, module manifest, migrations, and recovery evidence.
+source SHA, selected artifact identities, module manifest and lifecycle validation evidence.
 The current independent Plugin catalog and image publication can then become an optional external
 integration, rather than a default dependency of every Core deployment. Do not remove signed
 catalog verification from a build that still installs untrusted external modules. First decide
@@ -265,7 +265,7 @@ Accepted successor requirements apply to any candidate deployment:
 - Installed local operation must not require internet access. Individual integrations retain their own external dependencies.
 - Core/SDK/Protocol release together at matching versions, with supported runtime compatibility defined separately.
 
-Named volumes and non-destructive storage mounts are compatible implementation choices, not requirements to keep PostgreSQL, MinIO, Compose, Go or Node. The source's paired backup/restore and deployment-journal machinery remain historical evidence. Ordinary restart retention alone does not select a backup system or automatic interrupted-work resumption. Updates to a new Core release perform Reset, so operational-data migrations are excluded.
+Named volumes and non-destructive storage mounts are compatible implementation choices, not requirements to keep PostgreSQL, MinIO, Compose, Go or Node. The source's paired backup/restore and deployment-journal machinery remain historical evidence. Backup and restore functionality is excluded. Ordinary restart retention does not imply automatic interrupted-work resumption. Updates to a new Core release perform Reset, so operational-data migrations are excluded.
 
 ## Design issues and decision gates
 
@@ -367,12 +367,12 @@ warmup, and a review of binary, SBOM, test, and image-label differences.
 **Observed limitation:** the server and `mc` image are pinned to an old release, while mirror-style
 backup preserves current objects rather than acting as a complete object-history backup.
 
-**Recommendation:** use the current storage recovery suite for an explicit MinIO upgrade and
-restore test. Define whether field recovery means current bytes, object versions, metadata,
-retention, and credentials. Do not call a paired backup complete until those terms are tested.
+**Recommendation:** if MinIO is selected, test content integrity and lifecycle behavior directly.
+The source backup workflow is excluded from Atlas Core.
 
-**Gate:** restore PostgreSQL and MinIO into a clean Compose project, replay the migration ledger,
-verify object metadata and Core reads, and prove the old project remains untouched.
+**Gate:** initialize empty storage, create usable Objects, and verify metadata and bytes survive
+same-release Stop/Start and Restart. Verify Reset and a Core release update clear operational
+state while preserving installation setup. Do not restore backups or replay operational migrations.
 
 ## Unknowns to resolve from live systems
 
@@ -403,7 +403,7 @@ Evaluate one documented installation path with a representative Core/SDK/Protoco
 
 The lifecycle acceptance gate creates operational records, Object content, activity history and diagnostic logs. Stop and Start, then Restart, and verify that they remain available. Reset and verify that they are cleared while installed Plugin selections, credentials, configuration, software and Plugin artifacts survive. Test retained-state startup and fresh initialization separately. No paired backup restoration is required by this gate.
 
-Published evidence should identify the tested source revision, artifact versions, configuration and lifecycle outcomes. Keep any backup/export trial or interrupted-execution resumption experiment explicitly separate from the accepted retention contract. The version-update gate must perform Reset, clearing operational data/logs while preserving setup and Plugin artifacts; operational-data migrations are excluded.
+Published evidence should identify the tested source revision, artifact versions, configuration and lifecycle outcomes. Backup and restore functionality is excluded. Interrupted-execution resumption needs its own contract. The version-update gate must perform Reset, clearing operational data/logs while preserving setup and Plugin artifacts; operational-data migrations are excluded.
 
 ### Official external references consulted
 

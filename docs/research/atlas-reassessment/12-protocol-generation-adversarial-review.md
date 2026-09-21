@@ -1,6 +1,6 @@
 # Adversarial review of Protocol-driven generation
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Research date: 20 September 2026.
@@ -10,7 +10,7 @@ Status: concept review, with its bounded direction now accepted in [ADR-0011](..
 
 More generation is likely to reduce Atlas maintenance when it removes repeated declarations of the same public contract. It does not establish that fewer generated-versus-handwritten lines means less technical debt. The maintenance target is fewer independent authored decisions per ordinary change, including schema conventions, generator code, templates, configuration, adapters and tests.
 
-Support the direction, then prove the extent. Generate shared types, structural validation, serialization and reference documentation. Evaluate generated SDK transport calls and Core API bindings against a thin handwritten alternative. Keep runtime storage, authorization enforcement, Task reconciliation, Plugin supervision and SDK synchronization behavior explicitly implemented. The subsequently clarified reset model eliminates cross-run durability and data-migration requirements, without changing the generator-maintenance tradeoff.
+Support the direction, then prove the extent. Generate shared types, structural validation, serialization and reference documentation. Evaluate generated SDK transport calls and Core API bindings against a thin handwritten alternative. Keep runtime storage, authorization enforcement, Task reconciliation, Plugin supervision and SDK synchronization behavior explicitly implemented. The current lifecycle requires retention across ordinary Stop/Start and Restart, with cleanup on Reset and updates to a new Core release. Backup/restore and operational-data migrations are excluded. These boundaries do not change the generator-maintenance tradeoff.
 
 The user's aim is feasible: changing a public field or operation should usually require one contract edit plus actual behavior changes, while regenerated declarations follow automatically. A changed operational rule still legitimately changes the Core implementation and its independent behavior tests. Generation cannot remove that work merely by relocating it into a template or schema extension.
 

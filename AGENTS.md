@@ -14,7 +14,7 @@ This repository uses a single-context domain-doc layout. See `docs/agents/domain
 
 ## Runtime data
 
-Start, Stop and Restart preserve operational data and logs. Reset clears Atlas-owned operational records, Object content, activity history, transfer state and diagnostic logs while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Read `docs/adr/0015-separate-start-stop-restart-and-reset.md` before changing lifecycle, storage, logs or client synchronization. Retaining records does not authorize automatic rerun of work or a backup/restore system. Updating Core to a new release performs Reset; ordinary same-release restarts preserve state. Do not add version-to-version operational-data migrations.
+Start, Stop and Restart preserve operational data and logs. Reset clears Atlas-owned operational records, Object content, activity history, transfer state and diagnostic logs while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Read `docs/adr/0015-separate-start-stop-restart-and-reset.md` before changing lifecycle, storage, logs or client synchronization. Retaining records does not authorize automatic rerun of work. Backup and restore functionality is excluded. Updating Core to a new release performs Reset; ordinary same-release restarts preserve state. Do not add version-to-version operational-data migrations.
 
 ## Architecture differences
 

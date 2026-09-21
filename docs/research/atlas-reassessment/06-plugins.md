@@ -1,6 +1,6 @@
 # Atlas Plugins reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -158,7 +158,7 @@ through a Task without becoming a Datastream. See [the Datastream boundary](http
 
 Plugin caches, temporary files, and source checkpoints are disposable. Durable
 intent and results use normal Atlas resources. A private volume or generic
-Plugin KV store would add ownership, backup, migration, retention, and rollback
+Plugin KV store would add ownership, retention, Reset, and consistency
 rules and remains deferred.
 
 ## The placement decision to make
@@ -369,17 +369,19 @@ invalid input, malformed geometry, source outage, caller cancellation, Plugin
 stop, and recovery. See [acceptance README](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/tests/acceptance/plugins/building-scan/README.md#L1-L18)
 and [scenario](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/tests/acceptance/plugins/building-scan/scenario.mjs#L23-L260).
 
-### Experiment 2: field-device Task ownership
+### Experiment 2: ingestion and Asset Task ownership
 
-Model the ADS-B monitoring scenario with a Core subsystem and with a Tool
-Asset-backed Plugin. Use the same field-device or simulated Asset, Task input,
-progress, cancellation, runtime stop, replacement, and crash cases.
+Compare an ADS-B observer implemented as a Core subsystem with a Plugin that
+manages ingestion or exposes a processing Operation. Use the same input data,
+published observations, planned stop, update and fault cases. Plugins remain
+non-taskable. If either variant needs work from a field Asset, it issues a Task
+using an existing Core Command through the SDK.
 
-Acceptance requires that both variants make Task outcome and operator recovery
-legible. If the Plugin variant adds no useful independent dependency, resource,
-or failure boundary, keep the observer in Core and retain only the Source
-Gateway connector. If the external process is required, measure the cost of the
-full-access key, process restart, stranded Tasks, and separate release.
+Acceptance requires a queryable processing outcome and useful fault reporting.
+Keep any Asset Task outcome separate from the ingestion or Operation outcome.
+Compare the cost of credentials, process lifecycle and independent releases
+before choosing where the observer belongs. A Plugin fault permits manual
+restart; failed processing requires explicit rerun.
 
 ### Experiment 3: trusted child process only if a process seam survives
 

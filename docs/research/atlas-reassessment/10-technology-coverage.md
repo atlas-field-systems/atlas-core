@@ -1,6 +1,6 @@
 # Technology coverage ledger
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Scope update: the user needs removable mission-specific extensions in separate repositories alongside permanent Core modules. See [temporary mission extensions](11-mission-extensions.md). Earlier proposals to absorb integrations apply to permanent capabilities; the old extension-management machinery remains open for simplification.
@@ -91,7 +91,7 @@ These are not separate architecture decisions unless Atlas imports their APIs di
 | Technology | Disposition to evaluate | Assessment |
 | --- | --- | --- |
 | Go runtime/toolchain, Node runtime, TypeScript | Compare Go and TypeScript server modules on one representative slice; keep TypeScript for browser consumers | [Runtime](03-core-runtime.md), [system options](08-system-options.md) |
-| PostgreSQL and pgx | Retain as baseline; test an embedded alternative only against server concurrency and restore needs | [Storage](02-storage.md) |
+| PostgreSQL and pgx | Retain as baseline; test an embedded alternative only against server concurrency, retained-state startup and Reset behavior | [Storage](02-storage.md) |
 | MinIO server, mc and S3 | Reopen the storage engine; distinguish a vendor swap from eliminating cross-store recovery | [Storage](02-storage.md) |
 | Docker, Compose, BuildKit/buildx and QEMU | Use only the deployment/platform support the first server needs | [Deployment](07-deployment-tooling.md) |
 | Alpine base image, CA certificates, curl/wget health checks | Keep required runtime support; compare health checks and image composition with the chosen package | [Deployment](07-deployment-tooling.md) |

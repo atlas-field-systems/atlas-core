@@ -32,7 +32,7 @@ An installed Atlas system works without internet access when operators and Asset
 
 Start, Stop and Restart retain Entity/Track state, Tasks, Object metadata and content, movement/activity history, Plugin Operation records, synchronization records, stored upload state and diagnostic logs. Reset clears those Atlas-owned records and logs. See [the lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md).
 
-Core normally remains running while Assets operate. Start reapplies retained installation setup; first use initializes empty storage. Reset starts fresh operational state while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Clients must not silently repopulate cleared state after Reset. The client and active-work contracts across whole-Core lifecycle changes remain to be designed. Updating Core to a new release performs Reset, including clearing operational data and Atlas-managed logs. Operational-data migrations are excluded. Backup/restore is not selected.
+Core normally remains running while Assets operate. Start reapplies retained installation setup; first use initializes empty storage. Reset starts fresh operational state while preserving installed Plugin selections, credentials, configuration, software and Plugin artifacts. Clients must not silently repopulate cleared state after Reset. The client and active-work contracts across whole-Core lifecycle changes remain to be designed. Updating Core to a new release performs Reset, including clearing operational data and Atlas-managed logs. Operational-data migrations are excluded. Backup and restore functionality is excluded.
 
 ## Tasks across a disconnection
 

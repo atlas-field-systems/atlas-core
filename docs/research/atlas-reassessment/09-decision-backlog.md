@@ -1,6 +1,6 @@
 # Decision and experiment backlog
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -82,7 +82,7 @@ The detailed notes link the exact source decisions. This is their order of produ
 3. Metadata and bytes always require PostgreSQL plus MinIO. Reopen because the first deployment is one server and Object requirements are not yet fixed.
 4. Exact Protocol revision equality includes the current authored representation. Compatible client versions are now accepted; define compatibility checks and supported upgrade overlap alongside generation ownership.
 5. Core ownership of Asset Commands is now accepted. Prove the first actual Asset tasking need; keep Plugin Operations and specialized processing out of the Command catalog.
-6. The source omits operator identity from Task creation and cancellation records. The successor requires activity history within each run, wiped on restart; design attribution without introducing cross-run durability.
+6. The source omits operator identity from Task creation and cancellation records. The successor requires actor-attributed activity history retained across Stop/Start and Restart, then cleared on Reset. Design attribution to follow that lifecycle.
 7. The deployment manager supports a broad set of recovery and independent-update states. Reopen the supported operator product before copying the manager.
 
 Small swaps such as zerolog to slog, npm to pnpm, or chi to the standard router come after these choices. They can remove dependencies, but they do not remove an unnecessary release system or replica contract.

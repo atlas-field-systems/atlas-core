@@ -1,6 +1,6 @@
 # A simpler Core system
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup/restore is not selected. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -37,11 +37,11 @@ Proposed ownership, to test against the first workflows:
 | Operational picture | Entity identity, current observations, optional movement history | Report observation, read/query Entity, import/inspect history | JSONB layout, clock locks, history indexes |
 | Tasking | Commands, Task state transitions, runtime identity and delivery | Request work, register ready runtime, signal delivery and reconcile runtime-scoped work, report outcome, cancel | Row locks, fencing, queue bookkeeping |
 | Content | Object metadata and bytes | Store, read, reference, delete content | Upload intents, physical paths, cleanup retries |
-| Integrations | Source-specific queries and ingestion | Query a capability; execute ingestion through an explicit job or Task contract | Upstream credentials, parsing, provider-specific retry behavior |
+| Integrations | Source-specific queries and ingestion | Invoke a Plugin Operation or manage ingestion; publish through the SDK | Upstream credentials, parsing, provider-specific retry behavior |
 | Access | Operator and machine identity and authorization | Authenticate and authorize named actions | Cookie/session storage, key hashes, throttle records |
 | Synchronization | Published changes and recovery | Snapshot, resume after cursor, receive updates | Database notification mechanics, retained log cleanup |
 
-Ingestion that publishes durable observations needs a retry, deduplication, cancellation, provenance and progress contract. If it outlives a request, model that execution explicitly; do not disguise it as a side-effect-free Operation. The first integration should be classified as a query, periodic ingestion, or continuous work before choosing its interface.
+Plugin Operations may publish observations and continue after the caller disconnects. Use their accepted attempt identity, queryable outcome and explicit cancellation for invoked processing. Periodic or continuous ingestion follows the managed Plugin lifecycle. Keep Asset Tasks separate; ingestion does not make a Plugin taskable or require automatic retries.
 
 These are responsibility proposals, not six required packages or independently deployable services. If the first workflow does not use content or history, it should not force those modules into the first runnable slice. Internal implementation can stay small until real callers make separation useful.
 
@@ -94,7 +94,7 @@ Build no production architecture from a diagram alone. Compare candidates with t
 2. A real source integration answers a bounded query, fails cleanly, and can be cancelled.
 3. One real Command reaches one Asset runtime; restart fences the old runtime; completion and cancellation have defined outcomes.
 4. Run a temporary processor from a separate repository, remove it, and prove Core and retained results remain usable without that repository or its dependencies.
-5. Verify that Stop/Start and Restart preserve operational metadata, content, history and logs. Then Reset and verify they are cleared while installation setup and Plugin artifacts survive. Backup/restore is not a selected requirement; interrupted-execution resumption needs its own contract.
+5. Verify that Stop/Start and Restart preserve operational metadata, content, history and logs. Then Reset and verify they are cleared while installation setup and Plugin artifacts survive. Backup and restore functionality is excluded; interrupted-execution resumption needs its own contract.
 
 Measure setup steps, required processes, configuration and secrets, independently maintained contracts, custom recovery states, and code a feature author must touch. Also measure latency and throughput against a declared workload. Do not choose the shorter implementation if it quietly stops handling deletion races or uncertain Task outcomes.
 
