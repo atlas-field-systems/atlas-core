@@ -53,7 +53,7 @@ Start, Stop and Restart preserve data and logs. Reset is the usual development f
 
 An operator can cancel a scan of one area and issue another while an Asset is out of contact. At check-in, the Asset reports completed work and learns the current cancellations and Tasks. It may instead receive a return Task. The Asset OS chooses how to schedule, interrupt and execute its onboard work.
 
-[Task reconciliation](../adr/0007-reconcile-asset-tasks-after-disconnection.md) defines pending cancellation and late outcomes. Losing contact alone does not establish failure; permanent loss of required scan data can. Atlas records actual outcomes without pretending a cancellation undid work already performed.
+[Task reconciliation](../adr/0007-reconcile-asset-tasks-after-disconnection.md) defines pending cancellation and late outcomes. Losing contact or missing required scan data does not establish Failed; that requires the assigned Asset to report a definitive unsuccessful outcome. Atlas records actual outcomes without pretending a cancellation undid work already performed.
 
 ## Scan data and processing
 

@@ -187,7 +187,7 @@ The exact TypeScript shape is a proposal, not a source requirement. The point is
 - speculative composite resources;
 - a plugin-specific SDK mode;
 - generic mutation invalidation as a substitute for ordered replay;
-- a direct object-upload abstraction until a real consumer requests it.
+- a synchronization-specific Object-upload abstraction until a real consumer requests it; Object upload and download remain required in the thin SDK client.
 
 ### 3. CLI as a separate entry point
 
