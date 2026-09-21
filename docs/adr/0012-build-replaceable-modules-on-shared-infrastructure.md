@@ -1,5 +1,5 @@
 ---
-status: superseded
+status: superseded by ADR-0014
 ---
 
 # Build replaceable modules on shared infrastructure

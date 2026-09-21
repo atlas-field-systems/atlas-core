@@ -1,6 +1,6 @@
 # Atlas Modernization system map
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -61,7 +61,7 @@ Evidence: [feed consumption contract](https://github.com/the-Drunken-coder/Atlas
 
 ### 3. Deliver and execute a Task
 
-Core accepts a Command from the Protocol catalog and checks it against the Asset's registered manifest. The Task has one immutable Asset assignment. Core coordinates delivery and lifecycle; the Asset executes the work. Runtime registration, readiness, and generation fencing distinguish the current process from a replaced process. A check-in reports observed state and does not deliver Tasks.
+Core accepts a Command from the Protocol catalog and checks it against the Asset's registered manifest. The Task has one immutable Asset assignment. Core coordinates delivery and lifecycle; the Asset executes the work. Runtime registration, readiness, and generation fencing distinguish the current process from a replaced process. In that source implementation, a check-in reports observed state and does not deliver Tasks. The successor supersedes that split: Asset check-in reconciles reported outcomes with current Tasks, cancellations and new instructions while Core remains running.
 
 There is an important limit to the old system as a specification. The production Command catalog at this SHA is `[]`, and its authoring directory contains only a README. Task tests use fixture Commands. This is an intentional documented state, not a newly reproduced defect. It proves substantial machinery exists, but not that its policy fits the first real Asset.
 
@@ -106,7 +106,7 @@ These are recommendations to review, not authorized removals. The user subsequen
 | Plugin Operations | Both example Plugins | Keep if extensible queries are part of the product |
 | Tool Assets and taskable Plugins | Runtime support, documented lifecycle constraints | Excluded from the successor: Plugins are not Task targets; use Operations or managed processing/ingestion |
 | Source Gateway | Separate process in Core module | Reevaluate credential ownership and process placement |
-| Signed catalog, rollback journal, independent release | CLI and release workflows | Reopen the need for independent installation along with Plugins; preserve integrity if retained |
+| Signed catalog and rollback journal | CLI and release workflows | Reevaluate distribution mechanisms; independent Plugin releases are accepted and remain separate from Core releases |
 | Datastreams | Named but delivery contract deferred | Do not extract an imagined implementation |
 | Existing map UI and simulation workbench | Separate surfaces and consumer packages | Use as behavior examples; port only selected features later |
 | Meshtastic Link and radio firmware integration | Separate communication package | Keep outside first Core extraction unless field transport is explicitly selected |

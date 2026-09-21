@@ -1,5 +1,5 @@
 ---
-status: superseded; current retention is ADR-0015
+status: superseded by ADR-0015
 ---
 
 # Retain durable activity history

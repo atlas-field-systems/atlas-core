@@ -1,6 +1,6 @@
 # A simpler Core system
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 Successor decision update: [Core owns Commands and Assets execute Tasks](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md). Plugins expose Operations, process data or ingest external sources; they cannot introduce Asset Commands or be taskable Tool Assets. [Planned stops and updates protect active Plugin work](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md). Source descriptions below remain historical evidence; conflicting research proposals are superseded.
@@ -47,7 +47,7 @@ These are responsibility proposals, not six required packages or independently d
 
 A source-specific integration can be a subsystem inside Integrations. It should call the Operational picture or Tasking interface for domain mutations. It should not write their tables directly. Sharing a process does not justify sharing every implementation detail.
 
-Breaking the old contracts during extraction does not settle future device rollout policy. Before deploying the first field client, decide whether client upgrades can lag the server, how supported versions are identified, and what an incompatible client does. One server release is not one simultaneous release across every deployed device.
+Breaking the old contracts during extraction does not settle future device rollout policy. Compatible clients may lag Core. Before deploying the first field client, document the supported range, identify compatible versions and clearly reject unsupported clients. One server release is not one simultaneous release across every deployed device.
 
 ## Compare three concrete shapes
 

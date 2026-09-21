@@ -28,6 +28,18 @@ _Avoid_: Plugin release, deployment instance
 The operational state retained between Resets, independently of individual Core process runs.
 _Avoid_: Asset runtime, Session API resource, SDK cache
 
+**Core run**:
+One Core process lifetime, from Start until Stop or process exit. A Dataset may span several Core runs.
+_Avoid_: mission, Dataset lifetime
+
+**Restart**:
+Stopping and starting Core while retaining its Dataset, installation setup and Atlas-managed diagnostic logs.
+_Avoid_: Reset
+
+**Reset**:
+Stopping Core, clearing its operational Dataset and Atlas-managed diagnostic logs, and starting Core with a new Dataset while retaining installation setup.
+_Avoid_: Restart, backup restore
+
 **Activity history**:
 The record of who issued or cancelled Atlas Tasks and who changed Plugins, credentials or configuration, retained until Reset.
 _Avoid_: diagnostic logs, movement history, complete telemetry history
@@ -43,8 +55,12 @@ An Entity representing a taskable or reporting system participating in Atlas.
 _Avoid_: Plugin, device record
 
 **Asset Host**:
-The one computer running the Atlas process for one Asset. Attached controllers, sensors, and radios are its peripherals.
+The computer hosting the Asset-side software for one Asset; it does not mean the Atlas Core server. Attached controllers, sensors, and radios are its peripherals.
 _Avoid_: Asset cluster
+
+**Asset OS**:
+The Asset-side software that owns scheduling, execution, interruption and connected/offline behavior. Also written "Asset operating system"; its implementation is outside Atlas Core.
+_Avoid_: Atlas Core, server scheduler
 
 **Track**:
 An Entity representing an observed moving subject.
@@ -61,6 +77,10 @@ _Avoid_: arbitrary function, Task
 **Task**:
 One request to execute a Command on one assigned Asset, with a recorded lifecycle and outcome.
 _Avoid_: Command definition, mutable assignment
+
+**Cancellation requested**:
+The Task status recording a cancellation request while the Asset's final outcome remains unconfirmed.
+_Avoid_: Canceled, proof that execution stopped
 
 **Object**:
 A named resource describing operational data, which may have associated content.

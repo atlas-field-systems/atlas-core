@@ -18,9 +18,11 @@ Protocol defines shared external resources, operations, messages, errors and obs
 
 All external applications, Assets and Plugins are expected to use the SDK to interact with Core. A health-check client, Command Interface and data-processing Plugin use the same supported SDK, with behavior appropriate to their needs.
 
-Provide basic API access without starting a synchronized replica. Applications that need a maintained shared picture opt into synchronization and caching through the SDK. An application's role does not select its mode automatically. The SDK should make both uses clear without duplicating endpoint definitions or requiring a second client library outside it. The exact configuration and API shape remain to be designed.
+Provide basic API access without starting a synchronized replica. Applications that need a maintained shared picture opt into synchronization and caching through the SDK. An application's role does not select its mode automatically. The SDK should make both uses clear without duplicating endpoint definitions or requiring a second client library outside it. The exact configuration and API shape remain to be designed. All external API interaction goes through the SDK, including Object upload and download.
 
-Core remains responsible for authentication and validation at its API boundary. The SDK is the supported client entry point, not a substitute for those server responsibilities.
+Keep the Core API small and explicit. The SDK owns client-side conveniences such as resumable upload coordination, pagination, submission retry identity and waiting for Operation outcomes. These helpers compose supported API operations and live separately from generated bindings; they do not duplicate endpoint contracts or patch generated code. Add helpers for actual consumer workflows, not a general workflow engine.
+
+Core remains responsible for authentication, authorization, Task transitions, Object readiness and committed-state consistency at its API boundary. The SDK is the supported client entry point, not a substitute for those server responsibilities.
 
 ## Identity and access
 
@@ -72,4 +74,4 @@ The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) s
 
 The first runnable workflow is one Asset Task producing one ready Object followed by one Plugin Operation. Add lost-response, cancellation and Plugin-stop cases as those behaviors are implemented. This tests the accepted contracts without making every failure scenario a prerequisite to starting implementation.
 
-Reset safety uses a dataset identifier retained across Restart and changed on Reset. SDK consumers discard their old picture and pending submissions when it changes; Core rejects requests associated with obsolete dataset state. See [lifecycle](../adr/0015-separate-start-stop-restart-and-reset.md). Release startup validates retained configuration and Plugin compatibility, reports invalid configuration, and leaves incompatible Plugins installed but disabled. Supported client-version ranges and rejection behavior follow [compatibility](../adr/0005-allow-compatible-client-versions.md).
+Reset safety uses a dataset identifier retained across Restart and changed on Reset. SDK consumers discard their old picture and pending submissions when it changes; Core rejects old-dataset mutations and work submissions, plus replay or transfer-resume requests using obsolete dataset handles; discovery remains available for fresh synchronization. See [lifecycle](../adr/0015-separate-start-stop-restart-and-reset.md). Release startup validates retained configuration and Plugin compatibility, reports invalid configuration, and leaves incompatible Plugins installed but disabled. Supported client-version ranges and rejection behavior follow [compatibility](../adr/0005-allow-compatible-client-versions.md).

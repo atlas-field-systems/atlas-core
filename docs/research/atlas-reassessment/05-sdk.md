@@ -1,6 +1,6 @@
 # SDK technology reassessment
 
-Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
+Current lifecycle contract: [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) supersedes wipe-on-start. Start, Stop and Restart retain operational data and Atlas-managed diagnostic logs; Reset clears them while keeping setup and installed artifacts. Core stays running throughout field missions; Restart and Reset are primarily development actions outside missions. Mission execution continuity across Core restart is outside scope. Updates to a new Core release perform Reset; operational-data migrations are excluded. Backup and restore functionality is excluded. Source observations below describe the inspected historical implementation; successor recommendations remain provisional unless backed by an accepted decision.
 
 
 **Assessment date:** 2026-09-20
@@ -144,8 +144,8 @@ The package's current choice to use web-standard APIs is sound for the first ver
 - Every operation takes one options object. Put `signal`, request timeout override, auth, and conditional version fields in named positions.
 - Return decoded and validated protocol values, not untyped JSON.
 - Keep typed API, conflict, validation, and protocol-revision errors.
-- Keep HTTP methods needed by actual external consumers: authentication, entities, tasks, runtime registration, object metadata and content, and the query endpoints required by sync.
-- Keep direct array-buffer reads for object content. Add upload only when a real consumer needs it.
+- Keep HTTP methods needed by actual external consumers: authentication, entities, tasks, assigned-Asset reporting, object metadata and content, and the query endpoints required by sync.
+- Expose Object upload and download through the SDK, including resumable large uploads. The SDK coordinates transfers so Assets and applications do not need a separate raw API integration.
 - Make `delete` idempotency explicit in its method contract.
 - Keep no cache in the thin client. A point read is a point read and a mutation returns the server result.
 
@@ -171,7 +171,8 @@ The exact TypeScript shape is a proposal, not a source requirement. The point is
 
 `[Proposal]` Keep these sync operations:
 
-- handshake and protocol revision check;
+- compatibility handshake and dataset-identity check;
+- on dataset change, discard the cached picture and pending submissions, then hydrate fresh state without relabeling old requests;
 - subscribe and barrier acknowledgement;
 - snapshot hydration at a known server watermark;
 - `changed-since` replay with strict increasing revisions;
@@ -227,7 +228,7 @@ The successor deliberately gives up several current conveniences unless a consum
 - There is no promise of an offline archive or offline write queue.
 - A generic React data library does not provide Atlas feed recovery.
 - Generic generated REST code does not provide Atlas ordering, barriers, or cursor expiry recovery.
-- Object upload remains a direct API concern until a concrete client needs it.
+- Object upload and download are SDK responsibilities. Client-side helpers may compose API calls to simplify transfers, pagination and Operation tracking while keeping Core guarantees server-enforced.
 
 Those are acceptable losses for one Core server and field devices. They should be recorded in the public package documentation so a future consumer does not infer capabilities from the old SDK.
 
