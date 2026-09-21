@@ -11,3 +11,11 @@ Accepted Plugin Operations have a Core-owned attempt identifier and queryable st
 The Plugins module owns the lifecycle policy and reported state. The runtime mechanism, process or container supervision and installation format still need design. On Plugin failure, Core reports a fault and supports an operator-requested restart, including for continuous-source Plugins; automatic restart is not required for the first version. [Planned stops and updates protect active Plugin work](0006-protect-active-plugin-work-during-lifecycle-changes.md). This decision does not select a marketplace, automatic updates, or support for separately operated remote Plugins.
 
 Installing, updating, removing, enabling or disabling a Plugin must leave Core and unrelated Plugins running, without a Core restart or interruption of its APIs and Asset connections. Planned lifecycle changes still respect active-work protection. This specifies independent lifecycles, not an in-process code-replacement mechanism.
+
+The user accepted these submission and failure rules on 21 September 2026:
+
+- The SDK gives a submission a stable identity. Retrying the same submission after a lost acceptance response returns the original Operation and its current state. An explicit rerun uses a new submission identity and creates a new Operation. Submission identity is scoped to the current dataset; Reset must not turn an old retry into a new invocation.
+- A failed Operation keeps the Atlas resources and effects it successfully produced. Core makes known outputs attributable to the Operation. Failure does not imply that nothing happened, and Core does not automatically undo effects or rerun the attempt.
+- A deliberate rerun may produce additional results. Handling existing results belongs to the Plugin. Core does not promise a complete inventory of arbitrary external effects or a transaction spanning Plugin behavior and external systems.
+
+Plugins release independently of Core. Their packaging and distribution mechanisms remain implementation choices. Startup validates retained setup: incompatible Plugins remain installed but disabled with an explanation; compatible enabled Plugins start normally. See [compatibility](0005-allow-compatible-client-versions.md).

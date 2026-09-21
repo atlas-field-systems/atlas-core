@@ -45,8 +45,7 @@ deployment seam:
 | In-process capability behind a typed interface | The feature is trusted, bounded, and compatible with Core's language and runtime | No independent crash, memory, restart, or release boundary |
 | Managed Plugin process | The feature needs an independent failure domain, dependency set, resource budget, credential boundary, scaling decision, or release cadence | A private protocol, supervisor, image/config lifecycle, health and recovery work |
 
-Independent Plugin releases are therefore a candidate tradeoff, not a settled
-constraint. A signed catalog and digest-pinned image solve delivery coupling.
+Independent Plugin releases are an accepted constraint. Packaging and distribution remain implementation choices. A signed catalog and digest-pinned image solve delivery coupling.
 They do not solve hostile-code isolation, and they cost more than an in-process
 module. An external source adapter can stay a Core-owned module while using
 Source Gateway policy. A source adapter does not automatically need a Plugin.
@@ -191,7 +190,7 @@ fencing. Those are Core concepts. A separate Plugin is justified only if the
 observer's dependency, failure, resource, or release boundary matters more
 than the cost of the SDK credential and separate lifecycle.
 
-## Catalog and independent release as an option
+## Independent releases and distribution choices
 
 The supplied code and docs implement an independent lifecycle for schema-4
 deployments. A catalog entry, Installed Plugin, Enabled Plugin, and runtime
@@ -409,18 +408,11 @@ signature evidence, and measured maintenance cost against a normal Core or
 TypeScript implementation. This tests a helper boundary. It does not prove
 that a full WASM Plugin should own source access or Tasks.
 
-### Experiment 5: evaluate artifact independence after the seam
+### Experiment 5: compare independent Plugin distribution mechanisms
 
-For the feature chosen in Experiment 1, compare Core package release with an
-independent immutable artifact. Record how often it changes, whether operators
-need to update it without Core, whether rollback must preserve Core storage,
-and whether image verification is materially easier than ordinary package
-verification.
+For the Plugin chosen in Experiment 1, compare the simplest packaging and installation options that support release and update independently of Core. Measure installation, compatibility validation and update effort. Do not assume the source catalog, receipts or rollback machinery are required.
 
-Acceptance is a release-cost and recovery-cost comparison. Independent release
-should be retained only when its operator value exceeds catalog, compatibility,
-receipt, supervisor, and rollback complexity. It should not be retained merely
-because the current repository already has a catalog manager.
+Acceptance requires an independent Plugin release and lifecycle change without updating Core or interrupting unrelated work. Keep release independence fixed while comparing distribution mechanisms.
 
 ## Uncertain product questions
 
@@ -436,8 +428,8 @@ because the current repository already has a catalog manager.
 5. Does any real product need transient delivery outside durable Tracks or
    Objects, with explicit replay, ordering, retention, backpressure, and
    subscriber authorization?
-6. Should a crash leave Tasks for operator cancellation, or is automatic resume
-   a requirement? The current Plugin model intentionally does not resume.
+6. Which wire fields identify known Operation outputs and interrupted outcomes?
+   Manual restart, explicit rerun, retained effects and no automatic rollback are settled.
 7. Is one shared full-access Core key acceptable for the actual deployment
    threat model? It should not be assumed acceptable if trust expands.
 8. Should connector access be granted per feature or module? The current first
@@ -456,8 +448,7 @@ where the adapter executes.
 
 Use a Core subsystem for capabilities Atlas intends to support permanently. Keep temporary mission capabilities in separate repositories, even when they share Core resource contracts. Keep the managed Plugin path when
 measured work shows a need for independent failure, dependency, resource,
-credential, or release control. Treat independent artifact release as a second
-decision after the execution seam is justified. Treat catalog signing,
+credential, or release control. Plugins release independently of Core; select packaging and distribution without reopening that requirement. Treat catalog signing,
 container hardening, and WASM as answers to different questions.
 
 Do not add Datastream delivery, persistent Plugin state, Plugin dependencies,

@@ -24,6 +24,10 @@ _Avoid_: Protocol definition, Core implementation
 A published edition of Core with its corresponding SDK and Protocol editions.
 _Avoid_: Plugin release, deployment instance
 
+**Dataset**:
+The operational state retained between Resets, independently of individual Core process runs.
+_Avoid_: Asset runtime, Session API resource, SDK cache
+
 **Activity history**:
 The record of who issued or cancelled Atlas Tasks and who changed Plugins, credentials or configuration, retained until Reset.
 _Avoid_: diagnostic logs, movement history, complete telemetry history
