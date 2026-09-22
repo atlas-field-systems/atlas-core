@@ -134,7 +134,7 @@ The following decisions remain open:
 - Exact Object metadata schema and reference representation; historical associations are retained when a related Entity is removed.
 - Fields and lifecycle of operator records.
 - Plugin manifest/distribution and private Docker coordination details; Docker deployment and local administration are selected.
-- Plugin configuration schema format, startup success criteria, first-apply and rollback failure handling, and reporting active versus pending settings.
+- Plugin configuration schema format, startup success criteria, and detailed reporting of saved, active, failed and last working settings. Recovery after failed startup is explicitly manual under ADR-0006.
 - API key transport details, local first-key provisioning commands, and how browser documentation authenticates.
 - Health check criteria and response format.
 - Shared conventions for errors, pagination, concurrent edits, retries, and subscriptions.

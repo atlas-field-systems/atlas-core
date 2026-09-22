@@ -1,6 +1,6 @@
 # API planning reconciliation
 
-Status: the API/architecture recommendations were accepted on 22 September 2026. The endpoint map, SDK plans, canonical glossary and affected ADRs now record those decisions. Plugin configuration startup-failure recovery remains the one pending choice below. No runtime implementation is introduced.
+Status: the API/architecture recommendations were accepted on 22 September 2026. The endpoint map, SDK plans, canonical glossary and affected ADRs now record those decisions. Manual Plugin configuration recovery closes the last reconciliation choice. No runtime implementation is introduced.
 
 The planning session and architecture merged in PR #1 originally disagreed. This record explains the resolutions; [the documentation guide](agents/domain.md) still assigns authority to the glossary, architecture and ADRs. The separate planning glossary has been consolidated into [CONTEXT.md](../CONTEXT.md).
 
@@ -22,8 +22,8 @@ The planning session and architecture merged in PR #1 originally disagreed. This
 | Scan completion | Require the assigned Asset's completion report and all its declared required ready Objects, in either arrival order | [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) |
 | Hybrid scope | Filter transmission to save bandwidth while retaining full-picture read permission. In-scope reads/feed stay local; out-of-scope reads use one-off HTTP requests | [SDK hybrid mode](sdk-data-access.md#asset-hybrid-mode) |
 
-## Pending configuration choice
+## Plugin configuration recovery
 
-If applying saved Plugin settings prevents startup, should the local operator explicitly restore and restart the last working revision, or should Core do that automatically once? The recommendation is explicit local recovery, matching the manual fault-recovery policy. Both choices retain the failed candidate for correction and never automatically rerun Operations. [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md#local-configuration) records the agreed save/apply and active-work rules while this answer is pending.
+Accepted: if applying saved Plugin settings prevents startup, leave the Plugin faulted and report the failed apply. The local operator explicitly restores the last working settings and restarts, or corrects the candidate and applies again. Preserve the failed candidate and last working revision; do not automatically restore, restart or rerun Operations. [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md#local-configuration) owns this policy and the save/apply and active-work rules.
 
 Exact schemas, authentication/enrollment mechanics, queue revision handling, cancellation confirmation, transfer progress/resume bindings and SDK method signatures remain implementation design work rather than competing architecture decisions.
