@@ -18,7 +18,7 @@ External operational API consumers, including applications, Assets and Plugins, 
 
 Provide basic API access without starting a synchronized replica. Applications that need a maintained shared picture opt into synchronization and caching through the SDK. An application's role does not select its mode automatically. The SDK should make both uses clear without duplicating endpoint definitions or requiring a second client library outside it. The agreed modes are HTTP pass-through, full synchronization using local reads/queries/feed, and Asset hybrid using a local related subset plus one-off out-of-scope API reads. Every mode writes to Core. Hybrid filtering saves bandwidth and does not limit read authorization. See [SDK data access](../sdk-data-access.md) for recovery, local history and Dataset Reset behavior. Exact method signatures remain open. All external API interaction goes through the SDK, including Object upload and download.
 
-Keep the Core API small and explicit. The SDK owns client-side conveniences such as resumable upload coordination, pagination, submission retry identity and waiting for Operation outcomes. These helpers compose supported API operations and live separately from generated bindings; they do not duplicate endpoint contracts or patch generated code. Add helpers for actual consumer workflows, not a general workflow engine.
+Keep the Core API small and explicit. The SDK owns client-side conveniences such as whole-file upload retries, pagination, submission retry identity and waiting for Operation outcomes. These helpers compose supported API operations and live separately from generated bindings; they do not duplicate endpoint contracts or patch generated code. Add helpers for actual consumer workflows, not a general workflow engine.
 
 Core remains responsible for authentication, authorization, Task transitions, Object readiness and committed-state consistency at its API boundary. The SDK is the supported client entry point, not a substitute for those server responsibilities.
 
@@ -48,9 +48,9 @@ Plugins are trusted code with broad operational access, not isolated tenants. Th
 
 Clients identify Objects and access their content through Core APIs exposed by the SDK. Physical buckets, filesystem paths and storage-provider details stay inside the Objects implementation, outside public Object fields and Plugin integration requirements.
 
-[ADR-0009](../adr/0009-expose-objects-only-when-ready.md) owns ready-only visibility, private staging and same-run upload resumption. [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md) owns retention and Reset cleanup across metadata, content and transfer state. Objects implements these guarantees independently of the selected storage provider.
+[ADR-0009](../adr/0009-expose-objects-only-when-ready.md) owns ready-only visibility, private staging, restart-from-beginning upload retries and completed-request deduplication. [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md) owns retention and Reset cleanup across metadata, content and transfer state. Objects implements these guarantees independently of the selected storage provider.
 
-[ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md) selects SQLite and private local Object files. The resumable-transfer mechanism remains open.
+[ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md) selects SQLite and private local Object files. Resumable uploads are deferred; failed transfers restart from the beginning.
 
 ## Core tasking and Asset execution
 
@@ -84,11 +84,27 @@ Core must not silently drop committed changes while allowing a consumer to treat
 
 Buffer sizes, transport signaling and replay retention remain implementation choices. Full-picture read access is available to every authenticated SDK client; automatic synchronization is still opt-in. Dataset changes additionally follow [the Reset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary).
 
+## Movement history
+
+The initial scope is a small Core store for reported Asset and Track movement, accepted on 22 September 2026. Entities captures position, speed and altitude from accepted ordinary create/update/check-in reports into a separate append-only sample table, in the same transaction as the current-state write. Do not store whole Entity snapshots or infer measurements from the merged Entity. Capture only explicitly supplied quantities: a position requires a complete latitude/longitude pair; speed-only and altitude-only samples are valid; unrelated changes add no sample. A fresh report repeating a stationary position is still an observation, while replaying the same report creates no additional sample.
+
+Each sample records its Entity association, report/sample identity, optional observation time, Core receipt time and supplied measurements. Unknown observation time stays explicitly unknown; receipt time provides the labeled fallback for ordering. Existing Asset report-authority and freshness rules still apply. Store samples in SQLite with an index for Entity/time queries; exact columns, report identity encoding and cursor fields remain schema work. Retain samples across Restart until Reset, without a separate 30-day expiry job. Entity deletion must not silently cascade-delete retained observations or attach them to a replacement Entity.
+
+Expose one paginated `GET /entities/{entity_id}/movement-history` read with a bounded time range. Return raw samples with their timing and stable ordering, not reconstructed Entity state. Dataset and Entity association checks plus a stable pagination boundary prevent Reset, identity replacement or concurrent inserts from mixing results. Request bounds and ingestion capacity must be measured against Asset and Track report rates; do not silently sample away observations or truncate a requested interval.
+
+History-only backfill, manual sample editing, server-generated reduced trails, historical-value reconstruction and whole-map replay are deferred. The older pre-identification backfill workflow is therefore not supported initially. A Command Interface can display returned samples without this plan selecting its UI. Movement-history reads are explicit SDK history operations outside the synchronized operational picture; they call the history API in every mode and never populate or advance the live picture. See [SDK data access](../sdk-data-access.md#historical-reads).
+
 ## Activity history
 
 Core records who issued or canceled Tasks and who changed Plugins, credentials or configuration. System operations is the proposed home for a shared recording/query facility; Identity and access supplies actor identity, and each owning module supplies action meaning and affected resources. The facility must not infer business actions from diagnostic log strings. The external Command Interface may render the history.
 
-Record activity consistently with the action. Useful details include actor, action, target, time and outcome; exact fields and mechanism remain open. Store credential identifiers and safe change descriptions rather than secrets. [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md) defines retention and cleanup for both activity history and separate diagnostic logs.
+The initial scope is a small structured log, accepted on 22 September 2026: one SQLite activity table, a shared recording helper and `GET /admin/activity` with pagination and actor/action/target/time filters. Record Task issuance and cancellation requests, plus Plugin, credential and configuration changes. Include local CLI/TUI actions, including while Core is stopped. Ordinary telemetry, resource reads, file contents, full before/after snapshots, tamper-evident auditing, export tooling and general replay are outside this scope.
+
+Records contain a stable action identity, authenticated actor identity/type, action, target, time and known outcome. Preserve attribution after a profile or credential is deleted. A selected Operator profile may provide display context, but a shared credential does not prove which human used it; do not invent that attribution. Store safe change summaries and credential identifiers, never secret values.
+
+For database actions, record the activity in the same transaction as the accepted change. An idempotent retry must not create another logical action. For process operations, record the accepted request and later known outcome linked by action identity; an accepted request is not proof of completion. A crash may leave an outcome unknown. Do not claim a transaction spans the process effect. These records explain a limited set of operational actions, not every rejected request or all external effects.
+
+The local CLI/TUI uses the same private management recording facility while Core is stopped; Plugins and public clients cannot directly write arbitrary log entries. Read access follows the operator administrative boundary. History queries use explicit SDK methods outside the synchronized picture. Retain the log across Restart and clear it on Reset under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md). Exact local coordination, field formats, query limits and failure presentation remain implementation details.
 
 ## Basic operational protections
 
@@ -107,11 +123,12 @@ Use a pinned toolchain and deterministic regeneration. Independently authored wi
 | Promise | Validation focus |
 | --- | --- |
 | [Task reconciliation](../adr/0007-reconcile-asset-tasks-after-disconnection.md) and [scan completion](../adr/0008-complete-scan-tasks-when-required-results-are-available.md) | Allowed transitions, terminal outcomes and cancellation; completion report and ready Objects in both arrival orders |
-| [Object availability and transfer](../adr/0009-expose-objects-only-when-ready.md) | Private partial uploads, same-run resumption, ready-only publication and continued uploads without reopening Canceled Tasks |
+| [Object availability and transfer](../adr/0009-expose-objects-only-when-ready.md) | Private staging with cleanup, whole-file retries, completed-request deduplication, ready-only publication and continued uploads without reopening Canceled Tasks |
 | [Plugin attempts](../adr/0002-core-manages-installed-plugins.md) and [stopping](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) | Caller disconnection, lost acceptance responses, retained effects and protected local lifecycle changes |
 | [Runtime lifecycle](../adr/0015-separate-start-stop-restart-and-reset.md) | Retention and interrupted-work classification; Reset cleanup; writing-release mismatch refusal; rejection of old-dataset submissions with discovery still available |
 | [Client and setup compatibility](../adr/0005-allow-compatible-client-versions.md) | Supported versions, unsupported-client rejection and retained configuration/Plugin checks |
 | [SDK modes](#sdk-as-the-supported-entry-point) and [access boundaries](#identity-and-access) | Full-picture reads for every authenticated client with optional synchronization; allowed Plugin Task issuance; assigned-Asset reports on every mutation path; no public Plugin management methods/endpoints |
+| [Movement history](#movement-history) | Sparse accepted-report capture, retry deduplication, independent historical reads and retention until Reset |
 | [Change publication](#change-publication), [synchronization gaps](#detectable-synchronization-gaps) and [activity history](#activity-history) | Consistent committed changes and attributed actions; slow consumers detect gaps and rebuild a current picture |
 | [Operational protections](#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
 
@@ -125,7 +142,7 @@ The [initial MVP](operating-model.md#initial-mvp) selects simple Move To, indepe
 | --- | --- |
 | Move To | Create an Asset, issue a destination Task, deliver it to the assigned Asset and record its reported outcome without requiring an Object. Exercise cancellation and offline issuance/cancellation followed by check-in, using the accepted Task transitions. |
 | Elevation Lookup | Discover the Plugin capability, invoke it for a known fixture position and retrieve the expected elevation. Verify that caller disconnection does not cancel accepted work and that retrying a lost acceptance response retrieves the same Operation. |
-| Object transfer | Interrupt and resume an upload within the same Core run; keep the partial Object invisible, then download and compare the ready content. |
+| Object transfer | Interrupt an upload, verify that no partial Object is visible, retry from the beginning and compare the downloaded content. Lose the success response and verify that an identical retry returns the same Object with one publication. |
 | Plugin lifecycle | Use local management to stop/start the example Plugin while Core remains available. Exercise active-work protection with controlled test timing rather than a slow production algorithm. |
 | Stop/Start and Restart | Outside active Asset execution, retain records, ready Objects, setup and logs. Verify unfinished Core-owned work follows the linked lifecycle decision, without automatic rerun. |
 | Reset | Clear operational data, content, transfer state, activity history and Atlas-managed logs; retain startup setup. Verify a new dataset and rejection of obsolete submissions. |

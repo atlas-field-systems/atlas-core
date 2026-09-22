@@ -47,7 +47,7 @@ Pass when no stale runtime can change the new runtime's work, repeated requests 
 
 ### E3. Runtime storage and lifecycle comparison
 
-The confirmed planning workload is roughly 20 Assets, one or two operators, and potentially 100–200 locally observed aircraft Tracks from ADS-B. Thousands of aircraft are a future scale to evaluate rather than a promised initial capacity. Report frequency, burst rates and Object size distribution still need definition; runs last a few hours. Large uploads must resume after same-run connection loss.
+The confirmed planning workload is roughly 20 Assets, one or two operators, and potentially 100–200 locally observed aircraft Tracks from ADS-B. Thousands of aircraft are a future scale to evaluate rather than a promised initial capacity. Report frequency, burst rates and Object size distribution still need definition; runs last a few hours. The earlier same-run upload resume requirement was withdrawn on 22 September in favor of restart-from-beginning transfers; see [ADR-0009](../../adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries).
 
 Measure the PostgreSQL baseline, then change one axis at a time. Compare a local content directory before assuming SQLite is necessary; compare SQLite if a single-process server and measured workload make it credible. A single database containing bounded content is a separate candidate if it fits real sizes. Keep alternatives in throwaway branches and select one production design rather than shipping several profiles prematurely.
 

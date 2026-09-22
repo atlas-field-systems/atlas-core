@@ -49,6 +49,12 @@ In full-synchronization mode, operational ID lookups and list/filter reads use o
 
 Full-synchronization mode maintains the full operational dataset in memory and rebuilds it on SDK restart. Disk persistence and arbitrary selective subscriptions remain outside this agreed full-synchronization mode. Asset hybrid has a defined narrower scope and does not change full-synchronization behavior. Use explicit resource limits and report when the full picture cannot be maintained; never silently discard resources and claim complete coverage. Bounded change-history retention is separate from retaining the current resource picture.
 
+## Historical reads
+
+Movement and activity history are explicit, on-demand SDK operations, outside read-operational-data and its Entity/Task/Object picture. The same historical methods call `GET /entities/{entity_id}/movement-history` and, for operator administrative clients, `GET /admin/activity` in all three modes. This is a declared separate API category, not a cache miss fallback or per-read bypass on synchronized resource methods.
+
+History results never populate the live picture, emit its local feed events, or advance its recovery cursor. They do not start background synchronization of historical rows. History pagination uses Core cursors and Dataset identity, separate from local picture cursors. Reset invalidates old history requests/results. Local changed-since queries continue to mean bounded local change history, not movement or activity history. No history cache or offline-history promise is introduced.
+
 ## Asset hybrid mode
 
 Asset hybrid is the agreed third mode, designed to reduce bandwidth on an Asset's link. It automatically synchronizes:
@@ -134,9 +140,9 @@ Read-after-write reconciliation and notification deduplication follow the agreed
 
 All three modes follow [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary). A Dataset identity is created on first initialization, survives Restart, and changes on Reset. It is separate from an SDK picture generation or Asset process identity.
 
-Before accepting responses or retrying submissions, the SDK checks Dataset identity. After detecting Reset, discard the old picture, local history/cursors, pending submissions and obsolete transfer/recovery handles. Reject late responses/events from the prior Dataset and never relabel an old write as a new submission. Full synchronization and Asset hybrid return to not-ready and load their respective scopes afresh; HTTP mode rediscovers the Dataset without constructing a local picture. This is background recovery, not an application-read fallback.
+Before accepting responses or retrying submissions, the SDK checks Dataset identity. After detecting Reset, discard the old picture, local history/cursors, pending submissions and obsolete upload identities and recovery handles. Reject late responses/events from the prior Dataset and never relabel an old write as a new submission. Full synchronization and Asset hybrid return to not-ready and load their respective scopes afresh; HTTP mode rediscovers the Dataset without constructing a local picture. This is background recovery, not an application-read fallback.
 
-Core rejects old-dataset writes, Task reports, Operation submissions and obsolete upload/replay handles. Health, authentication and current-Dataset discovery remain available so clients can recover. A disconnection without a known Reset may retain a visibly stale picture; once Reset is known, that picture cannot be served as the current Dataset. Restart alone does not invalidate Dataset identity or promise active-mission continuity. Wire fields and the discovery binding remain implementation details.
+Core rejects old-dataset writes, Task reports, Operation submissions and obsolete upload identities/replay handles. Health, authentication and current-Dataset discovery remain available so clients can recover. A disconnection without a known Reset may retain a visibly stale picture; once Reset is known, that picture cannot be served as the current Dataset. Restart alone does not invalidate Dataset identity or promise active-mission continuity. Wire fields and the discovery binding remain implementation details.
 
 ## Protocol compatibility
 

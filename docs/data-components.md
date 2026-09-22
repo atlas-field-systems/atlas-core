@@ -45,7 +45,7 @@ Fresh reports establish contact; duplicates and historical backlog do not. Delay
 
 ## Resource fields and payloads
 
-These complete the database inventory and detail the Task status component listed above. Each resource retains its own field schema.
+These inventory the resource data units and detail the Task status component listed above. History and upload-retry records follow below; detailed physical schemas remain to be designed. Each resource retains its own field schema.
 
 | Data unit | Applies to | Requiredness | Contents and purpose |
 | --- | --- | --- | --- |
@@ -63,10 +63,12 @@ These complete the database inventory and detail the Task status component liste
 | Task `failure` | Task | Required for failed state | Failure code and message |
 | Task cancellation request | Task | Present when cancellation is requested | Request details, separate from execution status; receipt by Core alone is not confirmed cancellation |
 | Task `cancellation` | Task | Required for cancelled state | Confirmed cancellation outcome and details; accepted work waits for the Asset's confirmation |
+| Movement sample | Asset, Track | Created only for explicitly supplied movement in an accepted report | Entity association, report/sample identity, observation time when known, Core receipt time, and supplied position/speed/altitude; append-only until Reset; retries deduplicate |
 | Object identity/description | Object | Required ID; descriptive fields follow schema | Object ID, type, and usage hints |
 | Object storage metadata | Object | Required for a published Object | Public content type and byte size derive from the completed upload; physical storage locations remain private; content is immutable |
 | Object `referenced_by` | Object | Zero or more associations | Entity and Task references retained as historical context even when the related record is unavailable |
 | Object extension metadata | Object | Optional | Flexible file-specific JSON metadata; does not override storage-owned facts |
+| Successful upload identity | Core-private record | Retained for successful uploads until Reset | Dataset-scoped request identity, content-equivalence facts and resulting Object ID; recognizes lost-response retries without another publication |
 
 Task completion follows [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md) and [scan result readiness](adr/0008-complete-scan-tasks-when-required-results-are-available.md); a completion report may be retained while required Objects are still uploading. Cancellation intent remains independent of execution status.
 
@@ -75,6 +77,12 @@ The exact representation of Task progress and timestamps is inherited-schema mat
 Ready Object metadata and associations synchronize through the feed. Upload staging and progress do not publish incomplete Objects. File bytes remain in object storage and are fetched through the approved content endpoints.
 
 Task reordering is allowed before execution starts, including for acknowledged Tasks. Preserve immutable submission sequence and keep requested queue order distinct from Asset-confirmed order. Running and terminal Tasks cannot be moved. A disconnected Asset may still follow its last received order. Revision/conflict rules and the mutation/confirmation API remain open.
+
+## Movement history
+
+Current telemetry remains the latest state; the separate sample table preserves reported movement until Reset. Capture only incoming measurements, never copied fields from a merged Entity. Position requires both latitude and longitude; independently supplied speed/altitude are valid. An unchanged position in a fresh report is a sample, but retrying the same report is not another sample. Capture commits with the accepted Entity write. No full Entity snapshots, separate backfill API, historical editing or automatic downsampling is selected.
+
+One paginated history endpoint reads samples for an Entity and time range. History is outside the live operational picture and its bounded recovery log. Query bounds and report rates need measurement before choosing numeric limits. The [movement-history contract](architecture/system-design.md#movement-history) owns retention, reporting and historical-read semantics.
 
 ## Administrative records
 
@@ -86,6 +94,9 @@ These are separate resource records, not Entity components or members of the ope
 | API key | Key ID, descriptive metadata, stored credential verifier, and revocation state; no per-Plugin keys |
 | Plugin | Release identity, installation/enablement/availability, declared configuration schema, saved/active settings, startup-validation state, management result |
 | Core settings | Explicitly supported server configuration fields and application requirements |
+| Activity record | Stable action identity, authenticated actor/type, action, target, time and known outcome; safe summaries only; retain until Reset |
+
+Activity records cover Task issuance/cancellation and Plugin, credential and configuration changes, including local CLI/TUI actions. Record database changes and their activity together; link process requests to later known outcomes. Do not infer human identity from a selected profile or include secrets. See [activity history](architecture/system-design.md#activity-history).
 
 Their exact field inventory follows the approved endpoints and remains separate from this Entity-component schema. There are no role/permission records implied by these entries.
 
@@ -105,6 +116,9 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | `media_refs`, `sensor_refs` | Structured association records where querying requires them | References have meaning and schema, not arbitrary strings |
 | Task identity, assignment, submission sequence, queue order/confirmation, lifecycle, cancellation request, progress, timestamps | Typed columns with constraints | Core relies on these fields to validate lifecycle transitions |
 | Task input/output | Protocol-validated JSON in SQLite | Shape depends on the Command |
+| Movement samples | Separate typed SQLite rows, indexed by Entity and time with report-identity uniqueness | Preserve sparse observed quantities; page stable history without expanding live Entity JSON |
+| Activity records | Separate typed SQLite table with safe bounded detail fields | Query a limited action log; preserve attribution without a full audit framework |
+| Successful upload identities | Private Dataset-scoped retry record linked to Object ID | A completed request retry returns the original publication |
 | Object identity/storage facts | Typed columns | Core owns storage identity and measured facts |
 | Object references | Structured historical associations | Preserve references without cascading deletion of useful evidence |
 | Object extension metadata | Validated JSON in SQLite within the Object metadata contract | Keeps variable data flexible without weakening core fields |

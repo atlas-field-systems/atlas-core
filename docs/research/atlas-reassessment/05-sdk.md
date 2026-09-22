@@ -143,7 +143,7 @@ The package's current choice to use web-standard APIs is sound for the first ver
 - Return decoded and validated protocol values, not untyped JSON.
 - Keep typed API, conflict, validation, and protocol-revision errors.
 - Keep HTTP methods needed by actual external consumers: authentication, entities, tasks, assigned-Asset reporting, object metadata and content, and the query endpoints required by sync.
-- Expose Object upload and download through the SDK, including resumable large uploads. The SDK coordinates transfers so Assets and applications do not need a separate raw API integration.
+- Expose Object upload and download through the SDK. The 22 September scope review defers resumability: failed transfers restart from the beginning and successful-request retries recover the original Object. See [the current upload decision](../../adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries). The SDK coordinates uploads so consumers do not need a separate raw API integration.
 - Make `delete` idempotency explicit in its method contract.
 - Keep no cache in the thin client. A point read is a point read and a mutation returns the server result.
 

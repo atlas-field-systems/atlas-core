@@ -22,8 +22,18 @@ The planning session and architecture merged in PR #1 originally disagreed. This
 | Scan completion | Require the assigned Asset's completion report and all its declared required ready Objects, in either arrival order | [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) |
 | Hybrid scope | Filter transmission to save bandwidth while retaining full-picture read permission. In-scope reads/feed stay local; out-of-scope reads use one-off HTTP requests | [SDK hybrid mode](sdk-data-access.md#asset-hybrid-mode) |
 
+## Scope review after PR feedback
+
+On 22 September 2026 the user accepted the lower-complexity options after reviewing the older Atlas implementation:
+
+- Uploads restart from the beginning after interruption. Resumability is deferred. Safe staging, cleanup, ready-only publication and recognition of a completed retry remain required. [ADR-0009](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries) supersedes the earlier same-run resume promise, including partial-transfer retention.
+- Movement history is a small Core sample store with one paginated read, explicit report capture and retry deduplication, retained until Reset. Backfill, historical editing, reduced trails and historical-state reconstruction are deferred. [Movement contract](architecture/system-design.md#movement-history).
+- Activity history is a small structured log for Task issuance/cancellation and Plugin, credential and configuration changes, including local management, with honest authenticated attribution, no secrets and retention until Reset. [Activity contract](architecture/system-design.md#activity-history).
+
+These historical reads use explicit SDK API methods outside the synchronized picture. They do not change the source-selection rules for live reads, local queries or feed subscriptions. The component catalog and endpoint map now include both stores and their read routes.
+
 ## Plugin configuration recovery
 
 Accepted: if applying saved Plugin settings prevents startup, leave the Plugin faulted and report the failed apply. The local operator explicitly restores the last working settings and restarts, or corrects the candidate and applies again. Preserve the failed candidate and last working revision; do not automatically restore, restart or rerun Operations. [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md#local-configuration) owns this policy and the save/apply and active-work rules.
 
-Exact schemas, authentication/enrollment mechanics, queue revision handling, cancellation confirmation, transfer progress/resume bindings and SDK method signatures remain implementation design work rather than competing architecture decisions.
+Exact schemas, authentication/enrollment mechanics, queue revision handling, cancellation confirmation, whole-file upload retry verification and SDK method signatures remain implementation design work rather than competing architecture decisions.

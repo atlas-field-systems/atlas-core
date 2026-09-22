@@ -18,7 +18,9 @@ The initial operations and behaviors below are approved; the names describe beha
 | Fetch assigned Tasks | Read outstanding Tasks with submission/current queue order and confirmation state, following pagination; use the same method in all modes | HTTP mode: `GET /entities/{entity_id}/tasks`. Full synchronization: local picture. Asset hybrid: local for its own Asset, one-off API reads for others |
 | Report Task lifecycle | Acknowledge, start, report progress, complete, or fail assigned work | Existing Task lifecycle endpoints |
 | Cancel Task | Request withdrawal; accepted work keeps its execution state until Asset-confirmed cancellation or another outcome | `POST /tasks/{task_id}/cancel` |
-| Upload Object content | Stage content/metadata privately and publish a ready Object; changed content needs a new Object ID | `POST /objects/upload`; resumable-transfer details remain open |
+| Upload Object content | Stream the whole file; restart an interrupted transfer from zero using the same request identity; a previously completed identical request returns the original Object | `POST /objects/upload`; no resume/offset API |
+| Read movement history | On-demand paginated samples for one Asset/Track and time range; does not populate the operational picture | `GET /entities/{entity_id}/movement-history` in every mode |
+| Read activity history | Operator administrative clients query the limited action log; outside the operational picture | `GET /admin/activity` in every mode |
 | Invoke Plugin Operation | Submit a declared capability with stable Dataset-scoped identity; retries retrieve the same attempt | `POST /plugins/{plugin_id}/operations` |
 | Inspect/cancel Plugin Operation | Query recorded progress/outcome or request cancellation; caller disconnect does not stop accepted work | Plugin Operation read/list/cancel endpoints; direct API access outside the operational picture |
 
@@ -39,6 +41,10 @@ Core, Assets and SDK clients use declared supported compatibility ranges; unsupp
 The agreed [Asset hybrid mode](sdk-data-access.md#asset-hybrid-mode) synchronizes the Asset's own Entity, outstanding Tasks and subsequent outcomes, cancellation requests, queue-order changes, and directly referenced Entities/Object metadata needed for those Tasks. Core filters before transmission across initial queries, recovery, and feed. Reads outside the subset make one-off API requests without adding subscriptions or emitting local feed updates for the fetched data. Writes still go to Core; in-scope results reconcile into the local picture. File bytes remain on-demand downloads. Dependency fields, terminal-Task retention, and scope membership/cursor details remain to be specified.
 
 Scan completion reports may remain pending until all required Objects are ready; the SDK must return Core's actual recorded Task status rather than assume a successful completion-report request made it terminal. See [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md).
+
+Historical reads are explicit API-backed operations in every SDK mode, separate from the read-operational-data methods. Their results and cursors never update the local operational picture. See [historical reads](sdk-data-access.md#historical-reads).
+
+Upload retries resend the complete file after interruption. Producers retain the source file until publication succeeds. The SDK uses a stable Dataset-scoped request identity so a lost success response does not create another Object; it does not keep persistent partial-transfer progress or add an offline write queue. Reset invalidates the old request identity. Detailed content-equivalence verification follows [ADR-0009](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries).
 
 ## Assigned Task queue
 

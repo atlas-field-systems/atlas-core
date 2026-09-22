@@ -30,6 +30,7 @@ Only `asset`, `track`, and `geofeature` are valid Entity types. An Entity's ID a
 | `DELETE /entities/{entity_id}` | Interfaces remove an Entity | ID → no body | `delete` Entity; retain historical Object associations | Retain |
 | `POST /entities/{entity_id}/checkin` | Assets and their transport integrations report current state | ID, partial component data, optional supported-Command declaration → updated Entity | `update` Entity and Core-recorded contact; use shared validation | Adapt: status-based reporting |
 | `GET /entities/{entity_id}/tasks` | Assets and interfaces inspect assigned work | Asset ID, outstanding/status filter, pagination → Task page with submission/current queue order and confirmation state | None; listing does not accept or start work | Adapt: replace separate execution-session polling |
+| `GET /entities/{entity_id}/movement-history` | Consumers inspect retained movement for one Asset or Track | Entity association, from/to, limit/cursor → raw movement sample page with observation/receipt times | None; explicit history read outside the live picture | Adapt: narrow the older history API |
 | `GET /entities/{entity_id}/objects` | Interfaces find associated files | Entity ID, pagination → Object metadata page | None | Retain |
 
 Deletion rule retained from the older design: reject Asset deletion while it has nonterminal Tasks. Retain completed Task records and historical Object references after an allowed deletion. Aliases are optional, editable, and unique across all Entity types ignoring case. Store an absent alias as null; relationships use immutable Entity IDs. Entity types never change. Every Geofeature must have valid point, line, or polygon geometry at creation; unfinished drawings remain in the interface. Track geometry is optional, and Assets use telemetry for position. Exact Entity filters remain open.
@@ -39,6 +40,8 @@ Core validates components against Protocol-defined schemas and applicability. En
 Assets author their own reported Entity data; command interfaces send Tasks rather than editing Asset state. Core owns derived communications, heartbeat, timestamps, and versions. Every accepted fresh Asset-originated update refreshes Core-recorded contact, including telemetry patches and status reports. Core-derived changes do not refresh contact. Core verifies the Asset identity on every reporting path, including generic Entity patches; this introduces no operator roles. The precise enrollment, relay-proof and report-ordering fields remain open. Fresh reports establish contact; duplicates and historical backlog do not. Delayed updates cannot overwrite newer component values. Continuous, near-real-time telemetry is expected; exact freshness windows remain open.
 
 The SDK provides Asset registration through `POST /entities`, followed by check-in. Initial data can include descriptive fields, components, and Command support. Before the first report, defaults are operational status `unknown`, communications `offline`, and heartbeat `last_seen: null`. See the [SDK operations catalog](sdk-operations.md). No separate registration or telemetry endpoint is needed. Assets retain stable IDs across restarts. Registration retries use the same Asset ID and request identity; reconnects resume the existing record without overwriting it with startup defaults. Exact deduplication retention, response semantics, and report-ordering fields remain open.
+
+Movement samples are captured from explicitly supplied position, speed and altitude in accepted ordinary Entity reports, in the same transaction as the current-state write. Report retries do not duplicate samples, and unrelated updates do not manufacture measurements. History reads return bounded, stably ordered pages; they preserve the Dataset/Entity association and pagination boundary. Retain samples until Reset, separately from current telemetry and feed recovery. Backfill writes, sample editing, reduced-trail and historical-inspection routes are deferred. See [movement history](architecture/system-design.md#movement-history).
 
 ### Asset status
 
@@ -87,14 +90,14 @@ Objects hold arbitrary file types and flexible JSON metadata. Entity references 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /objects` | Interfaces and integrations list files | Filters, pagination → Object metadata page | None | Retain |
-| `POST /objects/upload` | File producers supply content and descriptive metadata | Content, upload/request identity, metadata and associations → ready Object on successful completion | Stage privately; publish Object and its change only when ready; no overwrite | Adapt: ready-only publication |
+| `POST /objects/upload` | File producers supply content and descriptive metadata | Complete file stream, Dataset-scoped request identity, metadata and associations → ready Object or original success on identical retry | Stream to private staging; publish only complete content; clean up failed staging; restart failed transfers from zero; no overwrite | Adapt: ready-only publication |
 | `GET /objects/{object_id}` | Consumers inspect a file record | Object ID → full metadata and associations | None | Retain |
 | `PATCH /objects/{object_id}` | Interfaces and integrations edit metadata | Object ID, changed metadata/associations, version precondition → Object | `update` Object metadata | Retain |
 | `DELETE /objects/{object_id}` | Interfaces remove an Object | Object ID → no body | `delete` Object; arrange stored-content removal | Retain |
 | `GET /objects/{object_id}/download` | Consumers retrieve file content | Object ID → attachment stream | None | Retain |
 | `GET /objects/{object_id}/view` | Interfaces preview supported content | Object ID → inline stream, attachment, or unsupported-type error | None | Retain; supported preview formats need review |
 
-Objects are visible through reads, queries and feed only after content and metadata are ready. Upload identity, staged metadata and progress are separate transfer state, not publicly listed Objects. Physical file paths remain private; measured byte size and content type come from the upload process. The earlier metadata-only `POST /objects` route is removed. Descriptive fields and associations may be staged with the upload and edited after publication. The resumable-transfer API, staging identity and progress queries still need detailed design under [ADR-0009](adr/0009-expose-objects-only-when-ready.md). After the first successful upload, file content is immutable. Changed content requires a new Object ID; descriptive metadata remains editable. A retry must recognize an already-successful upload without overwriting it. Exact retry identity/content verification, transfer limits, deletion completion, and preview formats remain open. Arbitrary upload types do not imply arbitrary inline rendering.
+Objects are visible through reads, queries and feed only after content and metadata are ready. Upload identity, staged metadata and progress are separate transfer state, not publicly listed Objects. Physical file paths remain private; measured byte size and content type come from the upload process. The earlier metadata-only `POST /objects` route is removed. Descriptive fields and associations may be staged with the upload and edited after publication. The accepted [upload contract](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries) restarts interrupted uploads from the beginning. Resumable transfer sessions, offset queries and chunk-continuation endpoints are deferred. Clean up failed or abandoned staging; it is not a retained operational record. Stable Dataset-scoped request identity recognizes a previously completed upload when its response was lost; concurrent retries cannot publish twice. Conflicting reuse fails. Exact content-equivalence verification remains schema work. After the first successful upload, file content is immutable. Changed content requires a new Object ID; descriptive metadata remains editable. A retry must recognize an already-successful upload without overwriting it. Exact retry identity/content verification, transfer limits, deletion completion, and preview formats remain open. Arbitrary upload types do not imply arbitrary inline rendering.
 
 ## Administration
 
@@ -109,6 +112,14 @@ All routes are authenticated. Operator-facing administrative clients may manage 
 | `GET /admin/resources` | Administrative clients inspect service resources | No body → host/process diagnostics | None | Adapt from `/resources` |
 
 The editable Core settings and their application rules must be defined before the configuration write route is implemented. The Plugin save/apply policy is not automatically a policy for Core itself. No generic maintenance or restart endpoint is proposed without a specific operation to support.
+
+### Activity history
+
+| Method and path | Expected caller / purpose | Input → result | Effects | Basis |
+| --- | --- | --- | --- | --- |
+| `GET /admin/activity` | Operator administrative clients inspect recorded actions | Actor/action/target/time filters, limit/cursor → activity page with known outcomes | None; read-only, outside the synchronized picture | New |
+
+Record Task issuance/cancellation and Plugin, credential and configuration changes, including local CLI/TUI actions. Core/private management supplies authenticated attribution; public callers cannot insert or alter log entries. A selected profile is not proof of a human actor behind a shared key. Keep safe summaries without secrets or full resource snapshots, deduplicate action retries, and retain until Reset. See the [activity-history contract](architecture/system-design.md#activity-history) for database transactions and process request/outcome recording.
 
 ### API keys
 
@@ -130,7 +141,7 @@ These routes require an operator administrative credential, not an Asset or Plug
 | `PATCH /admin/operators/{operator_id}` | Interfaces edit a profile | Changed name/settings, version precondition → Operator | Update profile | New |
 | `DELETE /admin/operators/{operator_id}` | Interfaces remove a profile | Operator ID → no body | Delete profile; historical attribution policy remains open | New |
 
-Use explicit Operator IDs rather than a `/me` route: an API key does not currently identify a person. Profile selection and any connection to activity attribution remain open. Deleting a profile does not imply deleting operational Entities, Tasks, or Objects.
+Use explicit Operator IDs rather than a `/me` route: an API key does not currently identify a person. Profile selection mechanics remain open; activity records identify the authenticated caller and do not treat a selected profile as proof of human identity. Deleting a profile does not imply deleting operational Entities, Tasks, or Objects.
 
 ## Plugins
 
@@ -188,7 +199,7 @@ Core readiness depends on required infrastructure, including SQLite and private 
 | Lists | Bounded cursor pagination, following older list contracts | Filters, limits, and headers versus body pagination metadata |
 | Errors | Stable error code and human-readable message with appropriate HTTP status | One consistent error envelope for handlers and authentication |
 | Concurrent changes | Resource versions and ETags; use `If-Match` to reject stale writes | Which writes require rather than merely accept it |
-| Retryable mutations | Stable Asset/request identities for registration retries, Task creation idempotency, and dataset-scoped submission identity for durable Plugin Operations | Identity formats, retention, and exact response behavior |
+| Retryable mutations | Stable Asset/request identities for registration retries, Task creation idempotency, Dataset-scoped Operation and upload identities; history capture and action recording deduplicate retries | Identity formats, retention, and exact response behavior |
 | Protocol compatibility | Allow declared compatible Core/Asset/SDK versions; explicitly reject unsupported versions and unsupported Asset Commands | Compatibility range advertisement and negotiation fields; catalog lookup remains local |
 | Change events | Committed Entity, Task, and Object writes publish versioned changes; identical no-op retries do not create another execution | Administrative/Plugin notifications and retention limits |
 
@@ -197,7 +208,7 @@ Core readiness depends on required infrastructure, including SQLite and private 
 1. Define exact request/response schemas, filters, limits, and status codes for the approved routes.
 2. Resolve the specific open choices in the shared contract table, including mandatory write preconditions and how supported compatibility ranges are advertised.
 3. Define Task reorder/confirmation APIs, cancellation confirmation and delivery races, report validation, and reconciliation mechanics without reintroducing the removed execution-session API.
-4. Define private local management outcomes, Operation envelopes/notification behavior, and resumable-upload initiation, progress and finalization details.
+4. Define private local management outcomes, Operation envelopes/notification behavior, and whole-file upload retry identity/content-verification details.
 
 ## Sources
 

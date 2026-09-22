@@ -27,12 +27,13 @@ These are the starting families. More can be added as requirements emerge. Their
 | `/objects` | File content, metadata, and references to related entities |
 | `/admin` | Core configuration, maintenance, and diagnostics |
 | `/admin/auth` | API key management, including creation, listing, and revocation |
+| `/admin/activity` | Read-only structured history of selected operational actions |
 | `/admin/operators` | Operator identity information and personal settings |
 | `/plugins` | Plugin discovery/status and durable Operation submission, outcomes and cancellation |
 | `/feed` | Live resource changes |
 | `/queries` | Initial state synchronization and recovery of missed changes |
 
-`/admin/auth` and `/admin/operators` are subfamilies of `/admin`, documented separately because they have distinct responsibilities.
+`/admin/auth`, `/admin/activity` and `/admin/operators` are subfamilies of `/admin`, documented separately because they have distinct responsibilities.
 
 ## Agreed resource responsibilities
 
@@ -55,6 +56,10 @@ Atlas Protocol owns the Command Catalog and its schemas. Assets declare which Co
 The SDK exposes a local function that returns the Command Catalog from the installed Protocol package. Assets and command interfaces already include Protocol, so catalog access requires no Core request or network connection. There is no `/command-catalog` endpoint in this design. The SDK function's name and signature remain to be designed. An Asset's advertised support is separate from the catalog of all defined Commands. Core, Assets and SDK clients may use different supported compatible versions. Core advertises supported compatibility ranges and explicitly rejects unsupported clients; exact negotiation fields remain open. Task creation also validates the Asset's advertised Command support. See [ADR-0005](adr/0005-allow-compatible-client-versions.md).
 
 Objects hold file content of arbitrary types together with metadata. Only ready Objects are visible to consumers or synchronization. Upload identity, staged metadata and progress remain separate from public Objects; see [ADR-0009](adr/0009-expose-objects-only-when-ready.md). A photograph's file content lives in Objects, and its JSON metadata can reference zero or more related Entities. The metadata allows additional file-specific information. The first successful upload fixes the Object's file content; different content requires a new Object ID, while descriptive metadata remains editable. Upload retries must recognize prior success without overwriting it. Exact field names, schemas, and retry verification remain to be designed.
+
+Failed Object uploads restart from the beginning; successful-request retries return the original Object. Resumable transfers are deferred. Temporary staging is cleaned up rather than retained as an inspectable transfer store. See [ADR-0009](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries).
+
+Movement history uses a small Core sample store for explicitly reported position, speed and altitude, separate from current telemetry. Retain until Reset and expose one paginated historical read. Backfill, sample editing, reduced trails and historical-state reconstruction are deferred. A minimal activity log records Task issuance/cancellation and Plugin, credential and configuration changes, including local actions, with authenticated attribution and no secrets. See [movement](architecture/system-design.md#movement-history) and [activity](architecture/system-design.md#activity-history).
 
 Operator records contain information such as a name and personal settings. Exact fields remain open.
 
@@ -118,7 +123,7 @@ Core filters hybrid initial queries, recovery, and feed delivery before transmis
 
 Pictures are held in memory without persistence and rebuilt on SDK restart. Full synchronization contains the entire operational dataset; hybrid contains its defined subset. Before local readiness, reads return not-ready. During an interruption, they retain the last known picture and expose its stale/disconnected state. Local change history is bounded and configurable, with explicit cursor expiry and cursors scoped to one instance, picture generation, and coverage. Successful in-scope writes reconcile authoritative results locally before returning and notify once; matching feed events are deduplicated. Resource limits must never silently truncate a supposedly complete picture.
 
-Hybrid scope limits transmission, not read permissions. All modes enforce the [dataset Reset boundary](sdk-data-access.md#dataset-reset-boundary). Exact hybrid dependency fields, terminal-Task retention, scope-entry/removal events, and query/cursor metadata remain to be specified. See [SDK data access](sdk-data-access.md) for the agreed modes and remaining engineering details. No additional endpoint family is needed for these modes.
+Hybrid scope limits transmission, not read permissions. All modes enforce the [dataset Reset boundary](sdk-data-access.md#dataset-reset-boundary). Exact hybrid dependency fields, terminal-Task retention, scope-entry/removal events, and query/cursor metadata remain to be specified. See [SDK data access](sdk-data-access.md) for the agreed modes and remaining engineering details. No additional endpoint family is needed for these modes. Explicit movement/activity history methods use their APIs in every mode, outside the synchronized picture; see [historical reads](sdk-data-access.md#historical-reads).
 
 ## Further planning
 

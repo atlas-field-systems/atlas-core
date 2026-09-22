@@ -28,5 +28,6 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | HTTP, full synchronization and Asset hybrid modes | [SDK data access](docs/sdk-data-access.md) |
 | Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
 | Asset status, communications and heartbeat | [Asset status](docs/asset-status.md) |
+| Movement and activity history scope | [Movement history](docs/architecture/system-design.md#movement-history) and [activity log](docs/architecture/system-design.md#activity-history) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |

@@ -17,7 +17,7 @@ Active mission continuity across a whole-Core restart is excluded. Do not requir
 | Restart | Stop and start Core | Preserve | Preserve and reapply |
 | Reset | Stop Core, clear Atlas-owned operational state and Atlas-managed diagnostic logs, then start Core | Wipe | Preserve and reapply |
 
-Operational state includes Entities and Tracks, Tasks, Object metadata and content, movement and activity history, Plugin Operation records, synchronization records and temporary upload state. Reset clears Atlas-managed diagnostic logs as well as operational activity history. It does not erase unrelated host logs or files. Installed Plugin selections, credentials, configuration, installed software and Plugin artifacts survive all four actions.
+Operational state includes Entities and Tracks, Tasks, Object metadata and content, movement and activity history, Plugin Operation records, synchronization records and successful upload identity records. Temporary upload files are disposable staging, cleaned after interruption or on startup under ADR-0009. Reset clears Atlas-managed diagnostic logs as well as operational activity history. It does not erase unrelated host logs or files. Installed Plugin selections, credentials, configuration, installed software and Plugin artifacts survive all four actions.
 
 This supersedes [ADR-0013](0013-start-each-core-run-with-empty-data.md). Retention is bounded by Reset rather than the Core process lifetime. If Core is already stopped, Reset clears state and starts Core. A new-release update includes Reset; distribution and update packaging remain to be designed.
 
@@ -27,7 +27,7 @@ Persistent storage uses the [selected stack](0016-use-go-sqlite-and-openapi-tool
 
 ## Dataset boundary
 
-Each dataset has an identifier, created on first initialization, retained across Restart, and changed by Reset before new state is exposed, including release-update Reset. The SDK detects an identifier change, discards its old synchronized picture and pending submissions, then reads fresh state. Core rejects old-dataset mutations and work submissions, including resource writes, Task instructions/reports, Plugin Operation submissions and upload writes/finalization. It also rejects replay or transfer-resume requests that use obsolete dataset cursors or handles. Health, authentication and current-dataset discovery remain available without an old-dataset match, so a client can reconnect and read a fresh snapshot. Ordinary reads do not authorize replaying old writes. The SDK checks dataset identity before accepting responses into its current picture or retrying a submission; the SDK must not silently relabel them as new submissions. This reset boundary was accepted on 21 September 2026. It does not identify an Asset process, introduce a Session resource, or promise Reset during an active mission. Exact wire placement remains implementation design.
+Each dataset has an identifier, created on first initialization, retained across Restart, and changed by Reset before new state is exposed, including release-update Reset. The SDK detects an identifier change, discards its old synchronized picture and pending submissions, then reads fresh state. Core rejects old-dataset mutations and work submissions, including resource writes, Task instructions/reports, Plugin Operation submissions and upload submissions/publication. It also rejects replay requests with obsolete dataset cursors and upload retries with obsolete Dataset identities. Health, authentication and current-dataset discovery remain available without an old-dataset match, so a client can reconnect and read a fresh snapshot. Ordinary reads do not authorize replaying old writes. The SDK checks dataset identity before accepting responses into its current picture or retrying a submission; the SDK must not silently relabel them as new submissions. This reset boundary was accepted on 21 September 2026. It does not identify an Asset process, introduce a Session resource, or promise Reset during an active mission. Exact wire placement remains implementation design.
 
 ## Unfinished work after Stop or Restart
 
@@ -37,7 +37,9 @@ Retention preserves evidence; it does not claim that execution continued. Stop r
 | --- | --- |
 | Asset Tasks | Keep recorded statuses, reports and result references. Do not infer Asset success, failure or cancellation from the Core interruption, and do not automatically reissue Tasks |
 | Plugin Operations | Mark unfinished attempts Interrupted under the [Operation lifecycle](0002-core-manages-installed-plugins.md#operation-transitions). A submission retry retrieves that attempt; a rerun must be explicit |
-| Partial Object transfers | Mark unfinished transfers interrupted and retain their stored progress/content for inspection until Reset. Reject resume/finalization of those interrupted transfers; a new upload is explicit and partial Objects remain private |
+| Partial Object uploads | Clean up abandoned private staging. Retried uploads start from the beginning; no partial-transfer resume or inspection store is required. Preserve already-published Objects and successful upload identity records |
+
+The 22 September upload simplification replaces the earlier retention of partial transfer bytes/progress until Reset; completed operational data remains retained.
 
 This classification supports retained development records, not active mission recovery or a promise to drain all work before Stop. Whole-Core interruption does not add a Task status. Reset clears these records under the existing cleanup rule.
 
