@@ -17,17 +17,16 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 
 The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted; implementation has not started.
 
-## API planning review
+## API and SDK plans
 
-The endpoint and SDK planning session produced the documents below. They preserve the session's decisions but overlap with architecture decisions merged separately. Read the [reconciliation notes](docs/planning-reconciliation.md) before using them as implementation requirements; they do not silently supersede the ADRs above.
+The plans below record the agreed API and SDK behavior. The [reconciliation record](docs/planning-reconciliation.md) explains the decisions that align them with the architecture. Detailed schemas and explicitly open implementation choices remain to be designed.
 
 | Read for | Document |
 | --- | --- |
 | Endpoint families and resource responsibilities | [API plan](docs/api-plan.md) |
-| Proposed public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
+| Public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
 | HTTP, full synchronization and Asset hybrid modes | [SDK data access](docs/sdk-data-access.md) |
 | Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
 | Asset status, communications and heartbeat | [Asset status](docs/asset-status.md) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
-| Resource terminology from this planning session | [Planning glossary](docs/api-glossary.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |

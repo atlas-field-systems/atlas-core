@@ -1,7 +1,5 @@
 # Asset status
 
-> Planning-session record, pending reconciliation with the architecture merged in PR #1. "Approved" and "agreed" below describe this session; they do not supersede existing ADRs. See [conflicts and document authority](planning-reconciliation.md).
-
 Every Asset requires status, communications, and heartbeat components. Asset status replaces the separate execution-session API previously proposed in the endpoint map. This is a planning document; no implementation exists in this repository.
 
 The replacement direction, separate operational and connection states, and reconciliation after exceptional interruption are agreed. Initial operational status `unknown`, initial communications `offline`, and initial heartbeat `last_seen: null` are agreed. Core accepts and retains valid Tasks even when the Asset is offline. The six operational status values below are agreed. Assets own sequential Task execution; Core does not use reported operational status or communication state to schedule their work. Detailed transition/report validation remains open. The status endpoints are part of the approved endpoint map.
@@ -66,7 +64,7 @@ Core derives communication state from the Asset or transport integration's repor
 
 Heartbeat is required on every Asset and begins with `last_seen: null`. Registration creates the record and is followed by check-in. Every accepted fresh Asset-originated update refreshes Core-recorded contact, including telemetry patches, status updates, and check-ins. A separate heartbeat packet is not required while other reports are arriving.
 
-The Asset authors its reported Entity data; interfaces send Tasks rather than edit the Asset directly. Core maintains derived fields, but its own changes never refresh heartbeat. Clients cannot supply Core's contact timestamp. Fresh Asset-originated Task acknowledgements, starts, progress, and outcomes also refresh contact. Interface-originated Task creation or cancellation does not.
+The Asset authors its reported Entity data; interfaces send Tasks rather than edit the Asset directly. Core verifies Asset identity across component, check-in, status and Task-reporting paths, following [report authority](architecture/system-design.md#identity-and-access). Core maintains derived fields, but its own changes never refresh heartbeat. Clients cannot supply Core's contact timestamp. Fresh Asset-originated Task acknowledgements, starts, progress, and outcomes also refresh contact. Interface-originated Task creation or cancellation does not.
 
 Continuous, near-real-time reporting during operations is the expected model. Fresh reports establish contact; duplicates and historical backlog do not. Delayed updates never overwrite newer component values. Freshness windows, report ordering, and relay-origin fields remain to be specified. These rules cover brief interruptions and retries rather than a planned long-disconnected store-and-forward workflow.
 
@@ -122,7 +120,7 @@ Pending decisions:
 
 ## Scope and source
 
-This replaces the public Asset execution-session design across the current planning documents. It does not remove the host manager's responsibility for running Plugin containers. Taskable Plugins follow the same Asset status model through their managed internal integration, without individual Plugin API keys.
+This replaces the public Asset execution-session design across the current planning documents. It does not remove the host manager's responsibility for running Plugin containers. Plugins are not Assets and do not report Asset status; their Operations and lifecycle follow [ADR-0002](adr/0002-core-manages-installed-plugins.md).
 
 Source snapshot: Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, read locally:
 

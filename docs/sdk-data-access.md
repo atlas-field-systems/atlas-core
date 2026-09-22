@@ -1,7 +1,5 @@
 # SDK data access
 
-> Planning-session record, pending reconciliation with the architecture merged in PR #1. "Approved" and "agreed" below describe this session; they do not supersede existing ADRs. See [conflicts and document authority](planning-reconciliation.md).
-
 The SDK has three agreed read modes: HTTP, full synchronization, and Asset hybrid. They share the same application-facing operations; the selected mode determines their data source. This is a design document, not an implemented SDK interface. Exact method names and the detailed policies marked as proposals remain open.
 
 ## Agreed modes
@@ -45,7 +43,7 @@ Start with the synchronized resources already identified in the API map:
 - Tasks and their latest execution state.
 - Object metadata and associations.
 
-Object file content is downloaded separately. Plugin management state, operator profiles, API keys, and Core settings are not automatically included in this operational picture.
+Only ready Object metadata enters the picture; upload staging and progress remain separate. Object file content is downloaded separately. Plugin discovery/status and Operations, operator profiles, API keys and Core settings are outside this operational picture and use their supported API methods. Plugin management itself is local-only and has no SDK methods.
 
 In full-synchronization mode, operational ID lookups and list/filter reads use only the local picture. If the local picture cannot answer, the SDK reports that limitation rather than querying HTTP. The exact supported query operations must be documented so callers know which reads can be answered locally. An incomplete or filtered picture must never be mistaken for the full dataset.
 
@@ -61,6 +59,8 @@ Asset hybrid is the agreed third mode, designed to reduce bandwidth on an Asset'
 - Directly referenced Entities and Object metadata needed to execute those Tasks.
 
 File bytes remain explicit downloads. Unrelated Assets, Tasks, and Objects are not included in the background subscription. Exact dependency declarations and retention of completed Tasks remain to be specified; synchronization does not recursively subscribe to the entire relationship graph.
+
+Hybrid scope limits bandwidth, not authorization. Every authenticated client may still request the full operational picture.
 
 Core filters initial queries, recovery queries, and live feed delivery before transmission. Downloading everything and discarding unrelated records in the SDK would not meet the bandwidth goal. The scope applies consistently across loading and recovery, including resources entering and leaving the subset. A scope removal must not be confused with global deletion, and unrelated Core changes must not trigger false recovery gaps. Exact filter and cursor mechanics remain engineering details.
 
@@ -130,9 +130,17 @@ In full-synchronization or Asset hybrid mode, after Core confirms a successful w
 
 Read-after-write reconciliation and notification deduplication follow the agreed rule above; exact result/version envelopes remain to be specified. Asset status is synchronized as part of the Entity record. Assets use the same assigned-Task read method in all modes and execute their outstanding queue sequentially, oldest submission first by default, following confirmed reordering. Core validates Task lifecycle reports but does not schedule execution from Asset status. Reading or caching a Task does not acknowledge or start it; the Asset reports those transitions explicitly. See [Asset status](asset-status.md) for the replacement design and open reconciliation decisions.
 
+## Dataset Reset boundary
+
+All three modes follow [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary). A Dataset identity is created on first initialization, survives Restart, and changes on Reset. It is separate from an SDK picture generation or Asset process identity.
+
+Before accepting responses or retrying submissions, the SDK checks Dataset identity. After detecting Reset, discard the old picture, local history/cursors, pending submissions and obsolete transfer/recovery handles. Reject late responses/events from the prior Dataset and never relabel an old write as a new submission. Full synchronization and Asset hybrid return to not-ready and load their respective scopes afresh; HTTP mode rediscovers the Dataset without constructing a local picture. This is background recovery, not an application-read fallback.
+
+Core rejects old-dataset writes, Task reports, Operation submissions and obsolete upload/replay handles. Health, authentication and current-Dataset discovery remain available so clients can recover. A disconnection without a known Reset may retain a visibly stale picture; once Reset is known, that picture cannot be served as the current Dataset. Restart alone does not invalidate Dataset identity or promise active-mission continuity. Wire fields and the discovery binding remain implementation details.
+
 ## Protocol compatibility
 
-Core, Assets, and SDK clients must use matching Protocol schema revisions before operational exchange. Mismatches produce an explicit compatibility error. Package versions can differ when they contain the same Protocol revision. Flexible revision compatibility is deferred; exact revision advertisement and comparison fields remain to be specified. Command Catalog lookup stays local and requires no catalog download.
+Core, Assets and SDK clients may use different versions within declared supported compatibility ranges, following [ADR-0005](adr/0005-allow-compatible-client-versions.md). Unsupported versions fail explicitly; exact advertisement and negotiation fields remain open. Task creation also checks the target Asset's advertised Command support. Adding a compatible optional field need not force a simultaneous update. Command Catalog lookup stays local to the installed Protocol package and requires no catalog download.
 
 ## Open decisions
 
@@ -142,7 +150,7 @@ Core, Assets, and SDK clients must use matching Protocol schema revisions before
 - Detailed local query pagination, history limits/cursor encoding, and local feed start/rebuild behavior.
 - Cache lifecycle and concrete resource limits for the full in-memory picture.
 - Mutation-result/version envelopes, change notification details, and synchronization status API.
-- How matching Protocol schema revisions are advertised and checked.
+- How supported compatibility ranges and negotiated contracts are advertised and checked.
 
 ## Earlier design reference
 

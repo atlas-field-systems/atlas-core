@@ -1,10 +1,8 @@
 # API endpoint map
 
-> Planning-session record, pending reconciliation with the architecture merged in PR #1. "Approved" and "agreed" below describe this session; they do not supersede existing ADRs. See [conflicts and document authority](planning-reconciliation.md).
-
 Approved endpoint map as of 2026-09-22, based on [the API plan](api-plan.md) and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. Approval does not mean implementation; no endpoints are implemented in this repository yet.
 
-Use [the glossary](api-glossary.md) for resource meanings. Protocol owns resource and Command schemas; the descriptions below identify inputs and results without freezing every field.
+Use [the glossary](../CONTEXT.md) for resource meanings. Protocol owns resource and Command schemas; the descriptions below identify inputs and results without freezing every field.
 
 See [the data component catalog](data-components.md) for the proposed component applicability and database inventory that will guide detailed schemas.
 
@@ -14,9 +12,9 @@ See [the data component catalog](data-components.md) for the proposed component 
 - **Adapt**: an older capability has a new path or changed contract.
 - **New**: added to satisfy a requirement established in this planning session.
 
-These labels describe provenance; all listed routes are approved. Expected callers describe usage, not permissions. Any valid API key can use every public endpoint. Installed Plugins use Core's managed internal integration and need no individual API keys.
+These labels describe provenance; the routes below reflect the accepted reconciliation. Expected callers describe usage. Core enforces [Asset report ownership and administrative boundaries](architecture/system-design.md#identity-and-access). All authenticated consumers may read operational data; a valid key alone does not authorize impersonating an Asset or administering Core. Managed Plugins require no operator-managed API keys.
 
-In the effects column, `create`, `update`, and `delete` mean committed resource changes delivered through `/feed` and `/queries/changed-since`. Failed validation produces no resource change. The initial synchronized resource set is Entities, Tasks, and Objects, following the older design. Plugin management, operator profiles, settings, and API keys are read through their own endpoints; their notification behavior remains open.
+In the effects column, `create`, `update`, and `delete` mean committed resource changes delivered through `/feed` and `/queries/changed-since`. Failed validation produces no resource change. The initial synchronized resource set is Entities, Tasks, and Objects, following the older design. Plugin discovery/status, operator profiles, settings and key metadata are read through the allowed public endpoints; their notification behavior remains open. Plugin management uses private local interfaces.
 
 ## Entities
 
@@ -38,7 +36,7 @@ Deletion rule retained from the older design: reject Asset deletion while it has
 
 Core validates components against Protocol-defined schemas and applicability. Entities have no unrestricted `extra` metadata map. Plugins will never define or register components. Required components cannot be removed through an update. Partial updates preserve omitted fields, replace supplied scalars, merge nested fields, and replace arrays completely. Explicit null removes an optional component or clears a nullable field. Validate the entire resulting resource and commit atomically.
 
-Assets author their own reported Entity data; command interfaces send Tasks rather than editing Asset state. Core owns derived communications, heartbeat, timestamps, and versions. Every accepted fresh Asset-originated update refreshes Core-recorded contact, including telemetry patches and status reports. Core-derived changes do not refresh contact. This authorship rule does not add API-key roles; the precise relay-origin and report-ordering fields remain open. Fresh reports establish contact; duplicates and historical backlog do not. Delayed updates cannot overwrite newer component values. Continuous, near-real-time telemetry is expected; exact freshness windows remain open.
+Assets author their own reported Entity data; command interfaces send Tasks rather than editing Asset state. Core owns derived communications, heartbeat, timestamps, and versions. Every accepted fresh Asset-originated update refreshes Core-recorded contact, including telemetry patches and status reports. Core-derived changes do not refresh contact. Core verifies the Asset identity on every reporting path, including generic Entity patches; this introduces no operator roles. The precise enrollment, relay-proof and report-ordering fields remain open. Fresh reports establish contact; duplicates and historical backlog do not. Delayed updates cannot overwrite newer component values. Continuous, near-real-time telemetry is expected; exact freshness windows remain open.
 
 The SDK provides Asset registration through `POST /entities`, followed by check-in. Initial data can include descriptive fields, components, and Command support. Before the first report, defaults are operational status `unknown`, communications `offline`, and heartbeat `last_seen: null`. See the [SDK operations catalog](sdk-operations.md). No separate registration or telemetry endpoint is needed. Assets retain stable IDs across restarts. Registration retries use the same Asset ID and request identity; reconnects resume the existing record without overwriting it with startup defaults. Exact deduplication retention, response semantics, and report-ordering fields remain open.
 
@@ -51,7 +49,7 @@ The [Asset status model](asset-status.md) replaces the former execution-session 
 | `GET /entities/{entity_id}/status` | Interfaces and integrations inspect an Asset's condition | Asset ID → status, report times, and reason/details | None | New |
 | `PATCH /entities/{entity_id}/status` | Assets and relays report Asset-originated operational status | Asset ID, status/reason/details, version precondition → updated status | `update` Entity and contact; no Task outcome inferred | New |
 
-Status-specific routes apply to Asset Entities. Status supplied through check-in or any permitted Entity patch uses the same validation and transition rules. Command support is reported on the Entity/check-in contract; it is not bound to a public execution-session registration. Managed taskable Plugins use the same status model without Plugin API keys. Mechanics for stale reports, restart reconciliation, and active Tasks remain open and must be settled before execution is implemented.
+Status-specific routes apply to Asset Entities. Status supplied through check-in or any permitted Entity patch uses the same validation and transition rules. Command support is reported on the Entity/check-in contract; it is not bound to a public execution-session registration. Plugins are not Assets and expose Operations separately. Mechanics for stale reports, restart reconciliation, and active Tasks remain open and must be settled before execution is implemented.
 
 ## Tasks
 
@@ -65,7 +63,7 @@ Task creation assigns one Protocol-defined Command to one Asset and begins in `p
 | `POST /tasks/{task_id}/acknowledge` | Assigned Asset confirms acceptance into its local queue | Task ID → Task, subject to Task lifecycle validation | `update` Task to acknowledged | Adapt: remove execution-session identity |
 | `POST /tasks/{task_id}/start` | Assigned Asset starts execution | Task ID → Task, subject to Task lifecycle validation | `update` Task to in progress | Adapt: remove execution-session identity |
 | `POST /tasks/{task_id}/progress` | Assigned Asset reports progress | Task ID, progress → Task | `update` Task | Adapt: stale-report contract open |
-| `POST /tasks/{task_id}/complete` | Assigned Asset reports completion | Task ID, Command-defined output when required → Task | `update` Task to completed | Adapt: stale-report contract open |
+| `POST /tasks/{task_id}/complete` | Assigned Asset reports completion | Task ID, Command-defined output and required result references → Task | Record completion report; complete only when Command result conditions hold | Adapt: report authority and result readiness |
 | `POST /tasks/{task_id}/fail` | Assigned Asset reports failure | Task ID, failure details → Task | `update` Task to failed | Adapt: stale-report contract open |
 | `POST /tasks/{task_id}/cancel` | Tasking client requests withdrawal of work | Task ID, cancellation request details → Task | Record request and notify Asset; accepted work retains its execution state until an outcome is confirmed | Adapt: distinguish request from confirmed cancellation |
 | `GET /tasks/{task_id}/objects` | Interfaces inspect associated files | Task ID, pagination → Object metadata page | None | Retain |
@@ -78,6 +76,8 @@ Core assigns Tasks a permanent increasing submission sequence per Asset in accep
 
 Task reordering is agreed for Tasks that have not started, including acknowledged Tasks. Submission sequence stays immutable; current queue order is separate. Running and terminal Tasks cannot be moved. Expose requested order separately from the order confirmed by the Asset. A disconnected Asset can continue its last received order. Exact revision/conflict rules, confirmation messages, and the mutation endpoint remain to be designed; no reorder route has been selected yet.
 
+A scan Task completes only when Core has both the authenticated assigned-Asset completion report and every required ready Object declared by that Asset, in either arrival order. Until then it remains in progress with upload progress separate. Pending cancellation is retained independently. Uploads may finish after confirmed cancellation without reopening the Task. See [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md).
+
 Cancellation requests and terminal cancellation are separate data. The six Task status values are unchanged. For Asset-accepted work, `cancelled` records a confirmed cancellation rather than merely the interface's request. The confirmation API, handling of never-accepted work, and delivery/acknowledgement races remain to be specified.
 
 ## Objects
@@ -87,19 +87,18 @@ Objects hold arbitrary file types and flexible JSON metadata. Entity references 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /objects` | Interfaces and integrations list files | Filters, pagination → Object metadata page | None | Retain |
-| `POST /objects` | File producers create descriptive metadata | Object identity, metadata, associations → Object | `create` Object metadata; no file upload | Retain |
-| `POST /objects/upload` | File producers upload an Object's first content | Multipart file, Object ID, optional descriptive fields → Object with storage-derived metadata | Store first content; create or populate Object and emit corresponding change; no overwrite | Retain |
+| `POST /objects/upload` | File producers supply content and descriptive metadata | Content, upload/request identity, metadata and associations → ready Object on successful completion | Stage privately; publish Object and its change only when ready; no overwrite | Adapt: ready-only publication |
 | `GET /objects/{object_id}` | Consumers inspect a file record | Object ID → full metadata and associations | None | Retain |
 | `PATCH /objects/{object_id}` | Interfaces and integrations edit metadata | Object ID, changed metadata/associations, version precondition → Object | `update` Object metadata | Retain |
 | `DELETE /objects/{object_id}` | Interfaces remove an Object | Object ID → no body | `delete` Object; arrange stored-content removal | Retain |
 | `GET /objects/{object_id}/download` | Consumers retrieve file content | Object ID → attachment stream | None | Retain |
 | `GET /objects/{object_id}/view` | Interfaces preview supported content | Object ID → inline stream, attachment, or unsupported-type error | None | Retain; supported preview formats need review |
 
-Storage facts such as byte size and storage location come from the upload process, not arbitrary metadata edits. The older upload endpoint accepts content separately from references; references are created or patched through metadata endpoints. Keep that as the starting contract. After the first successful upload, file content is immutable. Changed content requires a new Object ID; descriptive metadata remains editable. A retry must recognize an already-successful upload without overwriting it. Exact retry identity/content verification, transfer limits, deletion completion, and preview formats remain open. Arbitrary upload types do not imply arbitrary inline rendering.
+Objects are visible through reads, queries and feed only after content and metadata are ready. Upload identity, staged metadata and progress are separate transfer state, not publicly listed Objects. Physical file paths remain private; measured byte size and content type come from the upload process. The earlier metadata-only `POST /objects` route is removed. Descriptive fields and associations may be staged with the upload and edited after publication. The resumable-transfer API, staging identity and progress queries still need detailed design under [ADR-0009](adr/0009-expose-objects-only-when-ready.md). After the first successful upload, file content is immutable. Changed content requires a new Object ID; descriptive metadata remains editable. A retry must recognize an already-successful upload without overwriting it. Exact retry identity/content verification, transfer limits, deletion completion, and preview formats remain open. Arbitrary upload types do not imply arbitrary inline rendering.
 
 ## Administration
 
-All routes here use the same public API key rule. Operator profiles do not introduce roles, login permissions, or per-operator access limits.
+All routes are authenticated. Operator-facing administrative clients may manage the documented configuration and credentials; Asset and Plugin integration identities cannot. Operator profiles remain names/settings rather than permission roles. Plugin configuration and process administration are exclusively local. See [identity and access](architecture/system-design.md#identity-and-access).
 
 ### Core configuration and diagnostics
 
@@ -116,10 +115,10 @@ The editable Core settings and their application rules must be defined before th
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /admin/auth/api-keys` | Administrative clients list keys | Pagination → key metadata, never key secrets | None | Adapt from `/admin/api-keys` |
-| `POST /admin/auth/api-keys` | Administrative clients provision a key | Name/description → key metadata and secret returned once | Create a full-access key | Adapt from `/admin/api-keys` |
+| `POST /admin/auth/api-keys` | Administrative clients provision a key | Name/description → key metadata and secret returned once | Create an operator administrative key; not an Asset reporting identity | Adapt from `/admin/api-keys` |
 | `DELETE /admin/auth/api-keys/{key_id}` | Administrative clients revoke a key | Key ID → no body | Revoke the key | Adapt from `/admin/api-keys/{key_id}` |
 
-Unlike the older implementation, these routes accept any valid API key and require no browser-admin session. Bootstrap: local deployment setup provisions the first key outside HTTP and stores it for the operator; subsequent keys use these routes. Recovery after loss or revocation of every key is also a local setup responsibility. Exact setup commands remain open.
+These routes require an operator administrative credential, not an Asset or Plugin integration identity; no browser-admin session is selected. Asset identity is provisioned automatically during enrollment, with the binding mechanism still to be designed. Bootstrap: local deployment setup provisions the first key outside HTTP and stores it for the operator; subsequent keys use these routes. Recovery after loss or revocation of every key is also a local setup responsibility. Exact setup commands remain open.
 
 ### Operator records
 
@@ -135,29 +134,22 @@ Use explicit Operator IDs rather than a `/me` route: an API key does not current
 
 ## Plugins
 
-The public API owns desired state and configuration. A host manager performs installation and container operations. The paths below extend the older discovery/invocation API to cover the management behavior already agreed.
+Plugin installation, catalog selection, configuration, enable/disable, updates, removal and process control use the local CLI/TUI. They have no public endpoints or SDK methods. The public API exposes discovery/status and durable Operations under [ADR-0002](adr/0002-core-manages-installed-plugins.md).
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
-| `GET /plugins` | Interfaces discover installed Plugins and availability | Pagination → Plugin summary page | None | Adapt: include installation and management state |
-| `GET /plugins/catalog` | Administrative clients discover installable releases | Filters/pagination → available Plugin releases and compatibility metadata | None | New API for an older CLI capability |
-| `GET /plugins/{plugin_id}` | Interfaces inspect and monitor a Plugin | Plugin ID → release, enabled/available state, pending settings and latest management result | None | New |
-| `POST /plugins/{plugin_id}/install` | Administrative clients request installation | Selected release → accepted management receipt | Host manager installs selected release | New API for an older CLI capability |
-| `POST /plugins/{plugin_id}/enable` | Administrative clients request that a Plugin run | Plugin ID → accepted management receipt | Enable and start through host manager | New API for an older CLI capability |
-| `POST /plugins/{plugin_id}/disable` | Administrative clients request that a Plugin stop | Plugin ID → accepted management receipt | Disable and stop through host manager; retain installation | New API for an older CLI capability |
-| `POST /plugins/{plugin_id}/update` | Administrative clients request a release change | Selected release → accepted management receipt | Host manager updates Plugin; restart may be required | New API for an older CLI capability |
-| `POST /plugins/{plugin_id}/uninstall` | Administrative clients remove an installed Plugin | Plugin ID → accepted management receipt | Host manager removes installation | New API for an older CLI capability |
-| `GET /plugins/{plugin_id}/config/schema` | Interfaces discover settings | Plugin ID → declared settings schema, required fields and defaults | None | New |
-| `GET /plugins/{plugin_id}/config` | Interfaces inspect settings | Plugin ID → saved settings, active settings, revisions and pending-change state | None | New |
-| `PUT /plugins/{plugin_id}/config` | Interfaces save a complete settings document | Schema-valid settings, version precondition → saved settings and pending state | Save desired configuration; do not restart | New |
-| `POST /plugins/{plugin_id}/config/apply` | Administrative clients apply saved settings | Saved configuration revision → accepted management receipt | For running Plugin, restart and restore last working configuration on startup failure; for disabled Plugin, prepare settings for next start without enabling | New |
-| `POST /plugins/{plugin_id}/operations/{operation_id}` | Interfaces invoke a Plugin's declared bounded read-only capability | Declared operation input → synchronous operation result | No durable Atlas resource changes | Retain |
+| `GET /plugins` | Consumers discover installed Plugins and capabilities | Pagination → Plugin summary page | None | Adapt: discovery and availability only |
+| `GET /plugins/{plugin_id}` | Consumers inspect a Plugin | Plugin ID → release, capabilities, availability and fault status | None; no configuration secrets or management controls | New |
+| `POST /plugins/{plugin_id}/operations` | Consumers invoke a declared capability | Capability identifier, input, dataset-scoped submission identity → accepted attempt and outcome URL | Record durable Operation; declared processing may publish operational resources | Adapt: replace request-bound capability invocation |
+| `GET /plugins/{plugin_id}/operations` | Consumers list attempts | Filters, pagination → Operation page | None | New |
+| `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one attempt | Core-owned attempt ID → status, progress, known outputs and outcome | None | New |
+| `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` | Consumers request cancellation | Attempt ID → Operation | Record cancellation request; final outcome requires confirmation | New |
 
-Management response: return `202 Accepted` with a request ID and a status URL at `GET /plugins/{plugin_id}`. That resource exposes the current request ID, phase, result or failure, and active/saved configuration revisions. Permit one management action at a time per Plugin, rejecting overlapping actions with a conflict. Retain the result after uninstall so the initiating client can observe completion. These management mechanics are part of the approved baseline.
+Here `operation_id` identifies one accepted attempt, not a capability definition. Return `202 Accepted` on submission with the attempt identity and query URL. Retries with the same dataset-scoped submission identity recover the existing attempt; a deliberate rerun uses a new identity. Caller disconnection does not cancel work. Failed or interrupted attempts retain known outputs/effects. Terminal outcomes cannot be overwritten; query retained attempts even if the Plugin is later removed, until Reset.
 
-An accepted management request is not completion. Completion comes from host-manager reports. Installation is distinct from enablement and runtime availability. Configuration rollback reports the failed apply while keeping the proposed settings pending. Reject disable, uninstall, update, or configuration-apply actions when they would interrupt unfinished Tasks on an Asset implemented or run by that Plugin. Resolve those Tasks before retrying. Saving configuration without applying it remains allowed. Unrelated Assets' Tasks do not block Plugin management, and this rule does not imply that Plugins assign Tasks. Applying settings to a disabled Plugin validates and retains them for its next start without enabling it. Report that startup has not tested this revision; do not mark it active or replace the last startup-validated configuration merely because validation succeeded.
+Operations have their own [transition table](adr/0002-core-manages-installed-plugins.md#operation-transitions). Their cancellation-requested status remains distinct from the separate cancellation field used on Tasks. Operation polling uses these endpoints in every SDK mode; Operations are outside the initial Entity/Task/Object picture. Live Operation notification details remain open.
 
-Plugin management requests and bounded read-only Plugin capabilities are not operational Tasks. A taskable Plugin participates through an Asset and the ordinary Task contract. Durable resource changes use Core's ordinary resource actions through the managed integration. The private Core-to-Plugin and Core-to-manager routes belong in separate internal contracts; this document does not invent public management credentials for them.
+Plugins are not taskable Assets. They can create Tasks for Assets through the ordinary Task API, and publish resources through Core using managed integration identity. Stopping a Plugin protects its active Operations under [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md); unrelated Asset Tasks do not block management. Local management results, saved/active configuration and startup validation belong to that private contract, not the public Plugin resource.
 
 ## Synchronization
 
@@ -169,9 +161,11 @@ The SDK exposes resource reads, queries, and feed subscriptions through the same
 | `GET /queries/changed-since` | SDK clients recover missed changes | Full or Asset scope, baseline version and cursor → scoped ordered change events and next recovery boundary | None | Retain |
 | `GET /feed` | SDK clients subscribe to live changes | WebSocket upgrade, API-key authentication, subscription filters → hello and resource events | Maintain connection/subscriptions; no resource writes | Retain |
 
-Asset hybrid requires matching Core-side scope filters across initial queries, recovery, and feed delivery. Its scope includes the Asset's own Entity, outstanding Tasks and subsequent outcomes, cancellation requests, queue-order changes, and directly referenced Entities/Object metadata needed for those Tasks. Filter before transmission; do not download the full dataset and discard unrelated data locally. Out-of-scope reads use ordinary API requests without widening the subscription. Exact scope fields, dependency declarations, scope-entry/removal events, and cursor semantics remain to be specified. See [Asset hybrid](sdk-data-access.md#asset-hybrid-mode).
+Asset hybrid requires matching Core-side scope filters across initial queries, recovery, and feed delivery. Its scope includes the Asset's own Entity, outstanding Tasks and subsequent outcomes, cancellation requests, queue-order changes, and directly referenced Entities/Object metadata needed for those Tasks. Filter before transmission; do not download the full dataset and discard unrelated data locally. Scope is a bandwidth choice, not a read-permission boundary; every authenticated client can still request the full picture. Out-of-scope reads use ordinary API requests without widening the subscription. Exact scope fields, dependency declarations, scope-entry/removal events, and cursor semantics remain to be specified. See [Asset hybrid](sdk-data-access.md#asset-hybrid-mode).
 
 Recovery contract: finish initial dataset pagination, then recover changes since its baseline before treating the dataset as current. The paginated read is not a frozen database snapshot. Keep the baseline stable across its pages; do not substitute the largest version seen in individual resources. On feed reconnect or a version gap, recover through changed-since. If retained history no longer covers the requested version, return an explicit cursor-expired response and require a new initial load. Retention duration and subscription filters remain reviewable.
+
+All reads, mutations, upload handles and recovery cursors follow the [dataset Reset boundary](sdk-data-access.md#dataset-reset-boundary). Core rejects obsolete-dataset submissions, reports and transfer/replay handles; the SDK discards obsolete state without relabeling old writes. Exact wire placement remains open.
 
 Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-key authentication when upgrade headers are unavailable; authenticate before delivering events. No browser-session authentication is assumed. All application requests remain authenticated; CORS preflight is transport negotiation and needs separate handling.
 
@@ -184,7 +178,7 @@ Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-
 | `GET /docs` | Developers browse interactive documentation | API key → documentation interface | None | New |
 | `GET /openapi.json` | SDK/tooling and docs read the HTTP contract | API key → OpenAPI document | None | New |
 
-Core readiness depends on required infrastructure, including its database and configured object store. An unavailable Plugin is reported on that Plugin and does not make an otherwise functioning Core globally unready. Exact dependency probes and timeout thresholds remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
+Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is reported on that Plugin and does not make an otherwise functioning Core globally unready. Exact dependency probes and timeout thresholds remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
 
 ## Shared contract baseline
 
@@ -194,16 +188,16 @@ Core readiness depends on required infrastructure, including its database and co
 | Lists | Bounded cursor pagination, following older list contracts | Filters, limits, and headers versus body pagination metadata |
 | Errors | Stable error code and human-readable message with appropriate HTTP status | One consistent error envelope for handlers and authentication |
 | Concurrent changes | Resource versions and ETags; use `If-Match` to reject stale writes | Which writes require rather than merely accept it |
-| Retryable mutations | Stable Asset/request identities for registration retries, Task creation idempotency, and request deduplication for Plugin management | Identity formats, retention, and exact response behavior |
-| Protocol compatibility | Require matching Protocol schema revisions for Core, Assets, and SDK clients before operational exchange; explicit mismatch errors; package versions may differ | Revision advertisement and checking fields; catalog lookup remains local |
+| Retryable mutations | Stable Asset/request identities for registration retries, Task creation idempotency, and dataset-scoped submission identity for durable Plugin Operations | Identity formats, retention, and exact response behavior |
+| Protocol compatibility | Allow declared compatible Core/Asset/SDK versions; explicitly reject unsupported versions and unsupported Asset Commands | Compatibility range advertisement and negotiation fields; catalog lookup remains local |
 | Change events | Committed Entity, Task, and Object writes publish versioned changes; identical no-op retries do not create another execution | Administrative/Plugin notifications and retention limits |
 
 ## Remaining contract details
 
 1. Define exact request/response schemas, filters, limits, and status codes for the approved routes.
-2. Resolve the specific open choices in the shared contract table, including mandatory write preconditions and how matching Protocol revisions are advertised.
+2. Resolve the specific open choices in the shared contract table, including mandatory write preconditions and how supported compatibility ranges are advertised.
 3. Define Task reorder/confirmation APIs, cancellation confirmation and delivery races, report validation, and reconciliation mechanics without reintroducing the removed execution-session API.
-4. Define the private host-manager contract and management outcomes, including first-apply and rollback failures.
+4. Define private local management outcomes, Operation envelopes/notification behavior, and resumable-upload initiation, progress and finalization details.
 
 ## Sources
 

@@ -47,8 +47,14 @@ _Avoid_: diagnostic logs, movement history, complete telemetry history
 ## Resources and tasking
 
 **Entity**:
-An identified subject in Atlas's operational picture, such as an Asset, Track, or Geofeature.
+A represented participant, observed subject, or spatial designation in Atlas. Every Entity is an Asset, Track, or Geofeature; its identity and type never change.
 _Avoid_: database row
+
+**Alias**:
+An optional, editable Entity name, unique across Entity types ignoring case. Relationships use permanent Entity identities.
+
+**Asset status**:
+An Asset's reported operational condition. It does not establish a Task outcome or prove current contact.
 
 **Asset**:
 An Entity representing a taskable or reporting system participating in Atlas.
@@ -63,32 +69,42 @@ The Asset-side software that owns scheduling, execution, interruption and connec
 _Avoid_: Atlas Core, server scheduler
 
 **Track**:
-An Entity representing an observed moving subject.
+An Entity representing an observed subject, whether stationary or moving. A detected house is a Track.
 _Avoid_: Asset, stream item
 
 **Geofeature**:
-An Entity representing a spatial feature or area.
+An Entity representing a defined spatial designation, such as a zone or rally point, with point, line, or polygon geometry.
 _Avoid_: Asset, Track
 
 **Command**:
 A Core-defined intent that a supporting Asset can execute, with defined inputs and observable behavior.
 _Avoid_: arbitrary function, Task
 
+**Command Catalog**:
+The Protocol-owned collection of Command definitions and schemas. Assets declare which Commands they support; they do not invent additional catalog entries.
+
 **Task**:
 One request to execute a Command on one assigned Asset, with a recorded lifecycle and outcome.
 _Avoid_: Command definition, mutable assignment
 
-**Cancellation requested**:
-The Task status recording a cancellation request while the Asset's final outcome remains unconfirmed.
+**Task cancellation request**:
+A request to withdraw a Task, recorded separately from its execution status. The request does not establish that execution stopped; accepted work requires Asset confirmation.
 _Avoid_: Canceled, proof that execution stopped
 
 **Object**:
-A named resource describing operational data, which may have associated content.
+Stored file content and associated descriptive metadata, published when ready for use. Content is immutable; metadata can change. An Object can reference related Entities and Tasks.
 _Avoid_: Entity, arbitrary JSON value
 
 **Movement sample**:
 A report of one or more of an Entity's position, speed, or altitude, with observation time when known and the time Atlas received it.
 _Avoid_: complete Entity snapshot
+
+**Local operational picture**:
+The SDK's latest-known view of Entities, Tasks and Object metadata maintained from Core changes. It may lag while changes are in transit or synchronization is interrupted.
+
+**Operator**:
+A person using Atlas, represented by identity information such as a name and personal settings.
+_Avoid_: permission role
 
 ## Extensions and external data
 

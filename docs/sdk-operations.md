@@ -1,7 +1,5 @@
 # SDK operations catalog
 
-> Planning-session record, pending reconciliation with the architecture merged in PR #1. "Approved" and "agreed" below describe this session; they do not supersede existing ADRs. See [conflicts and document authority](planning-reconciliation.md).
-
 This catalog documents SDK workflows and their API mappings. It is separate from the Protocol Command Catalog, which defines operational instructions executed as Tasks. SDK operations such as registration and updating telemetry do not create Tasks. This is a design document; no SDK implementation or final method signatures exist here yet.
 
 ## Initial operations
@@ -20,7 +18,9 @@ The initial operations and behaviors below are approved; the names describe beha
 | Fetch assigned Tasks | Read outstanding Tasks with submission/current queue order and confirmation state, following pagination; use the same method in all modes | HTTP mode: `GET /entities/{entity_id}/tasks`. Full synchronization: local picture. Asset hybrid: local for its own Asset, one-off API reads for others |
 | Report Task lifecycle | Acknowledge, start, report progress, complete, or fail assigned work | Existing Task lifecycle endpoints |
 | Cancel Task | Request withdrawal; accepted work keeps its execution state until Asset-confirmed cancellation or another outcome | `POST /tasks/{task_id}/cancel` |
-| Upload Object content | Supply first content to an Object; subsequent changed content needs a new Object ID | `POST /objects/upload` |
+| Upload Object content | Stage content/metadata privately and publish a ready Object; changed content needs a new Object ID | `POST /objects/upload`; resumable-transfer details remain open |
+| Invoke Plugin Operation | Submit a declared capability with stable Dataset-scoped identity; retries retrieve the same attempt | `POST /plugins/{plugin_id}/operations` |
+| Inspect/cancel Plugin Operation | Query recorded progress/outcome or request cancellation; caller disconnect does not stop accepted work | Plugin Operation read/list/cancel endpoints; direct API access outside the operational picture |
 
 The SDK exposes typed methods and documentation for these operations. No machine-readable SDK-operation discovery function is planned without a concrete consumer. Local lookup of the Protocol Command Catalog remains a separate agreed SDK function. Further SDK coverage can follow the approved endpoints without inventing additional API families.
 
@@ -28,15 +28,17 @@ The SDK exposes typed methods and documentation for these operations. No machine
 
 Callers use the same SDK resource-read, query, and feed-subscription methods in all three modes. In HTTP/simple mode, all these operations pass through to Core's API, including query endpoints and the remote feed. In full-synchronization mode, resource reads and queries use only the local picture and locally retained changes; feed subscriptions observe updates applied to that picture. None of these application operations passes through to Core in full-synchronization mode. Asset hybrid serves its related subset locally and makes one-off API requests for out-of-scope reads, without expanding its subscription. Its feed describes only applied changes in the subset. Applications do not switch to a separate set of cache-specific methods.
 
-Create, update, delete, and Task lifecycle operations submit to Core in all three modes. File bytes and administrative resources outside the operational picture still use their API endpoints. Before the initial picture is ready, local reads return an explicit not-ready result. During interruption, reads use the last known picture with its disconnected/stale condition exposed. Exact error/status shapes remain to be specified; the same method signature does not imply identical freshness. A full-synchronization read or hybrid in-scope read never falls back to HTTP because of a local miss, stale data, or an unsupported local query. HTTP failures never fall back to the local picture. Source selection follows the mode and, for hybrid reads, the requested scope. See [SDK data access](sdk-data-access.md).
+Create, update, delete, and Task lifecycle operations submit to Core in all three modes. File bytes and permitted administrative resources outside the operational picture still use their API endpoints. Plugin installation, settings and process control are local CLI/TUI actions, not SDK operations. Before the initial picture is ready, local reads return an explicit not-ready result. During interruption, reads use the last known picture with its disconnected/stale condition exposed. Exact error/status shapes remain to be specified; the same method signature does not imply identical freshness. A full-synchronization read or hybrid in-scope read never falls back to HTTP because of a local miss, stale data, or an unsupported local query. HTTP failures never fall back to the local picture. Source selection follows the mode and, for hybrid reads, the requested scope. See [SDK data access](sdk-data-access.md).
 
 The background synchronizer privately uses remote `/queries` and `/feed` to maintain the picture. Application-facing query and feed operations remain available, but resolve locally in full-synchronization mode and within hybrid scope. Local feed subscribers observe changes after application to the cache, not raw remote messages. Missing local query history or coverage is reported without an API pass-through. Local change history is bounded with configurable limits. Local cursors are scoped to one SDK picture, expire when history is unavailable, and become invalid on rebuild; they are not interchangeable with Core cursors. On expiry, callers can request a fresh local snapshot. Detailed limits, encoding, and subscription-start behavior remain to be specified. HTTP mode does not maintain the synchronized picture.
 
 Full-synchronization mode maintains the full operational dataset in memory, with no persistence or selective synchronization. It rebuilds on SDK restart and reports resource-limit failures rather than silently dropping resources. After a successful operational write, it reconciles Core's authoritative result before resolving the write, emits the applied change once, and deduplicates the matching feed event without regressing newer state. Failed writes do not appear locally as committed data.
 
-Core, Assets, and SDK clients must share the same Protocol schema revision before operational exchange. Mismatches fail explicitly; package versions may differ when the Protocol revision matches.
+Core, Assets and SDK clients use declared supported compatibility ranges; unsupported versions fail explicitly. Catalog lookup remains local, and Task creation validates target Command support. All modes follow the [dataset Reset boundary](sdk-data-access.md#dataset-reset-boundary), discarding obsolete state and submissions without automatically replaying them into a new Dataset.
 
 The agreed [Asset hybrid mode](sdk-data-access.md#asset-hybrid-mode) synchronizes the Asset's own Entity, outstanding Tasks and subsequent outcomes, cancellation requests, queue-order changes, and directly referenced Entities/Object metadata needed for those Tasks. Core filters before transmission across initial queries, recovery, and feed. Reads outside the subset make one-off API requests without adding subscriptions or emitting local feed updates for the fetched data. Writes still go to Core; in-scope results reconcile into the local picture. File bytes remain on-demand downloads. Dependency fields, terminal-Task retention, and scope membership/cursor details remain to be specified.
+
+Scan completion reports may remain pending until all required Objects are ready; the SDK must return Core's actual recorded Task status rather than assume a successful completion-report request made it terminal. See [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md).
 
 ## Assigned Task queue
 
@@ -47,7 +49,7 @@ Core assigns a permanent increasing submission sequence within each Asset's queu
 ## Asset startup
 
 1. The Asset invokes registration with the information it already knows. The SDK uses ordinary Entity creation, not a dedicated registration endpoint.
-2. Core validates the supplied initial data and creates the Asset. Before its first report, operational status defaults to `unknown`, communications is `offline`, and heartbeat has `last_seen: null`.
+2. Enrollment automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset. The trust/bootstrap mechanism remains to be designed; choosing an Asset ID is not proof of identity. Before its first report, operational status defaults to `unknown`, communications is `offline`, and heartbeat has `last_seen: null`.
 3. The Asset sends check-in with current component data and any additional information now available. Core records contact and derives communication state from reported link observations and configured expectations.
 4. The Asset sends further reports as needed. It can send only changed fields instead of resending its full Entity. Every accepted fresh Asset-originated update refreshes contact, including telemetry and status updates.
 
@@ -73,7 +75,7 @@ Supplied scalar fields replace previous values. Nested fields merge; arrays repl
 
 ## Reporting and derived data
 
-The Asset authors its reported Entity state. Interfaces submit Tasks rather than directly editing Asset state. An integration can relay data originating from an Asset; exact origin and report-ordering fields remain open. The existing rule that any valid API key can call public endpoints remains unchanged. This authoring model is not an additional API-key permission system.
+The Asset authors its reported Entity state. Interfaces submit Tasks rather than directly editing Asset state. An integration can relay data originating from an Asset; exact origin and report-ordering fields remain open. Core verifies Asset identity on every reporting path, including generic Entity patches and Task lifecycle calls. A valid key or claimed Asset ID alone is insufficient. This introduces no operator roles. Managed Plugins receive integration identity without manually managed keys and cannot impersonate Assets.
 
 Core owns receipt timestamps, resource versions, and derived communication state. Fresh Asset-originated updates refresh contact; Core-derived changes do not. A telemetry-only update refreshes contact without refreshing the operational status report time. Fresh Asset-originated Task acknowledgements, starts, progress, and outcomes also refresh the assigned Asset's contact. Interface-originated Task creation or cancellation does not.
 

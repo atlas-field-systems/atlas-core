@@ -63,7 +63,7 @@ The operator tasks an Asset to scan an area. Its hardware determines the result:
 
 The operator separately invokes a Plugin Operation on that Object. The Plugin owns the algorithm and specialized result format. Processing does not hold the original scan Task open, and the accepted Operation continues if the operator closes or disconnects the Command Interface. A returning operator can obtain its result. Published detections enter the shared picture directly.
 
-This example does not require every Plugin to produce a separate Object or establish a general immutability/version-history policy. Plugins may also [initiate Asset Tasks](../adr/0004-core-owns-commands-and-assets-execute-tasks.md) through existing Commands. Area/building searches can be Operations; an aircraft-data integration can continuously publish Entities without becoming taskable.
+This example does not require every Plugin to produce a separate Object or establish general version history. Published Object content follows the [immutable-content rule](../adr/0009-expose-objects-only-when-ready.md); descriptive metadata can change. Plugins may also [initiate Asset Tasks](../adr/0004-core-owns-commands-and-assets-execute-tasks.md) through existing Commands. Area/building searches can be Operations; an aircraft-data integration can continuously publish Entities without becoming taskable.
 
 ## Details for module planning
 

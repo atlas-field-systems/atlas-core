@@ -1,7 +1,5 @@
 # Data component catalog
 
-> Planning-session record, pending reconciliation with the architecture merged in PR #1. "Approved" and "agreed" below describe this session; they do not supersede existing ADRs. See [conflicts and document authority](planning-reconciliation.md).
-
 This is the design inventory for resource data and database planning. It lists every named Entity component in the reviewed Atlas Modernization Protocol, the additional data required by our accepted design, and the resource types each belongs to. Assets require `status`, `communications`, and `heartbeat`; Tasks require `status`. These requirements are agreed, as are required Geofeature geometry, immutable Entity types, alias rules, Protocol-only component definitions, and the typed-storage/validated-JSON approach below. Other component applicability and detailed physical mappings remain proposals for review.
 
 The catalog describes logical data units. A row does not necessarily mean a separate SQL table, and the API can assemble one resource from several tables. Tasks and Objects have structured records and payloads, not the older Entity `components` bag.
@@ -21,27 +19,25 @@ The catalog describes logical data units. A row does not necessarily mean a sepa
 | `media_refs` | Optional | Optional | Optional | No | No | References to Objects with media roles such as camera feed, thumbnail, or heatmap data |
 | `mil_view` | Optional | Optional | Optional | No | No | Display classification/affiliation and observation time; old values include friendly, hostile, neutral, unknown, and civilian |
 | `sensor_refs` | Optional | Optional | No | No | No | Sensor ID/type references and optional field-of-view/orientation data |
-| `custom_plugin` | Optional | No | No | No | No | Core-managed association between a taskable Plugin and its Asset, identified by Plugin ID; not Plugin configuration or an execution-session identifier |
 
-This accounts for all ten named keys in the older `EntityComponents` schema. Decisions and remaining proposals relative to its documented typical usage:
+Nine of the ten named keys in the older `EntityComponents` schema are carried forward. The historical `custom_plugin` association is excluded because Plugins are not Assets; see [ADR-0004](adr/0004-core-owns-commands-and-assets-execute-tasks.md). Decisions and remaining proposals relative to its documented typical usage:
 
 - `status` is required on both Assets and Tasks. Asset status describes operational condition; Task status describes execution lifecycle, detailed below. They do not share one state table. A house Track does not need an Asset's ready/busy lifecycle.
 - `communications` and `heartbeat` are required on every Asset. The communication states are `high_bandwidth`, `healthy`, `degraded`, and `offline`. Connection type is separate; degraded/offline takes precedence over high bandwidth. Core derives state from Asset/transport observations and configured link expectations; exact criteria remain open in [Asset status](asset-status.md).
 - `geometry` is required when creating a Geofeature. A point uses one position; lines and polygons use lists of points. Unfinished drawings remain in the interface until valid. Track geometry is optional; Assets use telemetry for position.
-- `custom_plugin` retains the useful Plugin-to-Asset relationship without importing the removed execution-session mechanism. Its final name and whether it becomes a first-class ownership field remain open.
 - All Asset status values and detailed field schemas follow [Asset status](asset-status.md); this catalog does not select new lifecycle values.
 
 ### Component definitions
 
 Every supported component must be defined by Protocol, with a schema and declared applicability. Plugins will never define or register components. New components require a Protocol change. The older unrestricted `custom_*` extension pattern is not carried forward.
 
-The inherited `custom_plugin` name identifies a known Core-managed Plugin-to-Asset association; it does not authorize Plugin-defined components. Its final name remains open. Flexible Object metadata remains supported separately. Entities have no unrestricted `extra` metadata map. Entity data belongs in Protocol-defined fields and components; flexible file-specific metadata belongs on Objects. Additional Entity data requires named Protocol fields.
+Flexible Object metadata remains supported separately. Entities have no unrestricted `extra` metadata map. Entity data belongs in Protocol-defined fields and components; flexible file-specific metadata belongs on Objects. Additional Entity data requires named Protocol fields.
 
 ## Component updates and Asset authorship
 
 Clients send partial component JSON through the existing Entity routes. There is no separate telemetry-update endpoint. Omitted fields remain unchanged, supplied scalar fields replace their previous values, nested fields merge, and arrays replace completely. Explicit null removes an optional component or clears a nullable field. Required components cannot be removed. Core validates the complete resulting resource and commits the update atomically.
 
-Assets are the source of edits to their own reported Entity data. Command interfaces send Tasks rather than directly editing Asset state. Transport integrations can relay Asset-originated updates; the exact origin and ordering fields remain open. This is the data-authoring model, not a new API-key permission system. Core still maintains derived fields such as communications, heartbeat, versions, and timestamps.
+Assets are the source of edits to their own reported Entity data. Command interfaces send Tasks rather than directly editing Asset state. Transport integrations can relay Asset-originated updates; the exact origin and ordering fields remain open. Core verifies the reporting Asset's identity across check-in, component patches and Task reports. Relay proof remains to be specified; a claimed Asset ID alone is insufficient. Core still maintains derived fields such as communications, heartbeat, versions, and timestamps.
 
 Core records receipt time for every accepted fresh Asset-originated update, including partial telemetry updates, status reports, and check-ins. Clients cannot set Core's heartbeat timestamp. Core's own derived changes do not refresh contact. Registration creates the record with initial data; before its first subsequent report, defaults are operational status `unknown`, communications `offline`, and heartbeat `last_seen: null`. Detailed registration and reporting behavior is in the [SDK operations catalog](sdk-operations.md).
 
@@ -68,13 +64,15 @@ These complete the database inventory and detail the Task status component liste
 | Task cancellation request | Task | Present when cancellation is requested | Request details, separate from execution status; receipt by Core alone is not confirmed cancellation |
 | Task `cancellation` | Task | Required for cancelled state | Confirmed cancellation outcome and details; accepted work waits for the Asset's confirmation |
 | Object identity/description | Object | Required ID; descriptive fields follow schema | Object ID, type, and usage hints |
-| Object storage metadata | Object | Present when content exists | Storage location, content type, and size; populated by the first successful upload; file content is then immutable |
+| Object storage metadata | Object | Required for a published Object | Public content type and byte size derive from the completed upload; physical storage locations remain private; content is immutable |
 | Object `referenced_by` | Object | Zero or more associations | Entity and Task references retained as historical context even when the related record is unavailable |
 | Object extension metadata | Object | Optional | Flexible file-specific JSON metadata; does not override storage-owned facts |
 
+Task completion follows [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md) and [scan result readiness](adr/0008-complete-scan-tasks-when-required-results-are-available.md); a completion report may be retained while required Objects are still uploading. Cancellation intent remains independent of execution status.
+
 The exact representation of Task progress and timestamps is inherited-schema material to validate during detailed schema authoring. Task status is included in the logical component catalog and remains the Task lifecycle field in its wire representation. Command input/output provides controlled variation without introducing a generic Task `components` bag.
 
-Object metadata and associations synchronize through the feed. File bytes remain in object storage and are fetched through the approved content endpoints.
+Ready Object metadata and associations synchronize through the feed. Upload staging and progress do not publish incomplete Objects. File bytes remain in object storage and are fetched through the approved content endpoints.
 
 Task reordering is allowed before execution starts, including for acknowledged Tasks. Preserve immutable submission sequence and keep requested queue order distinct from Asset-confirmed order. Running and terminal Tasks cannot be moved. A disconnected Asset may still follow its last received order. Revision/conflict rules and the mutation/confirmation API remain open.
 
@@ -105,12 +103,11 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | `geometry` | Validated geometry representation; choose physical type/index with spatial query requirements | Supports both defined areas and observed subject extents |
 | `mil_view` | Typed optional fields or a typed component record | Small, bounded known structure |
 | `media_refs`, `sensor_refs` | Structured association records where querying requires them | References have meaning and schema, not arbitrary strings |
-| `custom_plugin` | Core-owned Plugin-to-Asset association | Lifecycle ownership is separate from user-editable extension JSON |
 | Task identity, assignment, submission sequence, queue order/confirmation, lifecycle, cancellation request, progress, timestamps | Typed columns with constraints | Core relies on these fields to validate lifecycle transitions |
-| Task input/output | Protocol-validated JSONB | Shape depends on the Command |
+| Task input/output | Protocol-validated JSON in SQLite | Shape depends on the Command |
 | Object identity/storage facts | Typed columns | Core owns storage identity and measured facts |
 | Object references | Structured historical associations | Preserve references without cascading deletion of useful evidence |
-| Object extension metadata | Validated JSONB within the Object metadata contract | Keeps variable data flexible without weakening core fields |
+| Object extension metadata | Validated JSON in SQLite within the Object metadata contract | Keeps variable data flexible without weakening core fields |
 
 The storage approach is agreed; exact tables, columns, and indexes remain proposals and are not implemented. Entity JSON shape does not dictate one SQL row, nor does each logical component require its own table. Historical Object references must not acquire foreign-key deletion behavior that contradicts their accepted semantics.
 
@@ -124,9 +121,10 @@ For each supported component, record one authoritative definition of:
 - Absence/default semantics and any explicit enabled/disabled state.
 - Who supplies its values and which values Core derives. These are write semantics, not permission roles.
 - Update/merge rules, timestamps, and synchronization behavior.
-- Storage mapping and the database constraints needed for stable invariants.
 
-Recommendation: author these definitions with Protocol and generate validators, SDK types, and applicable database schema artifacts from them. Core must validate both supplied component shapes and applicability to the resource type, including the final result of a patch. Database constraints should enforce the relational invariants independently. A generator should not automatically create a universal nullable-column table from every possible component property.
+Record storage mappings and relational constraints separately in private SQL schemas; they are not Protocol component definitions.
+
+Protocol owns public component schemas and applicability; generate API bindings and SDK types from OpenAPI. Private SQL schemas and queries own storage, with sqlc generating typed Go access. Do not generate database tables from public resource models. See [ADR-0016](adr/0016-use-go-sqlite-and-openapi-tooling.md). Core must validate both supplied component shapes and applicability to the resource type, including the final result of a patch. Database constraints should enforce the relational invariants independently. A generator should not automatically create a universal nullable-column table from every possible component property.
 
 Use SQL `NULL` for an optional scalar such as an absent alias. Omit an absent optional component or its row. If a present component can be disabled, represent that condition explicitly rather than erasing its configuration. A required component uses a meaningful defined initial state, not an empty placeholder. Before the first report, communications is `offline` and heartbeat has `last_seen: null`; operational status defaults to `unknown` when no report is available. Do not invent a contact timestamp.
 
@@ -139,4 +137,4 @@ Source: Atlas Modernization's locally read commit `8edee4e2743fbf0f85c16dfe638d9
 - [Task model](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md): lifecycle-specific fields and Command-defined input/output.
 - [Object metadata](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/database-structure/objects.md): descriptive metadata, storage-owned fields, and associations.
 
-Before generating database tables, review remaining applicability proposals, settle Command declaration requirements, and choose detailed physical mappings based on the reads and writes we need. No additional named components are assumed to exist merely because the older wildcard could accept them.
+Before authoring database tables, review remaining applicability proposals, settle Command declaration requirements, and choose detailed physical mappings based on the reads and writes we need. No additional named components are assumed to exist merely because the older wildcard could accept them.

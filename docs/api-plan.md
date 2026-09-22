@@ -1,10 +1,8 @@
 # API plan
 
-> Planning-session record, pending reconciliation with the architecture merged in PR #1. "Approved" and "agreed" below describe this session; they do not supersede existing ADRs. See [conflicts and document authority](planning-reconciliation.md).
-
 This document records the API planning decisions. The endpoint map was approved on 2026-09-22. The routes describe intended organization and accepted methods, not implemented endpoints. Detailed schemas and explicitly unresolved behavior remain to be designed.
 
-See [the domain glossary](api-glossary.md) for the meanings of the resources in this plan.
+See [the domain glossary](../CONTEXT.md) for the meanings of the resources in this plan.
 
 The [data component catalog](data-components.md) inventories resource components and their proposed applicability and storage mappings. Required Asset status, communications, and heartbeat, plus required Task status, are agreed. Required Geofeature geometry, immutable Entity types, alias rules, Protocol-only component definitions, and typed storage with validated JSON for variable payloads are also agreed. Detailed physical mappings and other component restrictions remain proposals.
 
@@ -12,9 +10,9 @@ The [approved API endpoint map](api-endpoints.md) records methods, paths, inputs
 
 ## Access
 
-A valid API key grants access to every public API endpoint. There are no roles or endpoint-specific permissions, including for administrative endpoints. This rule also covers health checks and documentation.
+Public consumers authenticate and have broad operational read access. There are no operator roles. Core enforces Asset ownership of reported state and assigned Task execution, including generic mutation paths; an arbitrary valid key cannot impersonate an Asset. Asset identity is provisioned automatically during enrollment. Exact enrollment and relay-proof mechanisms remain open. Administrative credentials remain distinct from Asset reporting identity; see [identity and access](architecture/system-design.md#identity-and-access).
 
-Installed Plugins do not require individual Atlas API keys. Core integrates them through its managed internal contract, without per-Plugin key provisioning, rotation, or configuration. The public API key rule remains the client access model.
+Managed Plugins use Core-provided integration identity without individual API-key provisioning or rotation by the operator. They can use SDK operational APIs, but cannot impersonate Assets or administer the installation. Health and documentation remain authenticated.
 
 Operator records represent people and associated data. They do not introduce an authorization model.
 
@@ -30,7 +28,7 @@ These are the starting families. More can be added as requirements emerge. Their
 | `/admin` | Core configuration, maintenance, and diagnostics |
 | `/admin/auth` | API key management, including creation, listing, and revocation |
 | `/admin/operators` | Operator identity information and personal settings |
-| `/plugins` | Core-managed plugin installation, execution, configuration, and lifecycle |
+| `/plugins` | Plugin discovery/status and durable Operation submission, outcomes and cancellation |
 | `/feed` | Live resource changes |
 | `/queries` | Initial state synchronization and recovery of missed changes |
 
@@ -50,27 +48,21 @@ Assets author their own reported Entity data. Interfaces send Tasks rather than 
 
 Tasks are operational instructions, such as scan area, move to, takeoff, land, and return to launch. They are not a general-purpose abstraction for software jobs.
 
-Each Task records one execution of one Command assigned to one Asset. The assigned Asset never changes. Core accepts and retains valid Tasks even when the assigned Asset is offline; existing unfinished Tasks survive disconnection without an inferred outcome. Assets fetch their full outstanding Task list and execute locally one at a time, oldest submission first by default, following confirmed queue reordering. Multiple move-to Tasks can form a path. Core assigns a permanent increasing submission sequence per Asset at Task acceptance; retries retain it and default reads follow it. Assets acknowledge Tasks when accepting them into their local queue and report in progress when execution starts. Core validates lifecycle reports; it does not reject additional work because an Asset is busy or gate Task creation on communication state. The Asset controls execution when it receives the Tasks. Tasking three Assets creates three Tasks; grouping Tasks remains a separate design question. Unstarted Tasks, including acknowledged Tasks, can be reordered. Submission sequence remains immutable; requested queue order is distinct from Asset-confirmed order. Running and terminal Tasks cannot move, and disconnected Assets can continue their last received order. Exact reorder/confirmation APIs and race handling remain open. Cancellation requests are separate from terminal outcomes; accepted work retains its execution state until the Asset confirms cancellation or reports another outcome.
+Each Task records one execution of one Command assigned to one Asset. The assigned Asset never changes. Core accepts and retains valid Tasks even when the assigned Asset is offline; existing unfinished Tasks survive disconnection without an inferred outcome. Assets fetch their full outstanding Task list and execute locally one at a time, oldest submission first by default, following confirmed queue reordering. Multiple move-to Tasks can form a path. Core assigns a permanent increasing submission sequence per Asset at Task acceptance; retries retain it and default reads follow it. Assets acknowledge Tasks when accepting them into their local queue and report in progress when execution starts. Core validates lifecycle reports; it does not reject additional work because an Asset is busy or gate Task creation on communication state. The Asset controls execution when it receives the Tasks. Tasking three Assets creates three Tasks; grouping Tasks remains a separate design question. Unstarted Tasks, including acknowledged Tasks, can be reordered. Submission sequence remains immutable; requested queue order is distinct from Asset-confirmed order. Running and terminal Tasks cannot move, and disconnected Assets can continue their last received order. Exact reorder/confirmation APIs and race handling remain open. Cancellation requests are separate from terminal outcomes; accepted work retains its execution state until the Asset confirms cancellation or reports another outcome. A scan completes only after both the assigned Asset's completion report and its required ready Objects are available, following [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md).
 
 Atlas Protocol owns the Command Catalog and its schemas. Assets declare which Commands they support and cannot invent new Commands outside that catalog.
 
-The SDK exposes a local function that returns the Command Catalog from the installed Protocol package. Assets and command interfaces already include Protocol, so catalog access requires no Core request or network connection. There is no `/command-catalog` endpoint in this design. The SDK function's name and signature remain to be designed. An Asset's advertised support is separate from the catalog of all defined Commands. Core, Assets, and SDK clients must have matching Protocol schema revisions before operational exchange; mismatches fail explicitly. Package versions may differ when their Protocol revision matches.
+The SDK exposes a local function that returns the Command Catalog from the installed Protocol package. Assets and command interfaces already include Protocol, so catalog access requires no Core request or network connection. There is no `/command-catalog` endpoint in this design. The SDK function's name and signature remain to be designed. An Asset's advertised support is separate from the catalog of all defined Commands. Core, Assets and SDK clients may use different supported compatible versions. Core advertises supported compatibility ranges and explicitly rejects unsupported clients; exact negotiation fields remain open. Task creation also validates the Asset's advertised Command support. See [ADR-0005](adr/0005-allow-compatible-client-versions.md).
 
-Objects hold file content of arbitrary types together with metadata. A photograph's file content lives in Objects, and its JSON metadata can reference zero or more related Entities. The metadata allows additional file-specific information. The first successful upload fixes the Object's file content; different content requires a new Object ID, while descriptive metadata remains editable. Upload retries must recognize prior success without overwriting it. Exact field names, schemas, and retry verification remain to be designed.
+Objects hold file content of arbitrary types together with metadata. Only ready Objects are visible to consumers or synchronization. Upload identity, staged metadata and progress remain separate from public Objects; see [ADR-0009](adr/0009-expose-objects-only-when-ready.md). A photograph's file content lives in Objects, and its JSON metadata can reference zero or more related Entities. The metadata allows additional file-specific information. The first successful upload fixes the Object's file content; different content requires a new Object ID, while descriptive metadata remains editable. Upload retries must recognize prior success without overwriting it. Exact field names, schemas, and retry verification remain to be designed.
 
 Operator records contain information such as a name and personal settings. Exact fields remain open.
 
-Core owns plugin installation, execution, and configuration. Plugins therefore require a defined structure and lifecycle contract. Packaging, runtime, and lifecycle behavior remain to be designed.
+Core owns Plugin lifecycle policy. Installation, configuration, enablement and process administration are local CLI/TUI actions through private management interfaces, with no public management routes or SDK methods. Docker deployment is selected; the private integration details remain open. See [local administration](architecture/system-design.md#local-administration).
 
-Core owns plugin configuration and desired state. A host manager performs installation and container operations on Core's behalf. Clients manage plugins through `/plugins`; the Core server does not directly control the container runtime. The Core-to-manager contract remains to be designed.
+Plugins expose durable Operations, not Asset Tasks. Accepted Operations have stable attempt identities and queryable progress/outcomes, survive caller disconnection, and can create Objects or other operational data. Retries retrieve the existing attempt; reruns are explicit. Plugins may issue Tasks to real Assets through existing Commands without becoming Assets themselves. See [ADR-0002](adr/0002-core-manages-installed-plugins.md).
 
-Every Plugin declares a configuration schema describing its settings, including required fields and defaults. Core validates configuration against that schema before accepting it. Plugins can define different settings while sharing the same configuration API contract. The schema format remains open; individual Plugin API keys are not part of this contract.
-
-Saving configuration and applying it are separate actions. Saving valid settings records desired configuration and reports pending changes without restarting a running Plugin. Applying the saved configuration restarts the affected running Plugin through the host manager. Reject a disable, uninstall, update, or apply action if it would interrupt unfinished Tasks on an Asset implemented or run by that Plugin; resolve those Tasks first. Saving settings remains allowed. Applying settings to a disabled Plugin validates and retains them for its next start without enabling it; report that startup has not yet tested that revision. Unrelated Assets' Tasks do not block Plugin management, and Plugins are not assumed to assign Tasks.
-
-If applying settings prevents the Plugin from starting, the host manager restores its last working configuration and restarts it with that configuration. Core reports the failed apply and retains the proposed settings for correction. The active configuration and pending settings remain distinguishable. Startup success criteria, first-apply failures without a previous working configuration, and rollback failures remain to be designed.
-
-Core owns the public API for plugin functionality. Plugins communicate with Core through a defined internal contract rather than exposing independent public endpoints. API key access and public documentation stay consistent through Core.
+Plugin configuration requires a declared schema with required fields and defaults. Core validates settings; saving desired settings is separate from applying them. Applying to a running Plugin follows the active-Operation stopping procedure before restart. Applying to a disabled Plugin prepares settings for its next start without enabling it or claiming startup validation. Unrelated Asset Tasks do not block Plugin management. The authoritative configuration and recovery policy lives in [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md).
 
 ### Definition sources
 
@@ -94,7 +86,7 @@ This design retains the one-Command, one-Asset Task rule and Protocol-owned Comm
 | `/docs` | Interactive API documentation |
 | `/openapi.json` | Machine-readable OpenAPI specification for documentation and developer tools |
 
-Core readiness depends on required infrastructure, including the database and configured object store. Individual Plugin failures are reported on the affected Plugin and do not make an otherwise functioning Core globally unready. Exact dependency probes remain open.
+Core readiness depends on required infrastructure, including SQLite and the private Object file storage. Individual Plugin failures are reported on the affected Plugin and do not make an otherwise functioning Core globally unready. Exact dependency probes remain open.
 
 OpenAPI describes the API contract. A documentation tool renders it at `/docs`; Swagger UI is a candidate. These route names are project choices, not routes automatically provided by OpenAPI.
 
@@ -110,7 +102,7 @@ For each endpoint, record:
 - State changes and emitted events.
 - Design status and unresolved questions.
 
-Expected callers explain how an endpoint is used, not who is allowed to use it. Access follows the shared API key rule.
+Expected callers explain usage. Enforced report ownership and administrative boundaries follow [identity and access](architecture/system-design.md#identity-and-access).
 
 Map subscriptions and asynchronous completion alongside requests so clients can determine when an operation finishes and how to receive updates.
 
@@ -126,7 +118,7 @@ Core filters hybrid initial queries, recovery, and feed delivery before transmis
 
 Pictures are held in memory without persistence and rebuilt on SDK restart. Full synchronization contains the entire operational dataset; hybrid contains its defined subset. Before local readiness, reads return not-ready. During an interruption, they retain the last known picture and expose its stale/disconnected state. Local change history is bounded and configurable, with explicit cursor expiry and cursors scoped to one instance, picture generation, and coverage. Successful in-scope writes reconcile authoritative results locally before returning and notify once; matching feed events are deduplicated. Resource limits must never silently truncate a supposedly complete picture.
 
-Exact hybrid dependency fields, terminal-Task retention, scope-entry/removal events, and query/cursor metadata remain to be specified. See [SDK data access](sdk-data-access.md) for the agreed modes and remaining engineering details. No additional endpoint family is needed for these modes.
+Hybrid scope limits transmission, not read permissions. All modes enforce the [dataset Reset boundary](sdk-data-access.md#dataset-reset-boundary). Exact hybrid dependency fields, terminal-Task retention, scope-entry/removal events, and query/cursor metadata remain to be specified. See [SDK data access](sdk-data-access.md) for the agreed modes and remaining engineering details. No additional endpoint family is needed for these modes.
 
 ## Further planning
 
@@ -137,11 +129,11 @@ The following decisions remain open:
 - Entity relationships and lifecycle behavior.
 - Communication-state criteria, detailed report validation, and delayed-report/freshness mechanisms.
 - Exact Task sequence encoding, reorder/conflict/confirmation APIs, cancellation confirmation and delivery races, and failure behavior during sequential Asset execution.
-- Task lifecycle, Asset-supported Command reporting, stale-report handling, and restart reconciliation.
+- Detailed Asset-supported Command reporting, stale-report handling, and restart reconciliation under the accepted Task lifecycle.
 - Local SDK Command Catalog function name/signature and SDK operation names, including the detailed registration deduplication contract for stable Asset and request identities.
 - Exact Object metadata schema and reference representation; historical associations are retained when a related Entity is removed.
 - Fields and lifecycle of operator records.
-- Plugin structure, packaging, lifecycle, and the Core-to-host-manager contract.
+- Plugin manifest/distribution and private Docker coordination details; Docker deployment and local administration are selected.
 - Plugin configuration schema format, startup success criteria, first-apply and rollback failure handling, and reporting active versus pending settings.
 - API key transport details, local first-key provisioning commands, and how browser documentation authenticates.
 - Health check criteria and response format.
