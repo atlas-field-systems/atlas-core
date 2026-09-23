@@ -24,13 +24,15 @@ Core remains responsible for authentication, authorization, Task transitions, Ob
 
 ## Local administration
 
-The CLI and TUI share a local management implementation for Core lifecycle, Reset, updates and installed Plugin management. They use private internal coordination, not the public API or SDK. Local tooling can start Core when it is stopped. Core's Plugins module owns its lifecycle policy; local tools coordinate with it instead of duplicating the rules.
+The CLI and TUI share a local management implementation for Core lifecycle, Reset, Hard Reset, updates and installed Plugin management. They use private internal coordination, not the public API or SDK. Local tooling can start Core when it is stopped. Core's Plugins module owns its lifecycle policy; local tools coordinate with it instead of duplicating the rules.
 
 Plugin installation, removal, updates, configuration, enable/disable, start/stop/restart and force stop have no public API endpoints or SDK methods and are outside public Protocol generation. Public consumers can discover Plugin capabilities/status, invoke Operations, query outcomes and request Operation cancellation. Canceling an Operation is distinct from stopping its Plugin. This supersedes the earlier Command Interface Plugin restart action; that application can still display faults.
 
 Local administrative actions contribute to [activity history](#activity-history). [ADR-0002](../adr/0002-core-manages-installed-plugins.md) defines independent Plugin lifecycles, and [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) defines active-work protection.
 
 Use the private Docker integration described in [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md). Its host-versus-Core placement, coordination channel and installation/update workflows remain open; no separate management service is required.
+
+[Hard Reset](../adr/0015-separate-start-stop-restart-and-reset.md#hard-reset) is a separate local CLI/TUI action available while Core is running. Its coordinator stops Core and managed Plugins, wipes operational and installation state, and returns to first-time setup. Ordinary Reset preserves Operator profiles, personal settings and installation setup. Neither reset action adds a public endpoint or SDK lifecycle method.
 
 ## Identity and access
 
@@ -43,6 +45,14 @@ All authenticated operators have full control. Existing execution-report and loc
 - SDK method availability does not grant permission. Core enforces authorization at the API boundary. Keep enrollment simple; credential formats, setup mechanics and route bindings remain implementation choices.
 
 Plugins are trusted code with broad operational access, not isolated tenants. These API rules do not promise host-process sandboxing. A trusted Plugin may receive provider credentials for its own integration. A credential broker or Source Gateway is optional; Atlas does not promise that provider secrets are always hidden from Plugins. Datastream delivery is not a selected successor capability.
+
+### API-key creation retries
+
+Administrative clients prepare an API key locally before requesting creation. The SDK uses a cryptographically secure generator for a secret containing at least 32 random bytes, allocates a stable creation/key identity, and hands the prepared credential to the caller for secure retention before submission. It does not generate a replacement secret on a transport retry. Keep prepared secrets out of diagnostic logs, activity records and ordinary resource caches; caller-side secure storage is explicit, not an SDK operational-picture persistence feature.
+
+`POST /admin/auth/api-keys` accepts the prepared identity, secret and descriptive metadata under an existing administrative credential over an authenticated encrypted transport. Core validates the key format, stores only a verifier plus canonical request facts, and returns metadata without a secret. This supersedes the earlier server-generated, one-time secret response: the caller already has the secret, so losing Core's response cannot lose the key. Non-SDK administrative clients follow the same generation and retention requirements.
+
+Commit the creation identity and credential together, scoped to the installation and bound to the authenticated administrative principal. Concurrent matching retries return the same key metadata; changed secret or initial metadata under the same identity fails explicitly. Compare against original facts, not editable current metadata. A revoked key remains revoked on retry and returns an explicit revoked outcome. Retain creation records across Restart, ordinary Reset and revocation until Hard Reset; key secrets are never recoverable through list/read APIs. Retrying still requires current administrative authorization and the current Dataset precondition where applicable. The SDK must not silently relabel a pre-Reset request; ordinary Reset's retained credentials do not bypass the Dataset boundary. Exact wire encoding and verifier scheme remain implementation details.
 
 ### Credential revocation
 
@@ -165,6 +175,6 @@ The [initial MVP](operating-model.md#initial-mvp) selects simple Move To, indepe
 | Object transfer | Interrupt an upload, verify that no partial Object is visible, retry from the beginning and compare the downloaded content. Lose the success response and verify that an identical retry returns the same Object with one publication. |
 | Plugin lifecycle | Use local management to stop/start the example Plugin while Core remains available. Exercise active-work protection with controlled test timing rather than a slow production algorithm. |
 | Stop/Start and Restart | Outside active Asset execution, retain records, ready Objects, setup and logs. Verify unfinished Core-owned work follows the linked lifecycle decision, without automatic rerun. |
-| Reset | Clear operational data, content, transfer state, activity history and Atlas-managed logs; retain startup setup. Verify a new dataset and rejection of obsolete submissions. |
+| Reset | Clear operational data, content, transfer state, activity history and Atlas-managed logs; retain startup setup and Operator profiles/settings. Verify a new dataset and rejection of obsolete submissions. |
 
 These are acceptance scenarios, not completed tests. Add them alongside the relevant implementation. Keep the broader scan-result ordering tests in the validation table above for the later scan workflow; do not force Move To and Elevation Lookup into a Task-to-Object-to-Plugin chain.

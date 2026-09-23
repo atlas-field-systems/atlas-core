@@ -83,7 +83,13 @@ Deleting an Object through the SDK returns Core's conflict if any Task has an ac
 3. The Asset sends check-in with current component data and any additional information now available. Core records contact and derives communication state from reported link observations and configured expectations.
 4. The Asset sends further reports as needed. It can send only changed fields instead of resending its full Entity. Every accepted fresh Asset-originated update refreshes contact, including telemetry and status updates.
 
-Registration may supply substantial initial data; it is not a request to create empty component placeholders. Supplying optional initial data does not exempt the record from required-component validation. Each Asset has a stable ID that survives restarts. Registration retries reuse that Asset ID and the same registration request identity, so a lost response does not create another Asset. Reconnecting resumes the existing record without overwriting its state with startup defaults. Exact request identity format, retention, and response semantics remain to be defined; registration is not a replacement upsert.
+Registration may supply substantial initial data; it is not a request to create empty component placeholders. Supplying optional initial data does not exempt the record from required-component validation. Each Asset has a stable ID that survives restarts. Registration retries reuse that Asset ID and the same registration request identity, so a lost response does not create another Asset. Reconnecting resumes the existing record without overwriting its state with startup defaults. The [registration retry contract](#registration-retry-identity) defines retention and matching behavior; exact wire fields remain to be defined. Registration is not a replacement upsert.
+
+## Registration retry identity
+
+Core commits the Dataset-scoped registration request identity, stable Asset ID, authenticated enrollment-principal binding, canonical initial request facts and resulting Entity/credential association atomically with Entity creation and identity provisioning. Store sufficient private facts to compare a retry to the original request, not to the Asset's later mutable state. Concurrent identical requests create one Asset and one provisioned identity; conflicting request reuse or an unauthorized caller fails.
+
+A matching authorized retry returns the original registration association and the current Asset representation without reapplying startup defaults, rolling back later reports or provisioning a second credential. Recovering access to that same identity must require the enrollment proof; the request ID alone is not a secret or authorization. Exact credential delivery/proof fields remain schema work. Retain registration retry records across Restart until Reset, including after Entity deletion; a retry for a deleted Asset reports deletion without resurrection. Registration retries cannot reactivate revoked credentials or bypass revoked enrollment authorization. Reset invalidates the old Dataset and its registrations. This does not change the retained-credential policy or authorize replaying an old registration into a new Dataset.
 
 ## Partial component updates
 
@@ -116,7 +122,7 @@ Core distinguishes fresh reports from arrival of delayed data. Duplicate reports
 ## Remaining decisions
 
 - SDK method names, argument shapes, and whether registration offers a convenience option to perform the first check-in.
-- Registration request identity format, deduplication retention, and reconnect response semantics for the agreed stable-ID/retry model.
+- Registration identity encoding and credential proof/delivery fields for the agreed stable-ID/retry model.
 - Report identity/ordering fields, relay origin, freshness windows, and clock assumptions that enforce the agreed fresh-contact and no-regression rules.
 - Version preconditions for frequent component reports and how the SDK handles conflicts.
 - Exact Task sequence/queue field encodings and report ordering; Pause/Resume correlation, deadline/clock fields and validation for conflicting immediate actions beyond the accepted control-order policy.

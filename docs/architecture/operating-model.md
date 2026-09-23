@@ -47,7 +47,7 @@ Every authenticated operator has full control, with no operator roles or view-on
 
 An installed system [works without internet](../adr/0010-operate-without-internet-access.md) when operators and Assets can reach Core. An internet-source Plugin depends on its external service independently.
 
-Start, Stop and Restart preserve data and logs. Reset is the usual development fresh start. The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) owns the action table, retained setup, release-update Reset and client dataset boundary. Local CLI/TUI tools provide [administration](system-design.md#local-administration).
+Start, Stop and Restart preserve data and logs. Reset is the usual development fresh start and preserves Operator profiles and installation setup. Hard Reset is a separate local CLI/TUI action available while Atlas is running that wipes all Atlas-managed state and returns to first-time setup. The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) owns the action table, retained setup, release-update Reset and client dataset boundary. Local CLI/TUI tools provide [administration](system-design.md#local-administration).
 
 ## Tasks across a disconnection
 

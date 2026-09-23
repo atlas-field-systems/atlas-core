@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# Separate Start, Stop, Restart and Reset
+# Separate Start, Stop, Restart, Reset and Hard Reset
 
 The user revised the lifecycle on 21 September 2026. Start, Stop and Restart preserve operational data and logs. Reset clears them. Restart and Reset are primarily development actions. Reset is the usual way to begin fresh; Restart preserves data and diagnostic logs for further development and inspection.
 
@@ -16,14 +16,27 @@ Active mission continuity across a whole-Core restart is excluded. Do not requir
 | Stop | Stop Core | Preserve | Preserve |
 | Restart | Stop and start Core | Preserve | Preserve and reapply |
 | Reset | Stop Core, clear Atlas-owned operational state and Atlas-managed diagnostic logs, then start Core | Wipe | Preserve and reapply |
+| Hard Reset | Stop Core and managed Plugins, clear all Atlas-managed state, then enter first-time setup | Wipe | Wipe profiles, credentials, settings and Plugin installations; retain Core software |
 
-Operational state includes Entities and Tracks, Tasks, Object metadata and content, movement and activity history, Plugin Operation records, synchronization records, Task creation identities, Entity identity reservations/deletion markers, Asset report acceptance state, required-result declarations and successful upload identity records with any deletion markers. Private Dataset metadata retains the Dataset ID and writing Core release across same-release Restart and is re-established by Reset. Temporary upload files are disposable staging, cleaned after interruption or on startup under ADR-0009. Reset clears Atlas-managed diagnostic logs as well as operational activity history. It does not erase unrelated host logs or files. Installed Plugin selections, credentials, configuration, installed software and Plugin artifacts survive all four actions.
+Operational state includes Entities and Tracks, Tasks, Object metadata and content, movement and activity history, Plugin Operation records, synchronization records, Task creation identities, Asset registration retry records, Entity identity reservations/deletion markers, Asset report acceptance state, required-result declarations and successful upload identity records with any deletion markers. Private Dataset metadata retains the Dataset ID and writing Core release across same-release Restart and is re-established by Reset. Temporary upload files are disposable staging, cleaned after interruption or on startup under ADR-0009. Reset clears Atlas-managed diagnostic logs as well as operational activity history. It does not erase unrelated host logs or files. Operator profiles and personal settings, installed Plugin selections, credentials and their creation retry records, configuration, installed software and Plugin artifacts survive Start, Stop, Restart and ordinary Reset. Profiles belong to retained installation setup; Reset clears activity history but not those profiles. Hard Reset additionally clears installation state as defined below.
 
 This supersedes [ADR-0013](0013-start-each-core-run-with-empty-data.md). Retention is bounded by Reset rather than the Core process lifetime. If Core is already stopped, Reset clears state and starts Core. A new-release update includes Reset; distribution and update packaging remain to be designed.
 
 Retained records do not authorize automatic resumption or rerun. A Plugin crash while Core remains running follows [ADR-0006](0006-protect-active-plugin-work-during-lifecycle-changes.md); Asset execution remains the Asset OS's responsibility.
 
 Persistent storage uses the [selected stack](0016-use-go-sqlite-and-openapi-tooling.md) and [Docker mount layout](0017-deploy-core-and-plugins-as-docker-containers.md). Backup and restore functionality and version-to-version operational-data migrations are excluded. New-release updates perform Reset; same-release restarts preserve state.
+
+## Hard Reset
+
+Accepted on 23 September 2026: provide a distinct Hard Reset action in the local CLI/TUI that can be invoked while Atlas is running, or while it is stopped. It removes all Atlas-managed state and returns the installation to first-time setup. It has no public HTTP endpoint or SDK operation. Ordinary Reset continues to preserve installation setup and Operator profiles.
+
+Hard Reset clears the Dataset and its protected Task results, Object content and staging, all histories and logs, all retry/identity records, Operator profiles and personal settings, administrative and Asset/Plugin credentials, enrollment authorization material, Core and Plugin configuration, installed Plugin selections, managed Plugin containers, private Plugin data and downloaded Plugin artifacts. Clear Atlas-managed Docker logs and storage too. Scope cleanup to this Atlas installation's owned resources; do not prune unrelated containers, shared images, host files or external services. Keep the Core executable/container image and local management tool so Atlas can run first-time setup again. Copies already downloaded to external clients are outside this local action.
+
+The CLI/TUI identifies the target installation and requires an explicit destructive-action confirmation. Once confirmed, a local coordinator stops accepting requests, closes live connections, disables automatic container restart and stops Core and managed Plugin writers before cleanup. Hard Reset deliberately discards their unfinished work rather than waiting for successful Task or Operation completion. It does not send a stop command to physical Assets or guarantee their behavior; field use still requires the operator to manage those Assets separately.
+
+The coordinator must remain able to finish cleanup after Core stops. Serialize it against other lifecycle/configuration actions. Record that cleanup is in progress outside the data being removed, and block ordinary startup until it finishes. On failure or coordinator interruption, leave serving disabled and report the incomplete cleanup; rerunning or resuming the local action completes the remaining cleanup. Do not claim success while any required target remains uncleared. The progress marker is removed after successful cleanup; no pre-reset activity/log archive is retained by Atlas.
+
+After cleanup, return to local first-time setup without automatically restoring old settings, Plugins or credentials. Provision fresh setup authorization and a new Dataset before enabling operational service. Old credentials, connections, Dataset submissions and retry records cannot authorize or repopulate the fresh installation. Operator profiles start empty. Exact CLI spelling, TUI layout, coordinator placement and cleanup ordering remain implementation details.
 
 ## Dataset boundary
 

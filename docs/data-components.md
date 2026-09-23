@@ -97,7 +97,7 @@ These are separate resource records, not Entity components or members of the ope
 
 | Record | Data covered |
 | --- | --- |
-| Operator | Stable ID, name, personal settings, timestamps |
+| Operator | Stable ID, name, personal settings, timestamps; retained installation setup across Restart and ordinary Reset; cleared by Hard Reset or explicit profile deletion |
 | Authenticated identity | Stable principal ID and kind: operator client, Asset or managed Plugin. Asset identities require a stable bound Asset ID; a claimed ID in a request is not authentication. |
 | API key / credential | Credential ID, principal association, descriptive metadata, verifier where applicable, and revocation state. Asset enrollment and Plugin integration identities are provisioned automatically; operators do not manage per-Plugin keys. |
 | Plugin | Release identity, installation/enablement/availability, declared configuration schema, saved/active settings, startup-validation state, management result |
@@ -115,6 +115,8 @@ These Core-owned records support the public contracts; they are not new Entity c
 | Record | Required contents and behavior |
 | --- | --- |
 | Dataset metadata | Current Dataset ID and writing Core release, initialized on first use or Reset and retained across same-release Restart. Start checks the writing release before serving data; a mismatch refuses startup and requires explicit update/Reset. |
+| Asset registration identity | Dataset-scoped request ID, stable Asset ID, authenticated enrollment-principal binding, canonical initial request facts and resulting Entity/credential association. Commit atomically with creation/provisioning; compare retries to original facts, return the existing association without overwriting current Asset state, reject conflicts and retain across Restart until Reset. Deleted Assets cannot be resurrected. |
+| API-key creation identity | Installation-scoped creation ID, authenticated administrative principal, canonical initial metadata, secret verifier and resulting key ID/revocation state. Commit with credential creation; identical authorized retries recover metadata without creating another credential. Retain across ordinary Reset and revocation; Hard Reset clears it. Never retain plaintext secrets in this record. |
 | Entity identity reservation | Dataset-scoped Entity ID reserved atomically on creation and retained after deletion across Restart until Reset. Reuse is rejected, including registration retries after deletion; retained history and references keep their original identity. |
 | Asset report acceptance | Core-private accepted report identities and ordering boundaries sufficient to reject duplicates and obsolete reports across check-in, component/status patches, Task lifecycle reports and queue adoption/conflict reports. Commit with affected state, contact and movement records; retain across Restart until Reset. Exact ordering scope and wire fields remain schema work; a full packet log is not required. |
 | Plugin Operation attempt | Operation ID, Dataset-scoped submission identity, Plugin identity/release/capability, validated input, current lifecycle/progress/timestamps, known outputs and failure/interruption details. Commit acceptance before dispatch. A matching retry retrieves the original attempt; conflicting reuse fails. Retain across Restart and Plugin removal until Reset; no automatic rerun. One current-state row per attempt is sufficient initially; a full progress-event history is not required. |
@@ -133,6 +135,8 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | Data | Storage direction | Reason |
 | --- | --- | --- |
 | Entity identity, alias, type, timestamps, version | Typed columns on an Entity table | Stable fields used for lookup, uniqueness, and filtering |
+| Asset registration identities | Private Dataset/request uniqueness with immutable original request facts and Entity/credential association | Lost-response retries remain recognizable after later Asset updates or Restart |
+| API-key creation identities | Private installation/creation uniqueness, canonical metadata and credential-verifier association | Lost-response retries cannot create extra keys or reactivate revoked keys; retained with installation setup |
 | Entity identity reservations | Private Dataset/Entity ID uniqueness with a retained deletion marker | Deleted IDs cannot be reused or attach retained history to another Entity |
 | Asset report acceptance state | Private per-Asset identities and ordering boundaries, with per-component/report-stream detail as required by the ordering contract | Restart cannot let duplicate or delayed traffic refresh contact or overwrite newer state |
 | Asset `status`, `communications`, `heartbeat` | Typed fields in an Asset-state record | All three components are required on Assets; create this record only for Assets |
