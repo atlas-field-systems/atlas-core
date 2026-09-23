@@ -12,15 +12,15 @@ Active mission continuity across a whole-Core restart is excluded. Do not requir
 
 | Action | Runtime effect | Operational data and logs | Installation setup |
 | --- | --- | --- | --- |
-| Start | Start Core using existing state; initialize an empty store on first use | Preserve existing state | Preserve and reapply |
-| Stop | Stop Core | Preserve | Preserve |
-| Restart | Stop and start Core | Preserve | Preserve and reapply |
-| Reset | Stop Core, clear Atlas-owned operational state and Atlas-managed diagnostic logs, then start Core | Wipe | Preserve and reapply |
+| Start | Start Core using existing state, then start compatible enabled Plugins; initialize an empty store on first use | Preserve existing state | Preserve and reapply |
+| Stop | Stop Core and all managed Plugins | Preserve | Preserve |
+| Restart | Stop Core and all managed Plugins, then start Core and compatible enabled Plugins | Preserve | Preserve and reapply |
+| Reset | Stop Core and all managed Plugins, clear Atlas-owned operational state and Atlas-managed diagnostic logs, then start Core and compatible enabled Plugins | Wipe | Preserve and reapply |
 | Hard Reset | Stop Core and managed Plugins, clear all Atlas-managed state, then enter first-time setup | Wipe | Wipe profiles, credentials, settings and Plugin installations; retain Core software |
 
 Operational state includes Entities and Tracks, Tasks, Object metadata and content, movement and activity history, Plugin Operation records, synchronization records, Task creation identities, Asset registration retry records, Entity identity reservations/deletion markers, Asset report acceptance state, required-result declarations and successful upload identity records with any deletion markers. Private Dataset metadata retains the Dataset ID and writing Core release across same-release Restart and is re-established by Reset. Temporary upload files are disposable staging, cleaned after interruption or on startup under ADR-0009. Reset clears Atlas-managed diagnostic logs as well as operational activity history. It does not erase unrelated host logs or files. Operator profiles and personal settings, installed Plugin selections, credentials and their creation retry records, configuration, installed software and Plugin artifacts survive Start, Stop, Restart and ordinary Reset. Profiles belong to retained installation setup; Reset clears activity history but not those profiles. Hard Reset additionally clears installation state as defined below.
 
-This supersedes [ADR-0013](0013-start-each-core-run-with-empty-data.md). Retention is bounded by Reset rather than the Core process lifetime. If Core is already stopped, Reset clears state and starts Core. A new-release update includes Reset; distribution and update packaging remain to be designed.
+This supersedes [ADR-0013](0013-start-each-core-run-with-empty-data.md). Retention is bounded by Reset rather than the Core process lifetime. If Core is already stopped, Reset still ensures managed Plugins are stopped before clearing state, then starts Core and compatible enabled Plugins. A new-release update includes Reset; distribution and update packaging remain to be designed.
 
 Retained records do not authorize automatic resumption or rerun. A Plugin crash while Core remains running follows [ADR-0006](0006-protect-active-plugin-work-during-lifecycle-changes.md); Asset execution remains the Asset OS's responsibility.
 
