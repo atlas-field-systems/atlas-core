@@ -8,7 +8,7 @@ An Object becomes visible through Atlas only when it is ready for use; an upload
 
 On 22 September 2026 the API reconciliation retained ready-only visibility and removed metadata-only public Object creation. Use stable upload request identity and stage content and metadata internally; publication waits for content and metadata to be ready. After publication, content is immutable and changed content requires a new Object ID; descriptive metadata and historical Entity/Task associations remain editable. Physical storage paths remain private.
 
-Internal upload staging is an implementation concern. The sections below additionally define retry identity, deletion and completed-result retention.
+Internal upload staging is an implementation concern. The sections below additionally define retry identity, deletion and required-result retention.
 
 ## Result identity before upload
 
@@ -34,17 +34,19 @@ An allowed Object deletion retains a private tombstone with its Object ID and su
 
 Serialize successful retry lookup, publication and deletion against the same identity facts. If deletion commits first, the retry reports deletion. If the retry observes the live Object first, its success describes that observation; a subsequent deletion can still remove an unprotected Object. Keep the private tombstone out of ready-Object lists while publishing the ordinary deletion change for synchronization. A storage cleanup retry must not remove content belonging to a different identity.
 
-This rule only applies to deletions already permitted by the required-result protection below. It does not permit deletion of a completed Task's required result or introduce retained file contents after deletion.
+This rule only applies to deletions already permitted by the required-result protection below. It does not permit deletion of a Task's declared required result or introduce retained file contents after deletion.
 
-## Required results of completed Tasks
+## Required result protection
 
-Accepted after clarification on 22 September 2026: operators cannot delete a required result Object of a completed Task before Dataset Reset. Completed Tasks are retained execution records, and their required ready results must remain available. Reset clears both under the existing lifecycle contract.
+On 23 September 2026 the user extended required-result protection to begin when Core accepts the assigned Asset's declaration, rather than waiting for Task completion. Operators cannot delete a declared required result Object before Dataset Reset. The declaration may precede upload; it protects the Object as soon as publication occurs without exposing a placeholder Object.
 
-Derive protection from the completed Task's authoritative, assigned-Asset-declared required result references. An Object required by any completed Task is protected, even if other Tasks also reference it. Optional attachments and unrelated Objects do not become protected merely by having a descriptive association. Deleting an Entity or editing Object metadata/associations cannot remove the completed Task's required-result reference or release protection. Ordinary descriptive edits remain allowed; immutable content and Core-owned storage facts remain unchanged.
+Derive protection from authoritative, assigned-Asset-declared required result references retained by Tasks. An Object required by any Task is protected. Optional attachments and unrelated Objects do not become protected merely by having a descriptive association. Once accepted, a required reference cannot be removed or replaced to release protection. Later Task completion, failure or cancellation does not release it. Deleting an Entity or editing Object metadata/associations cannot bypass it. Ordinary descriptive edits remain allowed; immutable content and Core-owned storage facts remain unchanged.
 
-`DELETE /objects/{object_id}` rejects deletion with an explicit conflict when this protection applies. There is no force-delete override or Task-deletion workaround. Task completion and Object deletion must serialize their readiness/protection decision: if completion wins, deletion fails; if an allowed deletion wins first, the missing result cannot satisfy completion. Physical cleanup must never remove a protected file because it was scheduled against stale metadata. Exact transaction/reservation mechanics follow storage implementation.
+`DELETE /objects/{object_id}` rejects deletion with an explicit conflict when this protection applies. There is no force-delete override or Task-deletion workaround. Reset clears the references and Objects together under the existing lifecycle contract.
 
-This protection applies when the Task has completed. Nonterminal, failed or cancelled Tasks do not independently pin their Objects under this rule, although another completed Task may. Upload/retry handling must preserve the protection and cannot replace the immutable required result. Allowed deletion follows the retained identity and explicit deleted-result retry outcome above.
+Serialize declaration acceptance, Object publication and deletion against the same Object identity. If the required declaration commits first, deletion fails. If an allowed deletion commits first, reject a later declaration referencing that deleted ID with an explicit deleted-result error; do not accept an unsatisfiable required reference or completion report. A rejected report changes neither the Task's result references nor its status. The Asset can upload under a new Object ID and submit a corrected report, or report failure when it cannot supply the result. An ID that has never been published or deleted can still be declared before upload. Physical cleanup must never remove a protected file because it was scheduled against stale metadata. Exact transaction mechanics follow storage implementation.
+
+Required-result references survive Restart until Reset, including declarations whose uploads have not arrived. Upload retries cannot replace immutable content or remove protection. Unprotected Objects retain the allowed deletion and explicit deleted-result retry behavior above.
 
 ## Task cancellation and result uploads
 

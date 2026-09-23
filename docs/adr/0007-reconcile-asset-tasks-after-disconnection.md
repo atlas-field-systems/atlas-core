@@ -101,7 +101,7 @@ The reporting contract must prevent an obsolete Asset process from rewriting rec
 
 ## Completed Task retention
 
-Completed and other terminal Tasks remain execution records until Dataset Reset. Operators cannot delete them or rewrite their outcome. Interfaces may show only current work by default; omitting past Tasks from a view does not erase them from Core. Required result Objects of completed Tasks are also protected from deletion until Reset under the [Object retention contract](0009-expose-objects-only-when-ready.md#required-results-of-completed-tasks). Optional attachments follow ordinary Object deletion rules.
+Completed and other terminal Tasks remain execution records until Dataset Reset. Operators cannot delete them or rewrite their outcome. Interfaces may show only current work by default; omitting past Tasks from a view does not erase them from Core. Declared required result Objects are protected from declaration acceptance until Reset, regardless of Task status under the [Object retention contract](0009-expose-objects-only-when-ready.md#required-result-protection). Optional attachments follow ordinary Object deletion rules.
 
 ## Modernization reference
 

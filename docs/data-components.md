@@ -89,7 +89,7 @@ One paginated history endpoint reads samples for an Entity and time range. Histo
 
 ## Required result protection
 
-A completed Task's immutable execution output retains its authoritative required Object references. These references protect the corresponding ready Objects from deletion until Reset; mutable Object association metadata cannot release that protection. Check all completed Tasks that require an Object. Completion/readiness and deletion/protection checks must serialize, including storage cleanup. Optional references do not imply protection. See the [retention contract](adr/0009-expose-objects-only-when-ready.md#required-results-of-completed-tasks).
+Tasks retain accepted assigned-Asset declarations of required Object references, including before upload. Protection begins at declaration acceptance and lasts until Reset, regardless of later Task status. Accepted references and mutable Object association metadata cannot be edited to release protection. Check all Tasks that require an Object. Declaration acceptance, publication and deletion checks must serialize, including storage cleanup; reject declarations for already-deleted identities. Optional references do not imply protection. See the [retention contract](adr/0009-expose-objects-only-when-ready.md#required-result-protection).
 
 ## Administrative records
 
@@ -115,6 +115,8 @@ These Core-owned records support the public contracts; they are not new Entity c
 | Record | Required contents and behavior |
 | --- | --- |
 | Dataset metadata | Current Dataset ID and writing Core release, initialized on first use or Reset and retained across same-release Restart. Start checks the writing release before serving data; a mismatch refuses startup and requires explicit update/Reset. |
+| Entity identity reservation | Dataset-scoped Entity ID reserved atomically on creation and retained after deletion across Restart until Reset. Reuse is rejected, including registration retries after deletion; retained history and references keep their original identity. |
+| Asset report acceptance | Core-private accepted report identities and ordering boundaries sufficient to reject duplicates and obsolete reports across check-in, component/status patches and Task reports. Commit with affected state, contact and movement records; retain across Restart until Reset. Exact ordering scope and wire fields remain schema work; a full packet log is not required. |
 | Plugin Operation attempt | Operation ID, Dataset-scoped submission identity, Plugin identity/release/capability, validated input, current lifecycle/progress/timestamps, known outputs and failure/interruption details. Commit acceptance before dispatch. A matching retry retrieves the original attempt; conflicting reuse fails. Retain across Restart and Plugin removal until Reset; no automatic rerun. One current-state row per attempt is sufficient initially; a full progress-event history is not required. |
 | Synchronization change | Dataset association, increasing committed sequence, resource type/ID, change kind, and replay data. Include deletion records and enough information for scoped recovery. Commit with the resource mutation; feed delivery and changed-since consume the same committed records. |
 | Synchronization retention boundary | Earliest recoverable boundary and latest committed sequence for the Dataset, maintained consistently with pruning. Expired cursors fail explicitly; SDK recovery rebuilds the picture. Retention is bounded and distinct from movement/activity retention until Reset. |
@@ -131,6 +133,8 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | Data | Storage direction | Reason |
 | --- | --- | --- |
 | Entity identity, alias, type, timestamps, version | Typed columns on an Entity table | Stable fields used for lookup, uniqueness, and filtering |
+| Entity identity reservations | Private Dataset/Entity ID uniqueness with a retained deletion marker | Deleted IDs cannot be reused or attach retained history to another Entity |
+| Asset report acceptance state | Private per-Asset identities and ordering boundaries, with per-component/report-stream detail as required by the ordering contract | Restart cannot let duplicate or delayed traffic refresh contact or overwrite newer state |
 | Asset `status`, `communications`, `heartbeat` | Typed fields in an Asset-state record | All three components are required on Assets; create this record only for Assets |
 | `telemetry` and `health` | Typed optional component records when independent reporting/query needs justify them | Validate known numeric fields; avoid making every Entity carry unrelated columns |
 | `geometry` | Validated geometry representation; choose physical type/index with spatial query requirements | Supports both defined areas and observed subject extents |
@@ -148,7 +152,7 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | Activity records | Separate typed SQLite table with safe bounded detail fields | Query a limited action log; preserve attribution without a full audit framework |
 | Successful upload identities | Private Dataset-scoped retry record with supplied Object ID, original canonical facts and retained deletion marker | A completed request retry returns the existing Object or explicit deleted-result outcome |
 | Object identity/storage facts | Typed columns | Core owns storage identity and measured facts |
-| Object references | Structured historical associations; Task-required references may precede Object publication and become protective on completion | Prevent deletion of required results until Reset, independent of mutable metadata; preserve history without cascading deletion |
+| Object references | Structured historical associations; Task-required references may precede Object publication and protect from declaration acceptance until Reset | Prevent deletion of required results until Reset, independent of mutable metadata; preserve history without cascading deletion |
 | Object extension metadata | Validated JSON in SQLite within the Object metadata contract | Keeps variable data flexible without weakening core fields |
 
 The storage approach is agreed; exact tables, columns, and indexes remain proposals and are not implemented. Entity JSON shape does not dictate one SQL row, nor does each logical component require its own table. Historical Object references must not acquire foreign-key deletion behavior that contradicts their accepted semantics.
