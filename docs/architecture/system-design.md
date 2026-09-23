@@ -60,6 +60,12 @@ Revocation applies to ongoing access as well as new HTTP requests. Core tracks l
 
 The SDK treats the resulting authorization failure as requiring replacement credentials rather than endless automatic retry with a revoked key. This does not introduce new client-side role rules or pretend to erase previously delivered data. Exact connection-close/error encoding remains Protocol work.
 
+### Asset deletion and access
+
+An allowed Asset deletion also decommissions its authenticated access. Core atomically commits Entity deletion, its retained identity reservation, revocation of every credential bound to that Asset and the deletion change. Serialize deletion against credential provisioning, registration retries, new Task assignment and reporting so none can leave a usable credential or newly assigned Task for a deleted Asset. The existing nonterminal-Task guard remains: rejecting deletion leaves both the Entity and its credentials unchanged. Track and Geofeature deletion does not revoke unrelated identities.
+
+At revocation commit, stop authorizing new reads, writes and feed delivery for those credentials and terminate their live feed connections under the [revocation rule](#credential-revocation). A queued event cannot bypass revocation. Previously transmitted data cannot be recalled. Retain revoked credential state across Restart and ordinary Reset; Reset does not reactivate the removed device. Registration retries cannot resurrect its deleted identity or revive revoked credentials. A deliberate new enrollment must satisfy the current enrollment policy and use a permitted new identity. Keep historical Task, Object and movement associations under the existing retention rules. No separate decommission endpoint is required.
+
 ## Bandwidth and authenticated reporting
 
 Design for normal Internet connectivity at Core and constrained links toward Assets. SDK ownership of the client pipeline is intended to permit later transport optimization without changing the meaning of Task, Entity or Object operations. Prefer partial component updates, the Asset hybrid scope, stable retry identities and bounded recovery over repeated full snapshots. Filter before transmission. Do not require the full command catalog, identity metadata or an enrollment exchange on each telemetry update.
