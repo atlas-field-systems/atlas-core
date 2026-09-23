@@ -100,13 +100,13 @@ Core accepts and retains valid Tasks even when the Asset is offline. Tasks keep 
 
 Planned shutdowns and restarts are expected only after unfinished work has been resolved. If an exceptional interruption occurs, reconcile with the Asset before deciding the outcome of unfinished Tasks. Do not automatically fail them merely because connectivity was lost or the Asset restarted.
 
-Assigned work is discovered through `GET /entities/{entity_id}/tasks`, using an outstanding-work filter, and through Task change events. The Asset tracks and executes its queue and reports transitions through the Task lifecycle routes. The Asset reports `acknowledged` when accepting a Task into its local queue and `in_progress` when execution begins. Exact filtering remains to be specified.
+Assigned work is discovered through `GET /entities/{entity_id}/tasks`, using an outstanding-work filter, and through Task change events. The Asset tracks and executes its queue and reports transitions through the Task status endpoint. The Asset reports `acknowledged` when accepting a Task into its local queue and `in_progress` when execution begins. Exact filtering remains to be specified.
 
 Unstarted Tasks, including acknowledged Tasks, can be reordered. Submission sequence stays immutable. Requested queue order is distinct from the order confirmed by the Asset; disconnected Assets can continue their last received order. Running and terminal Tasks cannot be moved.
 
-A cancellation request does not immediately terminate work already accepted by the Asset. Keep its execution state until the Asset confirms cancellation or reports another valid outcome. The request itself cannot establish that physical execution stopped. The existing six Task status values remain unchanged.
+A cancellation request sets Task status to `cancellation_requested` without proving execution stopped. Retain execution facts until the assigned Asset confirms `cancelled` or reports another valid outcome. The [Task transition table](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) owns these rules. Paused Tasks and immediate execution are planned follow-up topics; no Asset `paused` state or behavior is selected yet.
 
-Existing Task lifecycle routes remain, but they no longer require the former execution-session identity in the approved API design. Task IDs, immutable Asset assignment, idempotency, and legal lifecycle transitions still matter. Current status is not a substitute for all of those rules.
+Task reports use `PATCH /tasks/{task_id}/status`, replacing the separate lifecycle action routes without requiring the former execution-session identity. Task IDs, immutable Asset assignment, idempotency, and legal lifecycle transitions still matter. Current status is not a substitute for all of those rules.
 
 The earlier model used a process identity to reject late reports from an older process and to fail outstanding Tasks on restart. A status value alone cannot distinguish an old process reporting `ready` from its replacement reporting `ready`. This replacement intentionally leaves that mechanism unselected rather than quietly adding the old session identifier under a different name. Decide how to reject stale execution reports and handle restarts before implementing task execution.
 

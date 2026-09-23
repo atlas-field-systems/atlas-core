@@ -5,6 +5,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Read for | Document |
 | --- | --- |
 | Users, field workflow and expected workload | [Operating model](docs/architecture/operating-model.md) |
+| SDK–Core parity, integration and future gateway test requirements | [Testing strategy](docs/testing-strategy.md) |
 | Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/architecture/system-design.md#mvp-integration-checks) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
 | Collaboration between Core, SDK, Protocol and local tools | [System design](docs/architecture/system-design.md) |

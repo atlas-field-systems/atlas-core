@@ -44,6 +44,14 @@ All authenticated operators have full control. Existing execution-report and loc
 
 Plugins are trusted code with broad operational access, not isolated tenants. These API rules do not promise host-process sandboxing. A trusted Plugin may receive provider credentials for its own integration. A credential broker or Source Gateway is optional; Atlas does not promise that provider secrets are always hidden from Plugins. Datastream delivery is not a selected successor capability.
 
+## Bandwidth and authenticated reporting
+
+Design for normal Internet connectivity at Core and constrained links toward Assets. SDK ownership of the client pipeline is intended to permit later transport optimization without changing the meaning of Task, Entity or Object operations. Prefer partial component updates, the Asset hybrid scope, stable retry identities and bounded recovery over repeated full snapshots. Filter before transmission. Do not require the full command catalog, identity metadata or an enrollment exchange on each telemetry update.
+
+Authentication resolves a stable principal kind and, for Assets, its bound Asset ID. Enforce that binding on every reporting path. Provision Asset identities automatically during enrollment and managed Plugin identities through Core. The bootstrap proof, credential encoding, relay delegation and compact authenticated transport remain design work; a gateway connection or a short claimed Asset ID alone is not proof of the originating Asset. Revocation and Dataset boundaries must survive any optimization.
+
+HTTP/OpenAPI remains the selected Core boundary. A future radio transport may encode the same operations compactly and translate through a gateway SDK; no radio packet format, compression algorithm, batching protocol or per-packet overhead guarantee is selected here. Measure application payload bytes, actual transport bytes, retries and recovery separately on representative workloads. See the [integration and parity requirements](../testing-strategy.md).
+
 ## Objects hide storage
 
 Clients identify Objects and access their content through Core APIs exposed by the SDK. Physical buckets, filesystem paths and storage-provider details stay inside the Objects implementation, outside public Object fields and Plugin integration requirements.
@@ -68,13 +76,15 @@ Registration/fencing machinery from Modernization is not a required subsystem. R
 
 SDK helpers manage submission identity and outcome queries; the server remains responsible for acceptance and recorded outcomes. Operations can run beyond an individual HTTP request. [Identity and access](#identity-and-access) allows trusted Plugins to use operational data across sources and issue Asset Tasks, while reserving execution reporting for the assigned Asset and administration for its designated interfaces.
 
+A separate Core-owned Operation attempt record stores submission identity, Plugin/release/capability, input, state, progress and known outcomes. Commit acceptance before dispatch; preserve attempts across Plugin removal and Restart until Reset. Submission retry uniqueness prevents duplicate acceptance, not arbitrary duplicate external effects. See the [storage catalog](../data-components.md#core-support-records).
+
 Removing a Plugin withdraws its capability and any UI contribution; retained results follow their own lifecycle.
 
 [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) selects a separate Docker container per installed Plugin. Invocation fields, Plugin manifest/distribution details and any UI contribution contract remain open. If supported, Core may expose contribution metadata or serve static assets; the external Command Interface owns rendering, navigation, map interaction and resource views. UI delivery is not a selected implementation.
 
 ## Change publication
 
-The module making a change supplies its public representation. This ownership rule is accepted. The write-owning module commits its mutation and change record together. Shared publication code delivers committed records in an order consistent with state. For example, Tasks describes a Task status change; delivery code does not inspect private Task tables to reconstruct its meaning.
+The module making a change supplies its public representation. This ownership rule is accepted. The write-owning module commits its mutation and change record together in SQLite. A private ordered change log includes replay payloads and deletion records; both feed delivery and changed-since read the committed log. Shared publication code delivers committed records in an order consistent with state. For example, Tasks describes a Task status change; delivery code does not inspect private Task tables to reconstruct its meaning.
 
 This keeps a useful shared delivery function small. It does not establish a general event bus or require every internal call to emit an event. Preserve consistency between resource changes and their published records within the current run.
 
@@ -82,7 +92,7 @@ This keeps a useful shared delivery function small. It does not establish a gene
 
 Core must not silently drop committed changes while allowing a consumer to treat its picture as current. When a slow consumer, expired replay history or another delivery gap prevents complete replay, make that condition detectable through the synchronization contract. The SDK marks its picture stale and obtains a fresh snapshot with a consistent continuation point before treating it as current again.
 
-Buffer sizes, transport signaling and replay retention remain implementation choices. Full-picture read access is available to every authenticated SDK client; automatic synchronization is still opt-in. Dataset changes additionally follow [the Reset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary).
+Retain a bounded replay window and an explicit earliest recoverable boundary, updated consistently with pruning. Restart retains the remaining window; Reset creates a new Dataset. Scope entry/removal and deletion must be recoverable for Asset hybrid clients without transmitting the full picture. Exact payloads, scope rules, buffer sizes, transport signaling and numeric replay limits remain implementation choices. Full-picture read access is available to every authenticated SDK client; automatic synchronization is still opt-in. Dataset changes additionally follow [the Reset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary).
 
 ## Movement history
 
@@ -133,6 +143,10 @@ Use a pinned toolchain and deterministic regeneration. Independently authored wi
 | [Operational protections](#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
 
 The [selected stack](../adr/0016-use-go-sqlite-and-openapi-tooling.md) must also pass a representative generation check without output patches, and [Docker deployment](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) must preserve the lifecycle guarantees across container changes.
+
+### SDK and Core integration requirements
+
+Extensive real SDK–Core integration and behavioral parity testing is an accepted engineering requirement, not an optional follow-up to generated types. The [testing strategy](../testing-strategy.md) defines the required coverage, independent oracles, fault scenarios, bandwidth measurements and release evidence. External systems should be able to reuse that contract suite against the SDK, with a smaller complete-path suite checking the composed system. This confidence depends on tested versions, features and fault conditions; parity is not an unconditional proof that every future gateway or firmware behaves correctly.
 
 ### MVP integration checks
 

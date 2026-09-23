@@ -16,8 +16,10 @@ The initial operations and behaviors below are approved; the names describe beha
 | Read Command Catalog | Return Command definitions from the installed Protocol package | Local operation; no HTTP request |
 | Create Task | Request one execution of one Command on one Asset; Core accepts and retains valid Tasks even when the Asset is offline | `POST /tasks` |
 | Fetch assigned Tasks | Read outstanding Tasks with submission/current queue order and confirmation state, following pagination; use the same method in all modes | HTTP mode: `GET /entities/{entity_id}/tasks`. Full synchronization: local picture. Asset hybrid: local for its own Asset, one-off API reads for others |
-| Report Task lifecycle | Acknowledge, start, report progress, complete, or fail assigned work | Existing Task lifecycle endpoints |
-| Cancel Task | Request withdrawal; accepted work keeps its execution state until Asset-confirmed cancellation or another outcome | `POST /tasks/{task_id}/cancel` |
+| Report Task lifecycle | Acknowledge, start, report progress, complete, fail, or confirm cancellation of assigned work; return Core's actual state | `PATCH /tasks/{task_id}/status`; authenticated assigned-Asset validation |
+| Cancel Task | Request nonterminal cancellation_requested; the Asset subsequently confirms cancelled through the same status system | `PATCH /tasks/{task_id}/status` |
+| Reorder assigned Tasks | Submit the complete eligible unstarted list with expected revision and stable request identity | `PUT /entities/{entity_id}/task-order` |
+| Report queue adoption | Assigned Asset confirms a requested revision or reports an execution conflict | `POST /entities/{entity_id}/task-order/confirm` |
 | Upload Object content | Stream the whole file; restart an interrupted transfer from zero using the same request identity; a previously completed identical request returns the original Object | `POST /objects/upload`; no resume/offset API |
 | Read movement history | On-demand paginated samples for one Asset/Track and time range; does not populate the operational picture | `GET /entities/{entity_id}/movement-history` in every mode |
 | Read activity history | Operator administrative clients query the limited action log; outside the operational picture | `GET /admin/activity` in every mode |
@@ -46,11 +48,17 @@ Historical reads are explicit API-backed operations in every SDK mode, separate 
 
 Upload retries resend the complete file after interruption. Producers retain the source file until publication succeeds. The SDK uses a stable Dataset-scoped request identity so a lost success response does not create another Object; it does not keep persistent partial-transfer progress or add an offline write queue. Reset invalidates the old request identity. Detailed content-equivalence verification follows [ADR-0009](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries).
 
+## Task status updates
+
+Task lifecycle helpers share `PATCH /tasks/{task_id}/status`; there are no separate cancellation request/confirmation endpoints. The caller supplies a requested status or progress-only update and transition-specific data. Core derives report authority from authentication and applies the [Task transition rules](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions). A tasking client requests `cancellation_requested`; the assigned Asset confirms `cancelled`. Helpers must return the authoritative recorded state, including pending Object readiness or retained cancellation intent, rather than echoing the requested status as success.
+
+The [testing strategy](testing-strategy.md) requires these helpers and the queue operations to pass real SDK–Core parity, retry and race scenarios. Exact helper names and wire envelopes remain schema work.
+
 ## Assigned Task queue
 
 The Asset fetches all outstanding assigned Tasks, following pagination as needed, and executes them locally one at a time, oldest submission first by default, following confirmed queue reordering. Repeated move-to Tasks form a sequence of destinations. Fetching or caching the Tasks does not automatically acknowledge or start them.
 
-Core assigns a permanent increasing submission sequence within each Asset's queue when accepting a Task. Reads return that default order; a repeated read or Task-creation retry does not create another execution or move a Task to the end. The Asset acknowledges a Task when it accepts it into its local queue and reports in progress when execution begins. Unstarted Tasks, including acknowledged Tasks, can be reordered without rewriting submission sequence. Requested and Asset-confirmed order are separate; running and terminal Tasks cannot move. A disconnected Asset can continue using its last received order. Exact reorder and confirmation calls remain to be specified. Communication state does not gate Task creation or change Core scheduling behavior. Core accepts and retains valid Tasks even while the Asset is offline; the Asset owns execution when it receives them. See [Asset status](asset-status.md).
+Core assigns a permanent increasing submission sequence within each Asset's queue when accepting a Task. Reads return that default order; a repeated read or Task-creation retry does not create another execution or move a Task to the end. The Asset acknowledges a Task when it accepts it into its local queue and reports in progress when execution begins. Unstarted Tasks, including acknowledged Tasks, can be reordered without rewriting submission sequence. Requested and Asset-confirmed order are separate; running and terminal Tasks cannot move. A disconnected Asset can continue using its last received order. Use whole-list requests with expected revisions and stable retry identity, plus assigned-Asset adoption/conflict reports, under the [queue contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions). Communication state does not gate Task creation or change Core scheduling behavior. Core accepts and retains valid Tasks even while the Asset is offline; the Asset owns execution when it receives them. See [Asset status](asset-status.md).
 
 ## Asset startup
 
@@ -95,6 +103,6 @@ Core distinguishes fresh reports from arrival of delayed data. Duplicate reports
 - Registration request identity format, deduplication retention, and reconnect response semantics for the agreed stable-ID/retry model.
 - Report identity/ordering fields, relay origin, freshness windows, and clock assumptions that enforce the agreed fresh-contact and no-regression rules.
 - Version preconditions for frequent component reports and how the SDK handles conflicts.
-- Exact Task sequence encoding, reorder/conflict/confirmation calls, cancellation confirmation, and never-accepted/delivery-race behavior.
+- Exact Task sequence/queue field encodings and report ordering; pause/resume and immediate execution follow-up.
 
 These operations use the [approved endpoint map](api-endpoints.md), [component catalog](data-components.md), and [Asset status model](asset-status.md).

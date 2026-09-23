@@ -144,6 +144,10 @@ Before accepting responses or retrying submissions, the SDK checks Dataset ident
 
 Core rejects old-dataset writes, Task reports, Operation submissions and obsolete upload identities/replay handles. Health, authentication and current-Dataset discovery remain available so clients can recover. A disconnection without a known Reset may retain a visibly stale picture; once Reset is known, that picture cannot be served as the current Dataset. Restart alone does not invalidate Dataset identity or promise active-mission continuity. Wire fields and the discovery binding remain implementation details.
 
+## Integration and bandwidth requirements
+
+All three modes must pass the real SDK–Core [integration and parity suite](testing-strategy.md), including their different request-routing and freshness behavior. Shared public method names do not imply identical network traffic. Full synchronization must not perform application-read HTTP fallback; hybrid must filter before transmission and measure subset/dependency/recovery traffic. Future radio gateways may translate operations compactly, but must preserve authenticated Asset ownership, retry identity and Dataset semantics. HTTP assumptions do not set the bandwidth budget of a future radio link.
+
 ## Protocol compatibility
 
 Core, Assets and SDK clients may use different versions within declared supported compatibility ranges, following [ADR-0005](adr/0005-allow-compatible-client-versions.md). Unsupported versions fail explicitly; exact advertisement and negotiation fields remain open. Task creation also checks the target Asset's advertised Command support. Adding a compatible optional field need not force a simultaneous update. Command Catalog lookup stays local to the installed Protocol package and requires no catalog download.

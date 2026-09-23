@@ -88,7 +88,7 @@ One request to execute a Command on one assigned Asset, with a recorded lifecycl
 _Avoid_: Command definition, mutable assignment
 
 **Task cancellation request**:
-A request to withdraw a Task, recorded separately from its execution status. The request does not establish that execution stopped; accepted work requires Asset confirmation.
+A request to withdraw a Task, represented by its nonterminal Cancellation requested status. The request does not establish that execution stopped; Canceled requires Asset confirmation.
 _Avoid_: Canceled, proof that execution stopped
 
 **Object**:
