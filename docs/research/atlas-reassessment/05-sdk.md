@@ -75,7 +75,7 @@ These are the parts of the current SDK that solve real distributed-systems probl
 
 `[Confirmed static gap]` Abort support is inconsistent. Delete options have no signal, entity/object update options have no signal, full and changed-since query options have no signal, and object content and command-catalog methods do not expose cancellation even though they use HTTP. See [public option types](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/src/types.ts#L38-L115), [object content](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/src/client.ts#L322-L409), and the [ergonomics report](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/problems/2026-09-18-sdk-ergonomics-gaps.md#L1-L9).
 
-`[Confirmed scope omission]` Object upload is not wrapped by the SDK. The docs deliberately defer it and no source evidence shows an existing consumer hand-rolling it. Keep upload out of the first successor unless a field-device consumer requires it. If it is added, use the same options-object and signal convention as every other request.
+`[Confirmed scope omission]` Object upload is not wrapped by the SDK. The docs deliberately defer it and no source evidence shows an existing consumer hand-rolling it. The successor requires thin AtlasClient Object upload using the same options-object and signal convention as other requests. Only a synchronization-specific upload abstraction is deferred; the current upload/retry contract is defined in [ADR-0009](../../adr/0009-expose-objects-only-when-ready.md).
 
 ### Packaging paths
 
@@ -143,7 +143,7 @@ The package's current choice to use web-standard APIs is sound for the first ver
 - Return decoded and validated protocol values, not untyped JSON.
 - Keep typed API, conflict, validation, and protocol-revision errors.
 - Keep HTTP methods needed by actual external consumers: authentication, entities, tasks, assigned-Asset reporting, object metadata and content, and the query endpoints required by sync.
-- Expose Object upload and download through the SDK, including resumable large uploads. The SDK coordinates transfers so Assets and applications do not need a separate raw API integration.
+- Expose Object upload and download through the SDK. The 22 September scope review defers resumability: failed transfers restart from the beginning and successful-request retries recover the original Object. See [the current upload decision](../../adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries). The SDK coordinates uploads so consumers do not need a separate raw API integration.
 - Make `delete` idempotency explicit in its method contract.
 - Keep no cache in the thin client. A point read is a point read and a mutation returns the server result.
 

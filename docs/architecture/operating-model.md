@@ -47,7 +47,7 @@ Every authenticated operator has full control, with no operator roles or view-on
 
 An installed system [works without internet](../adr/0010-operate-without-internet-access.md) when operators and Assets can reach Core. An internet-source Plugin depends on its external service independently.
 
-Start, Stop and Restart preserve data and logs. Reset is the usual development fresh start. The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) owns the action table, retained setup, release-update Reset and client dataset boundary. Local CLI/TUI tools provide [administration](system-design.md#local-administration).
+Start, Stop and Restart preserve data and logs. Reset is the usual development fresh start and preserves Operator profiles and installation setup. Hard Reset is a separate local CLI/TUI action available while Atlas is running that wipes all Atlas-managed state and returns to first-time setup. The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) owns the action table, retained setup, release-update Reset and client dataset boundary. Local CLI/TUI tools provide [administration](system-design.md#local-administration).
 
 ## Tasks across a disconnection
 
@@ -63,10 +63,10 @@ The operator tasks an Asset to scan an area. Its hardware determines the result:
 
 The operator separately invokes a Plugin Operation on that Object. The Plugin owns the algorithm and specialized result format. Processing does not hold the original scan Task open, and the accepted Operation continues if the operator closes or disconnects the Command Interface. A returning operator can obtain its result. Published detections enter the shared picture directly.
 
-This example does not require every Plugin to produce a separate Object or establish a general immutability/version-history policy. Plugins may also [initiate Asset Tasks](../adr/0004-core-owns-commands-and-assets-execute-tasks.md) through existing Commands. Area/building searches can be Operations; an aircraft-data integration can continuously publish Entities without becoming taskable.
+This example does not require every Plugin to produce a separate Object or establish general version history. Published Object content follows the [immutable-content rule](../adr/0009-expose-objects-only-when-ready.md); descriptive metadata can change. Plugins may also [initiate Asset Tasks](../adr/0004-core-owns-commands-and-assets-execute-tasks.md) through existing Commands. Area/building searches can be Operations; an aircraft-data integration can continuously publish Entities without becoming taskable.
 
 ## Details for module planning
 
 Open decisions include Asset progress/failure detail contracts, Plugin installation and invocation formats, provenance/correction of observations, shared-picture freshness and workload measurements. Settled boundaries are linked above; exact wire fields and mechanisms remain implementation work.
 
-Questions for the operator should concern consequential system-wide outcomes. Resolve routine technical choices through engineering judgment. Avoid asking the operator to design individual Plugins, Asset operating systems or Command Interface interactions while planning Core.
+Questions for the operator should concern consequential system-wide outcomes. Explain alternatives through the behavior the user would experience, then ask which behavior they prefer. Resolve technical implementation choices through engineering judgment rather than asking the operator to select technologies or mechanisms. Avoid asking the operator to design individual Plugins, Asset operating systems or Command Interface interactions while planning Core.
