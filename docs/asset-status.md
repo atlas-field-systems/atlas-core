@@ -111,7 +111,7 @@ A cancellation request sets Task status to `cancellation_requested` without prov
 
 Task reports use `PATCH /tasks/{task_id}/status`, replacing the separate lifecycle action routes without requiring the former execution-session identity. Task IDs, immutable Asset assignment, idempotency, and legal lifecycle transitions still matter. Current status is not a substitute for all of those rules.
 
-The earlier model used a process identity to reject late reports from an older process and to fail outstanding Tasks on restart. A status value alone cannot distinguish an old process reporting `ready` from its replacement reporting `ready`. This replacement intentionally leaves that mechanism unselected rather than quietly adding the old session identifier under a different name. Decide how to reject stale execution reports and handle restarts before implementing task execution.
+The earlier model used a process identity to reject late reports from an older process and to fail outstanding Tasks on restart. A status value alone cannot distinguish an old process reporting `ready` from its replacement reporting `ready`. This replacement intentionally leaves that mechanism unselected rather than quietly adding the old session identifier under a different name. The accepted [recovery rule](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart) requires reconciliation and holding uncertain work before execution; exact stale-report proof remains to be specified.
 
 Pending decisions:
 
@@ -119,7 +119,7 @@ Pending decisions:
 - How late or duplicate reports and multiple processes claiming the same Asset are handled.
 - Detailed sequence encoding and Asset behavior after cancellation or failure of a queued Task.
 - Exact Task/queue reporting and event fields under the accepted revision contract.
-- Stale/conflicting immediate-command delivery and report correlation; queue continuation after a suspended Task cannot resume safely.
+- Report correlation and Command-specific deadline/clock fields. Newer Pause/Resume intent wins; a failed resumption leaves the Asset paused until another explicit Resume.
 
 ## Scope and source
 

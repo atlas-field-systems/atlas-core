@@ -58,7 +58,7 @@ Status-specific routes apply to Asset Entities. Status supplied through check-in
 
 ## Tasks
 
-Task creation assigns one Protocol-defined Command to one Asset and begins in `pending`. Core assigns a permanent increasing submission sequence within that Asset's queue when accepting it. Assignment, Command, input and selected scheduling are immutable. The specified lifecycle is `pending`, `acknowledged`, `in_progress`, `paused`, `cancellation_requested`, `completed`, `failed`, or `cancelled`. Paused requires Asset-confirmed suspension; explicit immediate Resume returns the suspended Task to in progress when it can safely continue. Terminal Tasks are permanent execution records, so there is no generic Task patch or delete endpoint.
+Task creation assigns one Protocol-defined Command to one Asset and begins in `pending`. Core assigns a permanent increasing submission sequence within that Asset's queue when accepting it. Assignment, Command, input and selected scheduling are immutable. The specified lifecycle is `pending`, `acknowledged`, `in_progress`, `paused`, `cancellation_requested`, `completed`, `failed`, or `cancelled`. Paused requires Asset-confirmed suspension; explicit immediate Resume returns the suspended Task to in progress when it can safely continue. Terminal Tasks are execution records retained until Reset, so there is no generic Task patch or delete endpoint. Interfaces may omit historical Tasks from normal views without deleting them.
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
@@ -81,6 +81,8 @@ A scan Task completes only when Core has both the authenticated assigned-Asset c
 The status endpoint replaces the separate acknowledge/start/progress/complete/fail/cancel endpoints. It is a validated lifecycle operation, not an unrestricted Task patch. A tasking client may request `cancellation_requested`; only the authenticated assigned Asset may report acknowledgement, start, progress, execution outcomes or `cancelled`. Cancellation confirmation identifies the request being confirmed. The SDK retains named helpers where useful, all using this endpoint.
 
 Progress-only reports preserve current status. Acknowledgement/start reports arriving during cancellation can update validated execution facts without replacing `cancellation_requested`. A completion submission can return a nonterminal Task while required Objects are pending. Matching retries have no additional effect; unauthorized transitions and conflicting terminal reports fail. The [Task transition table](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) governs validation. Request fields, concurrency/report-ordering tokens and error encodings remain schema work.
+
+Immediate Tasks follow Command-specific validity rules and optional execution deadlines checked by the Asset. Older Pause/Resume requests cannot undo newer applied control intent; never-executed superseded or expired requests receive an explicit outcome. An unsafe-to-resume Task reports failure and leaves the Asset paused until a new explicit Resume. Unexpected process restart requires reconciling retained work before execution and holding uncertain work and queued continuation. See [ordering and recovery](adr/0007-reconcile-asset-tasks-after-disconnection.md#control-ordering-and-expiry).
 
 Pause and Resume use `POST /tasks` with their Protocol-defined Commands and immediate scheduling; neither adds a dedicated endpoint. The Asset interrupts current queued work, reports its own `paused` status and the suspended Task's `paused` status, and completes the Pause Task once applied. Resume continues the interrupted Task before remaining queued work, or the Asset reports failure if that Task cannot safely resume. Independent immediate actions such as lights can run alongside movement or while paused without changing the queued path. See [scheduling](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling) and [Pause](adr/0007-reconcile-asset-tasks-after-disconnection.md#pause-through-an-immediate-command).
 
@@ -130,7 +132,7 @@ Record Task issuance/cancellation and Plugin, credential and configuration chang
 | `POST /admin/auth/api-keys` | Administrative clients provision a key | Name/description → key metadata and secret returned once | Create an operator administrative key; not an Asset reporting identity | Adapt from `/admin/api-keys` |
 | `DELETE /admin/auth/api-keys/{key_id}` | Administrative clients revoke a key | Key ID → no body | Revoke the key | Adapt from `/admin/api-keys/{key_id}` |
 
-These routes require an operator administrative credential, not an Asset or Plugin integration identity; no browser-admin session is selected. Asset identity is provisioned automatically during enrollment, with the binding mechanism still to be designed. Bootstrap: local deployment setup provisions the first key outside HTTP and stores it for the operator; subsequent keys use these routes. Recovery after loss or revocation of every key is also a local setup responsibility. Exact setup commands remain open.
+These routes require an operator administrative credential, not an Asset or Plugin integration identity; no browser-admin session is selected. Deployment tooling authorizes Asset enrollment; the SDK provisions the bound identity automatically with no per-Asset approval click or manual key-management workflow. The credential/proof mechanism remains to be designed. Bootstrap: local deployment setup provisions the first key outside HTTP and stores it for the operator; subsequent keys use these routes. Recovery after loss or revocation of every key is also a local setup responsibility. Exact setup commands remain open.
 
 ### Operator records
 
@@ -208,7 +210,7 @@ Core readiness depends on required infrastructure, including SQLite and private 
 
 1. Define exact request/response schemas, filters, limits, and status codes for the approved routes.
 2. Resolve the specific open choices in the shared contract table, including mandatory write preconditions and how supported compatibility ranges are advertised.
-3. Specify Task status and queue wire fields, report validation and reconciliation mechanics; specify Pause/Resume report correlation and conflicting/stale immediate delivery before implementation. Do not reintroduce the removed execution-session API.
+3. Specify Task status and queue wire fields, report validation and reconciliation mechanics; specify Pause/Resume report correlation, Command-specific deadlines and recovery evidence under the accepted ordering/reconciliation policies before implementation. Do not reintroduce the removed execution-session API.
 4. Define private local management outcomes, Operation envelopes/notification behavior, and whole-file upload retry identity/content-verification details.
 
 ## Sources

@@ -58,7 +58,7 @@ The [testing strategy](testing-strategy.md) requires these helpers and the queue
 
 Task creation selects supported queued/immediate scheduling through the same SDK operation and `POST /tasks`. Pause and Resume are immediate Commands. Lights and similar supported Commands can be queued or immediate; an immediate lights change can run alongside Move To without changing the path. Task identity, retries and outcomes remain visible in both cases. The Asset's outstanding-work reads and hybrid picture include immediate control Tasks even while it is paused.
 
-The Asset reports its paused condition through ordinary Entity status reporting and reports the interrupted Task's suspension through the Task status endpoint. The Pause Task completes once applied. A separate immediate Resume continues the interrupted Task first, or reports that Task failed if it cannot safely resume. The resumed Task keeps its identity/progress; it is not a new execution. The SDK must not optimistically set these states merely because task creation succeeded. See the [Pause and scheduling contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling); control/report correlation and stale-command policy remain open.
+The Asset reports its paused condition through ordinary Entity status reporting and reports the interrupted Task's suspension through the Task status endpoint. The Pause Task completes once applied. A separate immediate Resume continues the interrupted Task first, or reports that Task failed if it cannot safely resume. The resumed Task keeps its identity/progress; it is not a new execution. The SDK must not optimistically set these states merely because task creation succeeded. See the [Pause and scheduling contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling); the Asset validates Command-specific expiry and preserves newer Pause/Resume intent despite delayed older requests. Control/report correlation fields remain open.
 
 ## Assigned Task queue
 
@@ -66,10 +66,16 @@ The Asset fetches all outstanding assigned Tasks, following pagination as needed
 
 Core assigns a permanent increasing submission sequence within each Asset's queue when accepting a Task. Reads return that default order; a repeated read or Task-creation retry does not create another execution or move a Task to the end. The Asset acknowledges a Task when it accepts it into its local queue and reports in progress when execution begins. Unstarted queued Tasks, including acknowledged Tasks, can be reordered without rewriting submission sequence. Requested and Asset-confirmed order are separate; running and terminal Tasks cannot move. A disconnected Asset can continue using its last received order. Use whole-list requests with expected revisions and stable retry identity, plus assigned-Asset adoption/conflict reports, under the [queue contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions). Communication state does not gate Task creation or change Core scheduling behavior. Core accepts and retains valid Tasks even while the Asset is offline; the Asset owns execution when it receives them. See [Asset status](asset-status.md).
 
+## Recovery and historical Tasks
+
+After unexpected Asset-process restart, reconcile retained Tasks before executing any uncertain work. Hold the affected queue if execution cannot be established; neither reading outstanding Tasks nor reinitializing the SDK authorizes a rerun. See [recovery](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart). Failed resumption leaves the Asset paused until a new explicit Resume.
+
+Task reads can filter to current work for normal interfaces. Terminal records stay in Core until Reset and have no delete operation; their visibility in a particular interface is not a retention rule.
+
 ## Asset startup
 
 1. The Asset invokes registration with the information it already knows. The SDK uses ordinary Entity creation, not a dedicated registration endpoint.
-2. Enrollment automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset. The trust/bootstrap mechanism remains to be designed; choosing an Asset ID is not proof of identity. Before its first report, operational status defaults to `unknown`, communications is `offline`, and heartbeat has `last_seen: null`.
+2. Enrollment automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset. Deployment tooling supplies enrollment authorization; the SDK completes enrollment without a per-Asset approval step or manually managed API key. The credential/proof encoding remains engineering work; choosing an Asset ID is not proof of identity. Before its first report, operational status defaults to `unknown`, communications is `offline`, and heartbeat has `last_seen: null`.
 3. The Asset sends check-in with current component data and any additional information now available. Core records contact and derives communication state from reported link observations and configured expectations.
 4. The Asset sends further reports as needed. It can send only changed fields instead of resending its full Entity. Every accepted fresh Asset-originated update refreshes contact, including telemetry and status updates.
 
@@ -109,6 +115,6 @@ Core distinguishes fresh reports from arrival of delayed data. Duplicate reports
 - Registration request identity format, deduplication retention, and reconnect response semantics for the agreed stable-ID/retry model.
 - Report identity/ordering fields, relay origin, freshness windows, and clock assumptions that enforce the agreed fresh-contact and no-regression rules.
 - Version preconditions for frequent component reports and how the SDK handles conflicts.
-- Exact Task sequence/queue field encodings and report ordering; Pause/Resume correlation and stale/conflicting immediate delivery.
+- Exact Task sequence/queue field encodings and report ordering; Pause/Resume correlation, deadline/clock fields and validation for conflicting immediate actions beyond the accepted control-order policy.
 
 These operations use the [approved endpoint map](api-endpoints.md), [component catalog](data-components.md), and [Asset status model](asset-status.md).

@@ -135,7 +135,7 @@ The following decisions remain open:
 
 - Entity relationships and lifecycle behavior.
 - Communication-state criteria, detailed report validation, and delayed-report/freshness mechanisms.
-- Exact Task/queue field encodings, report ordering and failure behavior during sequential Asset execution; Pause/Resume report correlation and stale/conflicting immediate delivery remain follow-up details.
+- Exact Task/queue field encodings, report ordering and failure behavior during sequential Asset execution; Pause/Resume report correlation, deadline/clock fields and execution-recovery proof remain implementation details under the accepted policy.
 - Detailed Asset-supported Command reporting, stale-report handling, and restart reconciliation under the accepted Task lifecycle.
 - Local SDK Command Catalog function name/signature and SDK operation names, including the detailed registration deduplication contract for stable Asset and request identities.
 - Exact Object metadata schema and reference representation; historical associations are retained when a related Entity is removed.
