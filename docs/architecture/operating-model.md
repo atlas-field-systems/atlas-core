@@ -69,4 +69,4 @@ This example does not require every Plugin to produce a separate Object or estab
 
 Open decisions include Asset progress/failure detail contracts, Plugin installation and invocation formats, provenance/correction of observations, shared-picture freshness and workload measurements. Settled boundaries are linked above; exact wire fields and mechanisms remain implementation work.
 
-Questions for the operator should concern consequential system-wide outcomes. Resolve routine technical choices through engineering judgment. Avoid asking the operator to design individual Plugins, Asset operating systems or Command Interface interactions while planning Core.
+Questions for the operator should concern consequential system-wide outcomes. Explain alternatives through the behavior the user would experience, then ask which behavior they prefer. Resolve technical implementation choices through engineering judgment rather than asking the operator to select technologies or mechanisms. Avoid asking the operator to design individual Plugins, Asset operating systems or Command Interface interactions while planning Core.

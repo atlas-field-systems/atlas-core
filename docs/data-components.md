@@ -52,10 +52,11 @@ These inventory the resource data units and detail the Task status component lis
 | Entity identity | Asset, Track, Geofeature | Required ID/type; alias and subtype may be absent | Immutable ID and type; Asset ID persists across restarts; optional editable alias, unique across all Entity types ignoring case; subtype |
 | Resource timestamps/version | All synchronized resource types | Required as defined by each resource envelope | Creation/update times and change ordering; storage version need not occupy the same wire location in every resource |
 | `command_manifest` | Asset | Required before accepting supported work; otherwise absent or empty under a defined policy | Advertised subset of Protocol Commands, supported scheduling choices, cancellation/progress support, and descriptions; not the full catalog; queued execution and immediate behavior follow Protocol Commands |
+| Task creation identity | Task | Required for retryable creation | Dataset-scoped idempotency key, canonical immutable request facts including Asset, Command, input, scheduling and validity/deadline, and resulting Task ID under a uniqueness constraint; insert atomically with Task/submission sequence, retain across Restart until Reset, reject conflicting reuse |
 | Task assignment | Task | Required | Task ID, immutable Asset ID, and immutable Command identifier |
 | Task scheduling | Task | Required resolved choice at creation | Immutable queued or immediate, allowed by Protocol and Asset support, with Command validity rules and an optional execution deadline; immediate Tasks are excluded from the reorderable queued path |
 | Task submission sequence | Task | Required; assigned by Core | Permanent increasing sequence within the assigned Asset's queue, allocated when Core accepts the Task; determines default relative order of queued Tasks and is unchanged by retries; immediate Tasks retain the sequence without occupying the queued path |
-| Task current queue order | Task/Asset queue | Separate from submission sequence; exact representation open | Requested order and Asset-confirmed order for unstarted queued Tasks; started, paused and terminal Tasks cannot move |
+| Task current queue order | Task/Asset queue | Separate from submission sequence; exact representation open | Requested order and Asset-confirmed order for unstarted queued Tasks; started, paused, cancellation-requested and terminal Tasks cannot move |
 | Task `input` | Task | Required | Immutable Command-specific payload validated against its Protocol schema |
 | Task `status` | Task | Required | Pending in Core, acknowledged when the Asset accepts it into its local queue, in progress when execution starts, paused on confirmed suspension, cancellation requested while withdrawal is pending, then completed/failed/cancelled |
 | Task control/recovery facts | Task/Asset | Present when applicable | Applied Pause/Resume ordering and report correlation, expiry/supersession outcomes and evidence for reconciling retained work; exact representation and stale-process proof remain engineering work |
@@ -66,11 +67,11 @@ These inventory the resource data units and detail the Task status component lis
 | Task cancellation request | Task | Present when cancellation is requested | Request identity/details accompanying cancellation_requested status; receipt by Core alone is not confirmed cancellation |
 | Task `cancellation` | Task | Required for cancelled state | Confirmed cancellation outcome and details; accepted work waits for the Asset's confirmation |
 | Movement sample | Asset, Track | Created only for explicitly supplied movement in an accepted report | Entity association, report/sample identity, observation time when known, Core receipt time, and supplied position/speed/altitude; append-only until Reset; retries deduplicate |
-| Object identity/description | Object | Required ID; descriptive fields follow schema | Object ID, type, and usage hints |
+| Object identity/description | Object | Required ID; descriptive fields follow schema | SDK-allocated Object ID known before upload, type, and usage hints |
 | Object storage metadata | Object | Required for a published Object | Public content type and byte size derive from the completed upload; physical storage locations remain private; content is immutable |
 | Object `referenced_by` | Object | Zero or more associations | Entity and Task references retained as historical context even when the related record is unavailable |
 | Object extension metadata | Object | Optional | Flexible file-specific JSON metadata; does not override storage-owned facts |
-| Successful upload identity | Core-private record | Retained for successful uploads until Reset | Dataset-scoped request identity, content-equivalence facts and resulting Object ID; recognizes lost-response retries without another publication |
+| Successful upload identity | Core-private record | Retained for successful uploads until Reset | Dataset-scoped request identity, canonical upload facts including supplied Object ID and content equivalence, resulting publication and deletion marker; recognizes lost responses without another publication or resurrection after deletion |
 
 Task completion follows [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md) and [scan result readiness](adr/0008-complete-scan-tasks-when-required-results-are-available.md); a completion report may be retained while required Objects are still uploading. Cancellation requested is a nonterminal status; retain execution facts while waiting for an outcome.
 
@@ -78,7 +79,7 @@ The exact representation of Task progress and timestamps is inherited-schema mat
 
 Ready Object metadata and associations synchronize through the feed. Upload staging and progress do not publish incomplete Objects. File bytes remain in object storage and are fetched through the approved content endpoints.
 
-Queued Task reordering is allowed before execution starts, including for acknowledged Tasks. Preserve immutable submission sequence and keep requested queue order distinct from Asset-confirmed order. Running and terminal Tasks cannot be moved. A disconnected Asset may still follow its last received order. The accepted [queue revision contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions) supplies whole-list edits, stale-edit rejection and assigned-Asset adoption/conflict reports. Concrete field encodings remain open.
+Queued Task reordering is allowed only for eligible, never-started Tasks, including acknowledged Tasks; cancellation-requested Tasks are excluded. Preserve immutable submission sequence and keep requested queue order distinct from Asset-confirmed order. Started, paused, cancellation-requested and terminal Tasks cannot be moved. A disconnected Asset may still follow its last received order. The accepted [queue revision contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions) supplies whole-list edits, stale-edit rejection and assigned-Asset adoption/conflict reports. Concrete field encodings remain open.
 
 ## Movement history
 
@@ -101,7 +102,7 @@ These are separate resource records, not Entity components or members of the ope
 | API key / credential | Credential ID, principal association, descriptive metadata, verifier where applicable, and revocation state. Asset enrollment and Plugin integration identities are provisioned automatically; operators do not manage per-Plugin keys. |
 | Plugin | Release identity, installation/enablement/availability, declared configuration schema, saved/active settings, startup-validation state, management result |
 | Core settings | Explicitly supported server configuration fields and application requirements |
-| Activity record | Stable action identity, authenticated actor/type, action, target, time and known outcome; safe summaries only; retain until Reset |
+| Activity record | Stable action identity, retained authenticated actor ID/type and safe historical display context, action, target, time and known outcome; profile/credential deletion does not erase attribution; safe summaries only; retain until Reset |
 
 Activity records cover Task issuance/cancellation and Plugin, credential and configuration changes, including local CLI/TUI actions. Record database changes and their activity together; link process requests to later known outcomes. Do not infer human identity from a selected profile or include secrets. See [activity history](architecture/system-design.md#activity-history).
 
@@ -113,6 +114,7 @@ These Core-owned records support the public contracts; they are not new Entity c
 
 | Record | Required contents and behavior |
 | --- | --- |
+| Dataset metadata | Current Dataset ID and writing Core release, initialized on first use or Reset and retained across same-release Restart. Start checks the writing release before serving data; a mismatch refuses startup and requires explicit update/Reset. |
 | Plugin Operation attempt | Operation ID, Dataset-scoped submission identity, Plugin identity/release/capability, validated input, current lifecycle/progress/timestamps, known outputs and failure/interruption details. Commit acceptance before dispatch. A matching retry retrieves the original attempt; conflicting reuse fails. Retain across Restart and Plugin removal until Reset; no automatic rerun. One current-state row per attempt is sufficient initially; a full progress-event history is not required. |
 | Synchronization change | Dataset association, increasing committed sequence, resource type/ID, change kind, and replay data. Include deletion records and enough information for scoped recovery. Commit with the resource mutation; feed delivery and changed-since consume the same committed records. |
 | Synchronization retention boundary | Earliest recoverable boundary and latest committed sequence for the Dataset, maintained consistently with pruning. Expired cursors fail explicitly; SDK recovery rebuilds the picture. Retention is bounded and distinct from movement/activity retention until Reset. |
@@ -139,12 +141,14 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | Plugin Operation attempts | Separate typed SQLite rows with unique Dataset/submission identity and validated input/output JSON | Durable acceptance, retry lookup and retained outcomes without a workflow engine |
 | Synchronization changes and retention boundary | Private SQLite log, ordered sequence and recoverable-boundary metadata | Atomic resource/change commits, deletion recovery and explicit cursor expiry |
 | Asset Task queue revisions | Typed per-Asset requested/confirmed revisions and ordered Task references | Concurrent edits and delayed confirmations cannot silently replace newer intent |
+| Dataset metadata | Private singleton SQLite record for Dataset ID and writing Core release | Preserve Reset/release boundaries; no metadata-only startup overwrite or silent migration |
+| Task creation identities | Dataset/key uniqueness with canonical request facts and Task ID, committed with the Task | Lost-response retries and same-release Restart cannot duplicate an execution |
 | Task input/output | Protocol-validated JSON in SQLite | Shape depends on the Command |
 | Movement samples | Separate typed SQLite rows, indexed by Entity and time with report-identity uniqueness | Preserve sparse observed quantities; page stable history without expanding live Entity JSON |
 | Activity records | Separate typed SQLite table with safe bounded detail fields | Query a limited action log; preserve attribution without a full audit framework |
-| Successful upload identities | Private Dataset-scoped retry record linked to Object ID | A completed request retry returns the original publication |
+| Successful upload identities | Private Dataset-scoped retry record with supplied Object ID, original canonical facts and retained deletion marker | A completed request retry returns the existing Object or explicit deleted-result outcome |
 | Object identity/storage facts | Typed columns | Core owns storage identity and measured facts |
-| Object references | Structured historical associations plus authoritative required-result references on completed Tasks | Prevent deletion of required results until Reset, independent of mutable metadata; preserve history without cascading deletion |
+| Object references | Structured historical associations; Task-required references may precede Object publication and become protective on completion | Prevent deletion of required results until Reset, independent of mutable metadata; preserve history without cascading deletion |
 | Object extension metadata | Validated JSON in SQLite within the Object metadata contract | Keeps variable data flexible without weakening core fields |
 
 The storage approach is agreed; exact tables, columns, and indexes remain proposals and are not implemented. Entity JSON shape does not dictate one SQL row, nor does each logical component require its own table. Historical Object references must not acquire foreign-key deletion behavior that contradicts their accepted semantics.

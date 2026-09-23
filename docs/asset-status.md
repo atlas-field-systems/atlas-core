@@ -93,7 +93,7 @@ Assets advertise supported Protocol Commands on their Entity record. Reporting a
 
 ## Task integration
 
-Assets fetch their full outstanding Task list, following pagination as needed, and queue Tasks locally. Queued Tasks execute one at a time, oldest submission first by default, following confirmed reordering of unstarted Tasks. Several move-to Tasks can therefore define a path. A busy Asset can receive further Tasks; Core does not reject them merely because another Task is running.
+Assets fetch their full outstanding Task list, following pagination as needed, and queue Tasks locally. Queued Tasks execute one at a time, oldest submission first by default, following confirmed reordering of eligible, unstarted queued Tasks. Several move-to Tasks can therefore define a path. A busy Asset can receive further Tasks; Core does not reject them merely because another Task is running.
 
 Core assigns a permanent increasing submission sequence per Asset when accepting each Task. The sequence defines default execution order independently of client clocks, and assigned-work reads return that order. Exact field encoding remains to be designed. Retrying Task creation must not create another queue entry or change the original Task's order. Fetching the list does not itself acknowledge or start Tasks.
 
@@ -105,7 +105,7 @@ Planned shutdowns and restarts are expected only after unfinished work has been 
 
 Assigned work is discovered through `GET /entities/{entity_id}/tasks`, using an outstanding-work filter, and through Task change events. The Asset tracks and executes its queue and reports transitions through the Task status endpoint. The Asset reports `acknowledged` when accepting a Task into its local queue and `in_progress` when execution begins. Exact filtering remains to be specified.
 
-Unstarted queued Tasks, including acknowledged Tasks, can be reordered. Submission sequence stays immutable. Requested queue order is distinct from the order confirmed by the Asset; disconnected Assets can continue their last received order. Running and terminal Tasks cannot be moved.
+Eligible, unstarted queued Tasks, including acknowledged Tasks, can be reordered. Submission sequence stays immutable. Requested queue order is distinct from the order confirmed by the Asset; disconnected Assets can continue their last received order. Started, paused, cancellation-requested and terminal Tasks cannot be moved.
 
 A cancellation request sets Task status to `cancellation_requested` without proving execution stopped. Retain execution facts until the assigned Asset confirms `cancelled` or reports another valid outcome. The [Task transition table](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) owns these rules. Immediate Pause interrupts current queued work and places the Asset in `paused`. Supported independent immediate actions can still run without clearing that state. The interrupted Task separately reports `paused`; the Pause Task completes when applied. Immediate Resume continues the interrupted Task before the remaining queue; an unsafe-to-resume Task reports failure. See the [Pause contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#pause-through-an-immediate-command).
 
