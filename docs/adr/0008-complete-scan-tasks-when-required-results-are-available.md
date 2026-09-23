@@ -19,3 +19,9 @@ The SDK allocates the eventual Object ID before upload and uses that same ID in 
 Only the assigned Asset may declare its Task's execution result references, under the existing execution-report authority rule. Uploading or modifying an Object is not an Asset completion report. Object readiness alone cannot complete a Task, and an Asset report alone cannot complete a scan whose required data is still unavailable. This does not add caller ownership restrictions to Object uploads.
 
 Once Core accepts the assigned Asset's required-result declaration, those Object identities are protected until Reset, including while the Task is unfinished and before upload. Object association edits or later Task outcomes cannot remove that protection. Declaration acceptance, publication and deletion must obey the [required-result retention contract](0009-expose-objects-only-when-ready.md#required-result-protection).
+
+## Upload-first evaluation
+
+On 23 September 2026 the user approved evaluating upload-first as a simplification, not changing the accepted arrival-order contract yet. Compare requiring ready Objects before completion reporting against the current either-order behavior on interrupted links. Check the Asset's need to retain an unreported outcome and the race between Object upload, deletion and declaration. Keep required-result integrity and crash-safe publication in the evaluation.
+
+Until that evaluation supports a successor decision, both arrival orders and declaration-time protection remain required. Either design must preserve the user-facing promise that Completed means the scan's required results are available; finishing physical acquisition alone is insufficient.

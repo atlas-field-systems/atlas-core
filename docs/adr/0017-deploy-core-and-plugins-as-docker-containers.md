@@ -27,6 +27,8 @@ Core's Plugins module owns lifecycle policy, including admission, protected stop
 
 Apply [independent Plugin lifecycle](0002-core-manages-installed-plugins.md) and [active-work protection](0006-protect-active-plugin-work-during-lifecycle-changes.md) when installing, stopping or replacing a Plugin container. A Compose action must not restart Core or unrelated Plugins as a side effect. Containerization does not introduce automatic Plugin recovery or retry failed Operations. Installed images must be available before an offline mission, following [ADR-0010](0010-operate-without-internet-access.md).
 
+Independent container management does not mean Plugins run without Core. Local management enforces the [Core and Plugin runtime lifetime](0015-separate-start-stop-restart-and-reset.md#core-and-plugin-runtime-lifetime), including stopping managed Plugins when Core is spun down. Coordination placement and shutdown detection remain engineering choices.
+
 SDK and Protocol are release artifacts and need no standalone runtime containers. SQLite is embedded in Core and needs no database container. Plugins use the SDK and receive no direct mount of Core's database or Object store. Each Plugin may package its own runtime and dependencies; additional system containers need a concrete independent-execution requirement.
 
 ## Storage and scope
