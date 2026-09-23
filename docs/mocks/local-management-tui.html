@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Local management TUI flow mocks</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: #111512;
+        color: #e7ece6;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0 auto; max-width: 1220px; padding: 24px 32px 64px; }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 20px; font-weight: 650; }
+      h2 { font-size: 17px; margin-top: 40px; }
+      h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+      p { font-size: 13px; line-height: 1.5; margin-top: 9px; max-width: 90ch; }
+      a { color: #8fd3bc; }
+      nav { display: flex; gap: 24px; padding: 16px 0; border-bottom: 1px solid #526054; }
+      section { border-bottom: 1px solid #526054; padding-bottom: 32px; }
+      .screens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 20px; }
+      figure { margin: 0; min-width: 0; }
+      figcaption { color: #c6d3c5; font-size: 12px; margin-bottom: 7px; }
+      pre {
+        background: #080b09;
+        border: 1px solid #647466;
+        color: #e7ece6;
+        font: 12px/1.42 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        margin: 0;
+        min-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        white-space: pre;
+      }
+      .note { color: #b7c7b6; }
+      @media (max-width: 980px) { .screens { grid-template-columns: 1fr; } body { padding: 18px; } }
+    </style>
+  </head>
+  <body>
+    <h1>Local management TUI flow mocks</h1>
+    <p>Static sketches for issue #31. Text, keys, layout and action names are proposals. These screens do not add backend policy or a public management API. The CLI and TUI would call the same private management boundary.</p>
+    <nav aria-label="Mock alternatives">
+      <a href="#overview">A. Overview console</a>
+      <a href="#commands">B. Command console</a>
+      <a href="#stages">C. Staged actions</a>
+    </nav>
+
+    <section id="overview">
+      <h2>A. Overview console</h2>
+      <p>Selection stays in a status table. The right pane shows the selected target and available actions. A result line remains visible when an action finishes or becomes uncertain.</p>
+      <div class="screens">
+        <figure>
+          <figcaption>A1 · Normal management</figcaption>
+          <pre>ATLAS LOCAL  |  MOCK  |  installation field-01
+Core READY       Dataset ds-42       Release 0.1
+Readiness READY  |  Plugins: 1 running, 1 stopped
+────────────────────────────────────────────────────
+TARGETS                    DETAILS
+&gt; Core        ready         Started 09:12
+  Elevation   running       Operations admitted
+  Weather     stopped       Enabled, start available
+────────────────────────────────────────────────────
+Core actions
+[s] Start  [t] Stop  [r] Restart  [u] Update
+[x] Reset  [H] Hard Reset
+
+Plugin actions (select a Plugin)
+[i] Install  [e] Enable/disable  [p] Start/stop
+[v] Update  [d] Remove  [c] Settings
+
+RESULT  Ready. Closing this console leaves Core running.
+↑↓ target   Enter details   ? keys   q quit</pre>
+        </figure>
+        <figure>
+          <figcaption>A2 · Protected Plugin stop and settings</figcaption>
+          <pre>ATLAS LOCAL  |  MOCK  |  Elevation / Stop
+Core READY       Elevation DRAINING       Weather STOPPED
+────────────────────────────────────────────────────
+New Operations: closed     Ingestion: stopping
+Finite Operations: 2 active, 1 cancel requested
+Asset Tasks: unaffected
+
+OPERATION   STATE           KNOWN EFFECTS
+op-81       running         1 output ready
+op-82       cancel requested none confirmed
+
+[w] Wait for confirmed completion
+[c] Request cancellation of selected Operation
+[f] Force stop after cooperative stop fails
+
+Settings  saved r12  |  running r11  |  validated r11
+Saving r12 did not restart Elevation.
+Applying r12 waits for protected work, then starts it.
+If disabled: retain r12 for next start; untested.
+
+RESULT  Stop requested. Completion is not confirmed.
+Esc back   ↑↓ Operation   ? keys</pre>
+        </figure>
+        <figure>
+          <figcaption>A3 · Fault and unknown outcome</figcaption>
+          <pre>ATLAS LOCAL  |  MOCK  |  Elevation / Fault
+Core READY       Elevation FAULTED       Weather STOPPED
+────────────────────────────────────────────────────
+Apply r12 failed during startup.
+Saved candidate r12       Last validated r11
+Running revision none     Failed attempt retained
+
+[1] Correct candidate and apply
+[2] Restore r11, then restart
+[3] Inspect fault and Operation outcomes
+
+Operation op-81: INTERRUPTED, 1 known output retained
+Rerun: separate explicit action through operational API
+
+Latest management action act-58: outcome UNKNOWN
+The request was recorded; process effect is unconfirmed.
+[I] Inspect current Plugin state and action record
+
+RESULT  No automatic restore, restart or Operation rerun.
+Esc back   ? keys</pre>
+        </figure>
+        <figure>
+          <figcaption>A4 · Reset and Hard Reset</figcaption>
+          <pre>ATLAS LOCAL  |  MOCK  |  Core / Data actions
+Outside mission: Assets must no longer be participating.
+────────────────────────────────────────────────────
+RESET [x]
+Clears Dataset, Objects, Tasks, history and managed logs.
+Keeps profiles, credentials, settings and installed Plugins.
+Stops Core, creates a new Dataset, starts Core.
+
+HARD RESET [H]
+Stops Core and managed Plugins, clears all Atlas-managed
+operational and installation state, returns to first setup.
+Keeps Core software and unrelated host resources.
+Does not stop physical Assets.
+
+Confirm Hard Reset of installation field-01:
+Type field-01 to confirm: __________________________
+
+Cleanup interrupted: START BLOCKED until cleanup resumes.
+[R] Resume cleanup   [Esc] Cancel before confirmation</pre>
+        </figure>
+      </div>
+    </section>
+
+    <section id="commands">
+      <h2>B. Command console</h2>
+      <p>The operator types short local commands and reads a persistent transcript. Completion and uncertainty appear as separate result states. The command line offers the same actions as the CLI.</p>
+      <div class="screens">
+        <figure>
+          <figcaption>B1 · Normal management</figcaption>
+          <pre>atlas local  |  MOCK  |  field-01
+core ready · dataset ds-42 · release 0.1
+readiness ready · 1 Plugin running · 1 stopped
+────────────────────────────────────────────────────
+&gt; status
+CORE       ready       started 09:12
+ELEVATION  running     enabled, admission open
+WEATHER    stopped     enabled
+
+&gt; help
+core     start stop restart update reset hard-reset
+plugin   list install update remove enable disable
+         start stop restart force-stop settings
+
+&gt; plugin settings elevation
+saved r12 · running r11 · last validated r11
+
+&gt; _
+Closing this console leaves Core running.</pre>
+        </figure>
+        <figure>
+          <figcaption>B2 · Protected stop and settings</figcaption>
+          <pre>atlas local  |  MOCK  |  field-01
+────────────────────────────────────────────────────
+&gt; plugin stop elevation
+Accepted act-57. Admission closed; ingestion stopping.
+2 finite Operations remain. Asset Tasks are unaffected.
+
+&gt; plugin work elevation
+op-81 running           1 ready output
+op-82 cancel requested  outcome unconfirmed
+
+&gt; plugin stop elevation --wait
+Waiting for confirmed outcomes. No completion claimed.
+If cooperative stop fails: plugin force-stop elevation
+Force stop may leave effects or Operation outcomes unknown.
+
+&gt; plugin settings elevation save ./candidate.json
+Saved r12 after schema validation; running remains r11.
+&gt; plugin settings elevation apply r12
+Apply waits for finite work, then starts with r12.
+If disabled, it stays disabled; r12 remains untested.
+
+&gt; _</pre>
+        </figure>
+        <figure>
+          <figcaption>B3 · Fault and unknown outcome</figcaption>
+          <pre>atlas local  |  MOCK  |  field-01
+────────────────────────────────────────────────────
+&gt; plugin settings elevation apply r12
+FAILED act-58: startup fault. Elevation remains faulted.
+saved r12 · running none · last validated r11
+Failed candidate and attempt remain recorded.
+
+&gt; plugin work elevation
+op-81 interrupted; 1 known output remains available.
+Restarting the Plugin does not rerun op-81.
+
+&gt; plugin restore elevation r11
+Restored last validated settings for explicit restart.
+&gt; plugin restart elevation
+UNKNOWN act-59: coordinator lost the result.
+Request recorded. Current process effect unconfirmed.
+
+&gt; plugin status elevation
+Inspect current state and action record before acting.
+
+&gt; _</pre>
+        </figure>
+        <figure>
+          <figcaption>B4 · Reset and Hard Reset</figcaption>
+          <pre>atlas local  |  MOCK  |  field-01
+────────────────────────────────────────────────────
+&gt; core reset
+Outside mission only. Clears operational Dataset and
+managed logs. Keeps profiles, credentials, settings,
+installed Plugins. Starts Core with a new Dataset.
+Confirm Reset of field-01? [y/N] _
+
+&gt; core hard-reset
+Stops Core and Plugins. Removes this installation's
+data, setup, credentials, Plugin artifacts and logs.
+Keeps Core software and unrelated host resources.
+Physical Assets are not stopped by this action.
+Type installation name field-01: ___________
+
+&gt; core start
+BLOCKED: Hard Reset cleanup was interrupted.
+Run core hard-reset --resume to finish owned cleanup.
+First-time setup follows successful cleanup.</pre>
+        </figure>
+      </div>
+    </section>
+
+    <section id="stages">
+      <h2>C. Staged actions</h2>
+      <p>The operator opens a target, reviews the action's steps, then confirms. A small action ledger shows what is accepted, confirmed and still unresolved. Destructive actions use the same layout.</p>
+      <div class="screens">
+        <figure>
+          <figcaption>C1 · Normal management</figcaption>
+          <pre>ATLAS MANAGER  |  MOCK  |  field-01
+────────────────────────────────────────────────────
+TARGET            STATE       NEXT ACTION
+&gt; Core            ready       Manage lifecycle
+  Elevation       running     Manage Plugin
+  Weather         stopped     Start or configure
+
+Core readiness: ready       Dataset: ds-42
+Plugin fault count: 0       Release: 0.1
+
+SELECTED  Core
+1 Start / Stop / Restart
+2 Update release
+3 Reset Dataset
+4 Hard Reset installation
+
+PLUGIN ACTIONS
+Install / Update / Remove / Enable / Disable
+Start / Stop / Restart / Force stop / Settings
+
+Enter open target     ↑↓ select     q quit
+Closing manager leaves Core running.</pre>
+        </figure>
+        <figure>
+          <figcaption>C2 · Protected stop and settings</figcaption>
+          <pre>ATLAS MANAGER  |  MOCK  |  Elevation / Apply r12
+────────────────────────────────────────────────────
+SETTINGS  saved r12  |  running r11  |  validated r11
+Saving r12 did not restart or validate startup.
+
+STEPS                       STATE
+1 Close new admission       confirmed
+2 Stop continuous ingestion requested
+3 Finish finite work        2 active
+4 Stop Plugin               pending
+5 Start with r12            pending
+
+Asset Tasks do not block this action.
+Select active Operation to request cancellation.
+Force stop appears if cooperative stop fails; it does
+not turn unfinished Operations into successful work.
+If disabled, apply retains r12 without starting it.
+
+[w] Wait    [o] Operations    [Esc] Back</pre>
+        </figure>
+        <figure>
+          <figcaption>C3 · Fault and unknown outcome</figcaption>
+          <pre>ATLAS MANAGER  |  MOCK  |  Action ledger
+────────────────────────────────────────────────────
+ACTION   TARGET      REQUEST       OUTCOME
+act-58   Elevation   Apply r12     failed at startup
+act-59   Elevation   Restart      unknown
+
+CURRENT  Elevation faulted. Core remains ready.
+saved r12 · running none · last validated r11
+Failed candidate and attempt are retained.
+
+RECOVERY
+1 Inspect current state and action record for act-59
+2 Correct r12 and apply explicitly
+3 Restore r11 and restart explicitly
+
+Operation op-81: interrupted, 1 known output retained.
+Operation rerun is a separate explicit request.
+
+No automatic restart, settings rollback or rerun.
+Enter inspect    ↑↓ action    Esc targets</pre>
+        </figure>
+        <figure>
+          <figcaption>C4 · Reset and Hard Reset</figcaption>
+          <pre>ATLAS MANAGER  |  MOCK  |  Destructive action
+────────────────────────────────────────────────────
+SELECT ONE
+&gt; Reset Dataset
+  Clear operational data and managed logs; create new
+  Dataset. Retain profiles, credentials, Plugin setup.
+  Stop and start Core. Outside mission only.
+
+  Hard Reset installation
+  Clear operational and installation state, managed
+  Plugins, artifacts and logs. Return to first setup.
+  Core software and unrelated host resources remain.
+  Physical Assets are not stopped.
+
+TARGET  field-01
+Hard Reset requires typing field-01 before cleanup.
+If cleanup stops early, ordinary Start stays blocked.
+Resume the same cleanup; show success only when complete.
+
+Enter review    ↑↓ select    Esc back</pre>
+        </figure>
+      </div>
+    </section>
+    <p class="note">The screen sequence is illustrative. A selected flow can be recorded for the later implementation ticket without treating these mocks as implemented behavior.</p>
+  </body>
+</html>
