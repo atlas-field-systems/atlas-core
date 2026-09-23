@@ -43,10 +43,109 @@
     <h1>Local management TUI flow mocks</h1>
     <p>Static sketches for issue #31. Text, keys, layout and action names are proposals. These screens do not add backend policy or a public management API. The CLI and TUI would call the same private management boundary.</p>
     <nav aria-label="Mock alternatives">
+      <a href="#selected">Selected flow</a>
       <a href="#overview">A. Overview console</a>
       <a href="#commands">B. Command console</a>
       <a href="#stages">C. Staged actions</a>
     </nav>
+
+    <section id="selected">
+      <h2>Selected flow: A1 + B1 + C1</h2>
+      <p>The status table is the home view. Selecting a target opens its action list. A local command line and recent result stay at the bottom for direct operation and outcome inspection. The same arrangement carries through each management state.</p>
+      <div class="screens">
+        <figure>
+          <figcaption>S1 · Normal management</figcaption>
+          <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
+Core READY      Dataset ds-42      Readiness READY
+────────────────────────────────────────────────────
+TARGETS                    SELECTED  Core
+&gt; Core       ready          1 Start / Stop / Restart
+  Elevation  running        2 Update release
+  Weather    stopped        3 Reset Dataset
+                            4 Hard Reset installation
+
+Select a Plugin for install, update, remove, enable,
+disable, start, stop, restart, force stop or settings.
+────────────────────────────────────────────────────
+RECENT  Core started 09:12. No Plugin faults.
+&gt; status
+Core ready; Elevation running; Weather stopped.
+&gt; _
+
+↑↓ target   Enter action   / command   q quit
+Closing this console leaves Core running.</pre>
+        </figure>
+        <figure>
+          <figcaption>S2 · Protected Plugin apply</figcaption>
+          <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
+Core READY      Elevation DRAINING      Weather STOPPED
+────────────────────────────────────────────────────
+TARGETS                    SELECTED  Elevation / Apply r12
+  Core       ready          1 Inspect active work
+&gt; Elevation  draining       2 Request cancellation
+  Weather    stopped        3 Wait for confirmed stop
+                            4 Force stop if stuck
+
+Saved r12  |  running r11  |  last validated r11
+Admission closed; ingestion stopping; 2 finite active.
+Asset Tasks are unaffected. Disabled apply stays
+disabled and untested.
+────────────────────────────────────────────────────
+RECENT  act-57 accepted; stop outcome unconfirmed.
+&gt; plugin work elevation
+op-81 running, 1 output ready; op-82 cancel requested.
+&gt; _
+
+↑↓ target   Enter action   / command   Esc back</pre>
+        </figure>
+        <figure>
+          <figcaption>S3 · Fault and unknown outcome</figcaption>
+          <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
+Core READY      Elevation FAULTED      Weather STOPPED
+────────────────────────────────────────────────────
+TARGETS                    SELECTED  Elevation / Recovery
+  Core       ready          1 Inspect state and actions
+&gt; Elevation  faulted        2 Correct r12 and apply
+  Weather    stopped        3 Restore r11 and restart
+
+Apply r12 failed at startup. Saved r12; running none;
+last validated r11. Failed candidate is retained.
+op-81 interrupted; 1 known output is still available.
+Plugin restart never reruns the Operation.
+────────────────────────────────────────────────────
+RECENT  act-59 restart requested; outcome UNKNOWN.
+The process effect is unconfirmed. Inspect before acting.
+&gt; plugin status elevation
+Current state: faulted. Action act-59 needs inspection.
+&gt; _
+
+↑↓ target   Enter action   / command   Esc back</pre>
+        </figure>
+        <figure>
+          <figcaption>S4 · Reset and Hard Reset</figcaption>
+          <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
+Core READY      Dataset ds-42      Outside mission
+────────────────────────────────────────────────────
+TARGETS                    SELECTED  Core / Data actions
+&gt; Core       ready          1 Reset Dataset
+  Elevation  running        2 Hard Reset installation
+  Weather    stopped
+
+RESET clears operational data and managed logs, then
+starts a new Dataset. Profiles, credentials, settings
+and installed Plugins remain.
+
+HARD RESET clears this installation's operational and
+setup state, managed Plugins and logs. Core software and
+unrelated host resources remain. It does not stop Assets.
+────────────────────────────────────────────────────
+&gt; core hard-reset
+Type field-01 to confirm: __________
+If cleanup is interrupted: START BLOCKED. Resume cleanup
+before claiming success or returning to first-time setup.</pre>
+        </figure>
+      </div>
+    </section>
 
     <section id="overview">
       <h2>A. Overview console</h2>
