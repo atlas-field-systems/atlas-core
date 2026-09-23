@@ -26,6 +26,14 @@ Retained records do not authorize automatic resumption or rerun. A Plugin crash 
 
 Persistent storage uses the [selected stack](0016-use-go-sqlite-and-openapi-tooling.md) and [Docker mount layout](0017-deploy-core-and-plugins-as-docker-containers.md). Backup and restore functionality and version-to-version operational-data migrations are excluded. New-release updates perform Reset; same-release restarts preserve state.
 
+## Core and Plugin runtime lifetime
+
+Clarified on 23 September 2026: managed Plugins operate only while Core is running. A completed Core Stop also leaves its managed Plugins stopped; Restart and Reset stop them before bringing the installation back up. Independent Plugin start/stop/update while Core remains running stays supported. Starting compatible enabled Plugins with Core does not resume or rerun interrupted Operations.
+
+Local management coordinates this lifetime and reports incomplete shutdown rather than claiming everything stopped. Unexpected Core loss must not leave Plugins intentionally operating as standalone services; detection and shutdown mechanisms remain engineering work, with no instantaneous stop or automatic mission-recovery guarantee. Preserve known outcomes and classify uncertain work under [unfinished work](#unfinished-work-after-stop-or-restart). Physical Assets have their own execution lifetime and are not stopped by this Plugin rule.
+
+Local administration may still run while Core is stopped to perform setup, lifecycle actions and their activity recording. That capability does not require running Plugins or permitting offline Plugin Operations.
+
 ## Hard Reset
 
 Accepted on 23 September 2026: provide a distinct Hard Reset action in the local CLI/TUI that can be invoked while Atlas is running, or while it is stopped. It removes all Atlas-managed state and returns the installation to first-time setup. It has no public HTTP endpoint or SDK operation. Ordinary Reset continues to preserve installation setup and Operator profiles.

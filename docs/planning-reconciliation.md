@@ -52,3 +52,19 @@ Immediate Commands and paused Asset/Task states are now accepted under the [Task
 The user accepted Command-specific immediate validity rules and optional deadlines, newer Pause/Resume intent winning over delayed older controls, holding the queue after unsafe resumption, limited reconciliation after unexpected Asset-process restart, and automatic SDK enrollment using deployment-provided authorization. The [Task contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#control-ordering-and-expiry) and [identity contract](architecture/system-design.md#identity-and-access) define these boundaries.
 
 Completed Tasks cannot be deleted; ordinary interfaces may hide past Tasks without deleting their records. On 23 September 2026 the user extended required-result protection to run from declaration acceptance until Reset, including unfinished Tasks and pending uploads. The [Object contract](adr/0009-expose-objects-only-when-ready.md#required-result-protection) bases protection on authoritative Task references, prevents metadata bypass, and serializes declaration/publication/deletion checks. Optional attachments are not automatically protected.
+
+## Architecture review decisions, 23 September 2026
+
+The user chooses observable behavior; engineering selects internal mechanisms that preserve it. Review suggestions are not accepted merely because they reduce endpoints or code. The following decisions resolve the discussed recommendations, without claiming implementation:
+
+| Topic | Disposition | Authoritative detail |
+| --- | --- | --- |
+| Asset reporting authority | Establish private process/report authority before implementing recovery; exact proof and ordering remain engineering work | [Recovery](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart) |
+| Asset replica | Keep hybrid synchronization so a Task's live dependencies, such as a moving Track, update automatically through the link | [Hybrid mode](sdk-data-access.md#asset-hybrid-mode) |
+| Write confirmation | Return Core's committed result without waiting for the local picture; Task acceptance does not establish Asset receipt or execution | [ADR-0018](adr/0018-confirm-writes-when-core-commits.md) |
+| Plugin lifetime | Plugins operate with Core and stop when it is spun down; local management mechanics remain engineering choices | [Runtime lifetime](adr/0015-separate-start-stop-restart-and-reset.md#core-and-plugin-runtime-lifetime) |
+| Scan results | Evaluate upload-first; either-order reporting and declaration-time protection remain accepted until a successor decision. Completed still requires usable results | [Evaluation boundary](adr/0008-complete-scan-tasks-when-required-results-are-available.md#upload-first-evaluation) |
+| Testing | Separate simulated Core contract evidence from later real-Asset and independent-Plugin evidence | [Milestones](testing-strategy.md#core-contract-and-field-validation-milestones) |
+| Initial SDK | TypeScript is sufficient to start; keep mandatory SDK use without requiring another language | [Stack](adr/0016-use-go-sqlite-and-openapi-tooling.md#tradeoffs-and-implementation-checks) |
+
+Keep cancellation requests and queue reordering under their [existing contracts](adr/0007-reconcile-asset-tasks-after-disconnection.md), not new Commands/Tasks. Retain [Protocol-defined components](data-components.md#component-definitions), Entity identity reservations and the exclusion of active mission continuity across Core restart. A single UUID/hash is not accepted as a replacement for all retry, authorization and retention rules. Retained setup evolution and local activity recording while Core is stopped still need concrete engineering designs; this review does not select a database split or a migration tool.

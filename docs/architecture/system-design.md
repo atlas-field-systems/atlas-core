@@ -32,6 +32,8 @@ Local administrative actions contribute to [activity history](#activity-history)
 
 Use the private Docker integration described in [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md). Its host-versus-Core placement, coordination channel and installation/update workflows remain open; no separate management service is required.
 
+Managed Plugins run with Core and stop when it is spun down, under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md#core-and-plugin-runtime-lifetime). Local administration while Core is stopped is a management capability, not a way to run Plugin Operations without Core.
+
 [Hard Reset](../adr/0015-separate-start-stop-restart-and-reset.md#hard-reset) is a separate local CLI/TUI action available while Core is running. Its coordinator stops Core and managed Plugins, wipes operational and installation state, and returns to first-time setup. Ordinary Reset preserves Operator profiles, personal settings and installation setup. Neither reset action adds a public endpoint or SDK lifecycle method.
 
 ## Identity and access
@@ -182,7 +184,9 @@ The [initial MVP](operating-model.md#initial-mvp) selects simple Move To, indepe
 | Elevation Lookup | Discover the Plugin capability, invoke it for a known fixture position and retrieve the expected elevation. Verify that caller disconnection does not cancel accepted work and that retrying a lost acceptance response retrieves the same Operation. |
 | Object transfer | Interrupt an upload, verify that no partial Object is visible, retry from the beginning and compare the downloaded content. Lose the success response and verify that an identical retry returns the same Object with one publication. |
 | Plugin lifecycle | Use local management to stop/start the example Plugin while Core remains available. Exercise active-work protection with controlled test timing rather than a slow production algorithm. |
-| Stop/Start and Restart | Outside active Asset execution, retain records, ready Objects, setup and logs. Verify unfinished Core-owned work follows the linked lifecycle decision, without automatic rerun. |
+| Stop/Start and Restart | Outside active Asset execution, stop managed Plugins with Core and retain records, ready Objects, setup and logs. Start compatible enabled Plugins with the installation; verify unfinished Core-owned work follows the linked lifecycle decision, without automatic rerun. Report incomplete shutdown rather than claiming success. |
 | Reset | Clear operational data, content, transfer state, activity history and Atlas-managed logs; retain startup setup and Operator profiles/settings. Verify a new dataset and rejection of obsolete submissions. |
 
 These are acceptance scenarios, not completed tests. Add them alongside the relevant implementation. Keep the broader scan-result ordering tests in the validation table above for the later scan workflow; do not force Move To and Elevation Lookup into a Task-to-Object-to-Plugin chain.
+
+This is the Core contract milestone. [Later field and extension validation](../testing-strategy.md#core-contract-and-field-validation-milestones) separately checks a real Asset runtime and a Plugin built outside this repository; simulated execution does not prove physical Asset behavior.

@@ -111,7 +111,7 @@ A cancellation request sets Task status to `cancellation_requested` without prov
 
 Task reports use `PATCH /tasks/{task_id}/status`, replacing the separate lifecycle action routes without requiring the former execution-session identity. Task IDs, immutable Asset assignment, idempotency, and legal lifecycle transitions still matter. Current status is not a substitute for all of those rules.
 
-The earlier model used a process identity to reject late reports from an older process and to fail outstanding Tasks on restart. A status value alone cannot distinguish an old process reporting `ready` from its replacement reporting `ready`. This replacement intentionally leaves that mechanism unselected rather than quietly adding the old session identifier under a different name. The accepted [recovery rule](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart) requires reconciliation and holding uncertain work before execution; exact stale-report proof remains to be specified.
+The earlier model used a process identity to reject late reports from an older process and to fail outstanding Tasks on restart. A status value alone cannot distinguish an old process reporting `ready` from its replacement reporting `ready`. The accepted [recovery rule](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart) now selects private process generations and report identities as the direction for replacing that safeguard, without restoring the public execution-session API or automatic Task failure. Reconcile and hold uncertain work before execution; exact authority-transfer proof, ordering and freshness fields remain engineering work.
 
 Pending decisions:
 

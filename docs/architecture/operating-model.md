@@ -39,6 +39,8 @@ Plugins normally live in separate repositories. This example may start under `ex
 
 The MVP proves Task delivery, Plugin invocation and Object transfer through real Core/Protocol/SDK integration. A simulated Asset supplies execution reports for tests; it does not introduce an Asset OS into Core. The [integration checks](system-design.md#mvp-integration-checks) cover disconnection, cancellation and lifecycle behavior. Command Interface implementation is not required for this milestone.
 
+Treat this as a Core contract milestone. [Later validation](../testing-strategy.md#core-contract-and-field-validation-milestones) uses a real Asset to establish physical behavior and a separately built Plugin to establish extension independence; those are not claims a simulated Asset or an in-repository example can prove.
+
 ## Operator access
 
 Every authenticated operator has full control, with no operator roles or view-only accounts. Installed Plugins are trusted extensions built by the user. Authentication and caller attribution still matter; [identity and access](system-design.md#identity-and-access) defines the fixed operator, Asset and Plugin boundaries.
