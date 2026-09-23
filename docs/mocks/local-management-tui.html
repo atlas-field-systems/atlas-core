@@ -172,17 +172,17 @@ Failed apply evidence remains after Plugin removal.
 &gt; _</pre>
         </figure>
         <figure>
-          <figcaption>S6 · Stopped-state Hard Reset recovery</figcaption>
+          <figcaption>S6 · Stopped-state Hard Reset and recovery</figcaption>
           <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
-Core STOPPED      Cleanup INCOMPLETE      Start BLOCKED
+Core STOPPED      Hard Reset flow
 ────────────────────────────────────────────────────
 TARGETS                    SELECTED  Core / Hard Reset
-&gt; Core       stopped        1 Inspect cleanup
-  Elevation  stopped        2 Resume cleanup
-  Weather    stopped
+&gt; Core       stopped        1 Confirm Hard Reset
+  Elevation  stopped        2 Inspect cleanup
+  Weather    stopped        3 Resume cleanup
 
-Hard Reset began while Core was stopped.
-Confirmed destructive target: field-01.
+&gt; core hard-reset
+Type field-01 to confirm: field-01
 1 Stop writers, feeds, restart policies  confirmed
 2 Clear owned data, setup, Plugin artifacts, logs
                                       interrupted
