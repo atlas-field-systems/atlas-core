@@ -124,7 +124,7 @@ Runtime is conditional, not a reason to retain its current private machinery.
 
 ### First-version shape
 
-[Proposal] Exercise the first Asset Task, ready Object and Plugin Operation workflow with a small contract slice. Include compatibility and dataset discovery, Asset identity and observations, current Task instructions and execution reports, the seven Task statuses, separate cancellation request/confirmation, Object transfer and readiness, and clear errors.
+[Proposal] Exercise the first Asset Task, ready Object and Plugin Operation workflow with a small contract slice. Include compatibility and dataset discovery, Asset identity and observations, current Task instructions and execution reports, the Task statuses and cancellation request/confirmation defined by the [current lifecycle](../../adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions), Object transfer and readiness, and clear errors.
 
 Plugin Operations have an accepted attempt identity, stable submission retry identity, queryable state/outcome and explicit cancellation. They can continue after caller disconnection. Keep them separate from Asset Tasks; do not reinstate synchronous request-bound processing as the only Operation contract.
 

@@ -54,11 +54,17 @@ Task lifecycle helpers share `PATCH /tasks/{task_id}/status`; there are no separ
 
 The [testing strategy](testing-strategy.md) requires these helpers and the queue operations to pass real SDK–Core parity, retry and race scenarios. Exact helper names and wire envelopes remain schema work.
 
+## Immediate Commands and Pause
+
+Task creation selects supported queued/immediate scheduling through the same SDK operation and `POST /tasks`. Pause and Resume are immediate Commands. Lights and similar supported Commands can be queued or immediate; an immediate lights change can run alongside Move To without changing the path. Task identity, retries and outcomes remain visible in both cases. The Asset's outstanding-work reads and hybrid picture include immediate control Tasks even while it is paused.
+
+The Asset reports its paused condition through ordinary Entity status reporting and reports the interrupted Task's suspension through the Task status endpoint. The Pause Task completes once applied. A separate immediate Resume continues the interrupted Task first, or reports that Task failed if it cannot safely resume. The resumed Task keeps its identity/progress; it is not a new execution. The SDK must not optimistically set these states merely because task creation succeeded. See the [Pause and scheduling contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling); control/report correlation and stale-command policy remain open.
+
 ## Assigned Task queue
 
-The Asset fetches all outstanding assigned Tasks, following pagination as needed, and executes them locally one at a time, oldest submission first by default, following confirmed queue reordering. Repeated move-to Tasks form a sequence of destinations. Fetching or caching the Tasks does not automatically acknowledge or start them.
+The Asset fetches all outstanding assigned Tasks, following pagination as needed, and executes queued work locally one at a time, oldest submission first by default, following confirmed queue reordering. Repeated move-to Tasks form a sequence of destinations. Fetching or caching the Tasks does not automatically acknowledge or start them.
 
-Core assigns a permanent increasing submission sequence within each Asset's queue when accepting a Task. Reads return that default order; a repeated read or Task-creation retry does not create another execution or move a Task to the end. The Asset acknowledges a Task when it accepts it into its local queue and reports in progress when execution begins. Unstarted Tasks, including acknowledged Tasks, can be reordered without rewriting submission sequence. Requested and Asset-confirmed order are separate; running and terminal Tasks cannot move. A disconnected Asset can continue using its last received order. Use whole-list requests with expected revisions and stable retry identity, plus assigned-Asset adoption/conflict reports, under the [queue contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions). Communication state does not gate Task creation or change Core scheduling behavior. Core accepts and retains valid Tasks even while the Asset is offline; the Asset owns execution when it receives them. See [Asset status](asset-status.md).
+Core assigns a permanent increasing submission sequence within each Asset's queue when accepting a Task. Reads return that default order; a repeated read or Task-creation retry does not create another execution or move a Task to the end. The Asset acknowledges a Task when it accepts it into its local queue and reports in progress when execution begins. Unstarted queued Tasks, including acknowledged Tasks, can be reordered without rewriting submission sequence. Requested and Asset-confirmed order are separate; running and terminal Tasks cannot move. A disconnected Asset can continue using its last received order. Use whole-list requests with expected revisions and stable retry identity, plus assigned-Asset adoption/conflict reports, under the [queue contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions). Communication state does not gate Task creation or change Core scheduling behavior. Core accepts and retains valid Tasks even while the Asset is offline; the Asset owns execution when it receives them. See [Asset status](asset-status.md).
 
 ## Asset startup
 
@@ -103,6 +109,6 @@ Core distinguishes fresh reports from arrival of delayed data. Duplicate reports
 - Registration request identity format, deduplication retention, and reconnect response semantics for the agreed stable-ID/retry model.
 - Report identity/ordering fields, relay origin, freshness windows, and clock assumptions that enforce the agreed fresh-contact and no-regression rules.
 - Version preconditions for frequent component reports and how the SDK handles conflicts.
-- Exact Task sequence/queue field encodings and report ordering; pause/resume and immediate execution follow-up.
+- Exact Task sequence/queue field encodings and report ordering; Pause/Resume correlation and stale/conflicting immediate delivery.
 
 These operations use the [approved endpoint map](api-endpoints.md), [component catalog](data-components.md), and [Asset status model](asset-status.md).

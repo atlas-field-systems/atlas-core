@@ -87,6 +87,21 @@ The Protocol-owned collection of Command definitions and schemas. Assets declare
 One request to execute a Command on one assigned Asset, with a recorded lifecycle and outcome.
 _Avoid_: Command definition, mutable assignment
 
+**Task scheduling**:
+The selection of queued execution or immediate handling for a Task, within the Command and Asset's supported behavior.
+
+**Pause Command**:
+An immediate Command that interrupts the Asset's current queued Task and leaves the Asset waiting in its own idle or holding behavior, preserving the remaining queue.
+_Avoid_: cancellation, emergency stop, merely waiting for current work to finish
+
+**Resume Command**:
+An immediate Command that releases an Asset's paused condition and continues its suspended Task before the remaining queue. A Task that cannot safely resume reports failure.
+_Avoid_: recreating or automatically rerunning interrupted work
+
+**Paused Task**:
+A Task whose execution the Asset has confirmed is suspended; it remains nonterminal and retains its progress.
+_Avoid_: an unstarted Task, a cancelled Task
+
 **Task cancellation request**:
 A request to withdraw a Task, represented by its nonterminal Cancellation requested status. The request does not establish that execution stopped; Canceled requires Asset confirmation.
 _Avoid_: Canceled, proof that execution stopped

@@ -51,12 +51,13 @@ These inventory the resource data units and detail the Task status component lis
 | --- | --- | --- | --- |
 | Entity identity | Asset, Track, Geofeature | Required ID/type; alias and subtype may be absent | Immutable ID and type; Asset ID persists across restarts; optional editable alias, unique across all Entity types ignoring case; subtype |
 | Resource timestamps/version | All synchronized resource types | Required as defined by each resource envelope | Creation/update times and change ordering; storage version need not occupy the same wire location in every resource |
-| `command_manifest` | Asset | Required before accepting supported work; otherwise absent or empty under a defined policy | Advertised subset of Protocol Commands, cancellation/progress support, and descriptions; not the full catalog; Asset execution follows the agreed sequential queue |
+| `command_manifest` | Asset | Required before accepting supported work; otherwise absent or empty under a defined policy | Advertised subset of Protocol Commands, supported scheduling choices, cancellation/progress support, and descriptions; not the full catalog; queued execution and immediate behavior follow Protocol Commands |
 | Task assignment | Task | Required | Task ID, immutable Asset ID, and immutable Command identifier |
-| Task submission sequence | Task | Required; assigned by Core | Permanent increasing sequence within the assigned Asset's queue, allocated when Core accepts the Task; determines default execution order and is unchanged by retries |
-| Task current queue order | Task/Asset queue | Separate from submission sequence; exact representation open | Requested order and Asset-confirmed order for unstarted Tasks; running and terminal Tasks cannot move |
+| Task scheduling | Task | Required resolved choice at creation | Immutable queued or immediate, allowed by Protocol and Asset support; immediate Tasks are excluded from the reorderable queued path |
+| Task submission sequence | Task | Required; assigned by Core | Permanent increasing sequence within the assigned Asset's queue, allocated when Core accepts the Task; determines default relative order of queued Tasks and is unchanged by retries; immediate Tasks retain the sequence without occupying the queued path |
+| Task current queue order | Task/Asset queue | Separate from submission sequence; exact representation open | Requested order and Asset-confirmed order for unstarted queued Tasks; started, paused and terminal Tasks cannot move |
 | Task `input` | Task | Required | Immutable Command-specific payload validated against its Protocol schema |
-| Task `status` | Task | Required | Pending in Core, acknowledged when the Asset accepts it into its local queue, in progress when execution starts, cancellation requested while withdrawal is pending, then completed/failed/cancelled |
+| Task `status` | Task | Required | Pending in Core, acknowledged when the Asset accepts it into its local queue, in progress when execution starts, paused on confirmed suspension, cancellation requested while withdrawal is pending, then completed/failed/cancelled |
 | Task lifecycle times | Task | Creation/update required; other times depend on state | Acknowledged, started, and finished times corresponding to actual lifecycle events |
 | Task `progress` | Task | Optional when supported | Execution progress from 0 through 1 |
 | Task `output` | Task | Conditional on Command and completion | Command-defined result validated against that Command's output schema |
@@ -76,7 +77,7 @@ The exact representation of Task progress and timestamps is inherited-schema mat
 
 Ready Object metadata and associations synchronize through the feed. Upload staging and progress do not publish incomplete Objects. File bytes remain in object storage and are fetched through the approved content endpoints.
 
-Task reordering is allowed before execution starts, including for acknowledged Tasks. Preserve immutable submission sequence and keep requested queue order distinct from Asset-confirmed order. Running and terminal Tasks cannot be moved. A disconnected Asset may still follow its last received order. The accepted [queue revision contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions) supplies whole-list edits, stale-edit rejection and assigned-Asset adoption/conflict reports. Concrete field encodings remain open.
+Queued Task reordering is allowed before execution starts, including for acknowledged Tasks. Preserve immutable submission sequence and keep requested queue order distinct from Asset-confirmed order. Running and terminal Tasks cannot be moved. A disconnected Asset may still follow its last received order. The accepted [queue revision contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions) supplies whole-list edits, stale-edit rejection and assigned-Asset adoption/conflict reports. Concrete field encodings remain open.
 
 ## Movement history
 
@@ -128,7 +129,7 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | `geometry` | Validated geometry representation; choose physical type/index with spatial query requirements | Supports both defined areas and observed subject extents |
 | `mil_view` | Typed optional fields or a typed component record | Small, bounded known structure |
 | `media_refs`, `sensor_refs` | Structured association records where querying requires them | References have meaning and schema, not arbitrary strings |
-| Task identity, assignment, submission sequence, queue order/confirmation, lifecycle, cancellation request, progress, timestamps | Typed columns with constraints | Core relies on these fields to validate lifecycle transitions |
+| Task identity, assignment, scheduling, submission sequence, queue order/confirmation, lifecycle, cancellation request, progress, timestamps | Typed columns with constraints | Core relies on these fields to validate lifecycle transitions |
 | Authenticated identities and credentials | Typed identity kind, stable Asset binding where required, credential-to-principal association and revocation state | Enforce report ownership independently of caller-supplied IDs; preserve credential setup across Reset without authorizing obsolete-Dataset writes |
 | Plugin Operation attempts | Separate typed SQLite rows with unique Dataset/submission identity and validated input/output JSON | Durable acceptance, retry lookup and retained outcomes without a workflow engine |
 | Synchronization changes and retention boundary | Private SQLite log, ordered sequence and recoverable-boundary metadata | Atomic resource/change commits, deletion recovery and explicit cursor expiry |

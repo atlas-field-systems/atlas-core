@@ -2,7 +2,7 @@
 
 Every Asset requires status, communications, and heartbeat components. Asset status replaces the separate execution-session API previously proposed in the endpoint map. This is a planning document; no implementation exists in this repository.
 
-The replacement direction, separate operational and connection states, and reconciliation after exceptional interruption are agreed. Initial operational status `unknown`, initial communications `offline`, and initial heartbeat `last_seen: null` are agreed. Core accepts and retains valid Tasks even when the Asset is offline. The six operational status values below are agreed. Assets own sequential Task execution; Core does not use reported operational status or communication state to schedule their work. Detailed transition/report validation remains open. The status endpoints are part of the approved endpoint map.
+The replacement direction, separate operational and connection states, and reconciliation after exceptional interruption are agreed. Initial operational status `unknown`, initial communications `offline`, and initial heartbeat `last_seen: null` are agreed. Core accepts and retains valid Tasks even when the Asset is offline. The seven operational status values below are agreed. Assets own queued and immediate Task execution; Core does not use reported operational status or communication state to schedule their work. Detailed transition/report validation remains open. The status endpoints are part of the approved endpoint map.
 
 ## Earlier design
 
@@ -20,6 +20,7 @@ These agreed values describe the Asset's reported operational condition, separat
 | `initializing` | The Asset is starting or preparing its capabilities |
 | `ready` | The Asset is prepared to perform its advertised capabilities |
 | `busy` | The Asset is executing work |
+| `paused` | The Asset has handled an immediate Pause Command, suspended current queued work if any, and is waiting in its own idle/holding behavior; queued work does not advance |
 | `error` | A reported fault prevents normal operation; details explain the fault |
 | `stopped` | The Asset has deliberately stopped operational activity |
 
@@ -33,6 +34,8 @@ Agreed initial value: `unknown` when the Asset is created without an operational
 | Preparation completes | `initializing` → `ready` | Advertised capabilities are available |
 | Work starts | `ready` → `busy` | At least one operation is executing |
 | Queue is drained | `busy` → `ready` | Asset reports that it is available again; finishing one Task need not imply an empty queue |
+| Immediate Pause is applied | `busy` or `ready` → `paused` | Asset confirms interruption and its idle/holding condition; the queued path is retained |
+| Immediate Resume is applied | `paused` → `busy` or `ready` | Resume suspended work first; if none exists, release the waiting queue. Failed resumption follows the failure policy; report Task outcomes separately |
 | A fault occurs | Any operational state → `error` | Report a reason; do not invent a Task outcome |
 | Fault recovery | `error` → `initializing` or `ready` | Asset reports recovery |
 | Deliberate stop | An active state → `stopped` | Asset reports stopping |
@@ -90,7 +93,7 @@ Assets advertise supported Protocol Commands on their Entity record. Reporting a
 
 ## Task integration
 
-Assets fetch their full outstanding Task list, following pagination as needed, and queue Tasks locally. They execute one at a time, oldest submission first by default, following confirmed reordering of unstarted Tasks. Several move-to Tasks can therefore define a path. A busy Asset can receive further Tasks; Core does not reject them merely because another Task is running.
+Assets fetch their full outstanding Task list, following pagination as needed, and queue Tasks locally. Queued Tasks execute one at a time, oldest submission first by default, following confirmed reordering of unstarted Tasks. Several move-to Tasks can therefore define a path. A busy Asset can receive further Tasks; Core does not reject them merely because another Task is running.
 
 Core assigns a permanent increasing submission sequence per Asset when accepting each Task. The sequence defines default execution order independently of client clocks, and assigned-work reads return that order. Exact field encoding remains to be designed. Retrying Task creation must not create another queue entry or change the original Task's order. Fetching the list does not itself acknowledge or start Tasks.
 
@@ -102,9 +105,9 @@ Planned shutdowns and restarts are expected only after unfinished work has been 
 
 Assigned work is discovered through `GET /entities/{entity_id}/tasks`, using an outstanding-work filter, and through Task change events. The Asset tracks and executes its queue and reports transitions through the Task status endpoint. The Asset reports `acknowledged` when accepting a Task into its local queue and `in_progress` when execution begins. Exact filtering remains to be specified.
 
-Unstarted Tasks, including acknowledged Tasks, can be reordered. Submission sequence stays immutable. Requested queue order is distinct from the order confirmed by the Asset; disconnected Assets can continue their last received order. Running and terminal Tasks cannot be moved.
+Unstarted queued Tasks, including acknowledged Tasks, can be reordered. Submission sequence stays immutable. Requested queue order is distinct from the order confirmed by the Asset; disconnected Assets can continue their last received order. Running and terminal Tasks cannot be moved.
 
-A cancellation request sets Task status to `cancellation_requested` without proving execution stopped. Retain execution facts until the assigned Asset confirms `cancelled` or reports another valid outcome. The [Task transition table](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) owns these rules. Paused Tasks and immediate execution are planned follow-up topics; no Asset `paused` state or behavior is selected yet.
+A cancellation request sets Task status to `cancellation_requested` without proving execution stopped. Retain execution facts until the assigned Asset confirms `cancelled` or reports another valid outcome. The [Task transition table](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) owns these rules. Immediate Pause interrupts current queued work and places the Asset in `paused`. Supported independent immediate actions can still run without clearing that state. The interrupted Task separately reports `paused`; the Pause Task completes when applied. Immediate Resume continues the interrupted Task before the remaining queue; an unsafe-to-resume Task reports failure. See the [Pause contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#pause-through-an-immediate-command).
 
 Task reports use `PATCH /tasks/{task_id}/status`, replacing the separate lifecycle action routes without requiring the former execution-session identity. Task IDs, immutable Asset assignment, idempotency, and legal lifecycle transitions still matter. Current status is not a substitute for all of those rules.
 
@@ -115,8 +118,8 @@ Pending decisions:
 - The mechanics of reconciling unfinished Tasks after an exceptional interruption, without assuming an outcome from Asset status alone.
 - How late or duplicate reports and multiple processes claiming the same Asset are handled.
 - Detailed sequence encoding and Asset behavior after cancellation or failure of a queued Task.
-- Task reorder revision/conflict rules and the mutation/confirmation API for the agreed eligible states.
-- Cancellation confirmation API, never-accepted work, and delivery/acknowledgement races.
+- Exact Task/queue reporting and event fields under the accepted revision contract.
+- Stale/conflicting immediate-command delivery and report correlation; queue continuation after a suspended Task cannot resume safely.
 
 ## Scope and source
 
