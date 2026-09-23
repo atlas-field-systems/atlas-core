@@ -72,6 +72,8 @@ After unexpected Asset-process restart, reconcile retained Tasks before executin
 
 Task reads can filter to current work for normal interfaces. Terminal records stay in Core until Reset and have no delete operation; their visibility in a particular interface is not a retention rule.
 
+Deleting an Object through the SDK returns Core's conflict if any completed Task requires that result. The SDK must not remove it from a synchronized picture on a rejected deletion. Required-result protection lasts until Reset; optional attachments follow ordinary deletion rules.
+
 ## Asset startup
 
 1. The Asset invokes registration with the information it already knows. The SDK uses ordinary Entity creation, not a dedicated registration endpoint.

@@ -86,6 +86,10 @@ Current telemetry remains the latest state; the separate sample table preserves 
 
 One paginated history endpoint reads samples for an Entity and time range. History is outside the live operational picture and its bounded recovery log. Query bounds and report rates need measurement before choosing numeric limits. The [movement-history contract](architecture/system-design.md#movement-history) owns retention, reporting and historical-read semantics.
 
+## Required result protection
+
+A completed Task's immutable execution output retains its authoritative required Object references. These references protect the corresponding ready Objects from deletion until Reset; mutable Object association metadata cannot release that protection. Check all completed Tasks that require an Object. Completion/readiness and deletion/protection checks must serialize, including storage cleanup. Optional references do not imply protection. See the [retention contract](adr/0009-expose-objects-only-when-ready.md#required-results-of-completed-tasks).
+
 ## Administrative records
 
 These are separate resource records, not Entity components or members of the operational-picture synchronization set:
@@ -140,7 +144,7 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | Activity records | Separate typed SQLite table with safe bounded detail fields | Query a limited action log; preserve attribution without a full audit framework |
 | Successful upload identities | Private Dataset-scoped retry record linked to Object ID | A completed request retry returns the original publication |
 | Object identity/storage facts | Typed columns | Core owns storage identity and measured facts |
-| Object references | Structured historical associations | Preserve references without cascading deletion of useful evidence |
+| Object references | Structured historical associations plus authoritative required-result references on completed Tasks | Prevent deletion of required results until Reset, independent of mutable metadata; preserve history without cascading deletion |
 | Object extension metadata | Validated JSON in SQLite within the Object metadata contract | Keeps variable data flexible without weakening core fields |
 
 The storage approach is agreed; exact tables, columns, and indexes remain proposals and are not implemented. Entity JSON shape does not dictate one SQL row, nor does each logical component require its own table. Historical Object references must not acquire foreign-key deletion behavior that contradicts their accepted semantics.

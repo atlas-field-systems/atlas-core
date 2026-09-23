@@ -20,6 +20,16 @@ An interrupted transfer and a lost completion response are different cases. Keep
 
 Completed Objects and successful upload identity records survive ordinary Restart until Reset. Incomplete staging is disposable and not retained for inspection until Reset. Reset invalidates old upload identities and prevents an old in-flight request from publishing into the new Dataset. These rules still require safe file/metadata publication and cleanup; deferring resume does not remove those correctness obligations.
 
+## Required results of completed Tasks
+
+Accepted after clarification on 22 September 2026: operators cannot delete a required result Object of a completed Task before Dataset Reset. Completed Tasks are retained execution records, and their required ready results must remain available. Reset clears both under the existing lifecycle contract.
+
+Derive protection from the completed Task's authoritative, assigned-Asset-declared required result references. An Object required by any completed Task is protected, even if other Tasks also reference it. Optional attachments and unrelated Objects do not become protected merely by having a descriptive association. Deleting an Entity or editing Object metadata/associations cannot remove the completed Task's required-result reference or release protection. Ordinary descriptive edits remain allowed; immutable content and Core-owned storage facts remain unchanged.
+
+`DELETE /objects/{object_id}` rejects deletion with an explicit conflict when this protection applies. There is no force-delete override or Task-deletion workaround. Task completion and Object deletion must serialize their readiness/protection decision: if completion wins, deletion fails; if an allowed deletion wins first, the missing result cannot satisfy completion. Physical cleanup must never remove a protected file because it was scheduled against stale metadata. Exact transaction/reservation mechanics follow storage implementation.
+
+This protection applies when the Task has completed. Nonterminal, failed or cancelled Tasks do not independently pin their Objects under this rule, although another completed Task may. Upload/retry handling must preserve the protection and cannot replace the immutable required result. The retry outcome after an otherwise allowed Object deletion remains a separate detailed contract question.
+
 ## Task cancellation and result uploads
 
 Canceling a Task does not cancel its uploads. An in-flight result upload may continue and publish a ready Object after the Task is confirmed Canceled. Keep already-created Objects. The Task remains Canceled regardless of later upload completion; data availability does not reverse a terminal outcome.

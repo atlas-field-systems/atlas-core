@@ -15,3 +15,5 @@ Cancellation during acquisition or upload follows [the Task transition rules](00
 Core requires both an authenticated completion report from the assigned Asset and the availability of every required result Object declared by that Asset. They may arrive in either order. Core retains the report or ready result until both conditions hold; the final transition still obeys the confirmed-cancellation and terminal-state rules.
 
 Only the assigned Asset may declare its Task's execution result references, under the existing execution-report authority rule. Uploading or modifying an Object is not an Asset completion report. Object readiness alone cannot complete a Task, and an Asset report alone cannot complete a scan whose required data is still unavailable. This does not add caller ownership restrictions to Object uploads.
+
+Once a Task completes, its authoritative required result Objects are protected from deletion until Reset. Object association edits cannot remove that protection. Completion and deletion must obey the [required-result retention contract](0009-expose-objects-only-when-ready.md#required-results-of-completed-tasks).
