@@ -61,15 +61,15 @@ Core READY      Dataset ds-42      Readiness READY
 TARGETS                    SELECTED  Core
 &gt; Core       ready          1 Start / Stop / Restart
   Elevation  running        2 Update release
-  Weather    stopped        3 Reset Dataset
-                            4 Hard Reset installation
+  Weather    running        3 Reset Dataset
+  Mapper     stopped        4 Hard Reset installation
 
 Select a Plugin for install, update, remove, enable,
 disable, start, stop, restart, force stop or settings.
 ────────────────────────────────────────────────────
 RECENT  Core started 09:12. No Plugin faults.
 &gt; status
-Core ready; Elevation running; Weather stopped.
+Core ready; 2 Plugins running; Mapper stopped.
 &gt; _
 
 ↑↓ target   Enter action   / command   q quit
@@ -78,18 +78,18 @@ Closing this console leaves Core running.</pre>
         <figure>
           <figcaption>S2 · Protected Plugin apply</figcaption>
           <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
-Core READY      Elevation DRAINING      Weather STOPPED
+Core READY      Elevation DRAINING      Weather RUNNING
 ────────────────────────────────────────────────────
 TARGETS                    SELECTED  Elevation / Apply r12
   Core       ready          1 Inspect active work
 &gt; Elevation  draining       2 Request cancellation
-  Weather    stopped        3 Wait for confirmed stop
-                            4 Force stop if stuck
+  Weather    running        3 Wait for confirmed stop
+  Mapper     stopped        4 Force stop if stuck
 
 Saved r12  |  running r11  |  last validated r11
 Admission closed; ingestion stopping; 2 finite active.
-Asset Tasks are unaffected. Disabled apply stays
-disabled and untested.
+Asset Tasks and connections stay up. Weather stays up.
+Disabled apply stays disabled and untested.
 ────────────────────────────────────────────────────
 RECENT  act-57 accepted; stop outcome unconfirmed.
 &gt; plugin work elevation
@@ -101,12 +101,13 @@ op-81 running, 1 output ready; op-82 cancel requested.
         <figure>
           <figcaption>S3 · Fault and unknown outcome</figcaption>
           <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
-Core READY      Elevation FAULTED      Weather STOPPED
+Core READY      Elevation FAULTED      Weather RUNNING
 ────────────────────────────────────────────────────
 TARGETS                    SELECTED  Elevation / Recovery
   Core       ready          1 Inspect state and actions
 &gt; Elevation  faulted        2 Correct r12 and apply
-  Weather    stopped        3 Restore r11 and restart
+  Weather    running        3 Restore r11 and restart
+  Mapper     stopped
 
 Apply r12 failed at startup. Saved r12; running none;
 last validated r11. Failed candidate is retained.
@@ -129,7 +130,8 @@ Core READY      Dataset ds-42      Outside mission
 TARGETS                    SELECTED  Core / Data actions
 &gt; Core       ready          1 Reset Dataset
   Elevation  running        2 Hard Reset installation
-  Weather    stopped
+  Weather    running
+  Mapper     stopped
 
 RESET clears operational data and managed logs, then
 starts a new Dataset. Profiles, credentials, settings
@@ -138,11 +140,59 @@ and installed Plugins remain.
 HARD RESET clears this installation's operational and
 setup state, managed Plugins and logs. Core software and
 unrelated host resources remain. It does not stop Assets.
+After confirmation, stop writers and feeds and disable
+automatic restart before clearing owned resources.
 ────────────────────────────────────────────────────
 &gt; core hard-reset
 Type field-01 to confirm: __________
 If cleanup is interrupted: START BLOCKED. Resume cleanup
 before claiming success or returning to first-time setup.</pre>
+        </figure>
+        <figure>
+          <figcaption>S5 · Settings validation and action ordering</figcaption>
+          <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
+Core READY      Elevation RUNNING      Weather RUNNING
+────────────────────────────────────────────────────
+TARGETS                    SELECTED  Elevation / Settings
+  Core       ready          1 Save candidate
+&gt; Elevation  running        2 Apply saved revision
+  Weather    running        3 Inspect revisions
+  Mapper     stopped        4 Inspect action history
+
+Saved r12  |  running r11  |  last validated r11
+Saving validates the schema. It does not restart.
+────────────────────────────────────────────────────
+&gt; plugin settings elevation save ./invalid.json
+REJECTED: required dataset field absent. Saved stays r12.
+&gt; plugin settings elevation apply r12
+BUSY: act-57 still owns this Plugin's management action.
+No overlapping apply or change to running r11.
+
+Failed apply evidence remains after Plugin removal.
+&gt; _</pre>
+        </figure>
+        <figure>
+          <figcaption>S6 · Stopped-state Hard Reset recovery</figcaption>
+          <pre>ATLAS LOCAL  |  SELECTED MOCK  |  field-01
+Core STOPPED      Cleanup INCOMPLETE      Start BLOCKED
+────────────────────────────────────────────────────
+TARGETS                    SELECTED  Core / Hard Reset
+&gt; Core       stopped        1 Inspect cleanup
+  Elevation  stopped        2 Resume cleanup
+  Weather    stopped
+
+Hard Reset began while Core was stopped.
+Confirmed destructive target: field-01.
+1 Stop writers, feeds, restart policies  confirmed
+2 Clear owned data, setup, Plugin artifacts, logs
+                                      interrupted
+────────────────────────────────────────────────────
+&gt; core start
+BLOCKED: finish Hard Reset cleanup first.
+&gt; core hard-reset --resume
+Complete: owned targets cleared. Core software remains.
+First-time setup: no old profiles, keys or Plugins.
+Fresh authorization and Dataset precede service.</pre>
         </figure>
       </div>
     </section>
