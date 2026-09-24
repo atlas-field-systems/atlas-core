@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: Atlas Protocol
+  version: 0.1.0
+  description: |
+    Public Atlas Core operations.
+
+    Every request carries one credential as `Authorization: Bearer <key>`. Each
+    security scheme below names a kind of caller; an operation lists the kinds
+    that may call it. Core rejects a missing or unknown credential with 401 and a
+    known credential of an unlisted kind with 403.
+servers:
+  - url: http://127.0.0.1:8080
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check process liveness
+      security:
+        - operator: []
+      responses:
+        '200':
+          description: Core is serving requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /readiness:
+    get:
+      operationId: getReadiness
+      summary: Check required storage dependencies
+      security:
+        - operator: []
+      responses:
+        '200':
+          description: Required dependencies are ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '503':
+          description: At least one required dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /dataset:
+    get:
+      operationId: getDataset
+      summary: Discover the current Dataset
+      security:
+        - operator: []
+      responses:
+        '200':
+          description: Current Dataset identity and writing release.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    operator:
+      type: http
+      scheme: bearer
+      description: Administrative credential issued by local setup or recovery.
+  responses:
+    Unauthorized:
+      description: Missing or unknown credential.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: The credential's kind may not call this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [alive]
+    DependencyStatus:
+      type: string
+      enum: [ready, unavailable]
+    Readiness:
+      type: object
+      additionalProperties: false
+      required: [status, dependencies]
+      properties:
+        status:
+          type: string
+          enum: [ready, unavailable]
+        dependencies:
+          type: object
+          additionalProperties: false
+          required: [sqlite, objects]
+          properties:
+            sqlite:
+              $ref: '#/components/schemas/DependencyStatus'
+            objects:
+              $ref: '#/components/schemas/DependencyStatus'
+    Dataset:
+      type: object
+      additionalProperties: false
+      required: [id, writing_release]
+      properties:
+        id:
+          type: string
+          format: uuid
+        writing_release:
+          type: string

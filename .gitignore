@@ -1,0 +1,6 @@
+state/
+core/coverage.out
+core/bin/
+sdk/node_modules/
+sdk/dist/
+tests/e2e/.work/

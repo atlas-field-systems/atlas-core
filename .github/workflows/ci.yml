@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: sdk/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: sdk/.node-version
+      - name: Core vet and integration tests
+        working-directory: core
+        run: go vet ./... && go test ./...
+      - name: SDK typecheck
+        working-directory: sdk
+        run: pnpm install --frozen-lockfile && pnpm run typecheck
+      - name: Deterministic generation
+        run: scripts/check-generation.sh
+      - name: End-to-end scenarios and artifacts
+        run: scripts/test-e2e.sh --docker
