@@ -32,3 +32,27 @@ func (a *App) ReportAssetStatus(ctx context.Context, request api.ReportAssetStat
 	}
 	return api.ReportAssetStatus200JSONResponse(entity), nil
 }
+
+func (a *App) GetAssetStatus(ctx context.Context, request api.GetAssetStatusRequestObject) (api.GetAssetStatusResponseObject, error) {
+	view, err := a.entities.StatusView(ctx, request.EntityId.String())
+	if err != nil {
+		return nil, err
+	}
+	return api.GetAssetStatus200JSONResponse(view), nil
+}
+
+func (a *App) PatchEntity(ctx context.Context, request api.PatchEntityRequestObject) (api.PatchEntityResponseObject, error) {
+	entity, err := a.entities.Report(ctx, callerFrom(ctx), request.EntityId.String(), *request.Body)
+	if err != nil {
+		return nil, err
+	}
+	return api.PatchEntity200JSONResponse(entity), nil
+}
+
+func (a *App) CheckInAsset(ctx context.Context, request api.CheckInAssetRequestObject) (api.CheckInAssetResponseObject, error) {
+	entity, err := a.entities.Report(ctx, callerFrom(ctx), request.EntityId.String(), *request.Body)
+	if err != nil {
+		return nil, err
+	}
+	return api.CheckInAsset200JSONResponse(entity), nil
+}

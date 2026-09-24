@@ -41,7 +41,7 @@ A handler does three things: read the caller from the context, call one module m
 
 - Shape validation belongs in `protocol/openapi.yaml`: required fields, types, enums, formats, lengths, ranges, patterns and `additionalProperties: false`. Core enforces it with the generated spec through the request-validation middleware. Handwritten Go and TypeScript never repeat a Protocol enum, range or pattern.
 - Modules validate only rules the schema cannot express, such as "latitude and longitude together" or "the Dataset must be current".
-- Access is declared per operation in Protocol. Each kind of caller is its own bearer security scheme (`operator`, `asset`, ...), and an operation lists the kinds that may call it: `security: [{operator: []}, {asset: []}]`. The middleware authenticates the credential, then admits it only if its kind is listed. Never write a deny-list check such as `if kind == Enrollment`.
+- Access is declared per operation in Protocol. Each kind of caller is its own bearer security scheme (`operator`, `asset`, ...), and an operation lists the kinds that may call it: `security: [{operator: []}, {asset: []}]`. The middleware authenticates the credential, then admits it only if its kind is listed. Never write a deny-list check such as `if kind == Enrollment`. A handwritten route (the feed) keeps an allow-list of kinds beside its handler that mirrors its Protocol security, and a scenario proves it.
 - Use the generated constants and `Valid()` methods. Use the generated `nullable.Nullable[T]` when absent and `null` mean different things. Never carry the raw request body through the context.
 
 ### Errors
@@ -132,4 +132,8 @@ End-to-end scenarios are the primary evidence that Atlas works. Integration test
 | Storage and migrations | [`storage/sqlite.go`](../../core/internal/storage/sqlite.go), [`storage/migrations`](../../core/internal/storage/migrations) |
 | Go integration test of an unreachable fault | [`management/setup_test.go`](../../core/internal/management/setup_test.go) |
 | SDK methods | [`sdk/src/client.ts`](../../sdk/src/client.ts), [`sdk/src/errors.ts`](../../sdk/src/errors.ts) |
+| Module with a change log and in-process notifier | [`changes`](../../core/internal/changes/changes.go) |
+| Handwritten WebSocket route | [`app/feed.go`](../../core/internal/app/feed.go) |
+| SDK mode behind one read interface | [`sdk/src/types.ts`](../../sdk/src/types.ts), [`http-reads.ts`](../../sdk/src/http-reads.ts), [`picture.ts`](../../sdk/src/picture.ts) |
+| Scenario barriers instead of sleeps | [`tests/e2e/harness/barriers.mjs`](../../tests/e2e/harness/barriers.mjs) |
 | End-to-end scenario and its artifact | [`tests/e2e/restart.test.mjs`](../../tests/e2e/restart.test.mjs), [artifact](../../tests/e2e/artifacts/dataset-identity-survives-restart.md) |

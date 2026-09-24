@@ -6,4 +6,9 @@ generate:
   embedded-spec: true
 output-options:
   nullable-type: true
+  # The feed is a WebSocket upgrade with first-message authentication; it is
+  # documented in Protocol but served by a handwritten handler.
+  exclude-operation-ids: [getFeed]
+  # Keep the feed message schemas, which no generated operation references.
+  skip-prune: true
 output: internal/api/generated.go

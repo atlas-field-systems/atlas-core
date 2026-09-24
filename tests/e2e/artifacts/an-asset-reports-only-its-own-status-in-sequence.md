@@ -31,6 +31,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "First",
+    "change_sequence": 1,
     "command_manifest": [],
     "components": {
       "communications": {
@@ -44,6 +45,7 @@ SDK `POST /entities` with <enrollment key>
         "value": "unknown"
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<first asset>",
     "kind": "asset",
     "subtype": null,
@@ -81,6 +83,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "Second",
+    "change_sequence": 2,
     "command_manifest": [],
     "components": {
       "communications": {
@@ -94,6 +97,7 @@ SDK `POST /entities` with <enrollment key>
         "value": "unknown"
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<second asset>",
     "kind": "asset",
     "subtype": null,
@@ -120,6 +124,7 @@ SDK `PATCH /entities/<first asset>/status` with <first asset credential>
 ```json
 {
   "alias": "First",
+  "change_sequence": 3,
   "command_manifest": [],
   "components": {
     "communications": {
@@ -133,6 +138,7 @@ SDK `PATCH /entities/<first asset>/status` with <first asset credential>
       "value": "ready"
     }
   },
+  "dataset_id": "<id-1>",
   "id": "<first asset>",
   "kind": "asset",
   "subtype": null,
@@ -156,6 +162,7 @@ SDK `PATCH /entities/<first asset>/status` with <first asset credential>
 ```json
 {
   "alias": "First",
+  "change_sequence": 3,
   "command_manifest": [],
   "components": {
     "communications": {
@@ -169,6 +176,7 @@ SDK `PATCH /entities/<first asset>/status` with <first asset credential>
       "value": "ready"
     }
   },
+  "dataset_id": "<id-1>",
   "id": "<first asset>",
   "kind": "asset",
   "subtype": null,
@@ -275,6 +283,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "First",
+    "change_sequence": 3,
     "command_manifest": [],
     "components": {
       "communications": {
@@ -288,6 +297,7 @@ SDK `POST /entities` with <enrollment key>
         "value": "ready"
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<first asset>",
     "kind": "asset",
     "subtype": null,

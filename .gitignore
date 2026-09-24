@@ -4,3 +4,4 @@ core/bin/
 sdk/node_modules/
 sdk/dist/
 tests/e2e/.work/
+tests/e2e/artifacts/*.actual.md

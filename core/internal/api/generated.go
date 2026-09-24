@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -147,6 +148,99 @@ func (e EntityKind) Valid() bool {
 	}
 }
 
+// Defines values for EntityChangeKind.
+const (
+	Create EntityChangeKind = "create"
+	Update EntityChangeKind = "update"
+)
+
+// Valid indicates whether the value is a known member of the EntityChangeKind enum.
+func (e EntityChangeKind) Valid() bool {
+	switch e {
+	case Create:
+		return true
+	case Update:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntityChangeResourceType.
+const (
+	EntityChangeResourceTypeEntity EntityChangeResourceType = "entity"
+)
+
+// Valid indicates whether the value is a known member of the EntityChangeResourceType enum.
+func (e EntityChangeResourceType) Valid() bool {
+	switch e {
+	case EntityChangeResourceTypeEntity:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FeedChangeType.
+const (
+	Change FeedChangeType = "change"
+)
+
+// Valid indicates whether the value is a known member of the FeedChangeType enum.
+func (e FeedChangeType) Valid() bool {
+	switch e {
+	case Change:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FeedGapCode.
+const (
+	FeedGapCodeCursorExpired FeedGapCode = "cursor_expired"
+)
+
+// Valid indicates whether the value is a known member of the FeedGapCode enum.
+func (e FeedGapCode) Valid() bool {
+	switch e {
+	case FeedGapCodeCursorExpired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FeedGapType.
+const (
+	Gap FeedGapType = "gap"
+)
+
+// Valid indicates whether the value is a known member of the FeedGapType enum.
+func (e FeedGapType) Valid() bool {
+	switch e {
+	case Gap:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FeedHelloType.
+const (
+	Hello FeedHelloType = "hello"
+)
+
+// Valid indicates whether the value is a known member of the FeedHelloType enum.
+func (e FeedHelloType) Valid() bool {
+	switch e {
+	case Hello:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthStatus.
 const (
 	Alive HealthStatus = "alive"
@@ -183,6 +277,18 @@ func (e ReadinessStatus) Valid() bool {
 // AssetCommunicationsComponent defines model for AssetCommunicationsComponent.
 type AssetCommunicationsComponent struct {
 	LinkState Communications `json:"link_state"`
+}
+
+// AssetComponentPatch defines model for AssetComponentPatch.
+type AssetComponentPatch struct {
+	// Health Replaces stored health; null clears it.
+	Health nullable.Nullable[AssetHealthPatch] `json:"health,omitempty"`
+	Status *AssetInitialStatus                 `json:"status,omitempty"`
+
+	// Telemetry Present fields replace stored values and null clears a field; null
+	// for the whole component clears all telemetry. After merging,
+	// latitude and longitude must be both present or both absent.
+	Telemetry nullable.Nullable[AssetTelemetryPatch] `json:"telemetry,omitempty"`
 }
 
 // AssetComponents defines model for AssetComponents.
@@ -227,6 +333,11 @@ type AssetHealthComponent struct {
 	BatteryPercent float64 `json:"battery_percent"`
 }
 
+// AssetHealthPatch Replaces stored health; null clears it.
+type AssetHealthPatch struct {
+	BatteryPercent float64 `json:"battery_percent"`
+}
+
 // AssetHeartbeatComponent defines model for AssetHeartbeatComponent.
 type AssetHeartbeatComponent struct {
 	LastSeen nullable.Nullable[time.Time] `json:"last_seen"`
@@ -244,6 +355,19 @@ type AssetInitialComponents struct {
 // AssetInitialStatus defines model for AssetInitialStatus.
 type AssetInitialStatus struct {
 	Value AssetStatus `json:"value"`
+}
+
+// AssetReport One Asset-originated change. A fresh report records contact even with
+// no components. Reports apply in increasing sequence order; resending a
+// report ID with the same facts returns the current Entity. Present
+// components merge into stored ones (see each patch schema);
+// `command_manifest` replaces the stored manifest.
+type AssetReport struct {
+	CommandManifest *[]CommandSupport    `json:"command_manifest,omitempty"`
+	Components      *AssetComponentPatch `json:"components,omitempty"`
+	DatasetId       openapi_types.UUID   `json:"dataset_id"`
+	ReportId        openapi_types.UUID   `json:"report_id"`
+	Sequence        int64                `json:"sequence"`
 }
 
 // AssetStatus defines model for AssetStatus.
@@ -264,6 +388,13 @@ type AssetStatusReport struct {
 	Status    AssetStatus        `json:"status"`
 }
 
+// AssetStatusView defines model for AssetStatusView.
+type AssetStatusView struct {
+	Communications AssetCommunicationsComponent `json:"communications"`
+	Heartbeat      AssetHeartbeatComponent      `json:"heartbeat"`
+	Status         AssetStatusComponent         `json:"status"`
+}
+
 // AssetTelemetryComponent Latitude and longitude are supplied together.
 type AssetTelemetryComponent struct {
 	AltitudeM  *float64 `json:"altitude_m,omitempty"`
@@ -271,6 +402,26 @@ type AssetTelemetryComponent struct {
 	Latitude   *float64 `json:"latitude,omitempty"`
 	Longitude  *float64 `json:"longitude,omitempty"`
 	SpeedMps   *float64 `json:"speed_mps,omitempty"`
+}
+
+// AssetTelemetryPatch Present fields replace stored values and null clears a field; null
+// for the whole component clears all telemetry. After merging,
+// latitude and longitude must be both present or both absent.
+type AssetTelemetryPatch struct {
+	AltitudeM  nullable.Nullable[float64] `json:"altitude_m,omitempty"`
+	HeadingDeg nullable.Nullable[float64] `json:"heading_deg,omitempty"`
+	Latitude   nullable.Nullable[float64] `json:"latitude,omitempty"`
+	Longitude  nullable.Nullable[float64] `json:"longitude,omitempty"`
+	SpeedMps   nullable.Nullable[float64] `json:"speed_mps,omitempty"`
+}
+
+// ChangePage defines model for ChangePage.
+type ChangePage struct {
+	Changes []EntityChange `json:"changes"`
+
+	// Cursor Cursor after the last returned change, or unchanged when there are none.
+	Cursor    string             `json:"cursor"`
+	DatasetId openapi_types.UUID `json:"dataset_id"`
 }
 
 // CommandSupport defines model for CommandSupport.
@@ -299,9 +450,13 @@ type DependencyStatus string
 
 // Entity defines model for Entity.
 type Entity struct {
-	Alias           nullable.Nullable[string] `json:"alias"`
+	Alias nullable.Nullable[string] `json:"alias"`
+
+	// ChangeSequence Sequence of the committed change that produced this state.
+	ChangeSequence  int64                     `json:"change_sequence"`
 	CommandManifest []CommandSupport          `json:"command_manifest"`
 	Components      AssetComponents           `json:"components"`
+	DatasetId       openapi_types.UUID        `json:"dataset_id"`
 	Id              openapi_types.UUID        `json:"id"`
 	Kind            EntityKind                `json:"kind"`
 	Subtype         nullable.Nullable[string] `json:"subtype"`
@@ -311,11 +466,78 @@ type Entity struct {
 // EntityKind defines model for Entity.Kind.
 type EntityKind string
 
+// EntityChange defines model for EntityChange.
+type EntityChange struct {
+	DatasetId    openapi_types.UUID       `json:"dataset_id"`
+	Entity       Entity                   `json:"entity"`
+	Kind         EntityChangeKind         `json:"kind"`
+	ResourceId   openapi_types.UUID       `json:"resource_id"`
+	ResourceType EntityChangeResourceType `json:"resource_type"`
+	Sequence     int64                    `json:"sequence"`
+}
+
+// EntityChangeKind defines model for EntityChange.Kind.
+type EntityChangeKind string
+
+// EntityChangeResourceType defines model for EntityChange.ResourceType.
+type EntityChangeResourceType string
+
+// EntityPage defines model for EntityPage.
+type EntityPage struct {
+	// Baseline Change cursor at the snapshot's baseline; replay from it after the last page.
+	Baseline         string             `json:"baseline"`
+	BaselineSequence int64              `json:"baseline_sequence"`
+	DatasetId        openapi_types.UUID `json:"dataset_id"`
+	Entities         []Entity           `json:"entities"`
+	NextCursor       *string            `json:"next_cursor,omitempty"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
+
+// FeedAuthentication defines model for FeedAuthentication.
+type FeedAuthentication struct {
+	ApiKey string `json:"api_key"`
+}
+
+// FeedChange defines model for FeedChange.
+type FeedChange struct {
+	Change EntityChange `json:"change"`
+
+	// Cursor Change cursor after this change.
+	Cursor string         `json:"cursor"`
+	Type   FeedChangeType `json:"type"`
+}
+
+// FeedChangeType defines model for FeedChange.Type.
+type FeedChangeType string
+
+// FeedGap defines model for FeedGap.
+type FeedGap struct {
+	Code FeedGapCode `json:"code"`
+	Type FeedGapType `json:"type"`
+}
+
+// FeedGapCode defines model for FeedGap.Code.
+type FeedGapCode string
+
+// FeedGapType defines model for FeedGap.Type.
+type FeedGapType string
+
+// FeedHello defines model for FeedHello.
+type FeedHello struct {
+	// Cursor Change cursor at the subscription point; every later commit is delivered.
+	Cursor    string             `json:"cursor"`
+	DatasetId openapi_types.UUID `json:"dataset_id"`
+	Sequence  int64              `json:"sequence"`
+	Type      FeedHelloType      `json:"type"`
+}
+
+// FeedHelloType defines model for FeedHello.Type.
+type FeedHelloType string
 
 // Health defines model for Health.
 type Health struct {
@@ -340,11 +562,17 @@ type ReadinessStatus string
 // EntityId defines model for EntityId.
 type EntityId = openapi_types.UUID
 
+// Limit defines model for Limit.
+type Limit = int
+
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
 
 // Conflict defines model for Conflict.
 type Conflict = Error
+
+// CursorExpired defines model for CursorExpired.
+type CursorExpired = Error
 
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
@@ -355,8 +583,30 @@ type NotFound = Error
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
 
+// QueryChangedSinceParams defines parameters for QueryChangedSince.
+type QueryChangedSinceParams struct {
+	Cursor string `form:"cursor" json:"cursor"`
+
+	// Limit Page size. Defaults to 50.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// QueryFullParams defines parameters for QueryFull.
+type QueryFullParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Page size. Defaults to 50.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateEntityJSONRequestBody defines body for CreateEntity for application/json ContentType.
 type CreateEntityJSONRequestBody = AssetEnrollmentRequest
+
+// PatchEntityJSONRequestBody defines body for PatchEntity for application/json ContentType.
+type PatchEntityJSONRequestBody = AssetReport
+
+// CheckInAssetJSONRequestBody defines body for CheckInAsset for application/json ContentType.
+type CheckInAssetJSONRequestBody = AssetReport
 
 // ReportAssetStatusJSONRequestBody defines body for ReportAssetStatus for application/json ContentType.
 type ReportAssetStatusJSONRequestBody = AssetStatusReport
@@ -372,12 +622,27 @@ type ServerInterface interface {
 	// GetEntity Read an operational Entity
 	// (GET /entities/{entity_id})
 	GetEntity(w http.ResponseWriter, r *http.Request, entityId EntityId)
+	// PatchEntity Report changed components of the authenticated Asset
+	// (PATCH /entities/{entity_id})
+	PatchEntity(w http.ResponseWriter, r *http.Request, entityId EntityId)
+	// CheckInAsset Check in, reporting current Asset state and contact
+	// (POST /entities/{entity_id}/checkin)
+	CheckInAsset(w http.ResponseWriter, r *http.Request, entityId EntityId)
+	// GetAssetStatus Read an Asset's status and contact freshness
+	// (GET /entities/{entity_id}/status)
+	GetAssetStatus(w http.ResponseWriter, r *http.Request, entityId EntityId)
 	// ReportAssetStatus Report an Asset's own operational status
 	// (PATCH /entities/{entity_id}/status)
 	ReportAssetStatus(w http.ResponseWriter, r *http.Request, entityId EntityId)
 	// GetHealth Check process liveness
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// QueryChangedSince Replay committed changes after a Dataset-bound cursor
+	// (GET /queries/changed-since)
+	QueryChangedSince(w http.ResponseWriter, r *http.Request, params QueryChangedSinceParams)
+	// QueryFull Load a paginated operational picture with one baseline
+	// (GET /queries/full)
+	QueryFull(w http.ResponseWriter, r *http.Request, params QueryFullParams)
 	// GetReadiness Check required storage dependencies
 	// (GET /readiness)
 	GetReadiness(w http.ResponseWriter, r *http.Request)
@@ -446,6 +711,84 @@ func (siw *ServerInterfaceWrapper) GetEntity(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// PatchEntity operation middleware
+func (siw *ServerInterfaceWrapper) PatchEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId EntityId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchEntity(w, r, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CheckInAsset operation middleware
+func (siw *ServerInterfaceWrapper) CheckInAsset(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId EntityId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckInAsset(w, r, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAssetStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetAssetStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId EntityId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAssetStatus(w, r, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ReportAssetStatus operation middleware
 func (siw *ServerInterfaceWrapper) ReportAssetStatus(w http.ResponseWriter, r *http.Request) {
 
@@ -477,6 +820,98 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// QueryChangedSince operation middleware
+func (siw *ServerInterfaceWrapper) QueryChangedSince(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params QueryChangedSinceParams
+
+	// ------------- Required query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.QueryChangedSince(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// QueryFull operation middleware
+func (siw *ServerInterfaceWrapper) QueryFull(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params QueryFullParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.QueryFull(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -625,7 +1060,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/dataset", wrapper.GetDataset)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/entities", wrapper.CreateEntity)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/entities/{entity_id}", wrapper.GetEntity)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/entities/{entity_id}", wrapper.PatchEntity)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/entities/{entity_id}/status", wrapper.GetAssetStatus)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/entities/{entity_id}/status", wrapper.ReportAssetStatus)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/entities/{entity_id}/checkin", wrapper.CheckInAsset)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/queries/full", wrapper.QueryFull)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/queries/changed-since", wrapper.QueryChangedSince)
 
 	return m
 }
@@ -633,6 +1073,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 type BadRequestJSONResponse Error
 
 type ConflictJSONResponse Error
+
+type CursorExpiredJSONResponse Error
 
 type ForbiddenJSONResponse Error
 
@@ -845,6 +1287,256 @@ func (response GetEntity404JSONResponse) VisitGetEntityResponse(w http.ResponseW
 	return err
 }
 
+type PatchEntityRequestObject struct {
+	EntityId EntityId `json:"entity_id"`
+	Body     *PatchEntityJSONRequestBody
+}
+
+type PatchEntityResponseObject interface {
+	VisitPatchEntityResponse(w http.ResponseWriter) error
+}
+
+type PatchEntity200JSONResponse Entity
+
+func (response PatchEntity200JSONResponse) VisitPatchEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchEntity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PatchEntity400JSONResponse) VisitPatchEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchEntity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PatchEntity401JSONResponse) VisitPatchEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchEntity403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchEntity403JSONResponse) VisitPatchEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchEntity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PatchEntity404JSONResponse) VisitPatchEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchEntity409JSONResponse struct{ ConflictJSONResponse }
+
+func (response PatchEntity409JSONResponse) VisitPatchEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInAssetRequestObject struct {
+	EntityId EntityId `json:"entity_id"`
+	Body     *CheckInAssetJSONRequestBody
+}
+
+type CheckInAssetResponseObject interface {
+	VisitCheckInAssetResponse(w http.ResponseWriter) error
+}
+
+type CheckInAsset200JSONResponse Entity
+
+func (response CheckInAsset200JSONResponse) VisitCheckInAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInAsset400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CheckInAsset400JSONResponse) VisitCheckInAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInAsset401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CheckInAsset401JSONResponse) VisitCheckInAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInAsset403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CheckInAsset403JSONResponse) VisitCheckInAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInAsset404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CheckInAsset404JSONResponse) VisitCheckInAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInAsset409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CheckInAsset409JSONResponse) VisitCheckInAssetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssetStatusRequestObject struct {
+	EntityId EntityId `json:"entity_id"`
+}
+
+type GetAssetStatusResponseObject interface {
+	VisitGetAssetStatusResponse(w http.ResponseWriter) error
+}
+
+type GetAssetStatus200JSONResponse AssetStatusView
+
+func (response GetAssetStatus200JSONResponse) VisitGetAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssetStatus401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetAssetStatus401JSONResponse) VisitGetAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssetStatus403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetAssetStatus403JSONResponse) VisitGetAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssetStatus404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetAssetStatus404JSONResponse) VisitGetAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ReportAssetStatusRequestObject struct {
 	EntityId EntityId `json:"entity_id"`
 	Body     *ReportAssetStatusJSONRequestBody
@@ -987,6 +1679,176 @@ func (response GetHealth403JSONResponse) VisitGetHealthResponse(w http.ResponseW
 	return err
 }
 
+type QueryChangedSinceRequestObject struct {
+	Params QueryChangedSinceParams
+}
+
+type QueryChangedSinceResponseObject interface {
+	VisitQueryChangedSinceResponse(w http.ResponseWriter) error
+}
+
+type QueryChangedSince200JSONResponse ChangePage
+
+func (response QueryChangedSince200JSONResponse) VisitQueryChangedSinceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryChangedSince400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response QueryChangedSince400JSONResponse) VisitQueryChangedSinceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryChangedSince401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response QueryChangedSince401JSONResponse) VisitQueryChangedSinceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryChangedSince403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response QueryChangedSince403JSONResponse) VisitQueryChangedSinceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryChangedSince409JSONResponse struct{ ConflictJSONResponse }
+
+func (response QueryChangedSince409JSONResponse) VisitQueryChangedSinceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryChangedSince410JSONResponse struct{ CursorExpiredJSONResponse }
+
+func (response QueryChangedSince410JSONResponse) VisitQueryChangedSinceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(410)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryFullRequestObject struct {
+	Params QueryFullParams
+}
+
+type QueryFullResponseObject interface {
+	VisitQueryFullResponse(w http.ResponseWriter) error
+}
+
+type QueryFull200JSONResponse EntityPage
+
+func (response QueryFull200JSONResponse) VisitQueryFullResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryFull400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response QueryFull400JSONResponse) VisitQueryFullResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryFull401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response QueryFull401JSONResponse) VisitQueryFullResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryFull403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response QueryFull403JSONResponse) VisitQueryFullResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type QueryFull409JSONResponse struct{ ConflictJSONResponse }
+
+func (response QueryFull409JSONResponse) VisitQueryFullResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetReadinessRequestObject struct {
 }
 
@@ -1061,12 +1923,27 @@ type StrictServerInterface interface {
 	// GetEntity Read an operational Entity
 	// (GET /entities/{entity_id})
 	GetEntity(ctx context.Context, request GetEntityRequestObject) (GetEntityResponseObject, error)
+	// PatchEntity Report changed components of the authenticated Asset
+	// (PATCH /entities/{entity_id})
+	PatchEntity(ctx context.Context, request PatchEntityRequestObject) (PatchEntityResponseObject, error)
+	// CheckInAsset Check in, reporting current Asset state and contact
+	// (POST /entities/{entity_id}/checkin)
+	CheckInAsset(ctx context.Context, request CheckInAssetRequestObject) (CheckInAssetResponseObject, error)
+	// GetAssetStatus Read an Asset's status and contact freshness
+	// (GET /entities/{entity_id}/status)
+	GetAssetStatus(ctx context.Context, request GetAssetStatusRequestObject) (GetAssetStatusResponseObject, error)
 	// ReportAssetStatus Report an Asset's own operational status
 	// (PATCH /entities/{entity_id}/status)
 	ReportAssetStatus(ctx context.Context, request ReportAssetStatusRequestObject) (ReportAssetStatusResponseObject, error)
 	// GetHealth Check process liveness
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// QueryChangedSince Replay committed changes after a Dataset-bound cursor
+	// (GET /queries/changed-since)
+	QueryChangedSince(ctx context.Context, request QueryChangedSinceRequestObject) (QueryChangedSinceResponseObject, error)
+	// QueryFull Load a paginated operational picture with one baseline
+	// (GET /queries/full)
+	QueryFull(ctx context.Context, request QueryFullRequestObject) (QueryFullResponseObject, error)
 	// GetReadiness Check required storage dependencies
 	// (GET /readiness)
 	GetReadiness(ctx context.Context, request GetReadinessRequestObject) (GetReadinessResponseObject, error)
@@ -1192,6 +2069,98 @@ func (sh *strictHandler) GetEntity(w http.ResponseWriter, r *http.Request, entit
 	}
 }
 
+// PatchEntity operation middleware
+func (sh *strictHandler) PatchEntity(w http.ResponseWriter, r *http.Request, entityId EntityId) {
+	var request PatchEntityRequestObject
+
+	request.EntityId = entityId
+
+	var body PatchEntityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchEntity(ctx, request.(PatchEntityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchEntity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchEntityResponseObject); ok {
+		if err := validResponse.VisitPatchEntityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckInAsset operation middleware
+func (sh *strictHandler) CheckInAsset(w http.ResponseWriter, r *http.Request, entityId EntityId) {
+	var request CheckInAssetRequestObject
+
+	request.EntityId = entityId
+
+	var body CheckInAssetJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckInAsset(ctx, request.(CheckInAssetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckInAsset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckInAssetResponseObject); ok {
+		if err := validResponse.VisitCheckInAssetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAssetStatus operation middleware
+func (sh *strictHandler) GetAssetStatus(w http.ResponseWriter, r *http.Request, entityId EntityId) {
+	var request GetAssetStatusRequestObject
+
+	request.EntityId = entityId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAssetStatus(ctx, request.(GetAssetStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAssetStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAssetStatusResponseObject); ok {
+		if err := validResponse.VisitGetAssetStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ReportAssetStatus operation middleware
 func (sh *strictHandler) ReportAssetStatus(w http.ResponseWriter, r *http.Request, entityId EntityId) {
 	var request ReportAssetStatusRequestObject
@@ -1249,6 +2218,58 @@ func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// QueryChangedSince operation middleware
+func (sh *strictHandler) QueryChangedSince(w http.ResponseWriter, r *http.Request, params QueryChangedSinceParams) {
+	var request QueryChangedSinceRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.QueryChangedSince(ctx, request.(QueryChangedSinceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "QueryChangedSince")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(QueryChangedSinceResponseObject); ok {
+		if err := validResponse.VisitQueryChangedSinceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// QueryFull operation middleware
+func (sh *strictHandler) QueryFull(w http.ResponseWriter, r *http.Request, params QueryFullParams) {
+	var request QueryFullRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.QueryFull(ctx, request.(QueryFullRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "QueryFull")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(QueryFullResponseObject); ok {
+		if err := validResponse.VisitQueryFullResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetReadiness operation middleware
 func (sh *strictHandler) GetReadiness(w http.ResponseWriter, r *http.Request) {
 	var request GetReadinessRequestObject
@@ -1278,48 +2299,69 @@ func (sh *strictHandler) GetReadiness(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

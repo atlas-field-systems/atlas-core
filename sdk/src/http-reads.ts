@@ -1,0 +1,45 @@
+import type createClient from "openapi-fetch";
+import type { paths } from "./generated/protocol.js";
+import { unwrap } from "./errors.js";
+import { FeedConnection } from "./feed.js";
+import { notify, type ChangeListener, type EntityReads } from "./types.js";
+
+export type ProtocolClient = ReturnType<typeof createClient<paths>>;
+
+/** Reads straight from Core, one request per call. */
+export class HttpReads implements EntityReads {
+  constructor(
+    private readonly api: ProtocolClient,
+    private readonly openFeed: () => WebSocket,
+    private readonly apiKey: string,
+    private readonly onListenerError: (error: unknown) => void,
+  ) {}
+
+  async entity(id: string) {
+    return unwrap(await this.api.GET("/entities/{entity_id}", { params: { path: { entity_id: id } } }));
+  }
+
+  async assetStatus(id: string) {
+    return unwrap(await this.api.GET("/entities/{entity_id}/status", { params: { path: { entity_id: id } } }));
+  }
+
+  async queryFull(cursor?: string, limit?: number) {
+    return unwrap(await this.api.GET("/queries/full", { params: { query: { cursor, limit } } }));
+  }
+
+  async changedSince(cursor: string, limit?: number) {
+    return unwrap(await this.api.GET("/queries/changed-since", { params: { query: { cursor, limit } } }));
+  }
+
+  /** Delivers live changes from a feed connection until unsubscribed or disconnected. */
+  async subscribe(listener: ChangeListener) {
+    const { connection } = await FeedConnection.open(this.openFeed(), this.apiKey);
+    void (async () => {
+      for (;;) {
+        const message = await connection.next();
+        if (message.type === "change") notify(listener, message.change, this.onListenerError);
+      }
+    })().catch(() => { /* The connection ended; the caller resubscribes if it needs more. */ });
+    return () => connection.close();
+  }
+}

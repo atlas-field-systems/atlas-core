@@ -27,3 +27,15 @@ WHERE id = sqlc.arg(id);
 
 -- name: SetStatus :exec
 UPDATE entities SET status = ?, status_reported_at = ? WHERE id = ?;
+
+-- name: SetChangeSequence :exec
+UPDATE entities SET change_sequence = sqlc.arg(sequence), created_sequence = COALESCE(created_sequence, sqlc.arg(sequence))
+WHERE id = sqlc.arg(id);
+
+-- name: SetComponents :exec
+UPDATE entities
+SET latitude = ?, longitude = ?, altitude_m = ?, speed_mps = ?, heading_deg = ?, battery_percent = ?, command_manifest = ?
+WHERE id = ?;
+
+-- name: ListEntitiesAtBaseline :many
+SELECT * FROM entities WHERE created_sequence <= sqlc.arg(baseline) AND id > sqlc.arg(after_id) ORDER BY id LIMIT sqlc.arg(limit);

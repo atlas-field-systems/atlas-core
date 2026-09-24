@@ -9,7 +9,9 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"sync"
 
+	"github.com/atlas-field-systems/atlas-core/core/internal/changes"
 	"github.com/atlas-field-systems/atlas-core/core/internal/datasets"
 	"github.com/atlas-field-systems/atlas-core/core/internal/entities"
 	"github.com/atlas-field-systems/atlas-core/core/internal/identity"
@@ -17,11 +19,13 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/storage"
 )
 
-// Config locates an installation's storage.
+// Config locates an installation's storage and sets its limits.
 type Config struct {
 	SetupDir       string
 	OperationalDir string
 	Release        string
+	// ChangeRetention is how many recent changes stay replayable.
+	ChangeRetention int
 }
 
 func (c Config) installationFile() string { return filepath.Join(c.SetupDir, "installation.sqlite") }
@@ -32,11 +36,16 @@ func (c Config) objectsDir() string { return filepath.Join(c.OperationalDir, "ob
 
 // App is one Core run.
 type App struct {
+	// lifetime ends when Close begins; long-lived connections watch it.
+	lifetime     context.Context
+	endLifetime  context.CancelFunc
+	connections  sync.WaitGroup
 	log          *slog.Logger
 	installation *sql.DB
 	operational  *sql.DB
 	identity     *identity.Service
 	datasets     *datasets.Service
+	changes      *changes.Log
 	entities     *entities.Service
 	objects      *objects.Store
 	handler      http.Handler
@@ -45,10 +54,11 @@ type App struct {
 // Open opens installation and operational storage and prepares every module.
 // It refuses to start an installation that local setup has not provisioned.
 func Open(ctx context.Context, config Config, log *slog.Logger) (_ *App, err error) {
-	if config.SetupDir == "" || config.OperationalDir == "" || config.Release == "" {
-		return nil, errors.New("setup directory, operational directory and release are required")
+	if config.SetupDir == "" || config.OperationalDir == "" || config.Release == "" || config.ChangeRetention < 1 {
+		return nil, errors.New("setup directory, operational directory, release and change retention are required")
 	}
 	a := &App{log: log}
+	a.lifetime, a.endLifetime = context.WithCancel(context.Background())
 	defer func() {
 		if err != nil {
 			a.Close()
@@ -88,7 +98,8 @@ func (a *App) openOperational(ctx context.Context, config Config) (err error) {
 	if a.datasets, err = datasets.Open(ctx, a.operational, config.Release); err != nil {
 		return err
 	}
-	a.entities = entities.New(a.operational, a.identity, a.datasets)
+	a.changes = changes.New(a.operational, a.datasets.Current().ID, config.ChangeRetention)
+	a.entities = entities.New(a.operational, a.identity, a.datasets, a.changes)
 	if err := a.entities.Recover(ctx); err != nil {
 		return fmt.Errorf("recover Asset enrollment: %w", err)
 	}
@@ -99,8 +110,11 @@ func (a *App) openOperational(ctx context.Context, config Config) (err error) {
 // Handler serves the public Protocol.
 func (a *App) Handler() http.Handler { return a.handler }
 
-// Close releases storage. It is safe on a partially opened App.
+// Close ends open feed connections, then releases storage. It is safe on a
+// partially opened App.
 func (a *App) Close() error {
+	a.endLifetime()
+	a.connections.Wait()
 	var errs []error
 	for _, db := range []*sql.DB{a.operational, a.installation} {
 		if db != nil {

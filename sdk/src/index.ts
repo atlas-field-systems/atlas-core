@@ -2,10 +2,10 @@ export {
   AtlasClient,
   type AssetEnrollmentFacts,
   type AssetEnrollmentIdentity,
-  type AssetStatus,
+  type AssetReport,
   type AssetStatusReport,
   type AtlasClientOptions,
-  type Entity,
-  type Readiness,
 } from "./client.js";
-export { AtlasError } from "./errors.js";
+export { AtlasError, PictureError } from "./errors.js";
+export type { SynchronizationState } from "./picture.js";
+export type { AssetStatus, AssetStatusView, ChangePage, Entity, EntityChange, EntityPage, Readiness } from "./types.js";

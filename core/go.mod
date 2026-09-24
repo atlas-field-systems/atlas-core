@@ -3,6 +3,7 @@ module github.com/atlas-field-systems/atlas-core/core
 go 1.26.2
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/google/uuid v1.6.0
 	github.com/oapi-codegen/nethttp-middleware v1.2.0
