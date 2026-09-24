@@ -2,7 +2,7 @@
 
 Accepted on 22 September 2026. Atlas requires extensive integration testing between the real SDK and Core. External systems are expected to integrate through the SDK; demonstrating its behavioral parity with Core makes those external SDK tests useful evidence about Core integration. Cover the contracts thoroughly with independent expected outcomes, rather than maximizing test count or testing generated code against another output of the same generator.
 
-This is a required testing plan. Focused real SDK–Core scenarios in `tests/e2e/` now cover setup, Asset enrollment, the Entity-only synchronization slice and Elevation Lookup Plugin Operations. They do not establish full-system parity or measured capacity.
+This is a required testing plan. Focused real SDK–Core scenarios in `tests/e2e/` now cover setup, Asset enrollment, the Entity-only synchronization slice and Elevation Lookup Plugin Operations with cancellation and protected stopping. They do not establish full-system parity or measured capacity.
 
 ## Real boundaries and independent expectations
 

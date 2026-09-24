@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -40,21 +41,39 @@ func (i Installation) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops installed Plugins, then Core, keeping setup, Dataset, Object
-// storage and logs.
+// Stop makes a planned stop of every running Plugin, then stops Core,
+// keeping setup, Dataset, Object storage and logs. If a Plugin cannot stop
+// cooperatively, Core keeps running and the failure is reported.
 func (i Installation) Stop(ctx context.Context) error {
-	installed, err := i.installedPlugins()
+	running, err := i.runningPlugins(ctx)
 	if err != nil {
 		return err
 	}
-	services := []string{"stop"}
-	for _, id := range installed {
-		services = append(services, pluginService(id))
-	}
-	if err := i.compose(ctx, services...); err != nil {
-		return err
+	for _, id := range running {
+		if err := i.StopPlugin(ctx, id); err != nil {
+			return fmt.Errorf("%w; Core is still running", err)
+		}
 	}
 	return i.compose(ctx, "stop", "core")
+}
+
+// runningPlugins lists installed Plugins whose containers are running.
+func (i Installation) runningPlugins(ctx context.Context) ([]string, error) {
+	installed, err := i.installedPlugins()
+	if err != nil || len(installed) == 0 {
+		return nil, err
+	}
+	output, err := i.composeOutput(ctx, io.Discard, "ps", "--status", "running", "--services")
+	if err != nil {
+		return nil, err
+	}
+	var running []string
+	for _, id := range installed {
+		if slices.Contains(strings.Fields(output), pluginService(id)) {
+			running = append(running, id)
+		}
+	}
+	return running, nil
 }
 
 // compose runs Docker Compose over Core's file and every installed Plugin's.

@@ -34,7 +34,7 @@ func (s *Service) deliver(ctx context.Context, plugin registrydb.Plugin, operati
 	var refused refusedError
 	switch {
 	case err == nil:
-		return nil
+		return s.forwardEarlyCancellation(ctx, plugin, operation.ID)
 	case ctx.Err() != nil:
 		return nil // Core is stopping; the next start interrupts the attempt.
 	case errors.As(err, &refused):
@@ -44,8 +44,20 @@ func (s *Service) deliver(ctx context.Context, plugin registrydb.Plugin, operati
 	}
 }
 
+// forwardEarlyCancellation resends a cancellation requested while the
+// invocation was in flight, which the Plugin may have received before it
+// knew the attempt.
+func (s *Service) forwardEarlyCancellation(ctx context.Context, plugin registrydb.Plugin, id string) error {
+	current, err := s.operation(ctx, s.queries, plugin.ID, id)
+	if err != nil || api.OperationStatus(current.Status) != api.OperationStatusCancellationRequested {
+		return err
+	}
+	return s.containers.cancel(ctx, plugin, id)
+}
+
 // settlePending records an outcome unless the Plugin has already reported.
 func (s *Service) settlePending(ctx context.Context, id string, status api.OperationStatus, reason string) error {
+	defer s.settled.Notify()
 	params := operationsdb.SetOutcomeFromParams{Status: string(status), Error: nullString(reason), ID: id, Expected: string(api.OperationStatusPending)}
 	if _, err := s.queries.SetOutcomeFrom(ctx, params); err != nil {
 		return fmt.Errorf("settle Operation %s: %w", id, err)

@@ -1,9 +1,9 @@
 package app
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/atlas-field-systems/atlas-core/core/internal/plugins"
 	"github.com/atlas-field-systems/atlas-core/core/internal/problem"
@@ -11,7 +11,6 @@ import (
 
 var (
 	errNotManagement = problem.Forbidden("forbidden", "Local management identity is required.")
-	errUnknownAction = problem.Invalid("invalid_action", "The lifecycle action is not recognized.")
 )
 
 // lifecycleHandler serves the private channel local management uses to
@@ -19,6 +18,12 @@ var (
 // Protocol, so it sits beside the generated routes with its own secret.
 func (a *App) lifecycleHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A planned stop drains work for longer than the server's default
+		// write timeout allows.
+		if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(plugins.LifecycleResponseTimeout)); err != nil {
+			a.writeError(w, r, err)
+			return
+		}
 		if err := a.requireManagement(r); err != nil {
 			a.writeError(w, r, err)
 			return
@@ -28,7 +33,7 @@ func (a *App) lifecycleHandler() http.Handler {
 			a.writeError(w, r, invalidRequest(""))
 			return
 		}
-		if err := a.applyLifecycle(r.Context(), r.PathValue("plugin_id"), request.Action); err != nil {
+		if err := a.plugins.ApplyLifecycle(r.Context(), r.PathValue("plugin_id"), request.Action); err != nil {
 			a.writeError(w, r, err)
 			return
 		}
@@ -45,13 +50,4 @@ func (a *App) requireManagement(r *http.Request) error {
 		return errNotManagement
 	}
 	return nil
-}
-
-func (a *App) applyLifecycle(ctx context.Context, pluginID, action string) error {
-	switch action {
-	case plugins.ActionStarted:
-		return a.plugins.Started(ctx, pluginID)
-	default:
-		return errUnknownAction
-	}
 }

@@ -241,6 +241,7 @@ func (s *Service) Report(ctx context.Context, caller identity.Caller, pluginID s
 	if err := tx.Commit(); err != nil {
 		return api.Operation{}, err
 	}
+	s.settled.Notify()
 	return s.toAPI(updated)
 }
 

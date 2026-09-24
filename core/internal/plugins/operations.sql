@@ -43,3 +43,14 @@ SELECT * FROM plugin_runtime WHERE plugin_id = ?;
 -- name: SetRuntime :exec
 INSERT INTO plugin_runtime (plugin_id, admission_open, fault) VALUES (?, ?, ?)
 ON CONFLICT (plugin_id) DO UPDATE SET admission_open = excluded.admission_open, fault = excluded.fault;
+
+-- name: CancelUndispatched :execrows
+UPDATE plugin_operations SET status = 'canceled', error = ?
+WHERE id = ? AND status = 'pending' AND NOT dispatched;
+
+-- name: RequestCancellation :execrows
+UPDATE plugin_operations SET status = 'cancellation_requested'
+WHERE id = ? AND status IN ('pending', 'in_progress') AND dispatched;
+
+-- name: CountPending :one
+SELECT COUNT(*) FROM plugin_operations WHERE plugin_id = ? AND status = 'pending';

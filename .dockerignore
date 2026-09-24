@@ -1,8 +1,10 @@
-# Plugin images build from the repository root and need only sdk/ and plugins/.
+# Plugin images build from the repository root and need only sdk/, plugins/
+# and the test fixture Plugin.
 .git
 core
 docs
-tests
 state
+tests/e2e/.work
+tests/e2e/artifacts
 **/node_modules
 **/dist

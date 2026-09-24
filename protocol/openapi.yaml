@@ -486,6 +486,35 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /plugins/{plugin_id}/operations/{operation_id}/cancel:
+    post:
+      operationId: cancelPluginOperation
+      summary: Request cancellation of one Operation attempt
+      description: |
+        An attempt Core has not dispatched is canceled at once. A dispatched
+        one becomes cancellation_requested until the Plugin reports its
+        outcome, which may still be completed or failed. A terminal attempt
+        is returned unchanged. Canceling an attempt never stops its Plugin.
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/PluginId'
+        - $ref: '#/components/parameters/OperationId'
+      responses:
+        '200':
+          description: The attempt after the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /plugins/{plugin_id}/operations/{operation_id}/reports:
     post:
       operationId: reportPluginOperation
