@@ -13,11 +13,17 @@ const maxSecretFileBytes = 128
 
 // writeSecretFile durably creates a new owner-only file holding one secret.
 func writeSecretFile(path, secret string) error {
+	return writePrivateFile(path, secret+"\n")
+}
+
+// writePrivateFile durably creates a new owner-only file; it never replaces
+// an existing one.
+func writePrivateFile(path, content string) error {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(secret + "\n")
+	_, err = file.WriteString(content)
 	if err == nil {
 		err = file.Sync()
 	}

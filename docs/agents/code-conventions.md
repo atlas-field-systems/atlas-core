@@ -136,4 +136,6 @@ End-to-end scenarios are the primary evidence that Atlas works. Integration test
 | Handwritten WebSocket route | [`app/feed.go`](../../core/internal/app/feed.go) |
 | SDK mode behind one read interface | [`sdk/src/types.ts`](../../sdk/src/types.ts), [`http-reads.ts`](../../sdk/src/http-reads.ts), [`picture.ts`](../../sdk/src/picture.ts) |
 | Scenario barriers instead of sleeps | [`tests/e2e/harness/barriers.mjs`](../../tests/e2e/harness/barriers.mjs) |
+| Background work with a lifecycle | [`plugins/worker.go`](../../core/internal/plugins/worker.go), [`plugins/dispatch.go`](../../core/internal/plugins/dispatch.go) |
+| A Plugin, and a test fixture Plugin | [`plugins/elevation`](../../plugins/elevation), [`tests/e2e/fixtures/plugin`](../../tests/e2e/fixtures/plugin) |
 | End-to-end scenario and its artifact | [`tests/e2e/restart.test.mjs`](../../tests/e2e/restart.test.mjs), [artifact](../../tests/e2e/artifacts/dataset-identity-survives-restart.md) |

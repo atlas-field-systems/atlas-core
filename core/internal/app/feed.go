@@ -32,7 +32,7 @@ var errFeedExpired = errors.New("feed fell behind the retained change log")
 // feedCallers mirrors the security of the Protocol getFeed operation. The
 // feed is excluded from generation, so its security is not in the generated
 // spec; the "Enrollment cannot follow the feed" scenario checks this list.
-var feedCallers = map[identity.Kind]bool{identity.Operator: true, identity.Asset: true}
+var feedCallers = map[identity.Kind]bool{identity.Operator: true, identity.Asset: true, identity.Plugin: true}
 
 // feedHandler serves GET /feed: authenticate from the first message, send
 // FeedHello, then every later commit in sequence order.

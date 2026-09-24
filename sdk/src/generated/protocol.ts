@@ -201,6 +201,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plugins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Discover installed Plugins and their availability */
+        get: operations["listPlugins"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Inspect one installed Plugin */
+        get: operations["getPlugin"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a Plugin's retained Operation attempts, newest first */
+        get: operations["listPluginOperations"];
+        put?: never;
+        /**
+         * Submit a durable Operation attempt
+         * @description Core retains the attempt before dispatching it to the Plugin, so a
+         *     caller that disconnects afterwards cannot stop it. Resubmitting the
+         *     same submission ID with the same facts returns the original attempt;
+         *     changed facts conflict. There is no automatic rerun.
+         */
+        post: operations["submitPluginOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}/operations/{operation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a retained Operation attempt and its known outcome */
+        get: operations["getPluginOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}/operations/{operation_id}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report progress or an outcome for one of the Plugin's own attempts
+         * @description Only the Plugin that owns the attempt may report. A confirmed
+         *     terminal outcome is immutable: repeating it succeeds, changing it
+         *     conflicts. A failed outcome carries an error.
+         */
+        post: operations["reportPluginOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -442,6 +539,78 @@ export interface components {
             /** @enum {string} */
             code: "cursor_expired";
         };
+        Plugin: {
+            id: string;
+            release: string;
+            /**
+             * @description available: running and admitting Operations. unavailable: stopped,
+             *     stopping or unreachable. faulted: Core lost the Plugin or a stop
+             *     failed; unfinished outcomes may be unknown until local
+             *     management starts it again.
+             * @enum {string}
+             */
+            availability: "available" | "unavailable" | "faulted";
+            /** @description Why the Plugin is faulted. */
+            fault?: string;
+            capabilities: string[];
+        };
+        PluginPage: {
+            items: components["schemas"]["Plugin"][];
+            next_cursor?: string;
+        };
+        /**
+         * @description completed, canceled, failed and interrupted are terminal.
+         *     interrupted means Core cannot establish the outcome.
+         * @enum {string}
+         */
+        OperationStatus: "pending" | "in_progress" | "cancellation_requested" | "completed" | "canceled" | "failed" | "interrupted";
+        OperationSubmission: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
+            submission_id: string;
+            capability: string;
+            /** @description Must match the capability's input schema from the Plugin manifest. */
+            input: {
+                [key: string]: unknown;
+            };
+        };
+        Operation: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
+            submission_id: string;
+            plugin_id: string;
+            plugin_release: string;
+            capability: string;
+            input: {
+                [key: string]: unknown;
+            };
+            status: components["schemas"]["OperationStatus"];
+            /** @description The latest known output; kept when an attempt fails or is interrupted. */
+            output: {
+                [key: string]: unknown;
+            } | null;
+            error: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        OperationPage: {
+            items: components["schemas"]["Operation"][];
+            next_cursor?: string;
+        };
+        OperationReport: {
+            /** @enum {string} */
+            status: "in_progress" | "completed" | "failed" | "canceled";
+            /** @description Replaces the known output. */
+            output?: {
+                [key: string]: unknown;
+            };
+            /** @description Required with failed, and only allowed on a terminal outcome. */
+            error?: string;
+        };
     };
     responses: {
         /** @description The request does not match the operation's schema or rules. */
@@ -480,6 +649,15 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description The Plugin already has its maximum of unfinished attempts. */
+        TooManyRequests: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description The retained change log no longer covers this cursor; load a new snapshot. */
         CursorExpired: {
             headers: {
@@ -500,6 +678,9 @@ export interface components {
         };
     };
     parameters: {
+        Cursor: string;
+        PluginId: string;
+        OperationId: string;
         /** @description Page size. Defaults to 50. */
         Limit: number;
         EntityId: string;
@@ -838,6 +1019,182 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    listPlugins: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Page size. Defaults to 50. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Installed Plugins in ID order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PluginPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getPlugin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plugin_id: components["parameters"]["PluginId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Plugin. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Plugin"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPluginOperations: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Page size. Defaults to 50. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                plugin_id: components["parameters"]["PluginId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retained attempts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    submitPluginOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plugin_id: components["parameters"]["PluginId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationSubmission"];
+            };
+        };
+        responses: {
+            /** @description The attempt is retained and will be dispatched, or this is its retry. */
+            202: {
+                headers: {
+                    /** @description Where to read the attempt. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Operation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getPluginOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plugin_id: components["parameters"]["PluginId"];
+                operation_id: components["parameters"]["OperationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The attempt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Operation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportPluginOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plugin_id: components["parameters"]["PluginId"];
+                operation_id: components["parameters"]["OperationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationReport"];
+            };
+        };
+        responses: {
+            /** @description The attempt after the report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Operation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
 }

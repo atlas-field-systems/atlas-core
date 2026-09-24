@@ -19,9 +19,34 @@ type EnrollmentAuthority struct {
 	Revoked   bool
 }
 
+type ManagementSecret struct {
+	Singleton int64
+	Verifier  []byte
+}
+
 type OperatorKey struct {
 	ID        string
 	Verifier  []byte
 	CreatedAt int64
 	Revoked   bool
+}
+
+type Plugin struct {
+	ID             string
+	Release        string
+	Endpoint       string
+	DispatchSecret string
+	InstalledAt    int64
+}
+
+type PluginCapability struct {
+	PluginID    string
+	Name        string
+	InputSchema string
+}
+
+type PluginKey struct {
+	PluginID string
+	Verifier []byte
+	Revoked  bool
 }

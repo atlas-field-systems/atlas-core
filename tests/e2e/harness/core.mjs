@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
+import { track } from "./processes.mjs";
+
 const run = promisify(execFile);
 export const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -14,8 +16,13 @@ const listenTimeoutMs = 10_000;
 
 let binaries;
 
-/** Builds atlas-core and atlasctl once per test process. */
+/**
+ * Uses the binaries scripts/test-e2e.sh built for the whole run, or builds
+ * them once for this test file when a file is run on its own.
+ */
 function buildBinaries() {
+  const shared = process.env.ATLAS_E2E_BIN_DIR;
+  if (shared) return Promise.resolve({ core: path.join(shared, "atlas-core"), ctl: path.join(shared, "atlasctl") });
   binaries ??= (async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "atlas-e2e-bin-"));
     const core = path.join(dir, "atlas-core");
@@ -55,10 +62,10 @@ export class Installation {
 
   /** Starts Core. env adds Core settings such as ATLAS_CHANGE_RETENTION. */
   async start(env = {}) {
-    const child = spawn(this.bins.core, [], {
+    const child = track(spawn(this.bins.core, [], {
       env: { ...process.env, ATLAS_SETUP_DIR: this.setupDir, ATLAS_OPERATIONAL_DIR: this.operationalDir, ATLAS_LISTEN_ADDR: "127.0.0.1:0", ...env },
       stdio: ["ignore", "pipe", "inherit"],
-    });
+    }));
     const address = await listenAddress(child);
     return new CoreProcess(this, child, `http://${address}`);
   }

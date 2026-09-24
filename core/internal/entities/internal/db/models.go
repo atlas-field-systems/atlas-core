@@ -55,3 +55,24 @@ type Entity struct {
 	CreatedSequence    sql.NullInt64
 	ChangeSequence     int64
 }
+
+type PluginOperation struct {
+	ID            string
+	SubmissionID  string
+	FactsDigest   []byte
+	PluginID      string
+	PluginRelease string
+	Capability    string
+	Input         string
+	Status        string
+	Dispatched    bool
+	Output        sql.NullString
+	Error         sql.NullString
+	CreatedAt     int64
+}
+
+type PluginRuntime struct {
+	PluginID      string
+	AdmissionOpen bool
+	Fault         sql.NullString
+}

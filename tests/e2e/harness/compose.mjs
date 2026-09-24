@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { copyFile, mkdir, mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, readFile, readdir, rm, symlink } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -21,7 +21,9 @@ export class ComposeInstallation {
     await mkdir(workDir, { recursive: true });
     const root = await mkdtemp(path.join(workDir, "compose-"));
     const ctl = path.join(root, "atlasctl");
-    await run("go", ["build", "-o", ctl, "./cmd/atlasctl"], { cwd: path.join(repository, "core") });
+    if (process.env.ATLAS_E2E_BIN_DIR) await copyFile(path.join(process.env.ATLAS_E2E_BIN_DIR, "atlasctl"), ctl);
+    else await run("go", ["build", "-o", ctl, "./cmd/atlasctl"], { cwd: path.join(repository, "core") });
+    await chmod(ctl, 0o755);
     await copyFile(path.join(repository, "compose.yaml"), path.join(root, "compose.yaml"));
     await symlink(path.join(repository, "core"), path.join(root, "core"));
     const installation = new ComposeInstallation(root, ctl, `atlas-e2e-${randomBytes(4).toString("hex")}`);
@@ -50,13 +52,36 @@ export class ComposeInstallation {
     return { baseUrl: `http://${stdout.trim()}`, installation: this };
   }
 
+  /** Lists the Compose services currently running. */
+  async runningServices() {
+    const files = ["-f", path.join(this.root, "compose.yaml"), ...(await this.#pluginFiles())];
+    const { stdout } = await run("docker", ["compose", ...files, "ps", "--status", "running", "--services"], { env: this.env });
+    return stdout.trim().split("\n").filter(Boolean).sort();
+  }
+
+  async #pluginFiles() {
+    const dir = path.join(this.root, "state", "setup", "plugins");
+    const names = await readdir(dir).catch(() => []);
+    return names.filter((name) => name.endsWith(".compose.yaml")).flatMap((name) => ["-f", path.join(dir, name)]);
+  }
+
   async remove() {
     try {
-      await run("docker", ["compose", "-f", path.join(this.root, "compose.yaml"), "down", "--remove-orphans"], { env: this.env });
+      await run("docker", ["compose", "-f", path.join(this.root, "compose.yaml"), ...(await this.#pluginFiles()), "down", "--remove-orphans"], { env: this.env });
     } finally {
       await rm(this.root, { recursive: true, force: true });
     }
   }
+}
+
+const pluginImages = new Map();
+
+/** Builds a Plugin's image from its Dockerfile once per test process. */
+export function buildPluginImage(pluginDir, image) {
+  if (!pluginImages.has(image)) {
+    pluginImages.set(image, run("docker", ["build", "-q", "-t", image, "-f", path.join(pluginDir, "Dockerfile"), repository]));
+  }
+  return pluginImages.get(image);
 }
 
 let imageBuilt;

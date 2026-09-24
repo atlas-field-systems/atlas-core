@@ -48,3 +48,13 @@ export class PictureError extends Error {
 export function isCursorExpired(error: unknown): boolean {
   return (error instanceof AtlasError || error instanceof PictureError) && error.code === "cursor_expired";
 }
+
+/** A client-side wait ended before Core reported the awaited state. */
+export class WaitTimeoutError extends Error {
+  readonly code = "wait_timeout";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "WaitTimeoutError";
+  }
+}

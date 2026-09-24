@@ -1,0 +1,20 @@
+{
+  "id": "elevation",
+  "release": "1.0.0",
+  "image": "atlas-elevation:1.0.0",
+  "port": 8081,
+  "capabilities": [
+    {
+      "name": "elevation.lookup",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["latitude", "longitude"],
+        "properties": {
+          "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+          "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+        }
+      }
+    }
+  ]
+}

@@ -27,6 +27,9 @@ WHERE enrollment_authority.verifier = ?1 AND NOT enrollment_authority.revoked
 UNION ALL
 SELECT 'asset', asset_bindings.asset_id FROM asset_bindings
 WHERE asset_bindings.verifier = ?1 AND asset_bindings.active AND NOT asset_bindings.revoked
+UNION ALL
+SELECT 'plugin', plugin_keys.plugin_id FROM plugin_keys
+WHERE plugin_keys.verifier = ?1 AND NOT plugin_keys.revoked
 LIMIT 1
 `
 
@@ -88,6 +91,20 @@ func (q *Queries) CreateOperatorKey(ctx context.Context, arg CreateOperatorKeyPa
 	return err
 }
 
+const createPluginKey = `-- name: CreatePluginKey :exec
+INSERT INTO plugin_keys (plugin_id, verifier) VALUES (?, ?)
+`
+
+type CreatePluginKeyParams struct {
+	PluginID string
+	Verifier []byte
+}
+
+func (q *Queries) CreatePluginKey(ctx context.Context, arg CreatePluginKeyParams) error {
+	_, err := q.db.ExecContext(ctx, createPluginKey, arg.PluginID, arg.Verifier)
+	return err
+}
+
 const getAssetBinding = `-- name: GetAssetBinding :one
 SELECT asset_id, principal_id, credential_id, verifier, active, revoked FROM asset_bindings WHERE asset_id = ?
 `
@@ -104,6 +121,17 @@ func (q *Queries) GetAssetBinding(ctx context.Context, assetID string) (AssetBin
 		&i.Revoked,
 	)
 	return i, err
+}
+
+const getManagementSecret = `-- name: GetManagementSecret :one
+SELECT verifier FROM management_secret WHERE singleton = 1
+`
+
+func (q *Queries) GetManagementSecret(ctx context.Context) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, getManagementSecret)
+	var verifier []byte
+	err := row.Scan(&verifier)
+	return verifier, err
 }
 
 const listInactiveAssetBindings = `-- name: ListInactiveAssetBindings :many
@@ -165,4 +193,14 @@ func (q *Queries) RevokeEnrollmentAuthority(ctx context.Context) (int64, error) 
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const setManagementSecret = `-- name: SetManagementSecret :exec
+INSERT INTO management_secret (singleton, verifier) VALUES (1, ?)
+ON CONFLICT (singleton) DO NOTHING
+`
+
+func (q *Queries) SetManagementSecret(ctx context.Context, verifier []byte) error {
+	_, err := q.db.ExecContext(ctx, setManagementSecret, verifier)
+	return err
 }

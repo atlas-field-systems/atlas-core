@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { AtlasClient } from "../../../sdk/dist/index.js";
 import { ComposeInstallation } from "./compose.mjs";
 import { Installation } from "./core.mjs";
+import { PluginProcess, installProcessPlugin } from "./plugins.mjs";
 import { Transcript } from "./transcript.mjs";
 
 const artifacts = path.join(path.dirname(path.dirname(fileURLToPath(import.meta.url))), "artifacts");
@@ -42,6 +43,18 @@ class ScenarioRun {
     this.transcript.name(installation.enrollmentKey, "enrollment key");
     this.context.after(() => installation.remove());
     return installation;
+  }
+
+  /** Installs a Plugin to run as a local process; call before starting Core. */
+  installPlugin(installation, pluginDir) {
+    return installProcessPlugin(installation, pluginDir);
+  }
+
+  /** Starts an installed Plugin's server against a running Core. */
+  async startPlugin(plugin, core) {
+    const started = await PluginProcess.start(plugin, core);
+    this.context.after(() => started.kill());
+    return started;
   }
 
   /** Creates a set-up Docker Compose installation that is removed after the scenario. */

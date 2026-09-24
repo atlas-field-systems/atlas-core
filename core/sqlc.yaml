@@ -30,3 +30,17 @@ sql:
       go:
         package: db
         out: internal/changes/internal/db
+  - engine: sqlite
+    schema: internal/storage/migrations/installation
+    queries: internal/plugins/registry.sql
+    gen:
+      go:
+        package: registrydb
+        out: internal/plugins/internal/registrydb
+  - engine: sqlite
+    schema: internal/storage/migrations/operational
+    queries: internal/plugins/operations.sql
+    gen:
+      go:
+        package: operationsdb
+        out: internal/plugins/internal/operationsdb
