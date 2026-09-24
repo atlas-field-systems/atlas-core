@@ -151,10 +151,16 @@ SDK `GET /plugins/elevation/operations?limit=2` with <operator key>
         "latitude": 42,
         "longitude": -71
       },
-      "output": null,
+      "output": {
+        "elevation": 100,
+        "latitude": 42,
+        "longitude": -71,
+        "reference": "synthetic demonstration datum (zero is arbitrary, not surveyed terrain)",
+        "units": "m"
+      },
       "plugin_id": "elevation",
       "plugin_release": "1.0.0",
-      "status": "pending",
+      "status": "completed",
       "submission_id": "<submission 3>"
     },
     {
@@ -167,10 +173,16 @@ SDK `GET /plugins/elevation/operations?limit=2` with <operator key>
         "latitude": 42.001,
         "longitude": -71
       },
-      "output": null,
+      "output": {
+        "elevation": 120,
+        "latitude": 42.001,
+        "longitude": -71,
+        "reference": "synthetic demonstration datum (zero is arbitrary, not surveyed terrain)",
+        "units": "m"
+      },
       "plugin_id": "elevation",
       "plugin_release": "1.0.0",
-      "status": "pending",
+      "status": "completed",
       "submission_id": "<submission 2>"
     }
   ],
@@ -194,10 +206,16 @@ SDK `GET /plugins/elevation/operations?limit=2&cursor=<cursor-1>` with <operator
         "latitude": 42,
         "longitude": -71
       },
-      "output": null,
+      "output": {
+        "elevation": 100,
+        "latitude": 42,
+        "longitude": -71,
+        "reference": "synthetic demonstration datum (zero is arbitrary, not surveyed terrain)",
+        "units": "m"
+      },
       "plugin_id": "elevation",
       "plugin_release": "1.0.0",
-      "status": "pending",
+      "status": "completed",
       "submission_id": "<submission 1>"
     }
   ]

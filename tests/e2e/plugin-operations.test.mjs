@@ -74,10 +74,14 @@ scenario("A submission retry after a lost acceptance returns the original attemp
   });
 
   await s.step("Retrying the same submission returns the same attempt, run once", async () => {
-    const retried = await operator.submitOperation("elevation", submission);
-    const outcome = await s.transcript.unrecorded(() => operator.waitForOperation("elevation", retried.id));
+    // The retry races the attempt's completion, so only timing-independent facts are recorded.
+    const { retried, outcome, retained } = await s.transcript.unrecorded(async () => {
+      const retried = await operator.submitOperation("elevation", submission);
+      const outcome = await operator.waitForOperation("elevation", retried.id);
+      return { retried, outcome, retained: await operator.operations("elevation") };
+    });
+    s.transcript.observe("retained attempts", { count: retained.items.length, retry_is_the_retained_attempt: retained.items[0]?.id === retried.id, status: outcome.status });
     assert.equal(outcome.status, "completed");
-    const retained = await operator.operations("elevation");
     assert.deepEqual(retained.items.map((operation) => operation.id), [retried.id]);
   });
 });
@@ -137,6 +141,7 @@ scenario("Operation lists page newest first", async (s) => {
     for (const [index, latitude] of [42, 42.001, 42].entries()) {
       accepted.push((await operator.submitOperation("elevation", await prepare(s, operator, lookup, { latitude, longitude: -71 }, `submission ${index + 1}`))).id);
     }
+    await s.transcript.unrecorded(() => Promise.all(accepted.map((id) => operator.waitForOperation("elevation", id))));
     return accepted;
   });
 

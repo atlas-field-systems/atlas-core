@@ -53,67 +53,11 @@ The client never received this response.
 
 ## 3. Retrying the same submission returns the same attempt, run once
 
-SDK `POST /plugins/elevation/operations` with <operator key>
+Observed retained attempts:
 ```json
 {
-  "dataset_id": "<id-1>",
-  "submission_id": "<submission>",
-  "capability": "elevation.lookup",
-  "input": {
-    "latitude": 42,
-    "longitude": -71
-  }
-}
-```
-
-→ **202** · Location `/plugins/elevation/operations/<id-2>`
-```json
-{
-  "capability": "elevation.lookup",
-  "created_at": "<time>",
-  "dataset_id": "<id-1>",
-  "error": null,
-  "id": "<id-2>",
-  "input": {
-    "latitude": 42,
-    "longitude": -71
-  },
-  "output": null,
-  "plugin_id": "elevation",
-  "plugin_release": "1.0.0",
-  "status": "pending",
-  "submission_id": "<submission>"
-}
-```
-
-SDK `GET /plugins/elevation/operations` with <operator key>
-
-→ **200**
-```json
-{
-  "items": [
-    {
-      "capability": "elevation.lookup",
-      "created_at": "<time>",
-      "dataset_id": "<id-1>",
-      "error": null,
-      "id": "<id-2>",
-      "input": {
-        "latitude": 42,
-        "longitude": -71
-      },
-      "output": {
-        "elevation": 100,
-        "latitude": 42,
-        "longitude": -71,
-        "reference": "synthetic demonstration datum (zero is arbitrary, not surveyed terrain)",
-        "units": "m"
-      },
-      "plugin_id": "elevation",
-      "plugin_release": "1.0.0",
-      "status": "completed",
-      "submission_id": "<submission>"
-    }
-  ]
+  "count": 1,
+  "retry_is_the_retained_attempt": true,
+  "status": "completed"
 }
 ```

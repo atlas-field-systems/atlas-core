@@ -104,6 +104,7 @@ End-to-end scenarios are the primary evidence that Atlas works. Integration test
 - The artifact diff is the behavior-change record of a PR. Reviewers read it. An artifact change the PR does not explain is a bug until explained.
 - The artifact does not replace assertions. Each scenario still asserts the promise it exists for, with expected values authored independently: `protocol/fixtures` or literals in the scenario. A transcript alone only proves that behavior did not change, not that it is correct.
 - One scenario per promise, named after the promise, a handful of steps. Shared setup (building, starting, restarting Core, enrolling an Asset) lives in the harness under `tests/e2e/harness/`, never copied between scenarios.
+- Record only what is deterministic. When a read races background work (a Plugin finishing, a feed catching up), wait for the state to settle before recording it, or run the read with `transcript.unrecorded` and record a timing-independent observation.
 - Be deterministic: no sleeps. Use barriers such as fixture-Plugin hold and release controls, a delayed feed or a gated fetch. Record concurrent steps in the order they were issued.
 
 ### Integration tests
