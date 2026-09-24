@@ -20,6 +20,10 @@ Before claiming field readiness for an Asset integration, exercise a real Comman
 
 Separately prove extension independence with a Plugin built in its own repository using the supported SDK and container contract. Install and invoke it, stop and remove it while Core remains usable, inspect its retained Operation results, and archive the extension source without adding it to Core's normal build dependencies. A small Plugin may start in this repository for the MVP; that alone does not pass the independent-extension milestone.
 
+## Scenario artifacts
+
+Accepted on 24 September 2026. Every end-to-end scenario records a readable transcript of its steps, wire exchanges and checked observations, and commits it as a test artifact. Only allocated identifiers, clock values, secrets and opaque cursors are normalized. CI reruns the scenarios and fails when a transcript changes. Reviewers read transcript diffs as the record of behavior change. Transcripts are evidence that behavior is stable; they do not establish correctness alone, so each scenario also asserts its promise against independently authored expectations. The [code conventions](agents/code-conventions.md#tests) define the layout and workflow.
+
 ## Required scenario coverage
 
 | Area | Required integration evidence |
@@ -40,7 +44,7 @@ Separately prove extension independence with a Plugin built in its own repositor
 | Plugin Operations | Durable acceptance before dispatch, disconnected caller, duplicate submission, progress/cancellation/terminal races, failure with known outputs, Plugin loss/removal and Core interruption. Core Stop also stops managed Plugins; shutdown failure remains explicit. Exercise unexpected Core loss with the selected detection/shutdown mechanism, and verify starting Plugins again does not rerun interrupted Operations. |
 | Resource limits | Defined overload responses, bounded memory/storage behavior, slow links and consumers, concurrent Assets, meaningful latency/throughput and transferred-byte measurements. |
 
-Use sequence-driven tests with an independently specified state model for lifecycle and recovery combinations. Preserve failing seeds and packet schedules so randomized failures can be reproduced. Focused unit tests support the suite, especially validation and transition rules; they do not replace real integration coverage.
+Use sequence-driven tests with an independently specified state model for lifecycle and recovery combinations. Preserve failing seeds and packet schedules so randomized failures can be reproduced. Go integration tests with real storage cover faults the public boundary cannot reach, such as a crash between two writes. Unit tests are reserved for pure functions with hard-to-reach edge cases; they do not replace real integration coverage.
 
 ## Fault and bandwidth testing
 
