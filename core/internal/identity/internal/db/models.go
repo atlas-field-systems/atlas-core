@@ -4,6 +4,21 @@
 
 package db
 
+type AssetBinding struct {
+	AssetID      string
+	PrincipalID  string
+	CredentialID string
+	Verifier     []byte
+	Active       bool
+	Revoked      bool
+}
+
+type EnrollmentAuthority struct {
+	Singleton int64
+	Verifier  []byte
+	Revoked   bool
+}
+
 type OperatorKey struct {
 	ID        string
 	Verifier  []byte

@@ -16,3 +16,10 @@ sql:
       go:
         package: db
         out: internal/datasets/internal/db
+  - engine: sqlite
+    schema: internal/storage/migrations/operational
+    queries: internal/entities/queries.sql
+    gen:
+      go:
+        package: db
+        out: internal/entities/internal/db

@@ -17,9 +17,14 @@ import (
 // Kind names a kind of caller. Each value matches a Protocol security scheme.
 type Kind string
 
-const Operator Kind = "operator"
+const (
+	Operator   Kind = "operator"
+	Enrollment Kind = "enrollment"
+	Asset      Kind = "asset"
+)
 
-// Caller is an authenticated credential holder.
+// Caller is an authenticated credential holder. For an Asset, ID is its
+// Entity ID.
 type Caller struct {
 	Kind Kind
 	ID   string
@@ -41,14 +46,14 @@ func New(installation *sql.DB) *Service {
 
 // Authenticate resolves a presented credential to its caller.
 func (s *Service) Authenticate(ctx context.Context, credential string) (Caller, error) {
-	id, err := s.queries.ActiveOperatorKeyByVerifier(ctx, Verifier(credential))
+	row, err := s.queries.CallerByVerifier(ctx, Verifier(credential))
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return Caller{}, errUnknownCredential
 	case err != nil:
 		return Caller{}, fmt.Errorf("%w: %w", errUnavailable, err)
 	}
-	return Caller{Kind: Operator, ID: id}, nil
+	return Caller{Kind: Kind(row.Kind), ID: row.ID}, nil
 }
 
 // SetUp reports whether local setup has provisioned an operator credential.

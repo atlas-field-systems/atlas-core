@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/atlas-field-systems/atlas-core/core/internal/datasets"
+	"github.com/atlas-field-systems/atlas-core/core/internal/entities"
 	"github.com/atlas-field-systems/atlas-core/core/internal/identity"
 	"github.com/atlas-field-systems/atlas-core/core/internal/objects"
 	"github.com/atlas-field-systems/atlas-core/core/internal/storage"
@@ -36,6 +37,7 @@ type App struct {
 	operational  *sql.DB
 	identity     *identity.Service
 	datasets     *datasets.Service
+	entities     *entities.Service
 	objects      *objects.Store
 	handler      http.Handler
 }
@@ -85,6 +87,10 @@ func (a *App) openOperational(ctx context.Context, config Config) (err error) {
 	}
 	if a.datasets, err = datasets.Open(ctx, a.operational, config.Release); err != nil {
 		return err
+	}
+	a.entities = entities.New(a.operational, a.identity, a.datasets)
+	if err := a.entities.Recover(ctx); err != nil {
+		return fmt.Errorf("recover Asset enrollment: %w", err)
 	}
 	a.objects, err = objects.Open(config.objectsDir())
 	return err

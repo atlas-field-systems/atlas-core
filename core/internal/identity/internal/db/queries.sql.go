@@ -9,15 +9,48 @@ import (
 	"context"
 )
 
-const activeOperatorKeyByVerifier = `-- name: ActiveOperatorKeyByVerifier :one
-SELECT id FROM operator_keys WHERE verifier = ? AND NOT revoked
+const activateAssetBinding = `-- name: ActivateAssetBinding :exec
+UPDATE asset_bindings SET active = TRUE WHERE asset_id = ?
 `
 
-func (q *Queries) ActiveOperatorKeyByVerifier(ctx context.Context, verifier []byte) (string, error) {
-	row := q.db.QueryRowContext(ctx, activeOperatorKeyByVerifier, verifier)
-	var id string
-	err := row.Scan(&id)
-	return id, err
+func (q *Queries) ActivateAssetBinding(ctx context.Context, assetID string) error {
+	_, err := q.db.ExecContext(ctx, activateAssetBinding, assetID)
+	return err
+}
+
+const callerByVerifier = `-- name: CallerByVerifier :one
+SELECT CAST('operator' AS TEXT) AS kind, operator_keys.id FROM operator_keys
+WHERE operator_keys.verifier = ?1 AND NOT operator_keys.revoked
+UNION ALL
+SELECT 'enrollment', 'enrollment' FROM enrollment_authority
+WHERE enrollment_authority.verifier = ?1 AND NOT enrollment_authority.revoked
+UNION ALL
+SELECT 'asset', asset_bindings.asset_id FROM asset_bindings
+WHERE asset_bindings.verifier = ?1 AND asset_bindings.active AND NOT asset_bindings.revoked
+LIMIT 1
+`
+
+type CallerByVerifierRow struct {
+	Kind string
+	ID   string
+}
+
+func (q *Queries) CallerByVerifier(ctx context.Context, verifier []byte) (CallerByVerifierRow, error) {
+	row := q.db.QueryRowContext(ctx, callerByVerifier, verifier)
+	var i CallerByVerifierRow
+	err := row.Scan(&i.Kind, &i.ID)
+	return i, err
+}
+
+const countEnrollmentAuthorities = `-- name: CountEnrollmentAuthorities :one
+SELECT COUNT(*) FROM enrollment_authority
+`
+
+func (q *Queries) CountEnrollmentAuthorities(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countEnrollmentAuthorities)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const countOperatorKeys = `-- name: CountOperatorKeys :one
@@ -29,6 +62,15 @@ func (q *Queries) CountOperatorKeys(ctx context.Context) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const createEnrollmentAuthority = `-- name: CreateEnrollmentAuthority :exec
+INSERT INTO enrollment_authority (singleton, verifier) VALUES (1, ?)
+`
+
+func (q *Queries) CreateEnrollmentAuthority(ctx context.Context, verifier []byte) error {
+	_, err := q.db.ExecContext(ctx, createEnrollmentAuthority, verifier)
+	return err
 }
 
 const createOperatorKey = `-- name: CreateOperatorKey :exec
@@ -44,4 +86,83 @@ type CreateOperatorKeyParams struct {
 func (q *Queries) CreateOperatorKey(ctx context.Context, arg CreateOperatorKeyParams) error {
 	_, err := q.db.ExecContext(ctx, createOperatorKey, arg.ID, arg.Verifier, arg.CreatedAt)
 	return err
+}
+
+const getAssetBinding = `-- name: GetAssetBinding :one
+SELECT asset_id, principal_id, credential_id, verifier, active, revoked FROM asset_bindings WHERE asset_id = ?
+`
+
+func (q *Queries) GetAssetBinding(ctx context.Context, assetID string) (AssetBinding, error) {
+	row := q.db.QueryRowContext(ctx, getAssetBinding, assetID)
+	var i AssetBinding
+	err := row.Scan(
+		&i.AssetID,
+		&i.PrincipalID,
+		&i.CredentialID,
+		&i.Verifier,
+		&i.Active,
+		&i.Revoked,
+	)
+	return i, err
+}
+
+const listInactiveAssetBindings = `-- name: ListInactiveAssetBindings :many
+SELECT asset_id FROM asset_bindings WHERE NOT active
+`
+
+func (q *Queries) ListInactiveAssetBindings(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listInactiveAssetBindings)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var asset_id string
+		if err := rows.Scan(&asset_id); err != nil {
+			return nil, err
+		}
+		items = append(items, asset_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const reserveAssetBinding = `-- name: ReserveAssetBinding :exec
+INSERT INTO asset_bindings (asset_id, principal_id, credential_id, verifier) VALUES (?, ?, ?, ?)
+ON CONFLICT (asset_id) DO NOTHING
+`
+
+type ReserveAssetBindingParams struct {
+	AssetID      string
+	PrincipalID  string
+	CredentialID string
+	Verifier     []byte
+}
+
+func (q *Queries) ReserveAssetBinding(ctx context.Context, arg ReserveAssetBindingParams) error {
+	_, err := q.db.ExecContext(ctx, reserveAssetBinding,
+		arg.AssetID,
+		arg.PrincipalID,
+		arg.CredentialID,
+		arg.Verifier,
+	)
+	return err
+}
+
+const revokeEnrollmentAuthority = `-- name: RevokeEnrollmentAuthority :execrows
+UPDATE enrollment_authority SET revoked = TRUE WHERE singleton = 1 AND NOT revoked
+`
+
+func (q *Queries) RevokeEnrollmentAuthority(ctx context.Context) (int64, error) {
+	result, err := q.db.ExecContext(ctx, revokeEnrollmentAuthority)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

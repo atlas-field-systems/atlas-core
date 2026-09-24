@@ -32,6 +32,15 @@ export class Transcript {
     return this.#current.run(step, action);
   }
 
+  /**
+   * Runs an action without recording its exchanges, for concurrent requests
+   * whose interleaving is nondeterministic. Record an aggregate observation
+   * of the results instead.
+   */
+  async unrecorded(action) {
+    return this.#current.run({ unrecorded: true, entries: [] }, action);
+  }
+
   note(text) {
     this.#record({ kind: "note", text });
   }
@@ -69,7 +78,7 @@ export class Transcript {
   #record(entry) {
     const step = this.#current.getStore();
     if (!step) throw new Error("Transcript entries must be recorded inside a step.");
-    step.entries.push(entry);
+    if (!step.unrecorded) step.entries.push(entry);
   }
 
   render() {

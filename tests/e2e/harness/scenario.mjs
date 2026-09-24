@@ -39,6 +39,7 @@ class ScenarioRun {
   async installation() {
     const installation = await Installation.create();
     this.transcript.name(installation.operatorKey, "operator key");
+    this.transcript.name(installation.enrollmentKey, "enrollment key");
     this.context.after(() => installation.remove());
     return installation;
   }
@@ -62,6 +63,24 @@ class ScenarioRun {
   client(core, apiKey, label) {
     if (label) this.transcript.name(apiKey, label);
     return new AtlasClient({ baseUrl: core.baseUrl, apiKey, fetch: this.transcript.fetch });
+  }
+
+  /**
+   * An SDK client whose first matching response is lost after Core commits
+   * it, as if the connection dropped. The exchange is still recorded.
+   */
+  clientLosingFirstResponse(core, apiKey, method) {
+    let lost = false;
+    const fetch = async (input, init) => {
+      const requestMethod = init?.method ?? (input instanceof Request ? input.method : "GET");
+      const matches = !lost && requestMethod === method;
+      const response = await this.transcript.fetch(input, init);
+      if (!matches) return response;
+      lost = true;
+      this.transcript.note("The client never received this response.");
+      throw new Error("response lost after Core committed");
+    };
+    return new AtlasClient({ baseUrl: core.baseUrl, apiKey, fetch });
   }
 
   /** A direct Protocol request, recorded like SDK traffic. */
