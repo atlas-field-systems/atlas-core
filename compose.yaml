@@ -5,6 +5,9 @@ services:
       context: ./core
     image: atlas-core:0.1.0
     restart: unless-stopped
+    # atlasctl runs Core as the installing user so installation state stays
+    # manageable by that user; direct Compose use falls back to root.
+    user: "${ATLAS_UID:-0}:${ATLAS_GID:-0}"
     environment:
       ATLAS_SETUP_DIR: /var/lib/atlas/setup
       ATLAS_OPERATIONAL_DIR: /var/lib/atlas/operational
