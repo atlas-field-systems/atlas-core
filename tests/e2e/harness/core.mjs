@@ -35,6 +35,7 @@ export class Installation {
     const installation = new Installation(root, await buildBinaries());
     await installation.atlasctl("setup");
     installation.operatorKey = (await readFile(installation.firstKeyFile, "utf8")).trim();
+    installation.enrollmentKey = (await readFile(path.join(installation.setupDir, "enrollment-key"), "utf8")).trim();
     return installation;
   }
 

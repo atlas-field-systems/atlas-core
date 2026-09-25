@@ -15,7 +15,11 @@ const credentialSecretBytes = 32
 // operator can tell keys apart; it grants nothing by itself.
 type CredentialPrefix string
 
-const OperatorPrefix CredentialPrefix = "atlas_"
+const (
+	OperatorPrefix   CredentialPrefix = "atlas_"
+	EnrollmentPrefix CredentialPrefix = "atlas_enroll_"
+	AssetPrefix      CredentialPrefix = "atlas_asset_"
+)
 
 // NewCredential returns a new random credential with the given prefix.
 func NewCredential(prefix CredentialPrefix) (string, error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/atlas-field-systems/atlas-core/core/internal/datasets/internal/db"
+	"github.com/atlas-field-systems/atlas-core/core/internal/problem"
 )
 
 // Dataset identifies the operational state retained between Resets.
@@ -83,6 +84,17 @@ func CheckStored(ctx context.Context, operational *sql.DB, release string) error
 	}
 	if row.WritingRelease != release {
 		return fmt.Errorf("Dataset was written by Core release %s, not %s", row.WritingRelease, release)
+	}
+	return nil
+}
+
+var errDatasetChanged = problem.Conflict("dataset_changed", "The request belongs to another Dataset.")
+
+// RequireCurrent rejects a submission addressed to another Dataset, such as
+// one prepared before a Reset.
+func (s *Service) RequireCurrent(id uuid.UUID) error {
+	if id != s.current.ID {
+		return errDatasetChanged
 	}
 	return nil
 }

@@ -16,10 +16,103 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/oapi-codegen/nullable"
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for AssetEnrollmentRequestKind.
+const (
+	AssetEnrollmentRequestKindAsset AssetEnrollmentRequestKind = "asset"
+)
+
+// Valid indicates whether the value is a known member of the AssetEnrollmentRequestKind enum.
+func (e AssetEnrollmentRequestKind) Valid() bool {
+	switch e {
+	case AssetEnrollmentRequestKindAsset:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetStatus.
+const (
+	AssetStatusBusy         AssetStatus = "busy"
+	AssetStatusError        AssetStatus = "error"
+	AssetStatusInitializing AssetStatus = "initializing"
+	AssetStatusPaused       AssetStatus = "paused"
+	AssetStatusReady        AssetStatus = "ready"
+	AssetStatusStopped      AssetStatus = "stopped"
+	AssetStatusUnknown      AssetStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the AssetStatus enum.
+func (e AssetStatus) Valid() bool {
+	switch e {
+	case AssetStatusBusy:
+		return true
+	case AssetStatusError:
+		return true
+	case AssetStatusInitializing:
+		return true
+	case AssetStatusPaused:
+		return true
+	case AssetStatusReady:
+		return true
+	case AssetStatusStopped:
+		return true
+	case AssetStatusUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommandSupportScheduling.
+const (
+	Immediate CommandSupportScheduling = "immediate"
+	Queued    CommandSupportScheduling = "queued"
+)
+
+// Valid indicates whether the value is a known member of the CommandSupportScheduling enum.
+func (e CommandSupportScheduling) Valid() bool {
+	switch e {
+	case Immediate:
+		return true
+	case Queued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Communications.
+const (
+	Degraded      Communications = "degraded"
+	Healthy       Communications = "healthy"
+	HighBandwidth Communications = "high_bandwidth"
+	Offline       Communications = "offline"
+)
+
+// Valid indicates whether the value is a known member of the Communications enum.
+func (e Communications) Valid() bool {
+	switch e {
+	case Degraded:
+		return true
+	case Healthy:
+		return true
+	case HighBandwidth:
+		return true
+	case Offline:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for DependencyStatus.
 const (
@@ -33,6 +126,21 @@ func (e DependencyStatus) Valid() bool {
 	case DependencyStatusReady:
 		return true
 	case DependencyStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntityKind.
+const (
+	EntityKindAsset EntityKind = "asset"
+)
+
+// Valid indicates whether the value is a known member of the EntityKind enum.
+func (e EntityKind) Valid() bool {
+	switch e {
+	case EntityKindAsset:
 		return true
 	default:
 		return false
@@ -72,6 +180,114 @@ func (e ReadinessStatus) Valid() bool {
 	}
 }
 
+// AssetCommunicationsComponent defines model for AssetCommunicationsComponent.
+type AssetCommunicationsComponent struct {
+	LinkState Communications `json:"link_state"`
+}
+
+// AssetComponents defines model for AssetComponents.
+type AssetComponents struct {
+	Communications AssetCommunicationsComponent `json:"communications"`
+	Health         *AssetHealthComponent        `json:"health,omitempty"`
+	Heartbeat      AssetHeartbeatComponent      `json:"heartbeat"`
+	Status         AssetStatusComponent         `json:"status"`
+
+	// Telemetry Latitude and longitude are supplied together.
+	Telemetry *AssetTelemetryComponent `json:"telemetry,omitempty"`
+}
+
+// AssetEnrollmentRequest defines model for AssetEnrollmentRequest.
+type AssetEnrollmentRequest struct {
+	// Alias Unique across Entities, ignoring case.
+	Alias           *string                 `json:"alias,omitempty"`
+	CommandManifest *[]CommandSupport       `json:"command_manifest,omitempty"`
+	Components      *AssetInitialComponents `json:"components,omitempty"`
+
+	// Credential The Asset's own credential, prepared and retained by the SDK before the first attempt.
+	Credential string                     `json:"credential"`
+	DatasetId  openapi_types.UUID         `json:"dataset_id"`
+	Id         openapi_types.UUID         `json:"id"`
+	Kind       AssetEnrollmentRequestKind `json:"kind"`
+	RequestId  openapi_types.UUID         `json:"request_id"`
+	Subtype    *string                    `json:"subtype,omitempty"`
+}
+
+// AssetEnrollmentRequestKind defines model for AssetEnrollmentRequest.Kind.
+type AssetEnrollmentRequestKind string
+
+// AssetEnrollmentResult defines model for AssetEnrollmentResult.
+type AssetEnrollmentResult struct {
+	Asset        Entity             `json:"asset"`
+	CredentialId openapi_types.UUID `json:"credential_id"`
+	PrincipalId  openapi_types.UUID `json:"principal_id"`
+}
+
+// AssetHealthComponent defines model for AssetHealthComponent.
+type AssetHealthComponent struct {
+	BatteryPercent float64 `json:"battery_percent"`
+}
+
+// AssetHeartbeatComponent defines model for AssetHeartbeatComponent.
+type AssetHeartbeatComponent struct {
+	LastSeen nullable.Nullable[time.Time] `json:"last_seen"`
+}
+
+// AssetInitialComponents defines model for AssetInitialComponents.
+type AssetInitialComponents struct {
+	Health *AssetHealthComponent `json:"health,omitempty"`
+	Status *AssetInitialStatus   `json:"status,omitempty"`
+
+	// Telemetry Latitude and longitude are supplied together.
+	Telemetry *AssetTelemetryComponent `json:"telemetry,omitempty"`
+}
+
+// AssetInitialStatus defines model for AssetInitialStatus.
+type AssetInitialStatus struct {
+	Value AssetStatus `json:"value"`
+}
+
+// AssetStatus defines model for AssetStatus.
+type AssetStatus string
+
+// AssetStatusComponent defines model for AssetStatusComponent.
+type AssetStatusComponent struct {
+	// ReportedAt When Core accepted the latest status report; null until the Asset reports status.
+	ReportedAt nullable.Nullable[time.Time] `json:"reported_at"`
+	Value      AssetStatus                  `json:"value"`
+}
+
+// AssetStatusReport defines model for AssetStatusReport.
+type AssetStatusReport struct {
+	DatasetId openapi_types.UUID `json:"dataset_id"`
+	ReportId  openapi_types.UUID `json:"report_id"`
+	Sequence  int64              `json:"sequence"`
+	Status    AssetStatus        `json:"status"`
+}
+
+// AssetTelemetryComponent Latitude and longitude are supplied together.
+type AssetTelemetryComponent struct {
+	AltitudeM  *float64 `json:"altitude_m,omitempty"`
+	HeadingDeg *float64 `json:"heading_deg,omitempty"`
+	Latitude   *float64 `json:"latitude,omitempty"`
+	Longitude  *float64 `json:"longitude,omitempty"`
+	SpeedMps   *float64 `json:"speed_mps,omitempty"`
+}
+
+// CommandSupport defines model for CommandSupport.
+type CommandSupport struct {
+	Cancellation *bool                      `json:"cancellation,omitempty"`
+	CommandId    string                     `json:"command_id"`
+	Description  *string                    `json:"description,omitempty"`
+	Progress     *bool                      `json:"progress,omitempty"`
+	Scheduling   []CommandSupportScheduling `json:"scheduling"`
+}
+
+// CommandSupportScheduling defines model for CommandSupport.Scheduling.
+type CommandSupportScheduling string
+
+// Communications defines model for Communications.
+type Communications string
+
 // Dataset defines model for Dataset.
 type Dataset struct {
 	Id             openapi_types.UUID `json:"id"`
@@ -80,6 +296,20 @@ type Dataset struct {
 
 // DependencyStatus defines model for DependencyStatus.
 type DependencyStatus string
+
+// Entity defines model for Entity.
+type Entity struct {
+	Alias           nullable.Nullable[string] `json:"alias"`
+	CommandManifest []CommandSupport          `json:"command_manifest"`
+	Components      AssetComponents           `json:"components"`
+	Id              openapi_types.UUID        `json:"id"`
+	Kind            EntityKind                `json:"kind"`
+	Subtype         nullable.Nullable[string] `json:"subtype"`
+	Version         int                       `json:"version"`
+}
+
+// EntityKind defines model for Entity.Kind.
+type EntityKind string
 
 // Error defines model for Error.
 type Error struct {
@@ -107,17 +337,44 @@ type Readiness struct {
 // ReadinessStatus defines model for Readiness.Status.
 type ReadinessStatus string
 
+// EntityId defines model for EntityId.
+type EntityId = openapi_types.UUID
+
+// BadRequest defines model for BadRequest.
+type BadRequest = Error
+
+// Conflict defines model for Conflict.
+type Conflict = Error
+
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
 
+// NotFound defines model for NotFound.
+type NotFound = Error
+
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
+
+// CreateEntityJSONRequestBody defines body for CreateEntity for application/json ContentType.
+type CreateEntityJSONRequestBody = AssetEnrollmentRequest
+
+// ReportAssetStatusJSONRequestBody defines body for ReportAssetStatus for application/json ContentType.
+type ReportAssetStatusJSONRequestBody = AssetStatusReport
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// GetDataset Discover the current Dataset
 	// (GET /dataset)
 	GetDataset(w http.ResponseWriter, r *http.Request)
+	// CreateEntity Enroll an Asset with deployment authorization
+	// (POST /entities)
+	CreateEntity(w http.ResponseWriter, r *http.Request)
+	// GetEntity Read an operational Entity
+	// (GET /entities/{entity_id})
+	GetEntity(w http.ResponseWriter, r *http.Request, entityId EntityId)
+	// ReportAssetStatus Report an Asset's own operational status
+	// (PATCH /entities/{entity_id}/status)
+	ReportAssetStatus(w http.ResponseWriter, r *http.Request, entityId EntityId)
 	// GetHealth Check process liveness
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -140,6 +397,72 @@ func (siw *ServerInterfaceWrapper) GetDataset(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDataset(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateEntity operation middleware
+func (siw *ServerInterfaceWrapper) CreateEntity(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateEntity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEntity operation middleware
+func (siw *ServerInterfaceWrapper) GetEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId EntityId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEntity(w, r, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReportAssetStatus operation middleware
+func (siw *ServerInterfaceWrapper) ReportAssetStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId EntityId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReportAssetStatus(w, r, entityId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -300,11 +623,20 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/readiness", wrapper.GetReadiness)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/dataset", wrapper.GetDataset)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/entities", wrapper.CreateEntity)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/entities/{entity_id}", wrapper.GetEntity)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/entities/{entity_id}/status", wrapper.ReportAssetStatus)
 
 	return m
 }
 
+type BadRequestJSONResponse Error
+
+type ConflictJSONResponse Error
+
 type ForbiddenJSONResponse Error
+
+type NotFoundJSONResponse Error
 
 type UnauthorizedJSONResponse Error
 
@@ -353,6 +685,255 @@ func (response GetDataset403JSONResponse) VisitGetDatasetResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEntityRequestObject struct {
+	Body *CreateEntityJSONRequestBody
+}
+
+type CreateEntityResponseObject interface {
+	VisitCreateEntityResponse(w http.ResponseWriter) error
+}
+
+type CreateEntity200JSONResponse AssetEnrollmentResult
+
+func (response CreateEntity200JSONResponse) VisitCreateEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEntity201JSONResponse AssetEnrollmentResult
+
+func (response CreateEntity201JSONResponse) VisitCreateEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEntity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateEntity400JSONResponse) VisitCreateEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEntity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateEntity401JSONResponse) VisitCreateEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEntity403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateEntity403JSONResponse) VisitCreateEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateEntity409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateEntity409JSONResponse) VisitCreateEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEntityRequestObject struct {
+	EntityId EntityId `json:"entity_id"`
+}
+
+type GetEntityResponseObject interface {
+	VisitGetEntityResponse(w http.ResponseWriter) error
+}
+
+type GetEntity200JSONResponse Entity
+
+func (response GetEntity200JSONResponse) VisitGetEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEntity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetEntity401JSONResponse) VisitGetEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEntity403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetEntity403JSONResponse) VisitGetEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEntity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetEntity404JSONResponse) VisitGetEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportAssetStatusRequestObject struct {
+	EntityId EntityId `json:"entity_id"`
+	Body     *ReportAssetStatusJSONRequestBody
+}
+
+type ReportAssetStatusResponseObject interface {
+	VisitReportAssetStatusResponse(w http.ResponseWriter) error
+}
+
+type ReportAssetStatus200JSONResponse Entity
+
+func (response ReportAssetStatus200JSONResponse) VisitReportAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportAssetStatus400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReportAssetStatus400JSONResponse) VisitReportAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportAssetStatus401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReportAssetStatus401JSONResponse) VisitReportAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportAssetStatus403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReportAssetStatus403JSONResponse) VisitReportAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportAssetStatus404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReportAssetStatus404JSONResponse) VisitReportAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportAssetStatus409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReportAssetStatus409JSONResponse) VisitReportAssetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -474,6 +1055,15 @@ type StrictServerInterface interface {
 	// GetDataset Discover the current Dataset
 	// (GET /dataset)
 	GetDataset(ctx context.Context, request GetDatasetRequestObject) (GetDatasetResponseObject, error)
+	// CreateEntity Enroll an Asset with deployment authorization
+	// (POST /entities)
+	CreateEntity(ctx context.Context, request CreateEntityRequestObject) (CreateEntityResponseObject, error)
+	// GetEntity Read an operational Entity
+	// (GET /entities/{entity_id})
+	GetEntity(ctx context.Context, request GetEntityRequestObject) (GetEntityResponseObject, error)
+	// ReportAssetStatus Report an Asset's own operational status
+	// (PATCH /entities/{entity_id}/status)
+	ReportAssetStatus(ctx context.Context, request ReportAssetStatusRequestObject) (ReportAssetStatusResponseObject, error)
 	// GetHealth Check process liveness
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
@@ -545,6 +1135,96 @@ func (sh *strictHandler) GetDataset(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CreateEntity operation middleware
+func (sh *strictHandler) CreateEntity(w http.ResponseWriter, r *http.Request) {
+	var request CreateEntityRequestObject
+
+	var body CreateEntityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateEntity(ctx, request.(CreateEntityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateEntity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateEntityResponseObject); ok {
+		if err := validResponse.VisitCreateEntityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetEntity operation middleware
+func (sh *strictHandler) GetEntity(w http.ResponseWriter, r *http.Request, entityId EntityId) {
+	var request GetEntityRequestObject
+
+	request.EntityId = entityId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetEntity(ctx, request.(GetEntityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetEntity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetEntityResponseObject); ok {
+		if err := validResponse.VisitGetEntityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReportAssetStatus operation middleware
+func (sh *strictHandler) ReportAssetStatus(w http.ResponseWriter, r *http.Request, entityId EntityId) {
+	var request ReportAssetStatusRequestObject
+
+	request.EntityId = entityId
+
+	var body ReportAssetStatusJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReportAssetStatus(ctx, request.(ReportAssetStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReportAssetStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReportAssetStatusResponseObject); ok {
+		if err := validResponse.VisitReportAssetStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetHealth operation middleware
 func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	var request GetHealthRequestObject
@@ -598,22 +1278,48 @@ func (sh *strictHandler) GetReadiness(w http.ResponseWriter, r *http.Request) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"zFZPb+O2E/0qA/5+QC+CrGy26EI9pUn651Ag2G1PcdClxbHFDUVqZ0YO1MDfvSClWHbsdOuiKXqKFHHe",
-	"vHmceeNHVYWmDR69sCofFSG3wTOml+8DLawx6ONLFbygl/io29bZSosNfvaJQ/rMVY2Njk//J1yqUv1v",
-	"NiHPhq88uyYKpDabTaYMckW2jSCqVL/UCBWhQS9Wu68Y7q030OgefBCotHMgtWUILVJKnKtNpn71upM6",
-	"kP0dzetz/NkyW7+CQND5ex8e/A7lXMWAESOmuNKiGQcuxtiIod0NxQLERn2X2jFmqt3516OyqY5loEaL",
-	"KlXXWaMyJX2LqlQsZP0qFv5AVqxf/UboUDPGmGdnNpki/NxZisrcqgTzPOpuixwWn7CSiHyFLXqDvuo/",
-	"iJYukULfNRGEUJteZarzeq2t0wu3izGxGxQ8rfAqmGNlZKpBZr36CyUmhOn8seJ+RO2kPpEZH+ignV0f",
-	"q/wZoTHwGJH3qI31yHwiF/N0O+P7CaFDcv5S9x/cf+zqz84Knh75XI8BJttSOaYM/82uO659tq/YYcKY",
-	"EauOrPQfYh2jVsllhh7e94AL01hvWaIJrXctCyxzhwYWPbhQaQeM0rXRKwirsEbqczX6Q8y/QE1I02jX",
-	"Iu3gOdYvw2Hem27hbAUX4jTDZSCcnJDzuZ/765gCogTI0TCJLDIEv8dRM3y8GB0zxZbwXSIC864ozqt7",
-	"7NMDfszhWlf13D+JAwNzWKALD+B1gwx6MOmwTP6M9C1oP9ECZ1kYpMZ0jOdeai3J0pOdW8mHQghTN4CG",
-	"5s8MFh6s1PC2OAPtDej54YGwjAQ6HxOjGciNQef53Eexrbio9iDjDQUJVXAqU2skHoQu8rO8iI0YWvS6",
-	"tapU53mRn6tMtVrq1B4zM3n7avizLfsno0r1A8qT/Wf7K/VNUfxji+opxZFVddkRoRcYj4BNGkmftBvX",
-	"AIxrIG3St8XZS+m2/Gd76zYFnX85aPoRsTtsqrzdHbPbu81dprhrGk29KtWV5TQ0qX2q/WISzqzeWvlL",
-	"NzCa/StewJjhmP6xsS0DI60HqdNc8n9R68saq3toKVTIDHG1pcWUVKbdPfWS0NMye0WtpyRH5H4/Oj/s",
-	"uj3oZC7a9P+e6pn6eoh4/ZovBOL4SvJ4OhCgj+23szLz01tiC8oSSK9wT92BUuxvJE5wHblxkZWz2dmb",
-	"b/IiL/Kz8l3xrlCbu80fAQAA//8=",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

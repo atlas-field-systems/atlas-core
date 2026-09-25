@@ -55,6 +55,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enroll an Asset with deployment authorization
+         * @description The request ID and original facts identify one enrollment. A matching
+         *     retry returns the current Asset with 200; changed facts under the same
+         *     request or Asset ID conflict.
+         */
+        post: operations["createEntity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entities/{entity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an operational Entity */
+        get: operations["getEntity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entities/{entity_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Report an Asset's own operational status
+         * @description Only the Asset itself may report. Reports apply in increasing sequence order; resending a report ID with the same facts returns the current Asset.
+         */
+        patch: operations["reportAssetStatus"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -82,8 +141,119 @@ export interface components {
             id: string;
             writing_release: string;
         };
+        /** @enum {string} */
+        AssetStatus: "unknown" | "initializing" | "ready" | "busy" | "paused" | "error" | "stopped";
+        /** @enum {string} */
+        Communications: "high_bandwidth" | "healthy" | "degraded" | "offline";
+        Entity: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "asset";
+            alias: string | null;
+            subtype: string | null;
+            components: components["schemas"]["AssetComponents"];
+            command_manifest: components["schemas"]["CommandSupport"][];
+            version: number;
+        };
+        AssetComponents: {
+            status: components["schemas"]["AssetStatusComponent"];
+            communications: components["schemas"]["AssetCommunicationsComponent"];
+            heartbeat: components["schemas"]["AssetHeartbeatComponent"];
+            telemetry?: components["schemas"]["AssetTelemetryComponent"];
+            health?: components["schemas"]["AssetHealthComponent"];
+        };
+        AssetStatusComponent: {
+            value: components["schemas"]["AssetStatus"];
+            /**
+             * Format: date-time
+             * @description When Core accepted the latest status report; null until the Asset reports status.
+             */
+            reported_at: string | null;
+        };
+        AssetCommunicationsComponent: {
+            link_state: components["schemas"]["Communications"];
+        };
+        AssetHeartbeatComponent: {
+            /** Format: date-time */
+            last_seen: string | null;
+        };
+        AssetInitialStatus: {
+            value: components["schemas"]["AssetStatus"];
+        };
+        AssetInitialComponents: {
+            status?: components["schemas"]["AssetInitialStatus"];
+            telemetry?: components["schemas"]["AssetTelemetryComponent"];
+            health?: components["schemas"]["AssetHealthComponent"];
+        };
+        /** @description Latitude and longitude are supplied together. */
+        AssetTelemetryComponent: {
+            /** Format: double */
+            latitude?: number;
+            /** Format: double */
+            longitude?: number;
+            /** Format: double */
+            altitude_m?: number;
+            /** Format: double */
+            speed_mps?: number;
+            /** Format: double */
+            heading_deg?: number;
+        };
+        AssetHealthComponent: {
+            /** Format: double */
+            battery_percent: number;
+        };
+        CommandSupport: {
+            command_id: string;
+            scheduling: ("queued" | "immediate")[];
+            cancellation?: boolean;
+            progress?: boolean;
+            description?: string;
+        };
+        AssetEnrollmentRequest: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            request_id: string;
+            /** @enum {string} */
+            kind: "asset";
+            /** @description The Asset's own credential, prepared and retained by the SDK before the first attempt. */
+            credential: string;
+            /** @description Unique across Entities, ignoring case. */
+            alias?: string;
+            subtype?: string;
+            components?: components["schemas"]["AssetInitialComponents"];
+            command_manifest?: components["schemas"]["CommandSupport"][];
+        };
+        AssetEnrollmentResult: {
+            asset: components["schemas"]["Entity"];
+            /** Format: uuid */
+            principal_id: string;
+            /** Format: uuid */
+            credential_id: string;
+        };
+        AssetStatusReport: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
+            report_id: string;
+            /** Format: int64 */
+            sequence: number;
+            status: components["schemas"]["AssetStatus"];
+        };
     };
     responses: {
+        /** @description The request does not match the operation's schema or rules. */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Missing or unknown credential. */
         Unauthorized: {
             headers: {
@@ -102,8 +272,28 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description The resource does not exist. */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The request conflicts with a retained identity, order or the current Dataset. */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
     };
-    parameters: never;
+    parameters: {
+        EntityId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -183,6 +373,99 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    createEntity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetEnrollmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Matching enrollment retry; the current Asset is returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetEnrollmentResult"];
+                };
+            };
+            /** @description Asset enrolled. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetEnrollmentResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getEntity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: components["parameters"]["EntityId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current Entity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportAssetStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: components["parameters"]["EntityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetStatusReport"];
+            };
+        };
+        responses: {
+            /** @description Current Asset. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entity"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
 }

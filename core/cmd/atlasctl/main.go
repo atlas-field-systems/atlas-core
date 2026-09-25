@@ -10,7 +10,7 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/management"
 )
 
-const usage = "usage: atlasctl -root DIR setup|recover|start|stop"
+const usage = "usage: atlasctl -root DIR setup|recover|revoke-enrollment|start|stop"
 
 func main() {
 	root := flag.String("root", ".", "Atlas installation directory containing compose.yaml and state/")
@@ -37,6 +37,12 @@ func run(ctx context.Context, installation management.Installation, action strin
 		key, err := installation.Recover(ctx)
 		if err == nil {
 			fmt.Println("Recovery administrative credential:", key)
+		}
+		return err
+	case "revoke-enrollment":
+		err := installation.RevokeEnrollment(ctx)
+		if err == nil {
+			fmt.Println("Enrollment authority revoked")
 		}
 		return err
 	case "start":
