@@ -19,6 +19,11 @@ const (
 	OperatorPrefix   CredentialPrefix = "atlas_"
 	EnrollmentPrefix CredentialPrefix = "atlas_enroll_"
 	AssetPrefix      CredentialPrefix = "atlas_asset_"
+	PluginPrefix     CredentialPrefix = "atlas_plugin_"
+	// ManagementPrefix marks the secret local management presents to Core.
+	ManagementPrefix CredentialPrefix = "atlas_manage_"
+	// DispatchPrefix marks the secret Core presents to a Plugin container.
+	DispatchPrefix CredentialPrefix = "atlas_dispatch_"
 )
 
 // NewCredential returns a new random credential with the given prefix.

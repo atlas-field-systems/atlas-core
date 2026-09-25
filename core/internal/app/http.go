@@ -35,8 +35,9 @@ var (
 
 // newHandler builds the request pipeline:
 // body limit → authentication → Protocol validation and access → generated routes.
-// The feed is registered beside it because it authenticates in its first
-// WebSocket message rather than a header.
+// The feed and the private lifecycle channel are registered beside it: the
+// feed authenticates in its first WebSocket message, and the lifecycle
+// channel is local management's, outside the public Protocol.
 func (a *App) newHandler() (http.Handler, error) {
 	spec, err := api.GetSwagger()
 	if err != nil {
@@ -57,6 +58,7 @@ func (a *App) newHandler() (http.Handler, error) {
 	})
 	root := http.NewServeMux()
 	root.Handle("GET /feed", a.feedHandler())
+	root.Handle("POST /internal/plugins/{plugin_id}/lifecycle", a.lifecycleHandler())
 	root.Handle("/", limitBody(a.authenticate(validate(routes))))
 	return root, nil
 }

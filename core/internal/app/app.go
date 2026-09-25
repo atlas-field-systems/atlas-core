@@ -16,6 +16,7 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/entities"
 	"github.com/atlas-field-systems/atlas-core/core/internal/identity"
 	"github.com/atlas-field-systems/atlas-core/core/internal/objects"
+	"github.com/atlas-field-systems/atlas-core/core/internal/plugins"
 	"github.com/atlas-field-systems/atlas-core/core/internal/storage"
 )
 
@@ -47,6 +48,7 @@ type App struct {
 	datasets     *datasets.Service
 	changes      *changes.Log
 	entities     *entities.Service
+	plugins      *plugins.Service
 	objects      *objects.Store
 	handler      http.Handler
 }
@@ -103,6 +105,10 @@ func (a *App) openOperational(ctx context.Context, config Config) (err error) {
 	if err := a.entities.Recover(ctx); err != nil {
 		return fmt.Errorf("recover Asset enrollment: %w", err)
 	}
+	a.plugins = plugins.New(a.installation, a.operational, a.datasets, a.log)
+	if err := a.plugins.Start(ctx); err != nil {
+		return err
+	}
 	a.objects, err = objects.Open(config.objectsDir())
 	return err
 }
@@ -115,6 +121,9 @@ func (a *App) Handler() http.Handler { return a.handler }
 func (a *App) Close() error {
 	a.endLifetime()
 	a.connections.Wait()
+	if a.plugins != nil {
+		a.plugins.Close()
+	}
 	var errs []error
 	for _, db := range []*sql.DB{a.operational, a.installation} {
 		if db != nil {

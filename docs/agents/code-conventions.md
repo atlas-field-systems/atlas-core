@@ -104,6 +104,7 @@ End-to-end scenarios are the primary evidence that Atlas works. Integration test
 - The artifact diff is the behavior-change record of a PR. Reviewers read it. An artifact change the PR does not explain is a bug until explained.
 - The artifact does not replace assertions. Each scenario still asserts the promise it exists for, with expected values authored independently: `protocol/fixtures` or literals in the scenario. A transcript alone only proves that behavior did not change, not that it is correct.
 - One scenario per promise, named after the promise, a handful of steps. Shared setup (building, starting, restarting Core, enrolling an Asset) lives in the harness under `tests/e2e/harness/`, never copied between scenarios.
+- Record only what is deterministic. When a read races background work (a Plugin finishing, a feed catching up), wait for the state to settle before recording it, or run the read with `transcript.unrecorded` and record a timing-independent observation.
 - Be deterministic: no sleeps. Use barriers such as fixture-Plugin hold and release controls, a delayed feed or a gated fetch. Record concurrent steps in the order they were issued.
 
 ### Integration tests
@@ -136,4 +137,6 @@ End-to-end scenarios are the primary evidence that Atlas works. Integration test
 | Handwritten WebSocket route | [`app/feed.go`](../../core/internal/app/feed.go) |
 | SDK mode behind one read interface | [`sdk/src/types.ts`](../../sdk/src/types.ts), [`http-reads.ts`](../../sdk/src/http-reads.ts), [`picture.ts`](../../sdk/src/picture.ts) |
 | Scenario barriers instead of sleeps | [`tests/e2e/harness/barriers.mjs`](../../tests/e2e/harness/barriers.mjs) |
+| Background work with a lifecycle | [`plugins/worker.go`](../../core/internal/plugins/worker.go), [`plugins/dispatch.go`](../../core/internal/plugins/dispatch.go) |
+| A Plugin, and a test fixture Plugin | [`plugins/elevation`](../../plugins/elevation), [`tests/e2e/fixtures/plugin`](../../tests/e2e/fixtures/plugin) |
 | End-to-end scenario and its artifact | [`tests/e2e/restart.test.mjs`](../../tests/e2e/restart.test.mjs), [artifact](../../tests/e2e/artifacts/dataset-identity-survives-restart.md) |

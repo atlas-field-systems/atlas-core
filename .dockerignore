@@ -1,0 +1,8 @@
+# Plugin images build from the repository root and need only sdk/ and plugins/.
+.git
+core
+docs
+tests
+state
+**/node_modules
+**/dist

@@ -21,10 +21,11 @@ const (
 	Operator   Kind = "operator"
 	Enrollment Kind = "enrollment"
 	Asset      Kind = "asset"
+	Plugin     Kind = "plugin"
 )
 
 // Caller is an authenticated credential holder. For an Asset, ID is its
-// Entity ID.
+// Entity ID; for a Plugin, its Plugin ID.
 type Caller struct {
 	Kind Kind
 	ID   string

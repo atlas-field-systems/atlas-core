@@ -20,6 +20,7 @@ paths:
         - operator: []
         - enrollment: []
         - asset: []
+        - plugin: []
       responses:
         '200':
           description: Core is serving requests.
@@ -39,6 +40,7 @@ paths:
         - operator: []
         - enrollment: []
         - asset: []
+        - plugin: []
       responses:
         '200':
           description: Required dependencies are ready.
@@ -64,6 +66,7 @@ paths:
         - operator: []
         - enrollment: []
         - asset: []
+        - plugin: []
       responses:
         '200':
           description: Current Dataset identity and writing release.
@@ -119,6 +122,7 @@ paths:
       security:
         - operator: []
         - asset: []
+        - plugin: []
       parameters:
         - $ref: '#/components/parameters/EntityId'
       responses:
@@ -172,6 +176,7 @@ paths:
       security:
         - operator: []
         - asset: []
+        - plugin: []
       parameters:
         - $ref: '#/components/parameters/EntityId'
       responses:
@@ -261,6 +266,7 @@ paths:
       security:
         - operator: []
         - asset: []
+        - plugin: []
       parameters:
         - name: cursor
           in: query
@@ -290,6 +296,7 @@ paths:
       security:
         - operator: []
         - asset: []
+        - plugin: []
       parameters:
         - name: cursor
           in: query
@@ -329,11 +336,214 @@ paths:
       security:
         - operator: []
         - asset: []
+        - plugin: []
       responses:
         '101':
           description: Switching to the WebSocket protocol.
+  /plugins:
+    get:
+      operationId: listPlugins
+      summary: Discover installed Plugins and their availability
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Installed Plugins in ID order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /plugins/{plugin_id}:
+    get:
+      operationId: getPlugin
+      summary: Inspect one installed Plugin
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/PluginId'
+      responses:
+        '200':
+          description: The Plugin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plugin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /plugins/{plugin_id}/operations:
+    get:
+      operationId: listPluginOperations
+      summary: List a Plugin's retained Operation attempts, newest first
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/PluginId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Retained attempts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: submitPluginOperation
+      summary: Submit a durable Operation attempt
+      description: |
+        Core retains the attempt before dispatching it to the Plugin, so a
+        caller that disconnects afterwards cannot stop it. Resubmitting the
+        same submission ID with the same facts returns the original attempt;
+        changed facts conflict. There is no automatic rerun.
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/PluginId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationSubmission'
+      responses:
+        '202':
+          description: The attempt is retained and will be dispatched, or this is its retry.
+          headers:
+            Location:
+              description: Where to read the attempt.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /plugins/{plugin_id}/operations/{operation_id}:
+    get:
+      operationId: getPluginOperation
+      summary: Read a retained Operation attempt and its known outcome
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/PluginId'
+        - $ref: '#/components/parameters/OperationId'
+      responses:
+        '200':
+          description: The attempt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /plugins/{plugin_id}/operations/{operation_id}/reports:
+    post:
+      operationId: reportPluginOperation
+      summary: Report progress or an outcome for one of the Plugin's own attempts
+      description: |
+        Only the Plugin that owns the attempt may report. A confirmed
+        terminal outcome is immutable: repeating it succeeds, changing it
+        conflicts. A failed outcome carries an error.
+      security:
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/PluginId'
+        - $ref: '#/components/parameters/OperationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationReport'
+      responses:
+        '200':
+          description: The attempt after the report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 components:
   parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        maxLength: 512
+    PluginId:
+      name: plugin_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-z][a-z0-9-]{0,62}$'
+    OperationId:
+      name: operation_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     Limit:
       name: limit
       in: query
@@ -362,6 +572,10 @@ components:
       type: http
       scheme: bearer
       description: An enrolled Asset's own credential, bound to its Entity ID.
+    plugin:
+      type: http
+      scheme: bearer
+      description: A managed Plugin's integration credential, issued when local management installs it.
   responses:
     BadRequest:
       description: The request does not match the operation's schema or rules.
@@ -383,6 +597,12 @@ components:
             $ref: '#/components/schemas/Error'
     NotFound:
       description: The resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: The Plugin already has its maximum of unfinished attempts.
       content:
         application/json:
           schema:
@@ -885,3 +1105,126 @@ components:
         code:
           type: string
           enum: [cursor_expired]
+    Plugin:
+      type: object
+      additionalProperties: false
+      required: [id, release, availability, capabilities]
+      properties:
+        id:
+          type: string
+        release:
+          type: string
+        availability:
+          type: string
+          enum: [available, unavailable, faulted]
+          description: |
+            available: running and admitting Operations. unavailable: stopped,
+            stopping or unreachable. faulted: Core lost the Plugin or a stop
+            failed; unfinished outcomes may be unknown until local
+            management starts it again.
+        fault:
+          type: string
+          description: Why the Plugin is faulted.
+        capabilities:
+          type: array
+          items:
+            type: string
+    PluginPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plugin'
+        next_cursor:
+          type: string
+    OperationStatus:
+      type: string
+      enum: [pending, in_progress, cancellation_requested, completed, canceled, failed, interrupted]
+      description: |
+        completed, canceled, failed and interrupted are terminal.
+        interrupted means Core cannot establish the outcome.
+    OperationSubmission:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, submission_id, capability, input]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        capability:
+          type: string
+          maxLength: 128
+        input:
+          type: object
+          additionalProperties: true
+          description: Must match the capability's input schema from the Plugin manifest.
+    Operation:
+      type: object
+      additionalProperties: false
+      required: [id, dataset_id, submission_id, plugin_id, plugin_release, capability, input, status, output, error, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        dataset_id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        plugin_id:
+          type: string
+        plugin_release:
+          type: string
+        capability:
+          type: string
+        input:
+          type: object
+          additionalProperties: true
+        status:
+          $ref: '#/components/schemas/OperationStatus'
+        output:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: The latest known output; kept when an attempt fails or is interrupted.
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    OperationPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Operation'
+        next_cursor:
+          type: string
+    OperationReport:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [in_progress, completed, failed, canceled]
+        output:
+          type: object
+          additionalProperties: true
+          description: Replaces the known output.
+        error:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: Required with failed, and only allowed on a terminal outcome.

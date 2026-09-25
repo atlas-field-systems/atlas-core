@@ -25,6 +25,9 @@ func (i Installation) FirstKeyFile() string   { return filepath.Join(i.SetupDir(
 func (i Installation) EnrollmentKeyFile() string {
 	return filepath.Join(i.SetupDir(), "enrollment-key")
 }
+func (i Installation) managementSecretFile() string {
+	return filepath.Join(i.SetupDir(), "management-secret")
+}
 func (i Installation) composeFile() string { return filepath.Join(i.Root, "compose.yaml") }
 func (i Installation) databaseFile() string {
 	return filepath.Join(i.SetupDir(), "installation.sqlite")
@@ -49,6 +52,9 @@ func (i Installation) Setup(ctx context.Context) (string, error) {
 	}
 	defer closeDB()
 	if err := i.ensureEnrollmentAuthority(ctx, identities); err != nil {
+		return "", err
+	}
+	if err := i.ensureManagementSecret(ctx, identities); err != nil {
 		return "", err
 	}
 	if setUp, err := identities.SetUp(ctx); err != nil || setUp {
@@ -81,6 +87,22 @@ func (i Installation) ensureEnrollmentAuthority(ctx context.Context, identities 
 		return fmt.Errorf("retain enrollment authority: %w", err)
 	}
 	return identities.SetEnrollmentAuthority(ctx, key)
+}
+
+// ensureManagementSecret creates the secret local management presents to
+// Core when coordinating Plugin lifecycle.
+func (i Installation) ensureManagementSecret(ctx context.Context, identities *identity.Service) error {
+	secret, err := readSecretFile(i.managementSecretFile(), identity.ManagementPrefix)
+	if errors.Is(err, os.ErrNotExist) {
+		if secret, err = identity.NewCredential(identity.ManagementPrefix); err != nil {
+			return err
+		}
+		err = writeSecretFile(i.managementSecretFile(), secret)
+	}
+	if err != nil {
+		return fmt.Errorf("retain management secret: %w", err)
+	}
+	return identities.SetManagementSecret(ctx, secret)
 }
 
 // RevokeEnrollment stops new enrollments and retries without changing

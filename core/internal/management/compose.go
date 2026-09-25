@@ -3,16 +3,20 @@ package management
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
 // composeTimeout bounds one Docker Compose command, including a health wait.
 const composeTimeout = 2 * time.Minute
 
-// Start runs the installed Core image and waits for its private health probe.
-// It never builds or pulls, so it works without internet access.
+// Start runs the installed Core image, waits for its private health probe,
+// then starts every installed Plugin. It never builds or pulls, so it works
+// without internet access.
 func (i Installation) Start(ctx context.Context) error {
 	if _, err := os.Stat(i.databaseFile()); err != nil {
 		return fmt.Errorf("installation is not set up; run atlasctl setup: %w", err)
@@ -21,23 +25,70 @@ func (i Installation) Start(ctx context.Context) error {
 	if err := os.MkdirAll(i.OperationalDir(), 0o700); err != nil {
 		return fmt.Errorf("create operational storage directory: %w", err)
 	}
-	return i.compose(ctx, "up", "-d", "--wait", "--wait-timeout", "30", "--no-build", "--pull", "never", "core")
+	if err := i.compose(ctx, "up", "-d", "--wait", "--wait-timeout", "30", "--no-build", "--pull", "never", "core"); err != nil {
+		return err
+	}
+	installed, err := i.installedPlugins()
+	if err != nil {
+		return err
+	}
+	for _, id := range installed {
+		if err := i.StartPlugin(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// Stop stops Core and keeps setup, Dataset, Object storage and logs.
+// Stop stops installed Plugins, then Core, keeping setup, Dataset, Object
+// storage and logs.
 func (i Installation) Stop(ctx context.Context) error {
+	installed, err := i.installedPlugins()
+	if err != nil {
+		return err
+	}
+	services := []string{"stop"}
+	for _, id := range installed {
+		services = append(services, pluginService(id))
+	}
+	if err := i.compose(ctx, services...); err != nil {
+		return err
+	}
 	return i.compose(ctx, "stop", "core")
 }
 
+// compose runs Docker Compose over Core's file and every installed Plugin's.
 func (i Installation) compose(ctx context.Context, args ...string) error {
+	_, err := i.composeOutput(ctx, os.Stdout, args...)
+	return err
+}
+
+func (i Installation) composeOutput(ctx context.Context, stdout io.Writer, args ...string) (string, error) {
+	files, err := i.composeFiles()
+	if err != nil {
+		return "", err
+	}
 	ctx, cancel := context.WithTimeout(ctx, composeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "docker", append([]string{"compose", "-f", i.composeFile()}, args...)...)
+	var captured strings.Builder
+	cmd := exec.CommandContext(ctx, "docker", append(append([]string{"compose"}, files...), args...)...)
 	cmd.Env = append(os.Environ(), fmt.Sprintf("ATLAS_UID=%d", os.Getuid()), fmt.Sprintf("ATLAS_GID=%d", os.Getgid()))
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = io.MultiWriter(stdout, &captured)
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker compose %s: %w", args[0], err)
+		return "", fmt.Errorf("docker compose %s: %w", args[0], err)
 	}
-	return nil
+	return captured.String(), nil
+}
+
+func (i Installation) composeFiles() ([]string, error) {
+	fragments, err := filepath.Glob(filepath.Join(i.pluginsDir(), "*.compose.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	files := []string{"-f", i.composeFile()}
+	for _, fragment := range fragments {
+		files = append(files, "-f", fragment)
+	}
+	return files, nil
 }

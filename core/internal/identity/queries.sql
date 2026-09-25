@@ -13,6 +13,9 @@ WHERE enrollment_authority.verifier = sqlc.arg(verifier) AND NOT enrollment_auth
 UNION ALL
 SELECT 'asset', asset_bindings.asset_id FROM asset_bindings
 WHERE asset_bindings.verifier = sqlc.arg(verifier) AND asset_bindings.active AND NOT asset_bindings.revoked
+UNION ALL
+SELECT 'plugin', plugin_keys.plugin_id FROM plugin_keys
+WHERE plugin_keys.verifier = sqlc.arg(verifier) AND NOT plugin_keys.revoked
 LIMIT 1;
 
 -- name: CountEnrollmentAuthorities :one
@@ -36,3 +39,13 @@ UPDATE asset_bindings SET active = TRUE WHERE asset_id = ?;
 
 -- name: ListInactiveAssetBindings :many
 SELECT asset_id FROM asset_bindings WHERE NOT active;
+
+-- name: CreatePluginKey :exec
+INSERT INTO plugin_keys (plugin_id, verifier) VALUES (?, ?);
+
+-- name: SetManagementSecret :exec
+INSERT INTO management_secret (singleton, verifier) VALUES (1, ?)
+ON CONFLICT (singleton) DO NOTHING;
+
+-- name: GetManagementSecret :one
+SELECT verifier FROM management_secret WHERE singleton = 1;

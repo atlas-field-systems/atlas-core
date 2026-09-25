@@ -1,0 +1,10 @@
+{
+  "name": "@atlas-field-systems/plugin-elevation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@atlas-field-systems/sdk": "link:../../sdk"
+  },
+  "packageManager": "pnpm@11.0.9"
+}

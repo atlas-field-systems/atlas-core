@@ -11,6 +11,10 @@ export type AssetStatusView = Schemas["AssetStatusView"];
 export type FeedHello = Schemas["FeedHello"];
 export type FeedChange = Schemas["FeedChange"];
 export type FeedGap = Schemas["FeedGap"];
+export type Plugin = Schemas["Plugin"];
+export type Operation = Schemas["Operation"];
+export type OperationSubmission = Schemas["OperationSubmission"];
+export type OperationReport = Schemas["OperationReport"];
 export type ChangeListener = (change: EntityChange) => void;
 
 /** Operational reads offered identically by HTTP and full synchronization. */

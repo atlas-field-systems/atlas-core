@@ -1,12 +1,12 @@
 import createClient from "openapi-fetch";
 import type { components, paths } from "./generated/protocol.js";
 import { newAssetCredential } from "./credentials.js";
-import { PictureError, unwrap } from "./errors.js";
+import { PictureError, WaitTimeoutError, unwrap } from "./errors.js";
 import { FeedConnection } from "./feed.js";
 import { HttpReads } from "./http-reads.js";
 import { Picture } from "./picture.js";
 import { Synchronization } from "./synchronization.js";
-import type { AssetStatus, ChangeListener, Entity, EntityReads, Readiness } from "./types.js";
+import type { AssetStatus, ChangeListener, Entity, EntityReads, Operation, OperationReport, OperationSubmission, Readiness } from "./types.js";
 
 type Schemas = components["schemas"];
 export type AssetEnrollmentFacts = Pick<Schemas["AssetEnrollmentRequest"], "alias" | "subtype" | "components" | "command_manifest">;
@@ -55,8 +55,18 @@ export interface AtlasClientOptions {
   onListenerError?: (error: unknown) => void;
 }
 
-/** How long waitForSynchronization waits by default. */
+/** How long waitForSynchronization and waitForOperation wait by default. */
 const defaultWaitMs = 10_000;
+
+/** How often waitForOperation reads an attempt; outcomes are not on the feed. */
+const operationPollMs = 100;
+
+const terminalStatuses: ReadonlySet<Operation["status"]> = new Set(["completed", "canceled", "failed", "interrupted"]);
+
+export interface Page {
+  cursor?: string;
+  limit?: number;
+}
 
 /** Authenticated access to one Core. Reads behave the same in either mode. */
 export class AtlasClient {
@@ -124,6 +134,52 @@ export class AtlasClient {
   /** Checks in, reporting current state and contact. */
   async checkInAsset(id: string, report: AssetReport) {
     return unwrap(await this.#api.POST("/entities/{entity_id}/checkin", { params: { path: { entity_id: id } }, body: reportBody(report) }));
+  }
+
+  async plugins(page: Page = {}) {
+    return unwrap(await this.#api.GET("/plugins", { params: { query: page } }));
+  }
+
+  async plugin(id: string) {
+    return unwrap(await this.#api.GET("/plugins/{plugin_id}", { params: { path: { plugin_id: id } } }));
+  }
+
+  /**
+   * Prepares a submission for the current Dataset. Keep it to retry: a
+   * retry with the same submission returns the original attempt.
+   */
+  async prepareOperation(capability: string, input: OperationSubmission["input"]): Promise<OperationSubmission> {
+    const dataset = await this.dataset();
+    return { dataset_id: dataset.id, submission_id: crypto.randomUUID(), capability, input };
+  }
+
+  /** Submits, or retries a submission of, a durable Operation attempt. */
+  async submitOperation(pluginId: string, submission: OperationSubmission) {
+    return unwrap(await this.#api.POST("/plugins/{plugin_id}/operations", { params: { path: { plugin_id: pluginId } }, body: submission }));
+  }
+
+  async operation(pluginId: string, id: string) {
+    return unwrap(await this.#api.GET("/plugins/{plugin_id}/operations/{operation_id}", { params: { path: { plugin_id: pluginId, operation_id: id } } }));
+  }
+
+  async operations(pluginId: string, page: Page = {}) {
+    return unwrap(await this.#api.GET("/plugins/{plugin_id}/operations", { params: { path: { plugin_id: pluginId }, query: page } }));
+  }
+
+  /** Resolves with the attempt once it reaches a terminal status. */
+  async waitForOperation(pluginId: string, id: string, timeoutMs = defaultWaitMs): Promise<Operation> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const operation = await this.operation(pluginId, id);
+      if (terminalStatuses.has(operation.status)) return operation;
+      if (Date.now() >= deadline) throw new WaitTimeoutError("The Operation has no outcome yet.");
+      await new Promise((resolve) => setTimeout(resolve, operationPollMs));
+    }
+  }
+
+  /** For a Plugin: reports progress or an outcome of one of its own attempts. */
+  async reportOperation(pluginId: string, id: string, report: OperationReport) {
+    return unwrap(await this.#api.POST("/plugins/{plugin_id}/operations/{operation_id}/reports", { params: { path: { plugin_id: pluginId, operation_id: id } }, body: report }));
   }
 
   entity(id: string) { return this.#reads.entity(id); }
