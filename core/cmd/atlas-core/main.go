@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/atlas-field-systems/atlas-core/core/internal/app"
+	"github.com/atlas-field-systems/atlas-core/core/internal/changes"
 )
 
 const release = "0.1.0"
@@ -26,12 +28,17 @@ const (
 
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	config := app.Config{
-		SetupDir:       envOr("ATLAS_SETUP_DIR", "/var/lib/atlas/setup"),
-		OperationalDir: envOr("ATLAS_OPERATIONAL_DIR", "/var/lib/atlas/operational"),
-		Release:        release,
+	retention, err := strconv.Atoi(envOr("ATLAS_CHANGE_RETENTION", strconv.Itoa(changes.DefaultRetention)))
+	if err != nil {
+		log.Error("ATLAS_CHANGE_RETENTION must be a whole number", "error", err)
+		os.Exit(1)
 	}
-	var err error
+	config := app.Config{
+		SetupDir:        envOr("ATLAS_SETUP_DIR", "/var/lib/atlas/setup"),
+		OperationalDir:  envOr("ATLAS_OPERATIONAL_DIR", "/var/lib/atlas/operational"),
+		Release:         release,
+		ChangeRetention: retention,
+	}
 	if len(os.Args) == 2 && os.Args[1] == "check-ready" {
 		err = checkReady(config)
 	} else {

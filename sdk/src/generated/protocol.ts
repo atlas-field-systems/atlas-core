@@ -91,7 +91,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Report changed components of the authenticated Asset
+         * @description Only the Asset itself may report. Each fresh report records contact; see AssetReport for merge rules.
+         */
+        patch: operations["patchEntity"];
         trace?: never;
     };
     "/entities/{entity_id}/status": {
@@ -101,7 +105,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Read an Asset's status and contact freshness */
+        get: operations["getAssetStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -112,6 +117,88 @@ export interface paths {
          * @description Only the Asset itself may report. Reports apply in increasing sequence order; resending a report ID with the same facts returns the current Asset.
          */
         patch: operations["reportAssetStatus"];
+        trace?: never;
+    };
+    "/entities/{entity_id}/checkin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check in, reporting current Asset state and contact */
+        post: operations["checkInAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/queries/full": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Load a paginated operational picture with one baseline
+         * @description Every page of one snapshot shares the baseline of the first page.
+         *     Entities created after the baseline are left to replay from
+         *     `baseline`; Entities on later pages may already include changes made
+         *     after the baseline, so apply replayed changes only when newer.
+         */
+        get: operations["queryFull"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/queries/changed-since": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Replay committed changes after a Dataset-bound cursor */
+        get: operations["queryChangedSince"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Follow committed changes over a WebSocket
+         * @description A WebSocket upgrade. Browsers cannot set headers on the upgrade, so
+         *     the client sends FeedAuthentication as its first message instead of
+         *     an Authorization header; the security below lists the kinds of
+         *     credential it may carry. Core then sends FeedHello and a FeedChange
+         *     for every later commit, in sequence order. If the client falls
+         *     behind the retained change log, Core sends FeedGap and closes.
+         */
+        get: operations["getFeed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -147,6 +234,8 @@ export interface components {
         Communications: "high_bandwidth" | "healthy" | "degraded" | "offline";
         Entity: {
             /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
             id: string;
             /** @enum {string} */
             kind: "asset";
@@ -155,6 +244,11 @@ export interface components {
             components: components["schemas"]["AssetComponents"];
             command_manifest: components["schemas"]["CommandSupport"][];
             version: number;
+            /**
+             * Format: int64
+             * @description Sequence of the committed change that produced this state.
+             */
+            change_sequence: number;
         };
         AssetComponents: {
             status: components["schemas"]["AssetStatusComponent"];
@@ -243,6 +337,111 @@ export interface components {
             sequence: number;
             status: components["schemas"]["AssetStatus"];
         };
+        AssetStatusView: {
+            status: components["schemas"]["AssetStatusComponent"];
+            communications: components["schemas"]["AssetCommunicationsComponent"];
+            heartbeat: components["schemas"]["AssetHeartbeatComponent"];
+        };
+        /**
+         * @description One Asset-originated change. A fresh report records contact even with
+         *     no components. Reports apply in increasing sequence order; resending a
+         *     report ID with the same facts returns the current Entity. Present
+         *     components merge into stored ones (see each patch schema);
+         *     `command_manifest` replaces the stored manifest.
+         */
+        AssetReport: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
+            report_id: string;
+            /** Format: int64 */
+            sequence: number;
+            components?: components["schemas"]["AssetComponentPatch"];
+            command_manifest?: components["schemas"]["CommandSupport"][];
+        };
+        AssetComponentPatch: {
+            status?: components["schemas"]["AssetInitialStatus"];
+            telemetry?: components["schemas"]["AssetTelemetryPatch"];
+            health?: components["schemas"]["AssetHealthPatch"];
+        };
+        /**
+         * @description Present fields replace stored values and null clears a field; null
+         *     for the whole component clears all telemetry. After merging,
+         *     latitude and longitude must be both present or both absent.
+         */
+        AssetTelemetryPatch: {
+            /** Format: double */
+            latitude?: number | null;
+            /** Format: double */
+            longitude?: number | null;
+            /** Format: double */
+            altitude_m?: number | null;
+            /** Format: double */
+            speed_mps?: number | null;
+            /** Format: double */
+            heading_deg?: number | null;
+        } | null;
+        /** @description Replaces stored health; null clears it. */
+        AssetHealthPatch: {
+            /** Format: double */
+            battery_percent: number;
+        } | null;
+        EntityPage: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** @description Change cursor at the snapshot's baseline; replay from it after the last page. */
+            baseline: string;
+            /** Format: int64 */
+            baseline_sequence: number;
+            entities: components["schemas"]["Entity"][];
+            next_cursor?: string;
+        };
+        EntityChange: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: int64 */
+            sequence: number;
+            /** @enum {string} */
+            resource_type: "entity";
+            /** Format: uuid */
+            resource_id: string;
+            /** @enum {string} */
+            kind: "create" | "update";
+            entity: components["schemas"]["Entity"];
+        };
+        ChangePage: {
+            /** Format: uuid */
+            dataset_id: string;
+            changes: components["schemas"]["EntityChange"][];
+            /** @description Cursor after the last returned change, or unchanged when there are none. */
+            cursor: string;
+        };
+        FeedAuthentication: {
+            api_key: string;
+        };
+        FeedHello: {
+            /** @enum {string} */
+            type: "hello";
+            /** Format: uuid */
+            dataset_id: string;
+            /** @description Change cursor at the subscription point; every later commit is delivered. */
+            cursor: string;
+            /** Format: int64 */
+            sequence: number;
+        };
+        FeedChange: {
+            /** @enum {string} */
+            type: "change";
+            change: components["schemas"]["EntityChange"];
+            /** @description Change cursor after this change. */
+            cursor: string;
+        };
+        FeedGap: {
+            /** @enum {string} */
+            type: "gap";
+            /** @enum {string} */
+            code: "cursor_expired";
+        };
     };
     responses: {
         /** @description The request does not match the operation's schema or rules. */
@@ -281,6 +480,15 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description The retained change log no longer covers this cursor; load a new snapshot. */
+        CursorExpired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description The request conflicts with a retained identity, order or the current Dataset. */
         Conflict: {
             headers: {
@@ -292,6 +500,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Page size. Defaults to 50. */
+        Limit: number;
         EntityId: string;
     };
     requestBodies: never;
@@ -437,6 +647,62 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    patchEntity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: components["parameters"]["EntityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetReport"];
+            };
+        };
+        responses: {
+            /** @description Current Entity after the report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entity"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getAssetStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: components["parameters"]["EntityId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current status, communications and contact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetStatusView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     reportAssetStatus: {
         parameters: {
             query?: never;
@@ -466,6 +732,112 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    checkInAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: components["parameters"]["EntityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetReport"];
+            };
+        };
+        responses: {
+            /** @description Current Entity after the report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entity"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    queryFull: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                /** @description Page size. Defaults to 50. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of Entities in the current Dataset. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    queryChangedSince: {
+        parameters: {
+            query: {
+                cursor: string;
+                /** @description Page size. Defaults to 50. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Committed changes in sequence order and the cursor after them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            410: components["responses"]["CursorExpired"];
+        };
+    };
+    getFeed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Switching to the WebSocket protocol. */
+            101: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
 }

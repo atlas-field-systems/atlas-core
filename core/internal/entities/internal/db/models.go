@@ -21,6 +21,13 @@ type AssetReport struct {
 	FactsDigest []byte
 }
 
+type Change struct {
+	Sequence   int64
+	ResourceID string
+	Kind       string
+	Entity     string
+}
+
 type Dataset struct {
 	Singleton      int64
 	ID             string
@@ -45,4 +52,6 @@ type Entity struct {
 	CommandManifest    string
 	Version            int64
 	LastReportSequence int64
+	CreatedSequence    sql.NullInt64
+	ChangeSequence     int64
 }

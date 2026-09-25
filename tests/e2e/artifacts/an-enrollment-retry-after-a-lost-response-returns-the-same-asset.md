@@ -38,6 +38,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "Lost reply",
+    "change_sequence": 1,
     "command_manifest": [],
     "components": {
       "communications": {
@@ -51,6 +52,7 @@ SDK `POST /entities` with <enrollment key>
         "value": "initializing"
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<asset>",
     "kind": "asset",
     "subtype": null,
@@ -87,6 +89,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "Lost reply",
+    "change_sequence": 1,
     "command_manifest": [],
     "components": {
       "communications": {
@@ -100,6 +103,7 @@ SDK `POST /entities` with <enrollment key>
         "value": "initializing"
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<asset>",
     "kind": "asset",
     "subtype": null,
@@ -136,6 +140,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "Lost reply",
+    "change_sequence": 1,
     "command_manifest": [],
     "components": {
       "communications": {
@@ -149,6 +154,7 @@ SDK `POST /entities` with <enrollment key>
         "value": "initializing"
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<asset>",
     "kind": "asset",
     "subtype": null,
@@ -167,6 +173,7 @@ SDK `GET /entities/<asset>` with <asset credential>
 ```json
 {
   "alias": "Lost reply",
+  "change_sequence": 1,
   "command_manifest": [],
   "components": {
     "communications": {
@@ -180,6 +187,7 @@ SDK `GET /entities/<asset>` with <asset credential>
       "value": "initializing"
     }
   },
+  "dataset_id": "<id-1>",
   "id": "<asset>",
   "kind": "asset",
   "subtype": null,

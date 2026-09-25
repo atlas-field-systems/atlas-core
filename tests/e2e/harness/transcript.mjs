@@ -96,7 +96,7 @@ function renderEntry(entry, normalizer) {
   if (entry.kind === "note") return [entry.text];
   if (entry.kind === "observation") return [`Observed ${entry.label}:`, ...json(normalizer.value(entry.value))];
   const credential = entry.credential ? normalizer.string(entry.credential) : "no credential";
-  const lines = [`${entry.source} \`${entry.method} ${normalizer.string(entry.target)}\` with ${credential}`];
+  const lines = [`${entry.source} \`${entry.method} ${normalizer.target(entry.target)}\` with ${credential}`];
   if (entry.requestBody) lines.push(...body(entry.requestBody, normalizer));
   const location = entry.location ? ` · Location \`${normalizer.string(entry.location)}\`` : "";
   lines.push("", `→ **${entry.status}**${location}`);
@@ -134,6 +134,15 @@ class Normalizer {
     if (cursorKeys.has(key)) return this.#label(value, "cursor");
     if (timePattern.test(value)) return "<time>";
     return this.string(value);
+  }
+
+  /** Normalizes a request path and query, labelling cursor parameters like cursor fields. */
+  target(target) {
+    const [path, query] = target.split("?");
+    if (!query) return this.string(path);
+    const params = new URLSearchParams(query);
+    const labelled = [...params].map(([key, value]) => `${key}=${cursorKeys.has(key) ? this.#label(value, "cursor") : this.string(value)}`);
+    return `${this.string(path)}?${labelled.join("&")}`;
   }
 
   string(text) {

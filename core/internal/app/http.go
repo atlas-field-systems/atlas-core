@@ -35,6 +35,8 @@ var (
 
 // newHandler builds the request pipeline:
 // body limit → authentication → Protocol validation and access → generated routes.
+// The feed is registered beside it because it authenticates in its first
+// WebSocket message rather than a header.
 func (a *App) newHandler() (http.Handler, error) {
 	spec, err := api.GetSwagger()
 	if err != nil {
@@ -53,7 +55,10 @@ func (a *App) newHandler() (http.Handler, error) {
 		ErrorHandlerWithOpts: a.writeValidationError,
 		DoNotValidateServers: true,
 	})
-	return limitBody(a.authenticate(validate(routes))), nil
+	root := http.NewServeMux()
+	root.Handle("GET /feed", a.feedHandler())
+	root.Handle("/", limitBody(a.authenticate(validate(routes))))
+	return root, nil
 }
 
 func limitBody(next http.Handler) http.Handler {

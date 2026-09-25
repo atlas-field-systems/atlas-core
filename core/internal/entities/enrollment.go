@@ -134,7 +134,10 @@ func (s *Service) createAsset(ctx context.Context, request api.AssetEnrollmentRe
 	if err := queries.CreateRegistration(ctx, registration); err != nil {
 		return fmt.Errorf("record registration %s: %w", request.RequestId, err)
 	}
-	return tx.Commit()
+	if _, err := s.publish(ctx, tx, request.Id.String(), api.Create); err != nil {
+		return err
+	}
+	return s.changes.Commit(tx)
 }
 
 func newAssetParams(request api.AssetEnrollmentRequest) (db.CreateAssetParams, error) {

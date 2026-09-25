@@ -53,9 +53,10 @@ export class Installation {
     return stdout;
   }
 
-  async start() {
+  /** Starts Core. env adds Core settings such as ATLAS_CHANGE_RETENTION. */
+  async start(env = {}) {
     const child = spawn(this.bins.core, [], {
-      env: { ...process.env, ATLAS_SETUP_DIR: this.setupDir, ATLAS_OPERATIONAL_DIR: this.operationalDir, ATLAS_LISTEN_ADDR: "127.0.0.1:0" },
+      env: { ...process.env, ATLAS_SETUP_DIR: this.setupDir, ATLAS_OPERATIONAL_DIR: this.operationalDir, ATLAS_LISTEN_ADDR: "127.0.0.1:0", ...env },
       stdio: ["ignore", "pipe", "inherit"],
     });
     const address = await listenAddress(child);

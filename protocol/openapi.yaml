@@ -134,7 +134,59 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: patchEntity
+      summary: Report changed components of the authenticated Asset
+      description: Only the Asset itself may report. Each fresh report records contact; see AssetReport for merge rules.
+      security:
+        - asset: []
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetReport'
+      responses:
+        '200':
+          description: Current Entity after the report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /entities/{entity_id}/status:
+    get:
+      operationId: getAssetStatus
+      summary: Read an Asset's status and contact freshness
+      security:
+        - operator: []
+        - asset: []
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Current status, communications and contact.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetStatusView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       operationId: reportAssetStatus
       summary: Report an Asset's own operational status
@@ -166,8 +218,130 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /entities/{entity_id}/checkin:
+    post:
+      operationId: checkInAsset
+      summary: Check in, reporting current Asset state and contact
+      security:
+        - asset: []
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetReport'
+      responses:
+        '200':
+          description: Current Entity after the report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /queries/full:
+    get:
+      operationId: queryFull
+      summary: Load a paginated operational picture with one baseline
+      description: |
+        Every page of one snapshot shares the baseline of the first page.
+        Entities created after the baseline are left to replay from
+        `baseline`; Entities on later pages may already include changes made
+        after the baseline, so apply replayed changes only when newer.
+      security:
+        - operator: []
+        - asset: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            maxLength: 512
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of Entities in the current Dataset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /queries/changed-since:
+    get:
+      operationId: queryChangedSince
+      summary: Replay committed changes after a Dataset-bound cursor
+      security:
+        - operator: []
+        - asset: []
+      parameters:
+        - name: cursor
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 512
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Committed changes in sequence order and the cursor after them.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/CursorExpired'
+  /feed:
+    get:
+      operationId: getFeed
+      summary: Follow committed changes over a WebSocket
+      description: |
+        A WebSocket upgrade. Browsers cannot set headers on the upgrade, so
+        the client sends FeedAuthentication as its first message instead of
+        an Authorization header; the security below lists the kinds of
+        credential it may carry. Core then sends FeedHello and a FeedChange
+        for every later commit, in sequence order. If the client falls
+        behind the retained change log, Core sends FeedGap and closes.
+      security:
+        - operator: []
+        - asset: []
+      responses:
+        '101':
+          description: Switching to the WebSocket protocol.
 components:
   parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Page size. Defaults to 50.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
     EntityId:
       name: entity_id
       in: path
@@ -209,6 +383,12 @@ components:
             $ref: '#/components/schemas/Error'
     NotFound:
       description: The resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CursorExpired:
+      description: The retained change log no longer covers this cursor; load a new snapshot.
       content:
         application/json:
           schema:
@@ -276,8 +456,11 @@ components:
     Entity:
       type: object
       additionalProperties: false
-      required: [id, kind, alias, subtype, components, command_manifest, version]
+      required: [dataset_id, id, kind, alias, subtype, components, command_manifest, version, change_sequence]
       properties:
+        dataset_id:
+          type: string
+          format: uuid
         id:
           type: string
           format: uuid
@@ -299,6 +482,11 @@ components:
         version:
           type: integer
           minimum: 1
+        change_sequence:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Sequence of the committed change that produced this state.
     AssetComponents:
       type: object
       additionalProperties: false
@@ -490,3 +678,210 @@ components:
           minimum: 1
         status:
           $ref: '#/components/schemas/AssetStatus'
+    AssetStatusView:
+      type: object
+      additionalProperties: false
+      required: [status, communications, heartbeat]
+      properties:
+        status:
+          $ref: '#/components/schemas/AssetStatusComponent'
+        communications:
+          $ref: '#/components/schemas/AssetCommunicationsComponent'
+        heartbeat:
+          $ref: '#/components/schemas/AssetHeartbeatComponent'
+    AssetReport:
+      type: object
+      additionalProperties: false
+      description: |
+        One Asset-originated change. A fresh report records contact even with
+        no components. Reports apply in increasing sequence order; resending a
+        report ID with the same facts returns the current Entity. Present
+        components merge into stored ones (see each patch schema);
+        `command_manifest` replaces the stored manifest.
+      required: [dataset_id, report_id, sequence]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        report_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        components:
+          $ref: '#/components/schemas/AssetComponentPatch'
+        command_manifest:
+          type: array
+          maxItems: 64
+          items:
+            $ref: '#/components/schemas/CommandSupport'
+    AssetComponentPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: '#/components/schemas/AssetInitialStatus'
+        telemetry:
+          $ref: '#/components/schemas/AssetTelemetryPatch'
+        health:
+          $ref: '#/components/schemas/AssetHealthPatch'
+    AssetTelemetryPatch:
+      type: object
+      nullable: true
+      additionalProperties: false
+      description: |
+        Present fields replace stored values and null clears a field; null
+        for the whole component clears all telemetry. After merging,
+        latitude and longitude must be both present or both absent.
+      properties:
+        latitude:
+          type: number
+          format: double
+          nullable: true
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          nullable: true
+          minimum: -180
+          maximum: 180
+        altitude_m:
+          type: number
+          format: double
+          nullable: true
+        speed_mps:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+        heading_deg:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          maximum: 360
+          exclusiveMaximum: true
+    AssetHealthPatch:
+      type: object
+      nullable: true
+      additionalProperties: false
+      description: Replaces stored health; null clears it.
+      required: [battery_percent]
+      properties:
+        battery_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+    EntityPage:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, baseline, baseline_sequence, entities]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        baseline:
+          type: string
+          description: Change cursor at the snapshot's baseline; replay from it after the last page.
+        baseline_sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+        next_cursor:
+          type: string
+    EntityChange:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, sequence, resource_type, resource_id, kind, entity]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        resource_type:
+          type: string
+          enum: [entity]
+        resource_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [create, update]
+        entity:
+          $ref: '#/components/schemas/Entity'
+    ChangePage:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, changes, cursor]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityChange'
+        cursor:
+          type: string
+          description: Cursor after the last returned change, or unchanged when there are none.
+    FeedAuthentication:
+      type: object
+      additionalProperties: false
+      required: [api_key]
+      properties:
+        api_key:
+          type: string
+          maxLength: 128
+    FeedHello:
+      type: object
+      additionalProperties: false
+      required: [type, dataset_id, cursor, sequence]
+      properties:
+        type:
+          type: string
+          enum: [hello]
+        dataset_id:
+          type: string
+          format: uuid
+        cursor:
+          type: string
+          description: Change cursor at the subscription point; every later commit is delivered.
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+    FeedChange:
+      type: object
+      additionalProperties: false
+      required: [type, change, cursor]
+      properties:
+        type:
+          type: string
+          enum: [change]
+        change:
+          $ref: '#/components/schemas/EntityChange'
+        cursor:
+          type: string
+          description: Change cursor after this change.
+    FeedGap:
+      type: object
+      additionalProperties: false
+      required: [type, code]
+      properties:
+        type:
+          type: string
+          enum: [gap]
+        code:
+          type: string
+          enum: [cursor_expired]

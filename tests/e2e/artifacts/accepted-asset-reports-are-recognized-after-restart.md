@@ -31,6 +31,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "Restarted",
+    "change_sequence": 1,
     "command_manifest": [],
     "components": {
       "communications": {
@@ -44,6 +45,7 @@ SDK `POST /entities` with <enrollment key>
         "value": "unknown"
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<asset>",
     "kind": "asset",
     "subtype": null,
@@ -70,6 +72,7 @@ SDK `PATCH /entities/<asset>/status` with <asset credential>
 ```json
 {
   "alias": "Restarted",
+  "change_sequence": 2,
   "command_manifest": [],
   "components": {
     "communications": {
@@ -83,6 +86,7 @@ SDK `PATCH /entities/<asset>/status` with <asset credential>
       "value": "ready"
     }
   },
+  "dataset_id": "<id-1>",
   "id": "<asset>",
   "kind": "asset",
   "subtype": null,
@@ -108,6 +112,7 @@ SDK `PATCH /entities/<asset>/status` with <asset credential>
 ```json
 {
   "alias": "Restarted",
+  "change_sequence": 2,
   "command_manifest": [],
   "components": {
     "communications": {
@@ -121,6 +126,7 @@ SDK `PATCH /entities/<asset>/status` with <asset credential>
       "value": "ready"
     }
   },
+  "dataset_id": "<id-1>",
   "id": "<asset>",
   "kind": "asset",
   "subtype": null,

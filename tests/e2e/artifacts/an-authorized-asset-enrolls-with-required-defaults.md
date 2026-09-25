@@ -51,6 +51,7 @@ SDK `POST /entities` with <enrollment key>
 {
   "asset": {
     "alias": "Scout One",
+    "change_sequence": 1,
     "command_manifest": [
       {
         "cancellation": true,
@@ -80,6 +81,7 @@ SDK `POST /entities` with <enrollment key>
         "longitude": -71.8081
       }
     },
+    "dataset_id": "<id-1>",
     "id": "<asset>",
     "kind": "asset",
     "subtype": "ground vehicle",
@@ -100,6 +102,7 @@ SDK `GET /entities/<asset>` with <asset credential>
 ```json
 {
   "alias": "Scout One",
+  "change_sequence": 1,
   "command_manifest": [
     {
       "cancellation": true,
@@ -129,6 +132,7 @@ SDK `GET /entities/<asset>` with <asset credential>
       "longitude": -71.8081
     }
   },
+  "dataset_id": "<id-1>",
   "id": "<asset>",
   "kind": "asset",
   "subtype": "ground vehicle",
@@ -142,6 +146,7 @@ SDK `GET /entities/<asset>` with <operator key>
 ```json
 {
   "alias": "Scout One",
+  "change_sequence": 1,
   "command_manifest": [
     {
       "cancellation": true,
@@ -171,6 +176,7 @@ SDK `GET /entities/<asset>` with <operator key>
       "longitude": -71.8081
     }
   },
+  "dataset_id": "<id-1>",
   "id": "<asset>",
   "kind": "asset",
   "subtype": "ground vehicle",

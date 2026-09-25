@@ -24,17 +24,19 @@ func checkPosition(telemetry *api.AssetTelemetryComponent) error {
 	return nil
 }
 
-func toAPI(row db.Entity) (api.Entity, error) {
+func toAPI(row db.Entity, dataset uuid.UUID) (api.Entity, error) {
 	id, err := uuid.Parse(row.ID)
 	if err != nil {
 		return api.Entity{}, fmt.Errorf("stored Entity ID %q: %w", row.ID, err)
 	}
 	entity := api.Entity{
-		Id:      id,
-		Kind:    api.EntityKindAsset,
-		Alias:   nullableString(row.Alias),
-		Subtype: nullableString(row.Subtype),
-		Version: int(row.Version),
+		DatasetId:      dataset,
+		ChangeSequence: row.ChangeSequence,
+		Id:             id,
+		Kind:           api.EntityKindAsset,
+		Alias:          nullableString(row.Alias),
+		Subtype:        nullableString(row.Subtype),
+		Version:        int(row.Version),
 	}
 	entity.Components.Status = api.AssetStatusComponent{Value: api.AssetStatus(row.Status), ReportedAt: nullableTime(row.StatusReportedAt)}
 	entity.Components.Communications.LinkState = api.Communications(row.LinkState)

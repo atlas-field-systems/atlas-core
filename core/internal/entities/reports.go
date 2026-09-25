@@ -45,9 +45,45 @@ func (s *Service) ReportStatus(ctx context.Context, caller identity.Caller, asse
 		return api.Entity{}, err
 	}
 	return s.applyReport(ctx, accepted, func(ctx context.Context, queries *db.Queries, receivedAt int64) error {
-		params := db.SetStatusParams{Status: string(status.Status), StatusReportedAt: sql.NullInt64{Int64: receivedAt, Valid: true}, ID: assetID}
-		return queries.SetStatus(ctx, params)
+		return setStatus(ctx, queries, assetID, status.Status, receivedAt)
 	})
+}
+
+// Report records a check-in or partial update from the Asset itself. See
+// the Protocol AssetReport schema for the merge rules.
+func (s *Service) Report(ctx context.Context, caller identity.Caller, assetID string, update api.AssetReport) (api.Entity, error) {
+	if err := s.checkReporter(caller, assetID, update.DatasetId); err != nil {
+		return api.Entity{}, err
+	}
+	accepted, err := newReport(assetID, update.ReportId.String(), update.Sequence, update)
+	if err != nil {
+		return api.Entity{}, err
+	}
+	return s.applyReport(ctx, accepted, func(ctx context.Context, queries *db.Queries, receivedAt int64) error {
+		current, err := queries.GetEntity(ctx, assetID)
+		if err != nil {
+			return fmt.Errorf("read Entity %s: %w", assetID, err)
+		}
+		merged, err := mergeReport(current, update)
+		if err != nil {
+			return err
+		}
+		if err := queries.SetComponents(ctx, merged); err != nil {
+			return fmt.Errorf("update components of Asset %s: %w", assetID, err)
+		}
+		if update.Components != nil && update.Components.Status != nil {
+			return setStatus(ctx, queries, assetID, update.Components.Status.Value, receivedAt)
+		}
+		return nil
+	})
+}
+
+func setStatus(ctx context.Context, queries *db.Queries, assetID string, status api.AssetStatus, receivedAt int64) error {
+	params := db.SetStatusParams{Status: string(status), StatusReportedAt: sql.NullInt64{Int64: receivedAt, Valid: true}, ID: assetID}
+	if err := queries.SetStatus(ctx, params); err != nil {
+		return fmt.Errorf("set status of Asset %s: %w", assetID, err)
+	}
+	return nil
 }
 
 func (s *Service) checkReporter(caller identity.Caller, assetID string, datasetID uuid.UUID) error {
@@ -66,9 +102,9 @@ func newReport(assetID, reportID string, sequence int64, facts any) (report, err
 	return report{assetID: assetID, reportID: reportID, sequence: sequence, digest: digest[:]}, nil
 }
 
-// applyReport applies a fresh report and records contact, or returns the
-// current Entity unchanged for a resent report. Reports apply in increasing
-// sequence order.
+// applyReport applies a fresh report, records contact and publishes the
+// change, or returns the current Entity unchanged for a resent report.
+// Reports apply in increasing sequence order.
 func (s *Service) applyReport(ctx context.Context, accepted report, apply applyFunc) (api.Entity, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -80,7 +116,7 @@ func (s *Service) applyReport(ctx context.Context, accepted report, apply applyF
 		if err != nil {
 			return api.Entity{}, err
 		}
-		return get(ctx, queries, accepted.assetID)
+		return s.read(ctx, queries, accepted.assetID)
 	}
 	if err := checkOrder(ctx, queries, accepted); err != nil {
 		return api.Entity{}, err
@@ -88,11 +124,11 @@ func (s *Service) applyReport(ctx context.Context, accepted report, apply applyF
 	if err := record(ctx, queries, accepted, apply); err != nil {
 		return api.Entity{}, err
 	}
-	entity, err := get(ctx, queries, accepted.assetID)
+	entity, err := s.publish(ctx, tx, accepted.assetID, api.Update)
 	if err != nil {
 		return api.Entity{}, err
 	}
-	return entity, tx.Commit()
+	return entity, s.changes.Commit(tx)
 }
 
 func checkResent(ctx context.Context, queries *db.Queries, accepted report) (bool, error) {

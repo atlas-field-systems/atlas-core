@@ -53,8 +53,8 @@ class ScenarioRun {
   }
 
   /** Starts Core on a new installation, or on the given one after a Stop. */
-  async startCore(installation) {
-    const core = await (installation ?? (await this.installation())).start();
+  async startCore(installation, env) {
+    const core = await (installation ?? (await this.installation())).start(env);
     this.context.after(() => core.stop());
     return core;
   }
@@ -63,6 +63,17 @@ class ScenarioRun {
   client(core, apiKey, label) {
     if (label) this.transcript.name(apiKey, label);
     return new AtlasClient({ baseUrl: core.baseUrl, apiKey, fetch: this.transcript.fetch });
+  }
+
+  /**
+   * A full-synchronization client. Its background traffic depends on timing,
+   * so it is not recorded; record what it observes instead. It is stopped
+   * after the scenario.
+   */
+  pictureClient(core, apiKey, options = {}) {
+    const client = new AtlasClient({ baseUrl: core.baseUrl, apiKey, mode: "full", ...options });
+    this.context.after(() => client.stopSynchronization());
+    return client;
   }
 
   /**
@@ -108,7 +119,8 @@ class ScenarioRun {
     const expected = await readFile(file, "utf8").catch(() => {
       throw new Error(`No committed artifact at ${file}. Run with ATLAS_E2E_UPDATE=1 and review it.`);
     });
-    assert.equal(actual, expected, `Transcript differs from ${path.relative(process.cwd(), file)}. If the change is intended, regenerate with ATLAS_E2E_UPDATE=1 and explain it in the PR.`);
+    if (actual !== expected) await writeFile(file.replace(/\.md$/, ".actual.md"), actual);
+    assert.equal(actual, expected, `Transcript differs from ${path.relative(process.cwd(), file)}. If the change is intended, regenerate with ATLAS_E2E_UPDATE=1 and explain it in the PR. The actual transcript is beside it as .actual.md.`);
   }
 }
 

@@ -94,7 +94,7 @@ func (q *Queries) EntityExists(ctx context.Context, id string) (bool, error) {
 }
 
 const getEntity = `-- name: GetEntity :one
-SELECT id, kind, alias, subtype, status, status_reported_at, link_state, last_seen, latitude, longitude, altitude_m, speed_mps, heading_deg, battery_percent, command_manifest, version, last_report_sequence FROM entities WHERE id = ?
+SELECT id, kind, alias, subtype, status, status_reported_at, link_state, last_seen, latitude, longitude, altitude_m, speed_mps, heading_deg, battery_percent, command_manifest, version, last_report_sequence, created_sequence, change_sequence FROM entities WHERE id = ?
 `
 
 func (q *Queries) GetEntity(ctx context.Context, id string) (Entity, error) {
@@ -118,6 +118,8 @@ func (q *Queries) GetEntity(ctx context.Context, id string) (Entity, error) {
 		&i.CommandManifest,
 		&i.Version,
 		&i.LastReportSequence,
+		&i.CreatedSequence,
+		&i.ChangeSequence,
 	)
 	return i, err
 }
@@ -149,6 +151,59 @@ func (q *Queries) GetReport(ctx context.Context, reportID string) (AssetReport, 
 	return i, err
 }
 
+const listEntitiesAtBaseline = `-- name: ListEntitiesAtBaseline :many
+SELECT id, kind, alias, subtype, status, status_reported_at, link_state, last_seen, latitude, longitude, altitude_m, speed_mps, heading_deg, battery_percent, command_manifest, version, last_report_sequence, created_sequence, change_sequence FROM entities WHERE created_sequence <= ?1 AND id > ?2 ORDER BY id LIMIT ?3
+`
+
+type ListEntitiesAtBaselineParams struct {
+	Baseline sql.NullInt64
+	AfterID  string
+	Limit    int64
+}
+
+func (q *Queries) ListEntitiesAtBaseline(ctx context.Context, arg ListEntitiesAtBaselineParams) ([]Entity, error) {
+	rows, err := q.db.QueryContext(ctx, listEntitiesAtBaseline, arg.Baseline, arg.AfterID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Entity
+	for rows.Next() {
+		var i Entity
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Alias,
+			&i.Subtype,
+			&i.Status,
+			&i.StatusReportedAt,
+			&i.LinkState,
+			&i.LastSeen,
+			&i.Latitude,
+			&i.Longitude,
+			&i.AltitudeM,
+			&i.SpeedMps,
+			&i.HeadingDeg,
+			&i.BatteryPercent,
+			&i.CommandManifest,
+			&i.Version,
+			&i.LastReportSequence,
+			&i.CreatedSequence,
+			&i.ChangeSequence,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recordContact = `-- name: RecordContact :exec
 UPDATE entities
 SET last_seen = ?1, link_state = 'healthy', version = version + 1, last_report_sequence = ?2
@@ -163,6 +218,52 @@ type RecordContactParams struct {
 
 func (q *Queries) RecordContact(ctx context.Context, arg RecordContactParams) error {
 	_, err := q.db.ExecContext(ctx, recordContact, arg.ReceivedAt, arg.Sequence, arg.ID)
+	return err
+}
+
+const setChangeSequence = `-- name: SetChangeSequence :exec
+UPDATE entities SET change_sequence = ?1, created_sequence = COALESCE(created_sequence, ?1)
+WHERE id = ?2
+`
+
+type SetChangeSequenceParams struct {
+	Sequence int64
+	ID       string
+}
+
+func (q *Queries) SetChangeSequence(ctx context.Context, arg SetChangeSequenceParams) error {
+	_, err := q.db.ExecContext(ctx, setChangeSequence, arg.Sequence, arg.ID)
+	return err
+}
+
+const setComponents = `-- name: SetComponents :exec
+UPDATE entities
+SET latitude = ?, longitude = ?, altitude_m = ?, speed_mps = ?, heading_deg = ?, battery_percent = ?, command_manifest = ?
+WHERE id = ?
+`
+
+type SetComponentsParams struct {
+	Latitude        sql.NullFloat64
+	Longitude       sql.NullFloat64
+	AltitudeM       sql.NullFloat64
+	SpeedMps        sql.NullFloat64
+	HeadingDeg      sql.NullFloat64
+	BatteryPercent  sql.NullFloat64
+	CommandManifest string
+	ID              string
+}
+
+func (q *Queries) SetComponents(ctx context.Context, arg SetComponentsParams) error {
+	_, err := q.db.ExecContext(ctx, setComponents,
+		arg.Latitude,
+		arg.Longitude,
+		arg.AltitudeM,
+		arg.SpeedMps,
+		arg.HeadingDeg,
+		arg.BatteryPercent,
+		arg.CommandManifest,
+		arg.ID,
+	)
 	return err
 }
 

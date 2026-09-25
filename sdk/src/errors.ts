@@ -32,3 +32,19 @@ export function unwrap<R extends FetchResult>(result: R): NonNullable<R["data"]>
 function isProtocolError(body: unknown): body is ProtocolError {
   return typeof body === "object" && body !== null && "code" in body && "message" in body;
 }
+
+/** A local synchronization failure or an unavailable local read. */
+export class PictureError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "PictureError";
+  }
+}
+
+/** Whether error is Core's or the picture's report of an expired cursor. */
+export function isCursorExpired(error: unknown): boolean {
+  return (error instanceof AtlasError || error instanceof PictureError) && error.code === "cursor_expired";
+}
