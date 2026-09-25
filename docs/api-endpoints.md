@@ -197,18 +197,19 @@ Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-
 | --- | --- | --- | --- | --- |
 | `GET /health` | Monitors check that Core is serving | API key → liveness status | None | Adapt: now authenticated |
 | `GET /readiness` | Monitors check required dependencies | API key → readiness status and dependency checks | None | Adapt: now authenticated |
+| `GET /dataset` | SDK clients discover the current Dataset | API key → Dataset ID and writing Core release | None | New: first runtime slice discovery binding |
 | `GET /docs` | Developers browse interactive documentation | API key → documentation interface | None | New |
 | `GET /openapi.json` | SDK/tooling and docs read the HTTP contract | API key → OpenAPI document | None | New |
 
-Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is reported on that Plugin and does not make an otherwise functioning Core globally unready. Exact dependency probes and timeout thresholds remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
+Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is reported on that Plugin and does not make an otherwise functioning Core globally unready. The first runtime slice probes installation SQLite, operational SQLite and private Object storage on each authenticated readiness request; other dependency probes and thresholds remain to be specified. Dataset discovery is authenticated and remains available after a Reset so clients can learn the new identity. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
 
 ## Shared contract baseline
 
 | Concern | Accepted starting rule | Still to settle |
 | --- | --- | --- |
-| API key transport | Carry forward `Authorization: Bearer` and `X-API-Key` for public HTTP calls | Choose whether both are needed; browser docs entry flow |
+| API key transport | Use `Authorization: Bearer` for the first public HTTP routes | Browser docs entry flow; no `X-API-Key` support is selected |
 | Lists | Bounded cursor pagination, following older list contracts | Filters, limits, and headers versus body pagination metadata |
-| Errors | Stable error code and human-readable message with appropriate HTTP status | One consistent error envelope for handlers and authentication |
+| Errors | Stable `{"code": string, "message": string}` envelope on implemented authentication and request-bound failures; readiness reports dependency states | Extend the envelope consistently as resource routes arrive |
 | Concurrent changes | Resource versions and ETags; use `If-Match` to reject stale writes | Which writes require rather than merely accept it |
 | Retryable mutations | Stored original Asset registration facts, Task creation idempotency, Dataset-scoped Operation/upload identities, installation-scoped API-key creation identities; history capture and action recording deduplicate retries | Exact identity/wire encodings and remaining response schemas; accepted retention rules are defined in the linked contracts |
 | Protocol compatibility | Allow declared compatible Core/Asset/SDK versions; explicitly reject unsupported versions and unsupported Asset Commands | Compatibility range advertisement and negotiation fields; catalog lookup remains local |

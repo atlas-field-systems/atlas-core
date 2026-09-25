@@ -123,4 +123,13 @@ End-to-end scenarios are the primary evidence that Atlas works. Integration test
 
 ## Reference implementations
 
-The foundation PR fills in this list. Until then, follow the rules above.
+| Shape | Copy from |
+| --- | --- |
+| Module that owns its data | [`datasets`](../../core/internal/datasets/datasets.go), [`identity`](../../core/internal/identity/identity.go) |
+| Thin handlers | [`app/system.go`](../../core/internal/app/system.go) |
+| Request pipeline and error rendering | [`app/http.go`](../../core/internal/app/http.go) |
+| Access and shape in Protocol | [`protocol/openapi.yaml`](../../protocol/openapi.yaml) |
+| Storage and migrations | [`storage/sqlite.go`](../../core/internal/storage/sqlite.go), [`storage/migrations`](../../core/internal/storage/migrations) |
+| Go integration test of an unreachable fault | [`management/setup_test.go`](../../core/internal/management/setup_test.go) |
+| SDK methods | [`sdk/src/client.ts`](../../sdk/src/client.ts), [`sdk/src/errors.ts`](../../sdk/src/errors.ts) |
+| End-to-end scenario and its artifact | [`tests/e2e/restart.test.mjs`](../../tests/e2e/restart.test.mjs), [artifact](../../tests/e2e/artifacts/dataset-identity-survives-restart.md) |

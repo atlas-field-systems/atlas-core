@@ -1,0 +1,18 @@
+# One entry per module. Each module's queries generate into its private
+# internal/db package; schema comes from the owning database's migrations.
+version: "2"
+sql:
+  - engine: sqlite
+    schema: internal/storage/migrations/installation
+    queries: internal/identity/queries.sql
+    gen:
+      go:
+        package: db
+        out: internal/identity/internal/db
+  - engine: sqlite
+    schema: internal/storage/migrations/operational
+    queries: internal/datasets/queries.sql
+    gen:
+      go:
+        package: db
+        out: internal/datasets/internal/db

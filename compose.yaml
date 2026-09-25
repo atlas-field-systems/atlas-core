@@ -1,0 +1,19 @@
+name: atlas
+services:
+  core:
+    build:
+      context: ./core
+    image: atlas-core:0.1.0
+    restart: unless-stopped
+    # atlasctl runs Core as the installing user so installation state stays
+    # manageable by that user; direct Compose use falls back to root.
+    user: "${ATLAS_UID:-0}:${ATLAS_GID:-0}"
+    environment:
+      ATLAS_SETUP_DIR: /var/lib/atlas/setup
+      ATLAS_OPERATIONAL_DIR: /var/lib/atlas/operational
+      ATLAS_LISTEN_ADDR: :8080
+    ports:
+      - "127.0.0.1:${ATLAS_PORT:-8080}:8080"
+    volumes:
+      - ./state/setup:/var/lib/atlas/setup
+      - ./state/operational:/var/lib/atlas/operational

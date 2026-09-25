@@ -1,6 +1,6 @@
 # Atlas Core
 
-Atlas Core is being extracted and simplified from Atlas Modernization. This repository is currently a design and research workspace for Core, Protocol and SDK; the Command Interface is a separate consumer.
+Atlas Core is being extracted and simplified from Atlas Modernization. This repository contains accepted design work and the first Core, Protocol and SDK runtime slice; the Command Interface is a separate consumer.
 
 | Read for | Document |
 | --- | --- |
@@ -16,7 +16,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
 | Source evidence, technology alternatives and proposed experiments | [Research index](docs/research/atlas-reassessment/README.md) |
 
-The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted; implementation has not started.
+The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments.
 
 ## API and SDK plans
 
@@ -32,3 +32,36 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | Movement and activity history scope | [Movement history](docs/architecture/system-design.md#movement-history) and [activity log](docs/architecture/system-design.md#activity-history) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |
+
+## First runtime slice
+
+The first runtime slice starts one Go Core with separate installation and operational storage, then inspects authenticated health and Dataset identity through the TypeScript SDK. The remaining resource and lifecycle work is tracked in the implementation issues.
+
+## Local installation
+
+Prerequisites: Go 1.26.2, Node 25, pnpm 11.0.9 and Docker Compose. Build the image while packages are available; starting an installed image does not require internet access.
+
+```sh
+cd core
+go build -o bin/atlasctl ./cmd/atlasctl
+cd ..
+core/bin/atlasctl -root . setup
+docker compose build core
+core/bin/atlasctl -root . start
+```
+
+Setup prints the first administrative credential once and keeps a protected copy in `state/setup/first-key` (mode 0600). The installation database stores its verifier, never the plaintext key. Restrict access to `state/setup`; it is mounted only into Core. If access is lost, `core/bin/atlasctl -root . recover` issues another administrative credential through the private local boundary. `core/bin/atlasctl -root . stop` preserves setup, Dataset data, Object storage and logs. The Core process is independent of an SDK or Command Interface connection.
+
+Compose binds the public API to host loopback port 8080 by default. Use a trusted TLS ingress before exposing it to other machines. [Protocol](protocol/openapi.yaml) defines the public routes and which kinds of credential may call each; every request carries `Authorization: Bearer <key>`. Readiness checks both SQLite stores and private Object storage. Start waits for a private container health probe and reports startup failure if required storage is unavailable. Dataset identity and writing release persist across same-release starts. A different writing release refuses startup and requires a future explicit update/Reset flow.
+
+## Development checks
+
+```sh
+cd core && go vet ./... && go test ./... && cd ..
+scripts/check-generation.sh
+scripts/test-e2e.sh            # add --docker for the Compose scenarios
+```
+
+End-to-end scenarios in `tests/e2e/` build and start the real Core, drive it through the real SDK and direct Protocol requests, and assert each promise against independently authored wire fixtures in `protocol/fixtures`. Every scenario also writes a readable transcript to `tests/e2e/artifacts/`. The run fails when a transcript differs from the committed file; regenerate with `ATLAS_E2E_UPDATE=1 scripts/test-e2e.sh` and review the diff. The Docker scenarios build the Core image from the checkout and exercise the private setup, Start and Stop commands against mounted storage. See the [code conventions](docs/agents/code-conventions.md#tests).
+
+Generation pins sqlc 1.31.1, oapi-codegen 2.8.0 and openapi-typescript 7.13.0. Generated files are never edited by hand.
