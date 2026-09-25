@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/atlas-field-systems/atlas-core/core/internal/identity"
@@ -18,8 +19,12 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/storage"
 )
 
-// coordinationTimeout bounds one lifecycle message to Core.
-const coordinationTimeout = 5 * time.Second
+// Bounds on lifecycle messages to Core. A planned stop waits for Core to
+// drain finite work.
+const (
+	coordinationTimeout = 5 * time.Second
+	stoppingTimeout     = plugins.LifecycleResponseTimeout + 5*time.Second
+)
 
 // maxCoreReply bounds the error body read from Core.
 const maxCoreReply = 4 << 10
@@ -138,10 +143,71 @@ func (i Installation) installedPlugins() ([]string, error) {
 // StartPlugin starts a Plugin container, waits for its health check, and
 // tells Core it started. Core never reruns an earlier attempt.
 func (i Installation) StartPlugin(ctx context.Context, id string) error {
+	return i.withPluginLock(id, func() error { return i.startPlugin(ctx, id) })
+}
+
+// StopPlugin stops a Plugin after Core closes its admission and drains its
+// finite work. Core and other containers keep running.
+func (i Installation) StopPlugin(ctx context.Context, id string) error {
+	return i.withPluginLock(id, func() error { return i.stopPlugin(ctx, id) })
+}
+
+// RestartPlugin is a planned stop followed by a start. It never reruns an
+// Operation; resubmitting is a separate, explicit new attempt.
+func (i Installation) RestartPlugin(ctx context.Context, id string) error {
+	return i.withPluginLock(id, func() error {
+		if err := i.stopPlugin(ctx, id); err != nil {
+			return err
+		}
+		return i.startPlugin(ctx, id)
+	})
+}
+
+// ForceStopPlugin kills a Plugin that could not stop cooperatively. Its
+// unfinished attempts become interrupted; it does not claim external effects
+// stopped.
+func (i Installation) ForceStopPlugin(ctx context.Context, id string) error {
+	return i.withPluginLock(id, func() error {
+		if err := i.coordinate(ctx, id, plugins.ActionForceStopping); err != nil {
+			return err
+		}
+		if err := i.compose(ctx, "stop", "-t", "0", pluginService(id)); err != nil {
+			return err
+		}
+		return i.coordinate(ctx, id, plugins.ActionForceStopped)
+	})
+}
+
+func (i Installation) startPlugin(ctx context.Context, id string) error {
 	if err := i.compose(ctx, "up", "-d", "--wait", "--wait-timeout", "30", "--no-deps", "--no-build", "--pull", "never", pluginService(id)); err != nil {
 		return err
 	}
 	return i.coordinate(ctx, id, plugins.ActionStarted)
+}
+
+func (i Installation) stopPlugin(ctx context.Context, id string) error {
+	if err := i.coordinate(ctx, id, plugins.ActionStopping); err != nil {
+		return fmt.Errorf("stop Plugin %s: %w", id, err)
+	}
+	if err := i.compose(ctx, "stop", pluginService(id)); err != nil {
+		return errors.Join(err, i.coordinate(ctx, id, plugins.ActionStopFailed))
+	}
+	return nil
+}
+
+// withPluginLock serializes local lifecycle commands for one Plugin across
+// processes, failing fast if another command holds it.
+func (i Installation) withPluginLock(id string, work func() error) error {
+	file, err := os.OpenFile(filepath.Join(i.pluginsDir(), id+".lock"), os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		return fmt.Errorf("another lifecycle command for Plugin %s is running: %w", id, err)
+	}
+	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+	return work()
 }
 
 // coordinate sends a lifecycle action to the running Core over its private
@@ -159,7 +225,11 @@ func (i Installation) coordinate(ctx context.Context, pluginID, action string) e
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(ctx, coordinationTimeout)
+	timeout := coordinationTimeout
+	if action == plugins.ActionStopping {
+		timeout = stoppingTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, core+"/internal/plugins/"+pluginID+"/lifecycle", bytes.NewReader(body))
 	if err != nil {

@@ -276,6 +276,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plugins/{plugin_id}/operations/{operation_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request cancellation of one Operation attempt
+         * @description An attempt Core has not dispatched is canceled at once. A dispatched
+         *     one becomes cancellation_requested until the Plugin reports its
+         *     outcome, which may still be completed or failed. A terminal attempt
+         *     is returned unchanged. Canceling an attempt never stops its Plugin.
+         */
+        post: operations["cancelPluginOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plugins/{plugin_id}/operations/{operation_id}/reports": {
         parameters: {
             query?: never;
@@ -1152,6 +1175,32 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The attempt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Operation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelPluginOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plugin_id: components["parameters"]["PluginId"];
+                operation_id: components["parameters"]["OperationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The attempt after the request. */
             200: {
                 headers: {
                     [name: string]: unknown;

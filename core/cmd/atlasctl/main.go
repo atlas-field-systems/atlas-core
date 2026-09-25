@@ -14,7 +14,7 @@ import (
 const usage = `usage: atlasctl -root DIR COMMAND
   setup | recover | revoke-enrollment | start | stop
   plugin-install [-endpoint URL] [-core-url URL] PLUGIN_DIR
-  plugin-start PLUGIN_ID`
+  plugin-start | plugin-stop | plugin-restart | plugin-force-stop PLUGIN_ID`
 
 func main() {
 	root := flag.String("root", ".", "Atlas installation directory containing compose.yaml and state/")
@@ -55,15 +55,22 @@ func run(ctx context.Context, installation management.Installation, command stri
 		return installation.Stop(ctx)
 	case "plugin-install":
 		return installPlugin(ctx, installation, args)
-	case "plugin-start":
+	case "plugin-start", "plugin-stop", "plugin-restart", "plugin-force-stop":
 		id, err := pluginID(args)
 		if err != nil {
 			return err
 		}
-		return installation.StartPlugin(ctx, id)
+		return pluginCommands[command](installation, ctx, id)
 	default:
 		return fmt.Errorf("unknown command\n%s", usage)
 	}
+}
+
+var pluginCommands = map[string]func(management.Installation, context.Context, string) error{
+	"plugin-start":      management.Installation.StartPlugin,
+	"plugin-stop":       management.Installation.StopPlugin,
+	"plugin-restart":    management.Installation.RestartPlugin,
+	"plugin-force-stop": management.Installation.ForceStopPlugin,
 }
 
 func installPlugin(ctx context.Context, installation management.Installation, args []string) error {

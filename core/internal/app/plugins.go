@@ -56,3 +56,11 @@ func (a *App) ReportPluginOperation(ctx context.Context, request api.ReportPlugi
 	}
 	return api.ReportPluginOperation200JSONResponse(operation), nil
 }
+
+func (a *App) CancelPluginOperation(ctx context.Context, request api.CancelPluginOperationRequestObject) (api.CancelPluginOperationResponseObject, error) {
+	operation, err := a.plugins.Cancel(ctx, request.PluginId, request.OperationId)
+	if err != nil {
+		return nil, err
+	}
+	return api.CancelPluginOperation200JSONResponse(operation), nil
+}

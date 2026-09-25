@@ -16,6 +16,7 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/pagination"
 	"github.com/atlas-field-systems/atlas-core/core/internal/plugins/internal/operationsdb"
 	"github.com/atlas-field-systems/atlas-core/core/internal/plugins/internal/registrydb"
+	"github.com/atlas-field-systems/atlas-core/core/internal/signal"
 )
 
 // pluginList names Plugin list cursors in the pagination codec.
@@ -34,6 +35,8 @@ type Service struct {
 	containers containers
 	background *worker
 	log        *slog.Logger
+	// settled wakes waiters whenever an attempt's status or admission changes.
+	settled *signal.Broadcast
 
 	mu        sync.Mutex
 	reachable map[string]*reachability
@@ -48,6 +51,7 @@ func New(installation, operational *sql.DB, datasets *datasets.Service, log *slo
 		containers: newContainers(),
 		background: newWorker(),
 		log:        log,
+		settled:    signal.NewBroadcast(),
 		reachable:  map[string]*reachability{},
 	}
 }

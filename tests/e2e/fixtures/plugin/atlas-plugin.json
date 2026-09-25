@@ -9,11 +9,24 @@
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["label"],
+        "required": [
+          "label"
+        ],
         "properties": {
-          "label": { "type": "string", "maxLength": 64 },
-          "hold": { "type": "boolean" },
-          "fail": { "type": "string", "maxLength": 256 }
+          "label": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "hold": {
+            "type": "boolean"
+          },
+          "fail": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "ignore_cancel": {
+            "type": "boolean"
+          }
         }
       }
     }

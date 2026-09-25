@@ -10,6 +10,24 @@ import (
 	"database/sql"
 )
 
+const cancelUndispatched = `-- name: CancelUndispatched :execrows
+UPDATE plugin_operations SET status = 'canceled', error = ?
+WHERE id = ? AND status = 'pending' AND NOT dispatched
+`
+
+type CancelUndispatchedParams struct {
+	Error sql.NullString
+	ID    string
+}
+
+func (q *Queries) CancelUndispatched(ctx context.Context, arg CancelUndispatchedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, cancelUndispatched, arg.Error, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const claimDispatch = `-- name: ClaimDispatch :execrows
 UPDATE plugin_operations SET dispatched = TRUE WHERE id = ? AND status = 'pending' AND NOT dispatched
 `
@@ -20,6 +38,17 @@ func (q *Queries) ClaimDispatch(ctx context.Context, id string) (int64, error) {
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const countPending = `-- name: CountPending :one
+SELECT COUNT(*) FROM plugin_operations WHERE plugin_id = ? AND status = 'pending'
+`
+
+func (q *Queries) CountPending(ctx context.Context, pluginID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPending, pluginID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const countUnfinished = `-- name: CountUnfinished :one
@@ -207,6 +236,19 @@ func (q *Queries) ListOperationsBefore(ctx context.Context, arg ListOperationsBe
 		return nil, err
 	}
 	return items, nil
+}
+
+const requestCancellation = `-- name: RequestCancellation :execrows
+UPDATE plugin_operations SET status = 'cancellation_requested'
+WHERE id = ? AND status IN ('pending', 'in_progress') AND dispatched
+`
+
+func (q *Queries) RequestCancellation(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, requestCancellation, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setOutcome = `-- name: SetOutcome :exec

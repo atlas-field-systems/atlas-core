@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/google/uuid"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/changes/internal/db"
 	"github.com/atlas-field-systems/atlas-core/core/internal/pagination"
 	"github.com/atlas-field-systems/atlas-core/core/internal/problem"
+	"github.com/atlas-field-systems/atlas-core/core/internal/signal"
 )
 
 // DefaultRetention is how many recent changes stay replayable. A change keeps
@@ -45,7 +45,7 @@ type Log struct {
 	cursors   pagination.Codec
 	dataset   uuid.UUID
 	retention int64
-	commits   *notifier
+	commits   *signal.Broadcast
 }
 
 func New(operational *sql.DB, dataset uuid.UUID, retention int) *Log {
@@ -54,7 +54,7 @@ func New(operational *sql.DB, dataset uuid.UUID, retention int) *Log {
 		cursors:   pagination.NewCodec(dataset),
 		dataset:   dataset,
 		retention: int64(retention),
-		commits:   newNotifier(),
+		commits:   signal.NewBroadcast(),
 	}
 }
 
@@ -81,13 +81,13 @@ func (l *Log) Commit(tx *sql.Tx) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	l.commits.notify()
+	l.commits.Notify()
 	return nil
 }
 
 // Committed returns a channel closed at the next commit. Take it before
 // reading, so a commit between the read and the wait is not missed.
-func (l *Log) Committed() <-chan struct{} { return l.commits.next() }
+func (l *Log) Committed() <-chan struct{} { return l.commits.Next() }
 
 // Latest returns the newest sequence, or 0 for an empty log.
 func (l *Log) Latest(ctx context.Context) (int64, error) {
@@ -161,25 +161,4 @@ func (l *Log) decode(row db.Change) (api.EntityChange, error) {
 	change.ResourceId = change.Entity.Id
 	change.Entity.ChangeSequence = row.Sequence
 	return change, nil
-}
-
-// notifier broadcasts commits to any number of waiters by closing a channel.
-type notifier struct {
-	mu      sync.Mutex
-	channel chan struct{}
-}
-
-func newNotifier() *notifier { return &notifier{channel: make(chan struct{})} }
-
-func (n *notifier) next() <-chan struct{} {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	return n.channel
-}
-
-func (n *notifier) notify() {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	close(n.channel)
-	n.channel = make(chan struct{})
 }

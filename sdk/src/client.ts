@@ -166,6 +166,14 @@ export class AtlasClient {
     return unwrap(await this.#api.GET("/plugins/{plugin_id}/operations", { params: { path: { plugin_id: pluginId }, query: page } }));
   }
 
+  /**
+   * Requests cancellation. An undispatched attempt is canceled at once; a
+   * dispatched one waits for the Plugin's outcome. It never stops the Plugin.
+   */
+  async cancelOperation(pluginId: string, id: string) {
+    return unwrap(await this.#api.POST("/plugins/{plugin_id}/operations/{operation_id}/cancel", { params: { path: { plugin_id: pluginId, operation_id: id } } }));
+  }
+
   /** Resolves with the attempt once it reaches a terminal status. */
   async waitForOperation(pluginId: string, id: string, timeoutMs = defaultWaitMs): Promise<Operation> {
     const deadline = Date.now() + timeoutMs;

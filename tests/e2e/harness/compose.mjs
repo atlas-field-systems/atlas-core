@@ -52,6 +52,15 @@ export class ComposeInstallation {
     return { baseUrl: `http://${stdout.trim()}`, installation: this };
   }
 
+  /** Calls a route inside a service's container, which the host cannot reach. */
+  async callInside(service, method, route) {
+    const port = service === "plugin-fixture" ? 8082 : 8081;
+    const script = `const r = await fetch("http://127.0.0.1:${port}${route}", { method: "${method}" }); console.log(r.status === 204 ? "{}" : await r.text());`;
+    const files = ["-f", path.join(this.root, "compose.yaml"), ...(await this.#pluginFiles())];
+    const { stdout } = await run("docker", ["compose", ...files, "exec", "-T", service, "node", "--input-type=module", "-e", script], { env: this.env });
+    return JSON.parse(stdout);
+  }
+
   /** Lists the Compose services currently running. */
   async runningServices() {
     const files = ["-f", path.join(this.root, "compose.yaml"), ...(await this.#pluginFiles())];

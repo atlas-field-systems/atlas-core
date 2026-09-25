@@ -2,10 +2,8 @@ package plugins
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
-	"github.com/atlas-field-systems/atlas-core/core/internal/plugins/internal/operationsdb"
 	"github.com/atlas-field-systems/atlas-core/core/internal/plugins/internal/registrydb"
 )
 
@@ -87,27 +85,10 @@ func (s *Service) recordLoss(ctx context.Context, plugin registrydb.Plugin) {
 }
 
 func (s *Service) faultIfAdmitting(ctx context.Context, id, fault string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	queries := s.queries.WithTx(tx)
-	runtime, err := s.runtime(ctx, queries, id)
+	runtime, err := s.runtime(ctx, s.queries, id)
 	if err != nil || !runtime.AdmissionOpen || runtime.Fault.Valid {
 		return err
 	}
-	if err := setFault(ctx, queries, id, fault); err != nil {
-		return err
-	}
-	return tx.Commit()
-}
-
-// setFault closes admission, records why, and interrupts unfinished attempts.
-func setFault(ctx context.Context, queries *operationsdb.Queries, id, fault string) error {
-	params := operationsdb.SetRuntimeParams{PluginID: id, AdmissionOpen: false, Fault: sql.NullString{String: fault, Valid: true}}
-	if err := queries.SetRuntime(ctx, params); err != nil {
-		return err
-	}
-	return queries.InterruptUnfinishedOf(ctx, operationsdb.InterruptUnfinishedOfParams{Error: nullString(fault), PluginID: id})
+	defer s.settled.Notify()
+	return s.interrupt(ctx, id, fault)
 }
