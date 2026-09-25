@@ -453,3 +453,214 @@ scenario("Snapshot Task state is not replayed as a fresh local change", async (s
     s.transcript.observe("replayed local resource types", observed);
   });
 });
+
+scenario("Offline Asset work and current Task intent reconcile without a second execution", async (s) => {
+  const installation = await s.installation();
+  let core = await s.startCore(installation);
+  const first = await s.step("Enroll the first Asset", () => enrollAsset(s, core));
+  const second = await s.step("Enroll another Asset", () => enrollAsset(s, core, { alias: "Other", command_manifest: [{ command_id: "move_to", scheduling: ["queued"], cancellation: true, progress: true }] }, "other"));
+  let operator = s.client(core, installation.operatorKey);
+  let connected = true;
+  const assetLink = new AtlasClient({
+    baseUrl: core.baseUrl,
+    apiKey: first.identity.credential,
+    fetch: (input, init) => connected ? s.transcript.fetch(input, init) : Promise.reject(new Error("Asset link disconnected")),
+  });
+  const issued = [];
+  for (const [index, destination] of [{ latitude: 40, longitude: -70 }, { latitude: 41, longitude: -71 }].entries()) {
+    const submission = await s.step(`Prepare queued Task ${index + 1}`, async () => {
+      const prepared = await operator.prepareMoveTo(first.identity.assetId, destination);
+      s.transcript.name(prepared.submission_id, `submission ${index + 1}`);
+      return prepared;
+    });
+    const task = await s.step(`Issue queued Task ${index + 1}`, () => operator.submitTask(submission));
+    s.transcript.name(task.id, `Task ${index + 1}`);
+    issued.push(task);
+  }
+  const otherSubmission = await s.step("Prepare independent work", async () => {
+    const prepared = await operator.prepareMoveTo(second.identity.assetId, { latitude: 30, longitude: -60 });
+    s.transcript.name(prepared.submission_id, "other submission");
+    return prepared;
+  });
+  const otherTask = await s.step("Assign independent work to the other Asset", () => operator.submitTask(otherSubmission));
+  s.transcript.name(otherTask.id, "other Task");
+
+  await s.step("The first Asset reports busy before losing contact", async () => {
+    const reportId = crypto.randomUUID();
+    s.transcript.name(reportId, "busy report");
+    const busy = await assetLink.reportAssetStatus(first.identity.assetId, {
+      datasetId: first.identity.datasetId,
+      reportId,
+      sequence: 1,
+      status: "busy",
+    });
+    assert.equal(busy.components.status.value, "busy");
+  });
+
+  const onboard = await s.step("The first Asset reads work without acknowledging it", async () => {
+    const page = await assetLink.assignedTasks(first.identity.assetId, { limit: 1 });
+    assert.deepEqual(page.tasks.map((task) => task.id), [issued[0].id]);
+    assert.ok(page.next_cursor);
+    assert.equal((await operator.task(issued[0].id)).status, "pending");
+    return [page.tasks[0].id];
+  });
+  const physicalExecutions = [];
+  await s.step("The link drops Asset requests while onboard work finishes", async () => {
+    connected = false;
+    await assert.rejects(assetLink.assignedTasks(first.identity.assetId), /Asset link disconnected/);
+    physicalExecutions.push(onboard[0]);
+  });
+  const cancellationId = crypto.randomUUID();
+  s.transcript.name(cancellationId, "offline cancellation");
+  await s.step("The operator cancels unseen work and issues more while the Asset is offline", async () => {
+    const requested = await operator.cancelTask(issued[1].id, first.identity.datasetId, cancellationId);
+    assert.equal(requested.status, "cancellation_requested");
+    assert.equal(requested.cancellation_request_id, cancellationId);
+    const submission = await operator.prepareMoveTo(first.identity.assetId, { latitude: 42, longitude: -72 });
+    s.transcript.name(submission.submission_id, "submission 3");
+    const task = await operator.submitTask(submission);
+    s.transcript.name(task.id, "Task 3");
+    issued.push(task);
+    assert.deepEqual(issued.map((item) => item.acceptance_sequence), [1, 2, 3]);
+    await assert.rejects(assetLink.assignedTasks(first.identity.assetId), /Asset link disconnected/);
+  });
+
+  await s.step("Core Restart retains intent without inventing an Asset outcome", async () => {
+    await core.stop();
+    core = await s.startCore(installation);
+    operator = s.client(core, installation.operatorKey);
+    assert.deepEqual((await operator.tasks()).tasks.map((task) => task.status), ["pending", "cancellation_requested", "pending", "pending"]);
+    assert.equal((await operator.task(issued[1].id)).cancellation_request_id, cancellationId);
+  });
+
+  const assigned = await s.step("Reconnection reads every assigned page in immutable order", async () => {
+    const assetClient = s.client(core, first.identity.credential);
+    const tasks = [];
+    let cursor;
+    do {
+      const page = await assetClient.assignedTasks(first.identity.assetId, { limit: 1, cursor });
+      tasks.push(...page.tasks);
+      cursor = page.next_cursor;
+    } while (cursor);
+    assert.deepEqual(tasks.map((task) => task.id), issued.map((task) => task.id));
+    assert.deepEqual(tasks.map((task) => task.status), ["pending", "cancellation_requested", "pending"]);
+    assert.deepEqual((await assetClient.assignedTasks(second.identity.assetId)).tasks.map((task) => task.id), [otherTask.id]);
+    return tasks;
+  });
+
+  await s.step("The Asset reports actual work, confirms cancellation and executes only new work", async () => {
+    const assetClient = s.client(core, first.identity.credential);
+    await assert.rejects(s.client(core, second.identity.credential).reportTask(issued[0].id, report(s, second.identity, 1, "completed")), (error) => error instanceof AtlasError && error.status === 403);
+    const completed = await assetClient.reportTask(assigned[0].id, report(s, first.identity, 2, "completed"));
+    assert.equal(completed.status, "completed");
+    const cancelled = await assetClient.reportTask(assigned[1].id, report(s, first.identity, 3, "cancelled", { cancellation_request_id: cancellationId }));
+    assert.equal(cancelled.status, "cancelled");
+    physicalExecutions.push(assigned[2].id);
+    const last = await assetClient.reportTask(assigned[2].id, report(s, first.identity, 4, "completed"));
+    assert.equal(last.status, "completed");
+    assert.deepEqual(physicalExecutions, [issued[0].id, issued[2].id]);
+    assert.deepEqual((await assetClient.assignedTasks(first.identity.assetId)).tasks.map((task) => task.status), ["completed", "cancelled", "completed"]);
+    assert.equal((await operator.task(otherTask.id)).status, "pending");
+    const picture = s.pictureClient(core, installation.operatorKey);
+    await picture.startSynchronization();
+    assert.deepEqual((await picture.assignedTasks(first.identity.assetId)).tasks.map((task) => task.status), ["completed", "cancelled", "completed"]);
+    await picture.waitForSynchronization(last);
+  });
+});
+
+scenario("Cancellation and terminal races retain the Asset's actual outcome", async (s) => {
+  const core = await s.startCore();
+  const asset = await s.step("Enroll the assigned Asset", () => enrollAsset(s, core));
+  const other = await s.step("Enroll another authenticated Asset", () => enrollAsset(s, core, { alias: "Other", command_manifest: [{ command_id: "move_to", scheduling: ["queued"], cancellation: true, progress: true }] }, "other"));
+  const operator = s.client(core, core.installation.operatorKey);
+  const picture = s.pictureClient(core, core.installation.operatorKey);
+  await s.step("Synchronize before offline requests", () => picture.startSynchronization());
+  const tasks = [];
+  for (const [index, latitude] of [40, 41, 42].entries()) {
+    const task = await s.step(`Create Task ${index + 1} without Asset acknowledgement`, async () => {
+      const submission = await operator.prepareMoveTo(asset.identity.assetId, { latitude, longitude: -70 });
+      s.transcript.name(submission.submission_id, `submission ${index + 1}`);
+      const created = await operator.submitTask(submission);
+      s.transcript.name(created.id, `Task ${index + 1}`);
+      return created;
+    });
+    tasks.push(task);
+  }
+  const cancellationIds = Array.from({ length: 3 }, () => crypto.randomUUID());
+  cancellationIds.forEach((id, index) => s.transcript.name(id, `cancellation ${index + 1}`));
+
+  await s.step("Cancellation commits before acknowledgement and late execution facts cannot clear it", async () => {
+    const losing = s.clientLosingFirstResponse(core, core.installation.operatorKey, "PATCH");
+    await assert.rejects(losing.cancelTask(tasks[0].id, asset.identity.datasetId, cancellationIds[0]), /response lost/);
+    const cancelled = await operator.cancelTask(tasks[0].id, asset.identity.datasetId, cancellationIds[0]);
+    assert.equal(cancelled.status, "cancellation_requested");
+    assert.equal(cancelled.cancellation_request_id, cancellationIds[0]);
+    assert.equal((await operator.cancelTask(tasks[0].id, asset.identity.datasetId, cancellationIds[0])).change_sequence, cancelled.change_sequence);
+    const acknowledged = await asset.client.reportTask(tasks[0].id, report(s, asset.identity, 1, "acknowledged"));
+    assert.equal(acknowledged.status, "cancellation_requested");
+    assert.equal(acknowledged.execution_status, "acknowledged");
+    const progressed = report(s, asset.identity, 2, undefined, { progress_percent: 35 });
+    delete progressed.status;
+    const updated = await asset.client.reportTask(tasks[0].id, progressed);
+    assert.equal(updated.status, "cancellation_requested");
+    assert.equal(updated.progress_percent, 35);
+    const started = await asset.client.reportTask(tasks[0].id, report(s, asset.identity, 3, "in_progress"));
+    assert.equal(started.status, "cancellation_requested");
+    assert.equal(started.execution_status, "in_progress");
+    await assert.rejects(asset.client.reportTask(tasks[0].id, report(s, asset.identity, 4, "acknowledged")), (error) => error instanceof AtlasError && error.code === "task_transition_conflict");
+    await picture.waitForSynchronization(started);
+    assert.deepEqual(await picture.task(tasks[0].id), started);
+  });
+
+  await s.step("Direct Protocol completion wins and matching reports have no Task effect", async () => {
+    const completedReport = report(s, asset.identity, 4, "completed", { progress_percent: 100 });
+    const response = await s.request(core, `/tasks/${tasks[0].id}/status`, { method: "PATCH", credential: asset.identity.credential, body: completedReport });
+    assert.equal(response.status, 200);
+    assert.equal(response.body.status, "completed");
+    assert.equal(response.body.cancellation_request_id, cancellationIds[0]);
+    assert.equal(response.body.execution_status, "in_progress");
+    const matching = await asset.client.reportTask(tasks[0].id, report(s, asset.identity, 5, "completed", { progress_percent: 100 }));
+    assert.equal(matching.change_sequence, response.body.change_sequence);
+    assert.deepEqual(await operator.task(tasks[0].id), response.body);
+    await picture.waitForSynchronization(response.body);
+    assert.equal((await picture.task(tasks[0].id)).execution_status, "in_progress");
+    await assert.rejects(asset.client.reportTask(tasks[0].id, report(s, asset.identity, 6, "cancelled", { cancellation_request_id: cancellationIds[0] })), (error) => error instanceof AtlasError && error.code === "task_transition_conflict");
+  });
+
+  await s.step("Direct Protocol cancellation is visible through SDK reads and failure wins", async () => {
+    const request = { dataset_id: asset.identity.datasetId, status: "cancellation_requested", request_id: cancellationIds[1] };
+    const response = await s.request(core, `/tasks/${tasks[1].id}/status`, { method: "PATCH", credential: core.installation.operatorKey, body: request });
+    assert.equal(response.status, 200);
+    assert.equal(response.body.status, "cancellation_requested");
+    assert.deepEqual(await operator.task(tasks[1].id), response.body);
+    const failedReport = report(s, asset.identity, 6, "failed", { failure_reason: "route obstructed" });
+    const failed = await asset.client.reportTask(tasks[1].id, failedReport);
+    assert.equal(failed.status, "failed");
+    assert.equal(failed.failure_reason, "route obstructed");
+    assert.equal(failed.cancellation_request_id, cancellationIds[1]);
+    assert.equal(failed.execution_status, undefined);
+    assert.equal((await asset.client.reportTask(tasks[1].id, failedReport)).change_sequence, failed.change_sequence);
+    const matched = await asset.client.reportTask(tasks[1].id, report(s, asset.identity, 7, "failed", { failure_reason: "route obstructed" }));
+    assert.equal(matched.change_sequence, failed.change_sequence);
+    await assert.rejects(asset.client.reportTask(tasks[1].id, report(s, asset.identity, 8, "completed")), (error) => error instanceof AtlasError && error.code === "task_transition_conflict");
+  });
+
+  await s.step("Only the assigned Asset can confirm the exact cancellation request", async () => {
+    const requested = await operator.cancelTask(tasks[2].id, asset.identity.datasetId, cancellationIds[2]);
+    assert.equal(requested.status, "cancellation_requested");
+    const wrong = crypto.randomUUID();
+    s.transcript.name(wrong, "wrong cancellation");
+    await assert.rejects(asset.client.reportTask(tasks[2].id, report(s, asset.identity, 8, "cancelled", { cancellation_request_id: wrong })), (error) => error instanceof AtlasError && error.code === "task_transition_conflict");
+    await assert.rejects(other.client.reportTask(tasks[2].id, report(s, other.identity, 1, "cancelled", { cancellation_request_id: cancellationIds[2] })), (error) => error instanceof AtlasError && error.status === 403);
+    const confirmation = report(s, asset.identity, 8, "cancelled", { cancellation_request_id: cancellationIds[2] });
+    const confirmed = await asset.client.reportTask(tasks[2].id, confirmation);
+    assert.equal(confirmed.status, "cancelled");
+    assert.equal((await asset.client.reportTask(tasks[2].id, confirmation)).change_sequence, confirmed.change_sequence);
+    await assert.rejects(asset.client.reportTask(tasks[2].id, report(s, asset.identity, 9, "failed", { failure_reason: "conflicting outcome" })), (error) => error instanceof AtlasError && error.code === "task_transition_conflict");
+    await picture.waitForSynchronization(confirmed);
+    assert.deepEqual((await picture.assignedTasks(asset.identity.assetId)).tasks.map((task) => task.status), ["completed", "failed", "cancelled"]);
+    const deletion = await s.request(core, `/tasks/${tasks[2].id}`, { method: "DELETE", credential: core.installation.operatorKey });
+    assert.ok([404, 405].includes(deletion.status));
+    assert.equal((await operator.task(tasks[2].id)).status, "cancelled");
+  });
+});

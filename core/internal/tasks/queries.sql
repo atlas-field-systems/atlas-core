@@ -16,6 +16,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending');
 -- name: UpdateTaskStatus :exec
 UPDATE tasks SET status = sqlc.arg(status), progress_percent = sqlc.arg(progress_percent),
     failure_reason = sqlc.arg(failure_reason), cancellation_request_id = sqlc.arg(cancellation_request_id),
+    execution_status = sqlc.arg(execution_status),
     version = version + 1
 WHERE id = sqlc.arg(id);
 

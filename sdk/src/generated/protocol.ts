@@ -514,6 +514,11 @@ export interface components {
         };
         /** @enum {string} */
         TaskStatus: "pending" | "acknowledged" | "in_progress" | "cancellation_requested" | "completed" | "failed" | "cancelled";
+        /**
+         * @description Latest acknowledged or started execution phase explicitly reported by the assigned Asset. Absent when neither was reported.
+         * @enum {string}
+         */
+        TaskExecutionStatus: "acknowledged" | "in_progress";
         Task: {
             /** Format: uuid */
             dataset_id: string;
@@ -531,6 +536,7 @@ export interface components {
             /** Format: int64 */
             acceptance_sequence: number;
             status: components["schemas"]["TaskStatus"];
+            execution_status?: components["schemas"]["TaskExecutionStatus"];
             /** Format: double */
             progress_percent?: number;
             failure_reason?: string;
@@ -1674,6 +1680,7 @@ export const commandSupportSchedulingValues: ReadonlyArray<FlattenedDeepRequired
 export const taskSubmissionCommand_idValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskSubmission"]["command_id"]> = ["move_to"];
 export const taskSubmissionSchedulingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskSubmission"]["scheduling"]> = ["queued"];
 export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskStatus"]> = ["pending", "acknowledged", "in_progress", "cancellation_requested", "completed", "failed", "cancelled"];
+export const taskExecutionStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskExecutionStatus"]> = ["acknowledged", "in_progress"];
 export const taskCommand_idValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Task"]["command_id"]> = ["move_to"];
 export const taskSchedulingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Task"]["scheduling"]> = ["queued"];
 export const taskCancellationRequestStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskCancellationRequest"]["status"]> = ["cancellation_requested"];

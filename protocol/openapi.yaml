@@ -1047,6 +1047,10 @@ components:
     TaskStatus:
       type: string
       enum: [pending, acknowledged, in_progress, cancellation_requested, completed, failed, cancelled]
+    TaskExecutionStatus:
+      type: string
+      enum: [acknowledged, in_progress]
+      description: Latest acknowledged or started execution phase explicitly reported by the assigned Asset. Absent when neither was reported.
     Task:
       type: object
       additionalProperties: false
@@ -1078,6 +1082,8 @@ components:
           minimum: 1
         status:
           $ref: '#/components/schemas/TaskStatus'
+        execution_status:
+          $ref: '#/components/schemas/TaskExecutionStatus'
         progress_percent:
           type: number
           format: double

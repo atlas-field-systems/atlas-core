@@ -151,6 +151,10 @@ func (s *Service) toAPI(row db.Task) (api.Task, error) {
 	if row.ProgressPercent.Valid {
 		task.ProgressPercent = &row.ProgressPercent.Float64
 	}
+	if row.ExecutionStatus.Valid {
+		status := api.TaskExecutionStatus(row.ExecutionStatus.String)
+		task.ExecutionStatus = &status
+	}
 	if row.FailureReason.Valid {
 		task.FailureReason = &row.FailureReason.String
 	}

@@ -105,6 +105,9 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 	if update.Status == nil && current.Status != api.TaskStatusInProgress && current.Status != api.TaskStatusCancellationRequested {
 		return api.Task{}, errInvalidStatus
 	}
+	if update.Status != nil && *update.Status == api.TaskStatusAcknowledged && current.ExecutionStatus != nil && *current.ExecutionStatus == api.TaskExecutionStatusInProgress {
+		return api.Task{}, errInvalidTransition
+	}
 	if terminal(current.Status) && current.Status == status && sameTerminalFacts(current, update) {
 		current.ReceiptSequence = &contact.ChangeSequence
 		return current, s.changes.Commit(tx)
@@ -156,7 +159,18 @@ func (s *Service) storeReport(ctx context.Context, tx *sql.Tx, queries *db.Queri
 	if update.ProgressPercent != nil {
 		progress = update.ProgressPercent
 	}
-	params := db.UpdateTaskStatusParams{ID: id.String(), Status: string(status), ProgressPercent: nullableFloat(progress), FailureReason: nullableString(update.FailureReason), CancellationRequestID: nullableUUID(current.CancellationRequestId)}
+	executionStatus := current.ExecutionStatus
+	if update.Status != nil {
+		switch *update.Status {
+		case api.TaskStatusAcknowledged:
+			phase := api.TaskExecutionStatusAcknowledged
+			executionStatus = &phase
+		case api.TaskStatusInProgress:
+			phase := api.TaskExecutionStatusInProgress
+			executionStatus = &phase
+		}
+	}
+	params := db.UpdateTaskStatusParams{ID: id.String(), Status: string(status), ProgressPercent: nullableFloat(progress), FailureReason: nullableString(update.FailureReason), CancellationRequestID: nullableUUID(current.CancellationRequestId), ExecutionStatus: nullableExecutionStatus(executionStatus)}
 	if err := queries.UpdateTaskStatus(ctx, params); err != nil {
 		return api.Task{}, fmt.Errorf("update Task status: %w", err)
 	}
@@ -186,7 +200,7 @@ func (s *Service) cancel(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 		}
 		return api.Task{}, errInvalidTransition
 	}
-	params := db.UpdateTaskStatusParams{ID: current.Id.String(), Status: string(*update.Status), ProgressPercent: nullableFloat(current.ProgressPercent), FailureReason: nullableString(current.FailureReason), CancellationRequestID: nullableUUID(update.RequestId)}
+	params := db.UpdateTaskStatusParams{ID: current.Id.String(), Status: string(*update.Status), ProgressPercent: nullableFloat(current.ProgressPercent), FailureReason: nullableString(current.FailureReason), CancellationRequestID: nullableUUID(update.RequestId), ExecutionStatus: nullableExecutionStatus(current.ExecutionStatus)}
 	if err := queries.UpdateTaskStatus(ctx, params); err != nil {
 		if storage.IsConstraint(err) {
 			return api.Task{}, errInvalidTransition
@@ -254,4 +268,11 @@ func nullableUUID(value *uuid.UUID) sql.NullString {
 		return sql.NullString{}
 	}
 	return sql.NullString{String: value.String(), Valid: true}
+}
+
+func nullableExecutionStatus(value *api.TaskExecutionStatus) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(*value), Valid: true}
 }

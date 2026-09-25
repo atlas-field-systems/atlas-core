@@ -164,6 +164,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "id": "<Move To task>",
   "input": {
     "latitude": 40,
@@ -196,6 +197,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "id": "<Move To task>",
   "input": {
     "latitude": 40,
@@ -229,6 +231,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "failure_reason": "route blocked",
   "id": "<Move To task>",
   "input": {
@@ -306,6 +309,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "failure_reason": "route blocked",
   "id": "<Move To task>",
   "input": {
@@ -375,6 +379,7 @@ SDK `GET /tasks/<Move To task>` with <operator key>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "failure_reason": "route blocked",
   "id": "<Move To task>",
   "input": {

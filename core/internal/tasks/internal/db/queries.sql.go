@@ -47,7 +47,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) error {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence FROM tasks WHERE id = ?
+SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence, execution_status FROM tasks WHERE id = ?
 `
 
 func (q *Queries) GetTask(ctx context.Context, id string) (Task, error) {
@@ -72,12 +72,13 @@ func (q *Queries) GetTask(ctx context.Context, id string) (Task, error) {
 		&i.Version,
 		&i.CreatedSequence,
 		&i.ChangeSequence,
+		&i.ExecutionStatus,
 	)
 	return i, err
 }
 
 const getTaskBySubmission = `-- name: GetTaskBySubmission :one
-SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence FROM tasks WHERE submission_id = ?
+SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence, execution_status FROM tasks WHERE submission_id = ?
 `
 
 func (q *Queries) GetTaskBySubmission(ctx context.Context, submissionID string) (Task, error) {
@@ -102,12 +103,13 @@ func (q *Queries) GetTaskBySubmission(ctx context.Context, submissionID string) 
 		&i.Version,
 		&i.CreatedSequence,
 		&i.ChangeSequence,
+		&i.ExecutionStatus,
 	)
 	return i, err
 }
 
 const listAssignedTasks = `-- name: ListAssignedTasks :many
-SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence FROM tasks WHERE asset_id = ?1 AND acceptance_sequence > ?2
+SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence, execution_status FROM tasks WHERE asset_id = ?1 AND acceptance_sequence > ?2
 ORDER BY acceptance_sequence LIMIT ?3
 `
 
@@ -145,6 +147,7 @@ func (q *Queries) ListAssignedTasks(ctx context.Context, arg ListAssignedTasksPa
 			&i.Version,
 			&i.CreatedSequence,
 			&i.ChangeSequence,
+			&i.ExecutionStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -160,7 +163,7 @@ func (q *Queries) ListAssignedTasks(ctx context.Context, arg ListAssignedTasksPa
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence FROM tasks WHERE created_sequence > ?1 ORDER BY created_sequence LIMIT ?2
+SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence, execution_status FROM tasks WHERE created_sequence > ?1 ORDER BY created_sequence LIMIT ?2
 `
 
 type ListTasksParams struct {
@@ -196,6 +199,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 			&i.Version,
 			&i.CreatedSequence,
 			&i.ChangeSequence,
+			&i.ExecutionStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -211,7 +215,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]Task, e
 }
 
 const listTasksAtBaseline = `-- name: ListTasksAtBaseline :many
-SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence FROM tasks WHERE created_sequence <= ?1 AND id > ?2
+SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence, execution_status FROM tasks WHERE created_sequence <= ?1 AND id > ?2
 ORDER BY id LIMIT ?3
 `
 
@@ -249,6 +253,7 @@ func (q *Queries) ListTasksAtBaseline(ctx context.Context, arg ListTasksAtBaseli
 			&i.Version,
 			&i.CreatedSequence,
 			&i.ChangeSequence,
+			&i.ExecutionStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -294,8 +299,9 @@ func (q *Queries) SetTaskChangeSequence(ctx context.Context, arg SetTaskChangeSe
 const updateTaskStatus = `-- name: UpdateTaskStatus :exec
 UPDATE tasks SET status = ?1, progress_percent = ?2,
     failure_reason = ?3, cancellation_request_id = ?4,
+    execution_status = ?5,
     version = version + 1
-WHERE id = ?5
+WHERE id = ?6
 `
 
 type UpdateTaskStatusParams struct {
@@ -303,6 +309,7 @@ type UpdateTaskStatusParams struct {
 	ProgressPercent       sql.NullFloat64
 	FailureReason         sql.NullString
 	CancellationRequestID sql.NullString
+	ExecutionStatus       sql.NullString
 	ID                    string
 }
 
@@ -312,6 +319,7 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		arg.ProgressPercent,
 		arg.FailureReason,
 		arg.CancellationRequestID,
+		arg.ExecutionStatus,
 		arg.ID,
 	)
 	return err

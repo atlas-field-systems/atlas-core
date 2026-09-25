@@ -404,6 +404,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "acknowledged",
   "id": "<Move To task>",
   "input": {
     "latitude": 42.2743,
@@ -436,6 +437,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "id": "<Move To task>",
   "input": {
     "latitude": 42.2743,
@@ -468,6 +470,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "id": "<Move To task>",
   "input": {
     "latitude": 42.2743,
@@ -501,6 +504,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "id": "<Move To task>",
   "input": {
     "latitude": 42.2743,
@@ -533,6 +537,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "id": "<Move To task>",
   "input": {
     "latitude": 42.2743,
@@ -610,6 +615,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
   "command_id": "move_to",
   "created_sequence": 2,
   "dataset_id": "<id-1>",
+  "execution_status": "in_progress",
   "id": "<Move To task>",
   "input": {
     "latitude": 42.2743,
@@ -726,6 +732,7 @@ SDK `GET /entities/<asset>/tasks` with <operator key>
       "command_id": "move_to",
       "created_sequence": 2,
       "dataset_id": "<id-1>",
+      "execution_status": "in_progress",
       "id": "<Move To task>",
       "input": {
         "latitude": 42.2743,

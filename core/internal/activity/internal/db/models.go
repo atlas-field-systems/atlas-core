@@ -112,4 +112,5 @@ type Task struct {
 	Version               int64
 	CreatedSequence       int64
 	ChangeSequence        int64
+	ExecutionStatus       sql.NullString
 }
