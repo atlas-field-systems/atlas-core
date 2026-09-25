@@ -2,6 +2,7 @@
 
 - Before exploring or changing domain behavior, read `CONTEXT.md` and the relevant ADRs using `docs/agents/domain.md`.
 - When creating or updating issues, follow `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`.
+- Before writing or reviewing code, read `docs/agents/code-conventions.md` and copy its reference implementations. It is enforced in review.
 
 ## Architecture and lifecycle
 
@@ -16,3 +17,7 @@ When accepting or implementing a behavior or design change from Atlas Modernizat
 - Author shared contract facts in Protocol and regenerate their representations. Generated files are disposable: never hand-edit or post-process them. Keep business implementations in separate files behind generated interfaces.
 - Prefer supported generator output and a small configuration. Avoid endpoint-specific templates, duplicate wrapper APIs and patches that recreate the maintenance removed by generation. If a required case does not fit, simplify the contract/tool choice or keep that binding handwritten; explain the tradeoff before expanding generator machinery.
 - Test the promises independently of the generator using wire examples, public behavior and focused integration tests. Require deterministic regeneration; generated snapshots alone do not establish correctness. See `docs/architecture/system-design.md#generation-and-testing` for the validation scope.
+
+## Testing
+
+- End-to-end scenarios in `tests/e2e/` are the primary evidence. Each writes a committed transcript artifact that CI regenerates and diffs, and each still asserts its promise against independently authored expectations. Use Go integration tests only for faults the public boundary cannot reach. Avoid unit tests except for pure functions with hard-to-reach edge cases. See `docs/agents/code-conventions.md#tests`.
