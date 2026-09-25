@@ -544,6 +544,11 @@ export interface components {
             created_sequence: number;
             /** Format: int64 */
             change_sequence: number;
+            /**
+             * Format: int64
+             * @description Present in a Task write response when Asset contact has a later change than the Task. Wait for this sequence to cover the request; otherwise use change_sequence. A matching retry may return a newer contact sequence.
+             */
+            receipt_sequence?: number;
         };
         TaskStatusUpdate: {
             /** Format: uuid */

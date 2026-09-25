@@ -63,17 +63,21 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 		TaskID uuid.UUID            `json:"task_id"`
 		Update api.TaskStatusUpdate `json:"update"`
 	}{id, update}
-	resent, err := s.entities.AcceptTaskReport(ctx, tx, caller, current.AssetId.String(), update.DatasetId, update.ReportId.String(), *update.Sequence, facts)
+	contact, resent, err := s.entities.AcceptTaskReport(ctx, tx, caller, current.AssetId.String(), update.DatasetId, update.ReportId.String(), *update.Sequence, facts)
 	if err != nil {
 		return api.Task{}, err
 	}
 	if resent {
+		if contact.ChangeSequence > current.ChangeSequence {
+			current.ReceiptSequence = &contact.ChangeSequence
+		}
 		return current, nil
 	}
 	if update.Status == nil && current.Status != api.TaskStatusInProgress && current.Status != api.TaskStatusCancellationRequested {
 		return api.Task{}, errInvalidStatus
 	}
 	if terminal(current.Status) && current.Status == status && sameTerminalFacts(current, update) {
+		current.ReceiptSequence = &contact.ChangeSequence
 		return current, s.changes.Commit(tx)
 	}
 	if terminal(current.Status) || (update.Status != nil && !allowed(current.Status, status)) {

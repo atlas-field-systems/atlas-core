@@ -213,9 +213,15 @@ func (s *Service) List(ctx context.Context, assetID *uuid.UUID, cursor *string, 
 	if err != nil {
 		return api.TaskPage{}, fmt.Errorf("list Tasks: %w", err)
 	}
-	page := api.TaskPage{DatasetId: s.datasets.Current().ID, Tasks: []api.Task{}}
-	if len(rows) > limit {
+	hasMore := len(rows) > limit
+	if hasMore {
 		rows = rows[:limit]
+	}
+	page, err := s.pageRows(rows)
+	if err != nil {
+		return api.TaskPage{}, err
+	}
+	if hasMore {
 		last := rows[len(rows)-1].CreatedSequence
 		if assetID != nil {
 			last = rows[len(rows)-1].AcceptanceSequence
@@ -225,13 +231,6 @@ func (s *Service) List(ctx context.Context, assetID *uuid.UUID, cursor *string, 
 			return api.TaskPage{}, err
 		}
 		page.NextCursor = &next
-	}
-	for _, row := range rows {
-		task, err := s.toAPI(row)
-		if err != nil {
-			return api.TaskPage{}, err
-		}
-		page.Tasks = append(page.Tasks, task)
 	}
 	return page, nil
 }
@@ -243,12 +242,23 @@ func (s *Service) Snapshot(ctx context.Context, baseline int64, afterID string, 
 	if err != nil {
 		return api.TaskPage{}, fmt.Errorf("list snapshot Tasks: %w", err)
 	}
-	page := api.TaskPage{DatasetId: s.datasets.Current().ID, Tasks: []api.Task{}}
-	if len(rows) > limit {
+	hasMore := len(rows) > limit
+	if hasMore {
 		rows = rows[:limit]
+	}
+	page, err := s.pageRows(rows)
+	if err != nil {
+		return api.TaskPage{}, err
+	}
+	if hasMore {
 		next := rows[len(rows)-1].ID
 		page.NextCursor = &next
 	}
+	return page, nil
+}
+
+func (s *Service) pageRows(rows []db.Task) (api.TaskPage, error) {
+	page := api.TaskPage{DatasetId: s.datasets.Current().ID, Tasks: make([]api.Task, 0, len(rows))}
 	for _, row := range rows {
 		task, err := s.toAPI(row)
 		if err != nil {

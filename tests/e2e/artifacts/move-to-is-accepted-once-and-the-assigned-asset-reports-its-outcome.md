@@ -587,6 +587,7 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
     "longitude": -71.8081
   },
   "progress_percent": 100,
+  "receipt_sequence": 12,
   "scheduling": "queued",
   "status": "completed",
   "submission_id": "<Move To submission>",

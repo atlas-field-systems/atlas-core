@@ -62,24 +62,34 @@ export class Picture implements EntityReads {
     this.#applied = sequence;
     this.#historyStart = sequence;
     this.cursor = cursor;
+    this.#notifyWaiters();
   }
 
   /** Applies the next change in sequence and notifies local subscribers. */
   apply(change: EntityChange): void {
     if (change.sequence !== this.#applied + 1) throw new PictureError("replay_gap", `Expected change ${this.#applied + 1}, got ${change.sequence}.`);
     if (change.dataset_id !== this.#datasetId) throw new PictureError("dataset_changed", "A change belongs to another Dataset.");
+    let stored = false;
     if (change.resource_type === "entity" && change.entity) {
       const current = this.#entities.get(change.resource_id);
-      if (!current || change.entity.version > current.version) this.#store(change.entity);
+      if (!current || change.entity.version > current.version) {
+        this.#store(change.entity);
+        stored = true;
+      }
     } else if (change.resource_type === "task" && change.task) {
       const current = this.#tasks.get(change.resource_id);
-      if (!current || change.task.version > current.version) this.#storeTask(change.task);
+      if (!current || change.task.version > current.version) {
+        this.#storeTask(change.task);
+        stored = true;
+      }
     } else {
       throw new PictureError("invalid_change", "A change has no matching resource.");
     }
     this.#applied = change.sequence;
-    this.#remember(change);
-    for (const listener of this.#listeners) notify(listener, change, this.onListenerError);
+    if (stored) {
+      this.#remember(change);
+      for (const listener of this.#listeners) notify(listener, change, this.onListenerError);
+    }
     this.#notifyWaiters();
   }
 
@@ -149,7 +159,7 @@ export class Picture implements EntityReads {
     const after = this.#readCursor(cursor, "changes").sequence;
     if (after < this.#historyStart) throw new PictureError("cursor_expired", "Local change history no longer covers this cursor.");
     const changes = this.#history.filter((change) => change.sequence > after).slice(0, limit);
-    const last = changes.at(-1)?.sequence ?? after;
+    const last = changes.length < limit ? this.#applied : changes.at(-1)!.sequence;
     return { dataset_id: this.#datasetId, changes: structuredClone(changes), cursor: this.#cursor("changes", 0, last) };
   }
 
@@ -159,7 +169,7 @@ export class Picture implements EntityReads {
   }
 
   /** Resolves once the picture has applied the commit that produced entity. */
-  waitFor(receipt: Pick<Task, "dataset_id" | "change_sequence">, timeoutMs: number): Promise<void> {
+  waitFor(receipt: Pick<Task, "dataset_id" | "change_sequence" | "receipt_sequence">, timeoutMs: number): Promise<void> {
     if (receipt.dataset_id !== this.#datasetId) return Promise.reject(new PictureError("dataset_changed", "This write belongs to another Dataset."));
     return new Promise((resolve, reject) => {
       const finish = (error?: PictureError) => {
@@ -169,8 +179,9 @@ export class Picture implements EntityReads {
         else resolve();
       };
       const check = () => {
-        if (this.#state === "stopped" || this.#state === "failed") finish(new PictureError("sync_unavailable", "Synchronization ended before the write was applied."));
-        else if (this.#state === "ready" && this.#applied >= receipt.change_sequence) finish();
+        if (receipt.dataset_id !== this.#datasetId) finish(new PictureError("dataset_changed", "This write belongs to another Dataset."));
+        else if (this.#state === "stopped" || this.#state === "failed") finish(new PictureError("sync_unavailable", "Synchronization ended before the write was applied."));
+        else if (this.#state === "ready" && this.#applied >= (receipt.receipt_sequence ?? receipt.change_sequence)) finish();
       };
       const timeout = setTimeout(() => finish(new PictureError("sync_timeout", "The write committed, but the picture has not applied it yet.")), timeoutMs);
       this.#waiters.add(check);

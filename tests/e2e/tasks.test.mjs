@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 
-import { AtlasError, PictureError, commandCatalog } from "../../sdk/dist/index.js";
+import { AtlasClient, AtlasError, PictureError, commandCatalog } from "../../sdk/dist/index.js";
 import { enrollAsset } from "./harness/assets.mjs";
-import { HeldFeed, eventually } from "./harness/barriers.mjs";
+import { Gate, HeldFeed, eventually, gatedFetch } from "./harness/barriers.mjs";
 import { scenario } from "./harness/scenario.mjs";
 
 function report(s, identity, sequence, status, extra = {}) {
@@ -234,5 +234,141 @@ scenario("A Task receipt waits for every earlier change before local application
     assert.deepEqual((await picture.tasks()).tasks.map((task) => task.id), [one.id, two.id]);
     assert.deepEqual((await picture.changedSince(baseline)).changes.map((change) => change.sequence), [one.change_sequence, two.change_sequence]);
     assert.deepEqual(observed, [one.change_sequence, two.change_sequence]);
+  });
+});
+
+scenario("A fresh terminal report waits for its Asset contact", async (s) => {
+  const core = await s.startCore();
+  const asset = await s.step("Enroll the assigned Asset", () => enrollAsset(s, core));
+  const operator = s.client(core, core.installation.operatorKey);
+  const submission = await s.step("Prepare Move To", () => operator.prepareMoveTo(asset.identity.assetId, { latitude: 40, longitude: -70 }));
+  s.transcript.name(submission.submission_id, "Move To submission");
+  const task = await s.step("Create Move To", () => operator.submitTask(submission));
+  s.transcript.name(task.id, "Move To task");
+  const completed = await s.step("Asset completes Move To", () => asset.client.reportTask(task.id, report(s, asset.identity, 1, "completed")));
+  const feeds = [];
+  const picture = s.pictureClient(core, core.installation.operatorKey, { webSocketFactory: HeldFeed.into(feeds) });
+  await s.step("Load the completed Task and its Asset contact", () => picture.startSynchronization());
+  const before = await s.transcript.unrecorded(() => operator.entity(asset.identity.assetId));
+
+  await s.step("A new terminal report commits contact without changing the Task", async () => {
+    const newReport = report(s, asset.identity, 2, "completed");
+    const confirmed = await asset.client.reportTask(task.id, newReport);
+    const contact = await operator.entity(asset.identity.assetId);
+    const retried = await asset.client.reportTask(task.id, newReport);
+    assert.equal(confirmed.change_sequence, completed.change_sequence);
+    assert.equal(confirmed.receipt_sequence, contact.change_sequence);
+    assert.ok(retried.receipt_sequence >= confirmed.receipt_sequence);
+    assert.ok(confirmed.receipt_sequence > confirmed.change_sequence);
+    assert.equal(contact.version, before.version + 1);
+    await eventually(() => feeds[0].held.length === 1, "held contact change");
+    await assert.rejects(picture.waitForSynchronization(confirmed, 50), (error) => error instanceof PictureError && error.code === "sync_timeout");
+    await assert.rejects(picture.waitForSynchronization(retried, 50), (error) => error instanceof PictureError && error.code === "sync_timeout");
+    feeds[0].release();
+    await picture.waitForSynchronization(confirmed);
+    await picture.waitForSynchronization(retried);
+    assert.deepEqual(await picture.task(task.id), completed);
+    assert.deepEqual(await picture.entity(asset.identity.assetId), contact);
+    s.transcript.observe("terminal receipt and Task sequence", [confirmed.receipt_sequence, confirmed.change_sequence]);
+  });
+});
+
+scenario("A Task change delivered before its response is applied once", async (s) => {
+  const core = await s.startCore();
+  const asset = await s.step("Enroll the assigned Asset", () => enrollAsset(s, core));
+  const operator = s.client(core, core.installation.operatorKey);
+  const picture = s.pictureClient(core, core.installation.operatorKey);
+  await picture.startSynchronization();
+  const observed = [];
+  await picture.subscribeFeed((change) => observed.push(change.sequence));
+  const submission = await s.step("Prepare Move To", () => operator.prepareMoveTo(asset.identity.assetId, { latitude: 40, longitude: -70 }));
+  s.transcript.name(submission.submission_id, "Move To submission");
+  const held = new Gate();
+  const gatedOperator = new AtlasClient({ baseUrl: core.baseUrl, apiKey: core.installation.operatorKey,
+    fetch: gatedFetch((request) => request.method === "POST" && new URL(request.url).pathname === "/tasks", held, s.transcript.fetch),
+  });
+
+  await s.step("Core commits a Task while its acceptance response is held", async () => {
+    const pending = gatedOperator.submitTask(submission);
+    await held.arrived;
+    await eventually(async () => (await picture.tasks()).tasks.length === 1, "Task feed application");
+    const local = (await picture.tasks()).tasks[0];
+    assert.deepEqual(observed, [local.change_sequence]);
+    held.open();
+    const accepted = await pending;
+    s.transcript.name(accepted.id, "Move To task");
+    assert.deepEqual(accepted, local);
+    await picture.waitForSynchronization(accepted);
+    assert.deepEqual(observed, [accepted.change_sequence]);
+    s.transcript.observe("Task listener sequences", observed);
+  });
+});
+
+scenario("Expired Task replay rebuilds the picture without resubmitting Tasks", async (s) => {
+  const core = await s.startCore(undefined, { ATLAS_CHANGE_RETENTION: "5" });
+  const asset = await s.step("Enroll the assigned Asset", () => enrollAsset(s, core));
+  const operator = s.client(core, core.installation.operatorKey);
+  const feeds = [];
+  const picture = s.pictureClient(core, core.installation.operatorKey, { webSocketFactory: HeldFeed.into(feeds) });
+  await picture.startSynchronization();
+  const oldCursor = (await picture.queryFull()).baseline;
+  const observed = [];
+  await picture.subscribeFeed((change) => observed.push(change.resource_id));
+
+  const created = await s.step("Eight Tasks commit while the feed holds them", async () => {
+    const tasks = await s.transcript.unrecorded(async () => {
+      const tasks = [];
+      for (let index = 0; index < 8; index++) {
+        const submission = await operator.prepareMoveTo(asset.identity.assetId, { latitude: 40 + index, longitude: -70 });
+        tasks.push(await operator.submitTask(submission));
+      }
+      return tasks;
+    });
+    await eventually(() => feeds[0].held.length === 8, "eight held Task changes");
+    return tasks;
+  });
+
+  await s.step("An expired gap rebuilds from authoritative Tasks", async () => {
+    feeds[0].release(7);
+    await eventually(() => picture.synchronization.generation === 2 && picture.synchronization.state === "ready", "rebuilt Task picture");
+    await picture.waitForSynchronization(created.at(-1));
+    const local = (await picture.tasks()).tasks;
+    assert.deepEqual(local.map((task) => task.id), created.map((task) => task.id));
+    assert.deepEqual(local.map((task) => task.acceptance_sequence), [1, 2, 3, 4, 5, 6, 7, 8]);
+    assert.deepEqual(observed, []);
+    await assert.rejects(picture.changedSince(oldCursor), (error) => error instanceof PictureError && error.code === "cursor_expired");
+    assert.equal((await operator.tasks()).tasks.length, 8);
+    s.transcript.observe("rebuilt Task count and generation", [local.length, picture.synchronization.generation]);
+  });
+});
+
+scenario("Snapshot Task state is not replayed as a fresh local change", async (s) => {
+  const core = await s.startCore();
+  const asset = await s.step("Enroll the assigned Asset", () => enrollAsset(s, core));
+  const operator = s.client(core, core.installation.operatorKey);
+  const submission = await s.step("Prepare Move To", () => operator.prepareMoveTo(asset.identity.assetId, { latitude: 40, longitude: -70 }));
+  s.transcript.name(submission.submission_id, "Move To submission");
+  const task = await s.step("Create Move To", () => operator.submitTask(submission));
+  s.transcript.name(task.id, "Move To task");
+  const snapshotHeld = new Gate();
+  const picture = s.pictureClient(core, core.installation.operatorKey, {
+    snapshotPageSize: 1,
+    fetch: gatedFetch((request) => new URL(request.url).pathname === "/queries/full", snapshotHeld),
+  });
+  const observed = [];
+  await picture.subscribeFeed((change) => observed.push(change.resource_type));
+
+  await s.step("A Task completes between snapshot pages", async () => {
+    const started = picture.startSynchronization();
+    await snapshotHeld.arrived;
+    const completed = await asset.client.reportTask(task.id, report(s, asset.identity, 1, "completed"));
+    snapshotHeld.open();
+    await started;
+    assert.deepEqual(await picture.task(task.id), completed);
+    assert.deepEqual(observed, ["entity"]);
+    const page = await picture.changedSince((await picture.queryFull()).baseline);
+    assert.deepEqual(page.changes, []);
+    assert.equal(picture.synchronization.sequence, completed.change_sequence);
+    s.transcript.observe("replayed local resource types", observed);
   });
 });

@@ -1101,6 +1101,11 @@ components:
           type: integer
           format: int64
           minimum: 1
+        receipt_sequence:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Present in a Task write response when Asset contact has a later change than the Task. Wait for this sequence to cover the request; otherwise use change_sequence. A matching retry may return a newer contact sequence.
     TaskStatusUpdate:
       type: object
       additionalProperties: false

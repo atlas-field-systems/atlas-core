@@ -18,6 +18,7 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/identity"
 	"github.com/atlas-field-systems/atlas-core/core/internal/objects"
 	"github.com/atlas-field-systems/atlas-core/core/internal/plugins"
+	"github.com/atlas-field-systems/atlas-core/core/internal/snapshot"
 	"github.com/atlas-field-systems/atlas-core/core/internal/storage"
 	"github.com/atlas-field-systems/atlas-core/core/internal/tasks"
 )
@@ -52,6 +53,7 @@ type App struct {
 	activity     *activity.Log
 	entities     *entities.Service
 	tasks        *tasks.Service
+	snapshot     *snapshot.Service
 	plugins      *plugins.Service
 	objects      *objects.Store
 	handler      http.Handler
@@ -108,6 +110,7 @@ func (a *App) openOperational(ctx context.Context, config Config) (err error) {
 	a.activity = activity.New(a.operational)
 	a.entities = entities.New(a.operational, a.identity, a.datasets, a.changes)
 	a.tasks = tasks.New(a.operational, a.datasets, a.entities, a.changes, a.activity)
+	a.snapshot = snapshot.New(a.datasets.Current().ID, a.entities, a.tasks, a.changes)
 	if err := a.entities.Recover(ctx); err != nil {
 		return fmt.Errorf("recover Asset enrollment: %w", err)
 	}

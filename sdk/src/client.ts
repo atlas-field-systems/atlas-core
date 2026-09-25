@@ -235,7 +235,7 @@ export class AtlasClient {
   stopSynchronization() { this.#synchronization?.stop(); }
 
   /** Resolves once the local picture includes the commit that returned a resource. */
-  waitForSynchronization(receipt: Pick<Task, "dataset_id" | "change_sequence">, timeoutMs = defaultWaitMs) {
+  waitForSynchronization(receipt: Pick<Task, "dataset_id" | "change_sequence" | "receipt_sequence">, timeoutMs = defaultWaitMs) {
     this.#requireSynchronization();
     return this.#picture!.waitFor(receipt, timeoutMs);
   }
