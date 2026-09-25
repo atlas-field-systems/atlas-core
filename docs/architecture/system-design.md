@@ -90,6 +90,8 @@ Clients identify Objects and access their content through Core APIs exposed by t
 
 Tasks implements the [Core-owned Command boundary](../adr/0004-core-owns-commands-and-assets-execute-tasks.md), [Task reconciliation](../adr/0007-reconcile-asset-tasks-after-disconnection.md) and [scan result/status contract](../adr/0008-complete-scan-tasks-when-required-results-are-available.md). It validates Command/target contracts and uses [Identity and access](#identity-and-access) for assigned-Asset reporting.
 
+The first implemented Command, Move To, records its [wire and storage choices](move-to.md).
+
 The Asset OS owns execution, interruption and its confirmed onboard queue. Core records immutable submission order and operator reorder requests separately from Asset-confirmed order. Assets execute queued Tasks sequentially in submission order by default, following confirmed reordering of eligible, unstarted queued Tasks; a disconnected Asset may continue its last confirmed order. Immediate Commands are ordinary Tasks that can overlap queued work. Immediate Pause interrupts current queued work, and the Asset reports its paused condition and waits without advancing the queue. Core records intent and outcomes without starting Tasks or gating them on connectivity. See [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md).
 
 Asset check-in and component patches share Protocol-defined partial-update validation, report identity and freshness rules. Core verifies authorship across every reporting path; ordinary operator edits cannot manufacture Asset contact. Registration through Entity creation and subsequent check-in are documented in the [SDK operations catalog](../sdk-operations.md). This replaces the separate execution-runtime registration API.

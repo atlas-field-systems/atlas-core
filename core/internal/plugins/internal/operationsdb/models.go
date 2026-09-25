@@ -8,6 +8,15 @@ import (
 	"database/sql"
 )
 
+type Activity struct {
+	ID         int64
+	ActorKind  string
+	ActorID    string
+	Action     string
+	TargetID   string
+	RecordedAt int64
+}
+
 type AssetRegistration struct {
 	RequestID   string
 	AssetID     string
@@ -21,11 +30,18 @@ type AssetReport struct {
 	FactsDigest []byte
 }
 
+type AssetTaskSequence struct {
+	AssetID      string
+	LastSequence int64
+}
+
 type Change struct {
-	Sequence   int64
-	ResourceID string
-	Kind       string
-	Entity     string
+	Sequence     int64
+	ResourceID   string
+	Kind         string
+	Entity       string
+	ResourceType string
+	Task         sql.NullString
 }
 
 type Dataset struct {
@@ -75,4 +91,25 @@ type PluginRuntime struct {
 	PluginID      string
 	AdmissionOpen bool
 	Fault         sql.NullString
+}
+
+type Task struct {
+	ID                    string
+	SubmissionID          string
+	AssetID               string
+	FactsDigest           []byte
+	CommandID             string
+	DestinationLatitude   float64
+	DestinationLongitude  float64
+	Scheduling            string
+	CancellationSupported bool
+	ProgressSupported     bool
+	AcceptanceSequence    int64
+	Status                string
+	ProgressPercent       sql.NullFloat64
+	FailureReason         sql.NullString
+	CancellationRequestID sql.NullString
+	Version               int64
+	CreatedSequence       int64
+	ChangeSequence        int64
 }

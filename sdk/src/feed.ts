@@ -99,7 +99,10 @@ function parseMessage(data: string): FeedHello | Delivery | undefined {
 }
 
 function isChange(change: unknown): boolean {
-  return isRecord(change) && Number.isSafeInteger(change.sequence) && isRecord(change.entity) && change.entity.id === change.resource_id;
+  if (!isRecord(change) || !Number.isSafeInteger(change.sequence)) return false;
+  if (change.resource_type === "entity") return isRecord(change.entity) && change.entity.id === change.resource_id;
+  if (change.resource_type === "task") return isRecord(change.task) && change.task.id === change.resource_id;
+  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

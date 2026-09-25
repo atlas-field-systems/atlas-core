@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/atlas-field-systems/atlas-core/core/internal/activity"
 	"github.com/atlas-field-systems/atlas-core/core/internal/changes"
 	"github.com/atlas-field-systems/atlas-core/core/internal/datasets"
 	"github.com/atlas-field-systems/atlas-core/core/internal/entities"
@@ -18,6 +19,7 @@ import (
 	"github.com/atlas-field-systems/atlas-core/core/internal/objects"
 	"github.com/atlas-field-systems/atlas-core/core/internal/plugins"
 	"github.com/atlas-field-systems/atlas-core/core/internal/storage"
+	"github.com/atlas-field-systems/atlas-core/core/internal/tasks"
 )
 
 // Config locates an installation's storage and sets its limits.
@@ -47,7 +49,9 @@ type App struct {
 	identity     *identity.Service
 	datasets     *datasets.Service
 	changes      *changes.Log
+	activity     *activity.Log
 	entities     *entities.Service
+	tasks        *tasks.Service
 	plugins      *plugins.Service
 	objects      *objects.Store
 	handler      http.Handler
@@ -101,7 +105,9 @@ func (a *App) openOperational(ctx context.Context, config Config) (err error) {
 		return err
 	}
 	a.changes = changes.New(a.operational, a.datasets.Current().ID, config.ChangeRetention)
+	a.activity = activity.New(a.operational)
 	a.entities = entities.New(a.operational, a.identity, a.datasets, a.changes)
+	a.tasks = tasks.New(a.operational, a.datasets, a.entities, a.changes, a.activity)
 	if err := a.entities.Recover(ctx); err != nil {
 		return fmt.Errorf("recover Asset enrollment: %w", err)
 	}

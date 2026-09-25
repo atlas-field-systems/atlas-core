@@ -254,6 +254,148 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /tasks:
+    post:
+      operationId: createTask
+      summary: Commit one Command for an assigned Asset
+      security:
+        - operator: []
+        - plugin: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskSubmission'
+      responses:
+        '201':
+          description: Task accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '200':
+          description: Matching retry; the original Task is returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      operationId: listTasks
+      summary: List Tasks in acceptance order
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of Tasks.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tasks/{task_id}:
+    get:
+      operationId: getTask
+      summary: Read one authoritative Task
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Current Task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tasks/{task_id}/status:
+    patch:
+      operationId: updateTaskStatus
+      summary: Request cancellation or report assigned-Asset execution
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskStatusUpdate'
+      responses:
+        '200':
+          description: Authoritative Task after the accepted request or report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /entities/{entity_id}/tasks:
+    get:
+      operationId: listAssignedTasks
+      summary: Read assigned work without acknowledging or executing it
+      security:
+        - operator: []
+        - asset: []
+        - plugin: []
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of assigned Tasks.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /queries/full:
     get:
       operationId: queryFull
@@ -276,7 +418,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: One page of Entities in the current Dataset.
+          description: One page of Entities or Tasks in the current Dataset.
           content:
             application/json:
               schema:
@@ -588,6 +730,13 @@ components:
       schema:
         type: string
         format: uuid
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     operator:
       type: http
@@ -858,6 +1007,149 @@ components:
         description:
           type: string
           maxLength: 256
+    MoveToInput:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+    TaskSubmission:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, submission_id, asset_id, command_id, input, scheduling]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+          format: uuid
+        command_id:
+          type: string
+          enum: [move_to]
+        input:
+          $ref: '#/components/schemas/MoveToInput'
+        scheduling:
+          type: string
+          enum: [queued]
+    TaskStatus:
+      type: string
+      enum: [pending, acknowledged, in_progress, cancellation_requested, completed, failed, cancelled]
+    Task:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, id, submission_id, asset_id, command_id, input, scheduling, acceptance_sequence, status, version, created_sequence, change_sequence]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+          format: uuid
+        command_id:
+          type: string
+          enum: [move_to]
+        input:
+          $ref: '#/components/schemas/MoveToInput'
+        scheduling:
+          type: string
+          enum: [queued]
+        acceptance_sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        progress_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        failure_reason:
+          type: string
+          maxLength: 512
+        cancellation_request_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+        created_sequence:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Global commit sequence of Task creation, retained across updates.
+        change_sequence:
+          type: integer
+          format: int64
+          minimum: 1
+    TaskStatusUpdate:
+      type: object
+      additionalProperties: false
+      required: [dataset_id]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+          description: Omit only for a progress-only report from the assigned Asset.
+        request_id:
+          type: string
+          format: uuid
+          description: Stable identity of a tasking client's cancellation request.
+        report_id:
+          type: string
+          format: uuid
+          description: Stable identity of an assigned Asset report.
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        progress_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        failure_reason:
+          type: string
+          maxLength: 512
+        cancellation_request_id:
+          type: string
+          format: uuid
+          description: The cancellation request confirmed by a cancelled report.
+    TaskPage:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, tasks]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        next_cursor:
+          type: string
     AssetEnrollmentRequest:
       type: object
       additionalProperties: false
@@ -1028,7 +1320,7 @@ components:
     EntityPage:
       type: object
       additionalProperties: false
-      required: [dataset_id, baseline, baseline_sequence, entities]
+      required: [dataset_id, baseline, baseline_sequence, entities, tasks]
       properties:
         dataset_id:
           type: string
@@ -1044,12 +1336,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Entity'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
         next_cursor:
           type: string
     EntityChange:
       type: object
       additionalProperties: false
-      required: [dataset_id, sequence, resource_type, resource_id, kind, entity]
+      required: [dataset_id, sequence, resource_type, resource_id, kind]
       properties:
         dataset_id:
           type: string
@@ -1060,7 +1356,7 @@ components:
           minimum: 1
         resource_type:
           type: string
-          enum: [entity]
+          enum: [entity, task]
         resource_id:
           type: string
           format: uuid
@@ -1069,6 +1365,8 @@ components:
           enum: [create, update]
         entity:
           $ref: '#/components/schemas/Entity'
+        task:
+          $ref: '#/components/schemas/Task'
     ChangePage:
       type: object
       additionalProperties: false

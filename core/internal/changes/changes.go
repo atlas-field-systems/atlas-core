@@ -1,4 +1,4 @@
-// Package changes owns the ordered log of committed Entity changes that
+// Package changes owns the ordered log of committed resource changes that
 // snapshots, replay and the feed read.
 package changes
 
@@ -19,7 +19,7 @@ import (
 )
 
 // DefaultRetention is how many recent changes stay replayable. A change keeps
-// a full Entity (about 1 KB), so this bounds the log near 50 MB while giving
+// a full resource state, so this bounds retained replay while giving
 // clients hours of replay at typical report rates. Clients that fall further
 // behind rebuild from a snapshot.
 const DefaultRetention = 50_000
@@ -66,9 +66,26 @@ func (l *Log) Append(ctx context.Context, tx *sql.Tx, kind api.EntityChangeKind,
 		return 0, fmt.Errorf("encode change of Entity %s: %w", entity.Id, err)
 	}
 	queries := l.queries.WithTx(tx)
-	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded)})
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded), ResourceType: "entity"})
 	if err != nil {
 		return 0, fmt.Errorf("append change of Entity %s: %w", entity.Id, err)
+	}
+	if err := queries.PruneChanges(ctx, sequence-l.retention); err != nil {
+		return 0, fmt.Errorf("prune change log: %w", err)
+	}
+	return sequence, nil
+}
+
+// AppendTask records a Task's public state in the same transaction as its mutation.
+func (l *Log) AppendTask(ctx context.Context, tx *sql.Tx, kind api.EntityChangeKind, task api.Task) (int64, error) {
+	encoded, err := json.Marshal(task)
+	if err != nil {
+		return 0, fmt.Errorf("encode change of Task %s: %w", task.Id, err)
+	}
+	queries := l.queries.WithTx(tx)
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: task.Id.String(), Kind: string(kind), Entity: "{}", ResourceType: "task", Task: sql.NullString{String: string(encoded), Valid: true}})
+	if err != nil {
+		return 0, fmt.Errorf("append change of Task %s: %w", task.Id, err)
 	}
 	if err := queries.PruneChanges(ctx, sequence-l.retention); err != nil {
 		return 0, fmt.Errorf("prune change log: %w", err)
@@ -152,13 +169,32 @@ func (l *Log) decode(row db.Change) (api.EntityChange, error) {
 	change := api.EntityChange{
 		DatasetId:    l.dataset,
 		Sequence:     row.Sequence,
-		ResourceType: api.EntityChangeResourceTypeEntity,
+		ResourceType: api.EntityChangeResourceType(row.ResourceType),
 		Kind:         api.EntityChangeKind(row.Kind),
 	}
-	if err := json.Unmarshal([]byte(row.Entity), &change.Entity); err != nil {
-		return api.EntityChange{}, fmt.Errorf("decode change %d: %w", row.Sequence, err)
+	switch change.ResourceType {
+	case api.EntityChangeResourceTypeEntity:
+		var entity api.Entity
+		if err := json.Unmarshal([]byte(row.Entity), &entity); err != nil {
+			return api.EntityChange{}, fmt.Errorf("decode Entity change %d: %w", row.Sequence, err)
+		}
+		entity.ChangeSequence = row.Sequence
+		change.ResourceId, change.Entity = entity.Id, &entity
+	case api.EntityChangeResourceTypeTask:
+		var task api.Task
+		if !row.Task.Valid {
+			return api.EntityChange{}, fmt.Errorf("Task change %d has no Task", row.Sequence)
+		}
+		if err := json.Unmarshal([]byte(row.Task.String), &task); err != nil {
+			return api.EntityChange{}, fmt.Errorf("decode Task change %d: %w", row.Sequence, err)
+		}
+		task.ChangeSequence = row.Sequence
+		if task.CreatedSequence == 0 {
+			task.CreatedSequence = row.Sequence
+		}
+		change.ResourceId, change.Task = task.Id, &task
+	default:
+		return api.EntityChange{}, fmt.Errorf("unknown change resource type %q", row.ResourceType)
 	}
-	change.ResourceId = change.Entity.Id
-	change.Entity.ChangeSequence = row.Sequence
 	return change, nil
 }

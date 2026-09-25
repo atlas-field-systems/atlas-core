@@ -31,6 +31,20 @@ sql:
         package: db
         out: internal/changes/internal/db
   - engine: sqlite
+    schema: internal/storage/migrations/operational
+    queries: internal/tasks/queries.sql
+    gen:
+      go:
+        package: db
+        out: internal/tasks/internal/db
+  - engine: sqlite
+    schema: internal/storage/migrations/operational
+    queries: internal/activity/queries.sql
+    gen:
+      go:
+        package: db
+        out: internal/activity/internal/db
+  - engine: sqlite
     schema: internal/storage/migrations/installation
     queries: internal/plugins/registry.sql
     gen:

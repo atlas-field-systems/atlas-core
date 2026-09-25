@@ -5,6 +5,10 @@ export type Readiness = Schemas["Readiness"];
 export type Entity = Schemas["Entity"];
 export type EntityPage = Schemas["EntityPage"];
 export type EntityChange = Schemas["EntityChange"];
+export type Task = Schemas["Task"];
+export type TaskPage = Schemas["TaskPage"];
+export type TaskSubmission = Schemas["TaskSubmission"];
+export type TaskStatusUpdate = Schemas["TaskStatusUpdate"];
 export type ChangePage = Schemas["ChangePage"];
 export type AssetStatus = Schemas["AssetStatus"];
 export type AssetStatusView = Schemas["AssetStatusView"];
@@ -21,6 +25,9 @@ export type ChangeListener = (change: EntityChange) => void;
 export interface EntityReads {
   entity(id: string): Promise<Entity>;
   assetStatus(id: string): Promise<AssetStatusView>;
+  task(id: string): Promise<Task>;
+  tasks(cursor?: string, limit?: number): Promise<TaskPage>;
+  assignedTasks(assetId: string, cursor?: string, limit?: number): Promise<TaskPage>;
   queryFull(cursor?: string, limit?: number): Promise<EntityPage>;
   changedSince(cursor: string, limit?: number): Promise<ChangePage>;
   /** Calls listener for each committed change; resolves to an unsubscribe function. */

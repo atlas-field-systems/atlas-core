@@ -7,20 +7,29 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const insertChange = `-- name: InsertChange :one
-INSERT INTO changes (resource_id, kind, entity) VALUES (?, ?, ?) RETURNING sequence
+INSERT INTO changes (resource_id, kind, entity, resource_type, task) VALUES (?, ?, ?, ?, ?) RETURNING sequence
 `
 
 type InsertChangeParams struct {
-	ResourceID string
-	Kind       string
-	Entity     string
+	ResourceID   string
+	Kind         string
+	Entity       string
+	ResourceType string
+	Task         sql.NullString
 }
 
 func (q *Queries) InsertChange(ctx context.Context, arg InsertChangeParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertChange, arg.ResourceID, arg.Kind, arg.Entity)
+	row := q.db.QueryRowContext(ctx, insertChange,
+		arg.ResourceID,
+		arg.Kind,
+		arg.Entity,
+		arg.ResourceType,
+		arg.Task,
+	)
 	var sequence int64
 	err := row.Scan(&sequence)
 	return sequence, err
@@ -38,7 +47,7 @@ func (q *Queries) LatestSequence(ctx context.Context) (int64, error) {
 }
 
 const listChangesAfter = `-- name: ListChangesAfter :many
-SELECT sequence, resource_id, kind, entity FROM changes WHERE sequence > ? ORDER BY sequence LIMIT ?
+SELECT sequence, resource_id, kind, entity, resource_type, task FROM changes WHERE sequence > ? ORDER BY sequence LIMIT ?
 `
 
 type ListChangesAfterParams struct {
@@ -60,6 +69,8 @@ func (q *Queries) ListChangesAfter(ctx context.Context, arg ListChangesAfterPara
 			&i.ResourceID,
 			&i.Kind,
 			&i.Entity,
+			&i.ResourceType,
+			&i.Task,
 		); err != nil {
 			return nil, err
 		}

@@ -131,6 +131,31 @@ func (s *Service) applyReport(ctx context.Context, accepted report, apply applyF
 	return entity, s.changes.Commit(tx)
 }
 
+// AcceptTaskReport records fresh assigned-Asset contact within a Task report's
+// transaction. The caller commits both the Entity and Task changes together.
+// A matching report retry does not refresh contact or append another change.
+func (s *Service) AcceptTaskReport(ctx context.Context, tx *sql.Tx, caller identity.Caller, assetID string, datasetID uuid.UUID, reportID string, sequence int64, facts any) (bool, error) {
+	if err := s.checkReporter(caller, assetID, datasetID); err != nil {
+		return false, err
+	}
+	accepted, err := newReport(assetID, reportID, sequence, facts)
+	if err != nil {
+		return false, err
+	}
+	queries := s.queries.WithTx(tx)
+	if resent, err := checkResent(ctx, queries, accepted); resent || err != nil {
+		return resent, err
+	}
+	if err := checkOrder(ctx, queries, accepted); err != nil {
+		return false, err
+	}
+	if err := record(ctx, queries, accepted, func(context.Context, *db.Queries, int64) error { return nil }); err != nil {
+		return false, err
+	}
+	_, err = s.publish(ctx, tx, assetID, api.Update)
+	return false, err
+}
+
 func checkResent(ctx context.Context, queries *db.Queries, accepted report) (bool, error) {
 	earlier, err := queries.GetReport(ctx, accepted.reportID)
 	if errors.Is(err, sql.ErrNoRows) {

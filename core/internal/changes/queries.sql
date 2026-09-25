@@ -1,5 +1,5 @@
 -- name: InsertChange :one
-INSERT INTO changes (resource_id, kind, entity) VALUES (?, ?, ?) RETURNING sequence;
+INSERT INTO changes (resource_id, kind, entity, resource_type, task) VALUES (?, ?, ?, ?, ?) RETURNING sequence;
 
 -- name: PruneChanges :exec
 DELETE FROM changes WHERE sequence <= ?;

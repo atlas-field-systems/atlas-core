@@ -136,6 +136,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tasks in acceptance order */
+        get: operations["listTasks"];
+        put?: never;
+        /** Commit one Command for an assigned Asset */
+        post: operations["createTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one authoritative Task */
+        get: operations["getTask"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Request cancellation or report assigned-Asset execution */
+        patch: operations["updateTaskStatus"];
+        trace?: never;
+    };
+    "/entities/{entity_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read assigned work without acknowledging or executing it */
+        get: operations["listAssignedTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/queries/full": {
         parameters: {
             query?: never;
@@ -424,6 +493,90 @@ export interface components {
             progress?: boolean;
             description?: string;
         };
+        MoveToInput: {
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+        };
+        TaskSubmission: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
+            submission_id: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** @enum {string} */
+            command_id: "move_to";
+            input: components["schemas"]["MoveToInput"];
+            /** @enum {string} */
+            scheduling: "queued";
+        };
+        /** @enum {string} */
+        TaskStatus: "pending" | "acknowledged" | "in_progress" | "cancellation_requested" | "completed" | "failed" | "cancelled";
+        Task: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            submission_id: string;
+            /** Format: uuid */
+            asset_id: string;
+            /** @enum {string} */
+            command_id: "move_to";
+            input: components["schemas"]["MoveToInput"];
+            /** @enum {string} */
+            scheduling: "queued";
+            /** Format: int64 */
+            acceptance_sequence: number;
+            status: components["schemas"]["TaskStatus"];
+            /** Format: double */
+            progress_percent?: number;
+            failure_reason?: string;
+            /** Format: uuid */
+            cancellation_request_id?: string;
+            version: number;
+            /**
+             * Format: int64
+             * @description Global commit sequence of Task creation, retained across updates.
+             */
+            created_sequence: number;
+            /** Format: int64 */
+            change_sequence: number;
+        };
+        TaskStatusUpdate: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** @description Omit only for a progress-only report from the assigned Asset. */
+            status?: components["schemas"]["TaskStatus"];
+            /**
+             * Format: uuid
+             * @description Stable identity of a tasking client's cancellation request.
+             */
+            request_id?: string;
+            /**
+             * Format: uuid
+             * @description Stable identity of an assigned Asset report.
+             */
+            report_id?: string;
+            /** Format: int64 */
+            sequence?: number;
+            /** Format: double */
+            progress_percent?: number;
+            failure_reason?: string;
+            /**
+             * Format: uuid
+             * @description The cancellation request confirmed by a cancelled report.
+             */
+            cancellation_request_id?: string;
+        };
+        TaskPage: {
+            /** Format: uuid */
+            dataset_id: string;
+            tasks: components["schemas"]["Task"][];
+            next_cursor?: string;
+        };
         AssetEnrollmentRequest: {
             /** Format: uuid */
             dataset_id: string;
@@ -514,6 +667,7 @@ export interface components {
             /** Format: int64 */
             baseline_sequence: number;
             entities: components["schemas"]["Entity"][];
+            tasks: components["schemas"]["Task"][];
             next_cursor?: string;
         };
         EntityChange: {
@@ -522,12 +676,13 @@ export interface components {
             /** Format: int64 */
             sequence: number;
             /** @enum {string} */
-            resource_type: "entity";
+            resource_type: "entity" | "task";
             /** Format: uuid */
             resource_id: string;
             /** @enum {string} */
             kind: "create" | "update";
-            entity: components["schemas"]["Entity"];
+            entity?: components["schemas"]["Entity"];
+            task?: components["schemas"]["Task"];
         };
         ChangePage: {
             /** Format: uuid */
@@ -707,6 +862,7 @@ export interface components {
         /** @description Page size. Defaults to 50. */
         Limit: number;
         EntityId: string;
+        TaskId: string;
     };
     requestBodies: never;
     headers: never;
@@ -969,6 +1125,157 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    listTasks: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Page size. Defaults to 50. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of Tasks. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskSubmission"];
+            };
+        };
+        responses: {
+            /** @description Matching retry; the original Task is returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+            /** @description Task accepted. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: components["parameters"]["TaskId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current Task. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateTaskStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: components["parameters"]["TaskId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Authoritative Task after the accepted request or report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listAssignedTasks: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Page size. Defaults to 50. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                entity_id: components["parameters"]["EntityId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of assigned Tasks. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     queryFull: {
         parameters: {
             query?: {
@@ -982,7 +1289,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One page of Entities in the current Dataset. */
+            /** @description One page of Entities or Tasks in the current Dataset. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1247,3 +1554,33 @@ export interface operations {
         };
     };
 }
+type FlattenedDeepRequired<T> = {
+    [K in keyof T]-?: FlattenedDeepRequired<T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]>;
+};
+type ReadonlyArray<T> = [
+    Exclude<T, undefined>
+] extends [
+    unknown[]
+] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
+export const healthStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]["status"]> = ["alive"];
+export const dependencyStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["DependencyStatus"]> = ["ready", "unavailable"];
+export const readinessStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Readiness"]["status"]> = ["ready", "unavailable"];
+export const assetStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AssetStatus"]> = ["unknown", "initializing", "ready", "busy", "paused", "error", "stopped"];
+export const communicationsValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Communications"]> = ["high_bandwidth", "healthy", "degraded", "offline"];
+export const entityKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Entity"]["kind"]> = ["asset"];
+export const commandSupportSchedulingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CommandSupport"]["scheduling"]> = ["queued", "immediate"];
+export const taskSubmissionCommand_idValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskSubmission"]["command_id"]> = ["move_to"];
+export const taskSubmissionSchedulingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskSubmission"]["scheduling"]> = ["queued"];
+export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskStatus"]> = ["pending", "acknowledged", "in_progress", "cancellation_requested", "completed", "failed", "cancelled"];
+export const taskCommand_idValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Task"]["command_id"]> = ["move_to"];
+export const taskSchedulingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Task"]["scheduling"]> = ["queued"];
+export const assetEnrollmentRequestKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AssetEnrollmentRequest"]["kind"]> = ["asset"];
+export const entityChangeResource_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityChange"]["resource_type"]> = ["entity", "task"];
+export const entityChangeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityChange"]["kind"]> = ["create", "update"];
+export const feedHelloTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedHello"]["type"]> = ["hello"];
+export const feedChangeTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedChange"]["type"]> = ["change"];
+export const feedGapTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedGap"]["type"]> = ["gap"];
+export const feedGapCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedGap"]["code"]> = ["cursor_expired"];
+export const pluginAvailabilityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Plugin"]["availability"]> = ["available", "unavailable", "faulted"];
+export const operationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OperationStatus"]> = ["pending", "in_progress", "cancellation_requested", "completed", "canceled", "failed", "interrupted"];
+export const operationReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OperationReport"]["status"]> = ["in_progress", "completed", "failed", "canceled"];

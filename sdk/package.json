@@ -8,7 +8,7 @@
     "default": "./dist/index.js"
   },
   "scripts": {
-    "generate": "openapi-typescript ../protocol/openapi.yaml -o src/generated/protocol.ts",
+    "generate": "openapi-typescript ../protocol/openapi.yaml --enum-values -o src/generated/protocol.ts && node scripts/generate-catalog.mjs",
     "typecheck": "tsc --noEmit",
     "build": "tsc"
   },

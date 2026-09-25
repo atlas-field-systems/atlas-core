@@ -39,6 +39,11 @@ func (s *Service) Enroll(ctx context.Context, request api.AssetEnrollmentRequest
 	if err := s.datasets.RequireCurrent(request.DatasetId); err != nil {
 		return Enrollment{}, err
 	}
+	if request.CommandManifest != nil {
+		if err := checkManifest(*request.CommandManifest); err != nil {
+			return Enrollment{}, err
+		}
+	}
 	if request.Components != nil {
 		if err := checkPosition(request.Components.Telemetry); err != nil {
 			return Enrollment{}, err

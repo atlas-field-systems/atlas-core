@@ -37,6 +37,12 @@ func (s *Service) Get(ctx context.Context, id string) (api.Entity, error) {
 	return s.read(ctx, s.queries, id)
 }
 
+// GetInTx lets a collaborating module validate an Asset against the same
+// transaction in which it records assigned work.
+func (s *Service) GetInTx(ctx context.Context, tx *sql.Tx, id string) (api.Entity, error) {
+	return s.read(ctx, s.queries.WithTx(tx), id)
+}
+
 // StatusView reads an Asset's status, communications and contact.
 func (s *Service) StatusView(ctx context.Context, id string) (api.AssetStatusView, error) {
 	entity, err := s.Get(ctx, id)

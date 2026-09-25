@@ -33,6 +33,9 @@ func mergeReport(current db.Entity, update api.AssetReport) (db.SetComponentsPar
 		}
 	}
 	if update.CommandManifest != nil {
+		if err := checkManifest(*update.CommandManifest); err != nil {
+			return db.SetComponentsParams{}, err
+		}
 		manifest, err := json.Marshal(*update.CommandManifest)
 		if err != nil {
 			return db.SetComponentsParams{}, fmt.Errorf("encode command manifest: %w", err)

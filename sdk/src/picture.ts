@@ -1,10 +1,11 @@
 import { PictureError } from "./errors.js";
-import { notify, type ChangeListener, type ChangePage, type Entity, type EntityChange, type EntityPage, type EntityReads } from "./types.js";
+import { notify, type ChangeListener, type ChangePage, type Entity, type EntityChange, type EntityPage, type EntityReads, type Task, type TaskPage } from "./types.js";
 
 export type SynchronizationState = "initializing" | "ready" | "stale" | "stopped" | "failed";
 
 export interface PictureLimits {
   maxEntities: number;
+  maxTasks: number;
   localHistoryLimit: number;
 }
 
@@ -15,6 +16,7 @@ export interface PictureLimits {
  */
 export class Picture implements EntityReads {
   readonly #entities = new Map<string, Entity>();
+  readonly #tasks = new Map<string, Task>();
   readonly #listeners = new Set<ChangeListener>();
   readonly #waiters = new Set<() => void>();
   readonly #instance = crypto.randomUUID();
@@ -43,6 +45,7 @@ export class Picture implements EntityReads {
   reset(): void {
     this.#generation++;
     this.#entities.clear();
+    this.#tasks.clear();
     this.#history = [];
     this.#setState("initializing");
   }
@@ -50,6 +53,7 @@ export class Picture implements EntityReads {
   /** Adds one snapshot page. Pages may hold states newer than the baseline. */
   load(page: EntityPage): void {
     for (const entity of page.entities) this.#store(entity);
+    for (const task of page.tasks) this.#storeTask(task);
   }
 
   /** Marks the loaded snapshot as the state at its baseline. */
@@ -64,8 +68,15 @@ export class Picture implements EntityReads {
   apply(change: EntityChange): void {
     if (change.sequence !== this.#applied + 1) throw new PictureError("replay_gap", `Expected change ${this.#applied + 1}, got ${change.sequence}.`);
     if (change.dataset_id !== this.#datasetId) throw new PictureError("dataset_changed", "A change belongs to another Dataset.");
-    const current = this.#entities.get(change.resource_id);
-    if (!current || change.entity.version > current.version) this.#store(change.entity);
+    if (change.resource_type === "entity" && change.entity) {
+      const current = this.#entities.get(change.resource_id);
+      if (!current || change.entity.version > current.version) this.#store(change.entity);
+    } else if (change.resource_type === "task" && change.task) {
+      const current = this.#tasks.get(change.resource_id);
+      if (!current || change.task.version > current.version) this.#storeTask(change.task);
+    } else {
+      throw new PictureError("invalid_change", "A change has no matching resource.");
+    }
     this.#applied = change.sequence;
     this.#remember(change);
     for (const listener of this.#listeners) notify(listener, change, this.onListenerError);
@@ -89,18 +100,46 @@ export class Picture implements EntityReads {
     return { status: components.status, communications: components.communications, heartbeat: components.heartbeat };
   }
 
+  async task(id: string): Promise<Task> {
+    this.#requireReadable();
+    const task = this.#tasks.get(id);
+    if (!task) throw new PictureError("not_found", "The Task is not in the local picture.");
+    return structuredClone(task);
+  }
+
+  async tasks(cursor?: string, limit = 50): Promise<TaskPage> {
+    return this.#taskPage("tasks", undefined, cursor, limit);
+  }
+
+  async assignedTasks(assetId: string, cursor?: string, limit = 50): Promise<TaskPage> {
+    return this.#taskPage(`tasks:${assetId}`, assetId, cursor, limit);
+  }
+
+  #taskPage(list: string, assetId: string | undefined, cursor: string | undefined, limit: number): TaskPage {
+    this.#requireReadable();
+    requirePositive(limit);
+    const offset = cursor ? this.#readCursor(cursor, list).offset : 0;
+    const tasks = [...this.#tasks.values()].filter((task) => assetId === undefined || task.asset_id === assetId).sort((a, b) => assetId === undefined ? a.created_sequence - b.created_sequence : a.acceptance_sequence - b.acceptance_sequence);
+    const end = offset + limit;
+    return { dataset_id: this.#datasetId, tasks: structuredClone(tasks.slice(offset, end)), ...(end < tasks.length ? { next_cursor: this.#cursor(list, end) } : {}) };
+  }
+
   async queryFull(cursor?: string, limit = 50): Promise<EntityPage> {
     this.#requireReadable();
     requirePositive(limit);
     const offset = cursor ? this.#readCursor(cursor, "snapshot").offset : 0;
     const entities = [...this.#entities.values()].sort((a, b) => a.id.localeCompare(b.id));
+    const tasks = [...this.#tasks.values()].sort((a, b) => a.id.localeCompare(b.id));
     const end = offset + limit;
+    const pageEntities = entities.slice(offset, end);
+    const pageTasks = tasks.slice(Math.max(0, offset - entities.length), Math.max(0, end - entities.length));
     return {
       dataset_id: this.#datasetId,
       baseline: this.#cursor("changes", 0),
       baseline_sequence: this.#applied,
-      entities: structuredClone(entities.slice(offset, end)),
-      ...(end < entities.length ? { next_cursor: this.#cursor("snapshot", end) } : {}),
+      entities: structuredClone(pageEntities),
+      tasks: structuredClone(pageTasks),
+      ...(end < entities.length + tasks.length ? { next_cursor: this.#cursor("snapshot", end) } : {}),
     };
   }
 
@@ -120,8 +159,8 @@ export class Picture implements EntityReads {
   }
 
   /** Resolves once the picture has applied the commit that produced entity. */
-  waitFor(entity: Entity, timeoutMs: number): Promise<void> {
-    if (entity.dataset_id !== this.#datasetId) return Promise.reject(new PictureError("dataset_changed", "This write belongs to another Dataset."));
+  waitFor(receipt: Pick<Task, "dataset_id" | "change_sequence">, timeoutMs: number): Promise<void> {
+    if (receipt.dataset_id !== this.#datasetId) return Promise.reject(new PictureError("dataset_changed", "This write belongs to another Dataset."));
     return new Promise((resolve, reject) => {
       const finish = (error?: PictureError) => {
         clearTimeout(timeout);
@@ -131,7 +170,7 @@ export class Picture implements EntityReads {
       };
       const check = () => {
         if (this.#state === "stopped" || this.#state === "failed") finish(new PictureError("sync_unavailable", "Synchronization ended before the write was applied."));
-        else if (this.#state === "ready" && this.#applied >= entity.change_sequence) finish();
+        else if (this.#state === "ready" && this.#applied >= receipt.change_sequence) finish();
       };
       const timeout = setTimeout(() => finish(new PictureError("sync_timeout", "The write committed, but the picture has not applied it yet.")), timeoutMs);
       this.#waiters.add(check);
@@ -144,6 +183,13 @@ export class Picture implements EntityReads {
       throw new PictureError("resource_limit", "The local picture exceeds its Entity limit.");
     }
     this.#entities.set(entity.id, entity);
+  }
+
+  #storeTask(task: Task): void {
+    if (!this.#tasks.has(task.id) && this.#tasks.size >= this.limits.maxTasks) {
+      throw new PictureError("resource_limit", "The local picture exceeds its Task limit.");
+    }
+    this.#tasks.set(task.id, task);
   }
 
   #remember(change: EntityChange): void {
@@ -166,11 +212,11 @@ export class Picture implements EntityReads {
   }
 
   /** Local cursors name this picture instance and generation, so they never reach Core or outlive a rebuild. */
-  #cursor(list: "snapshot" | "changes", offset: number, sequence = this.#applied): string {
+  #cursor(list: string, offset: number, sequence = this.#applied): string {
     return `local.${btoa(JSON.stringify({ instance: this.#instance, generation: this.#generation, list, sequence, offset }))}`;
   }
 
-  #readCursor(cursor: string, list: "snapshot" | "changes"): { sequence: number; offset: number } {
+  #readCursor(cursor: string, list: string): { sequence: number; offset: number } {
     let position: { instance?: string; generation?: number; list?: string; sequence?: number; offset?: number };
     try {
       position = JSON.parse(atob(cursor.replace(/^local\./, "")));

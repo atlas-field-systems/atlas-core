@@ -23,6 +23,18 @@ export class HttpReads implements EntityReads {
     return unwrap(await this.api.GET("/entities/{entity_id}/status", { params: { path: { entity_id: id } } }));
   }
 
+  async task(id: string) {
+    return unwrap(await this.api.GET("/tasks/{task_id}", { params: { path: { task_id: id } } }));
+  }
+
+  async tasks(cursor?: string, limit?: number) {
+    return unwrap(await this.api.GET("/tasks", { params: { query: { cursor, limit } } }));
+  }
+
+  async assignedTasks(assetId: string, cursor?: string, limit?: number) {
+    return unwrap(await this.api.GET("/entities/{entity_id}/tasks", { params: { path: { entity_id: assetId }, query: { cursor, limit } } }));
+  }
+
   async queryFull(cursor?: string, limit?: number) {
     return unwrap(await this.api.GET("/queries/full", { params: { query: { cursor, limit } } }));
   }

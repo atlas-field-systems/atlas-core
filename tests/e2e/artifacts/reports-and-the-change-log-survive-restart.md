@@ -89,7 +89,9 @@ SDK `GET /queries/full` with <operator key>
       "subtype": null,
       "version": 1
     }
-  ]
+  ],
+  "next_cursor": "<cursor-2>",
+  "tasks": []
 }
 ```
 
@@ -279,7 +281,7 @@ SDK `GET /queries/changed-since?cursor=<cursor-1>` with <operator key>
       "sequence": 3
     }
   ],
-  "cursor": "<cursor-2>",
+  "cursor": "<cursor-3>",
   "dataset_id": "<id-1>"
 }
 ```

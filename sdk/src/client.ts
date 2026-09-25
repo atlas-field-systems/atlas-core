@@ -1,12 +1,13 @@
 import createClient from "openapi-fetch";
-import type { components, paths } from "./generated/protocol.js";
+import { taskStatusValues, type components, type paths } from "./generated/protocol.js";
 import { newAssetCredential } from "./credentials.js";
 import { PictureError, WaitTimeoutError, unwrap } from "./errors.js";
 import { FeedConnection } from "./feed.js";
+import { commandCatalog } from "./generated/catalog.js";
 import { HttpReads } from "./http-reads.js";
 import { Picture } from "./picture.js";
 import { Synchronization } from "./synchronization.js";
-import type { AssetStatus, ChangeListener, Entity, EntityReads, Operation, OperationReport, OperationSubmission, Readiness } from "./types.js";
+import type { AssetStatus, ChangeListener, EntityReads, Operation, OperationReport, OperationSubmission, Readiness, Task, TaskSubmission, TaskStatusUpdate } from "./types.js";
 
 type Schemas = components["schemas"];
 export type AssetEnrollmentFacts = Pick<Schemas["AssetEnrollmentRequest"], "alias" | "subtype" | "components" | "command_manifest">;
@@ -46,6 +47,8 @@ export interface AtlasClientOptions {
   mode?: "http" | "full";
   /** Entities a full picture may hold before synchronization fails. Default 10,000. */
   maxEntities?: number;
+  /** Tasks a full picture may hold before synchronization fails. Default 10,000. */
+  maxTasks?: number;
   /** Changes kept for local changedSince reads. Default 1,000. */
   localHistoryLimit?: number;
   /** Entities per snapshot request while loading a full picture. Default 100. */
@@ -60,6 +63,8 @@ const defaultWaitMs = 10_000;
 
 /** How often waitForOperation reads an attempt; outcomes are not on the feed. */
 const operationPollMs = 100;
+
+const taskStatuses = Object.fromEntries(taskStatusValues.map((status) => [status, status]));
 
 const terminalStatuses: ReadonlySet<Operation["status"]> = new Set(["completed", "canceled", "failed", "interrupted"]);
 
@@ -84,7 +89,7 @@ export class AtlasClient {
       this.#reads = http;
       return;
     }
-    this.#picture = new Picture({ maxEntities: options.maxEntities ?? 10_000, localHistoryLimit: options.localHistoryLimit ?? 1_000 }, onListenerError);
+    this.#picture = new Picture({ maxEntities: options.maxEntities ?? 10_000, maxTasks: options.maxTasks ?? 10_000, localHistoryLimit: options.localHistoryLimit ?? 1_000 }, onListenerError);
     this.#reads = this.#picture;
     this.#synchronization = new Synchronization(this.#picture, {
       snapshotPage: (cursor, limit) => http.queryFull(cursor, limit),
@@ -134,6 +139,27 @@ export class AtlasClient {
   /** Checks in, reporting current state and contact. */
   async checkInAsset(id: string, report: AssetReport) {
     return unwrap(await this.#api.POST("/entities/{entity_id}/checkin", { params: { path: { entity_id: id } }, body: reportBody(report) }));
+  }
+
+  /** Prepare once, then persist and reuse this identity after an uncertain response. */
+  async prepareMoveTo(assetId: string, input: TaskSubmission["input"]): Promise<TaskSubmission> {
+    const dataset = await this.dataset();
+    return { dataset_id: dataset.id, submission_id: crypto.randomUUID(), asset_id: assetId, command_id: commandCatalog.move_to.id, input, scheduling: commandCatalog.move_to.scheduling[0] };
+  }
+
+  /** Returns as soon as Core commits the Task, independently of local catch-up. */
+  async submitTask(submission: TaskSubmission): Promise<Task> {
+    return unwrap(await this.#api.POST("/tasks", { body: submission }));
+  }
+
+  /** Persist requestId before sending so an uncertain response can be retried. */
+  async cancelTask(id: string, datasetId: string, requestId: string): Promise<Task> {
+    return unwrap(await this.#api.PATCH("/tasks/{task_id}/status", { params: { path: { task_id: id } }, body: { dataset_id: datasetId, status: taskStatuses.cancellation_requested, request_id: requestId } }));
+  }
+
+  /** For the assigned Asset: report execution with a stable report identity. */
+  async reportTask(id: string, update: TaskStatusUpdate): Promise<Task> {
+    return unwrap(await this.#api.PATCH("/tasks/{task_id}/status", { params: { path: { task_id: id } }, body: update }));
   }
 
   async plugins(page: Page = {}) {
@@ -192,6 +218,9 @@ export class AtlasClient {
 
   entity(id: string) { return this.#reads.entity(id); }
   assetStatus(id: string) { return this.#reads.assetStatus(id); }
+  task(id: string) { return this.#reads.task(id); }
+  tasks(page: Page = {}) { return this.#reads.tasks(page.cursor, page.limit); }
+  assignedTasks(assetId: string, page: Page = {}) { return this.#reads.assignedTasks(assetId, page.cursor, page.limit); }
   queryFull(cursor?: string, limit?: number) { return this.#reads.queryFull(cursor, limit); }
   changedSince(cursor: string, limit?: number) { return this.#reads.changedSince(cursor, limit); }
   subscribeFeed(listener: ChangeListener) { return this.#reads.subscribe(listener); }
@@ -205,10 +234,10 @@ export class AtlasClient {
 
   stopSynchronization() { this.#synchronization?.stop(); }
 
-  /** Resolves once the local picture includes the commit that returned entity. */
-  waitForSynchronization(entity: Entity, timeoutMs = defaultWaitMs) {
+  /** Resolves once the local picture includes the commit that returned a resource. */
+  waitForSynchronization(receipt: Pick<Task, "dataset_id" | "change_sequence">, timeoutMs = defaultWaitMs) {
     this.#requireSynchronization();
-    return this.#picture!.waitFor(entity, timeoutMs);
+    return this.#picture!.waitFor(receipt, timeoutMs);
   }
 
   #requireSynchronization(): Synchronization {
