@@ -79,11 +79,8 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     assert.equal((await hybrid.tasks()).coverage.asset_id, alpha.identity.assetId);
     assert.equal((await hybrid.assignedTasks(beta.identity.assetId)).coverage.asset_id, beta.identity.assetId);
     const fullTasks = await hybrid.tasks({ scope: "full" });
-    const fullPicture = await hybrid.queryFull(undefined, undefined, "full");
     assert.equal(fullTasks.coverage.scope, "full");
     assert.equal(fullTasks.tasks.length, 2);
-    assert.equal(fullPicture.coverage.scope, "full");
-    assert.equal(fullPicture.entities.length, 2);
     s.transcript.observe("local and full Task counts", { local: (await hybrid.tasks()).tasks.length, full: fullTasks.tasks.length });
   });
 

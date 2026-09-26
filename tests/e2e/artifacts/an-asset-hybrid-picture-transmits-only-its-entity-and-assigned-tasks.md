@@ -420,86 +420,6 @@ SDK `GET /tasks` with <alpha credential>
 }
 ```
 
-SDK `GET /queries/full` with <alpha credential>
-
-→ **200**
-```json
-{
-  "baseline": "<cursor-1>",
-  "baseline_sequence": 4,
-  "coverage": {
-    "scope": "full"
-  },
-  "dataset_id": "<id-1>",
-  "entities": [
-    {
-      "alias": "Beta",
-      "change_sequence": 2,
-      "command_manifest": [
-        {
-          "cancellation": true,
-          "command_id": "move_to",
-          "progress": true,
-          "scheduling": [
-            "queued"
-          ]
-        }
-      ],
-      "components": {
-        "communications": {
-          "link_state": "offline"
-        },
-        "heartbeat": {
-          "last_seen": null
-        },
-        "status": {
-          "reported_at": null,
-          "value": "unknown"
-        }
-      },
-      "dataset_id": "<id-1>",
-      "id": "<beta>",
-      "kind": "asset",
-      "subtype": null,
-      "version": 1
-    },
-    {
-      "alias": "Alpha",
-      "change_sequence": 1,
-      "command_manifest": [
-        {
-          "cancellation": true,
-          "command_id": "move_to",
-          "progress": true,
-          "scheduling": [
-            "queued"
-          ]
-        }
-      ],
-      "components": {
-        "communications": {
-          "link_state": "offline"
-        },
-        "heartbeat": {
-          "last_seen": null
-        },
-        "status": {
-          "reported_at": null,
-          "value": "unknown"
-        }
-      },
-      "dataset_id": "<id-1>",
-      "id": "<alpha>",
-      "kind": "asset",
-      "subtype": null,
-      "version": 1
-    }
-  ],
-  "next_cursor": "<cursor-2>",
-  "tasks": []
-}
-```
-
 Observed local and full Task counts:
 ```json
 {
@@ -585,7 +505,7 @@ direct `GET /queries/full?scope=asset` with <alpha credential>
 → **200**
 ```json
 {
-  "baseline": "<cursor-3>",
+  "baseline": "<cursor-1>",
   "baseline_sequence": 7,
   "coverage": {
     "asset_id": "<alpha>",
@@ -625,7 +545,7 @@ direct `GET /queries/full?scope=asset` with <alpha credential>
       "version": 2
     }
   ],
-  "next_cursor": "<cursor-4>",
+  "next_cursor": "<cursor-2>",
   "tasks": []
 }
 ```
@@ -642,7 +562,7 @@ direct `GET /queries/full?scope=asset` with <operator key>
 }
 ```
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <beta credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <beta credential>
 
 → **400**
 ```json
@@ -652,7 +572,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <beta cre
 }
 ```
 
-direct `GET /queries/changed-since?cursor=<cursor-3>` with <alpha credential>
+direct `GET /queries/changed-since?cursor=<cursor-1>` with <alpha credential>
 
 → **400**
 ```json
@@ -1016,7 +936,7 @@ SDK `POST /entities/<beta>/checkin` with <beta credential>
 }
 ```
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <alpha credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha credential>
 
 → **200**
 ```json
@@ -1026,7 +946,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <alpha cr
     "asset_id": "<alpha>",
     "scope": "asset"
   },
-  "cursor": "<cursor-5>",
+  "cursor": "<cursor-3>",
   "dataset_id": "<id-1>",
   "through_sequence": 15
 }
