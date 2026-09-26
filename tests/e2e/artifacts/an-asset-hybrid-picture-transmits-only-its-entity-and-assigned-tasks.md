@@ -148,7 +148,9 @@ SDK `POST /entities` with <enrollment key>
 }
 ```
 
-## 3. Load the Asset subset and disclose coverage
+## 3. Reject an empty hybrid Asset ID
+
+## 4. Load the Asset subset and disclose coverage
 
 Observed local coverage and Entity count:
 ```json
@@ -158,7 +160,58 @@ Observed local coverage and Entity count:
 }
 ```
 
-## 4. One-off unrelated reads do not enter the local feed
+## 5. One-off unrelated reads do not enter the local feed
+
+SDK `GET /entities/<beta>` with <alpha credential>
+
+→ **200**
+```json
+{
+  "alias": "Beta",
+  "change_sequence": 2,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "offline"
+    },
+    "heartbeat": {
+      "last_seen": null
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<beta>",
+  "kind": "asset",
+  "subtype": null,
+  "version": 1
+}
+```
+
+SDK `GET /entities/<beta>/tasks` with <alpha credential>
+
+→ **200**
+```json
+{
+  "coverage": {
+    "asset_id": "<beta>",
+    "scope": "asset"
+  },
+  "dataset_id": "<id-1>",
+  "tasks": []
+}
+```
 
 Observed unrelated Asset read and local events:
 ```json
@@ -168,7 +221,7 @@ Observed unrelated Asset read and local events:
 }
 ```
 
-## 5. Create one Task for each Asset
+## 6. Create one Task for each Asset
 
 SDK `GET /dataset` with <operator key>
 
@@ -262,7 +315,190 @@ SDK `POST /tasks` with <operator key>
 }
 ```
 
-## 6. The Task arrives locally; an unrelated Task is a one-off read
+## 7. The Task arrives locally; an unrelated Task is a one-off read
+
+SDK `GET /tasks/<unrelated Task>` with <alpha credential>
+
+→ **200**
+```json
+{
+  "acceptance_sequence": 1,
+  "asset_id": "<beta>",
+  "change_sequence": 4,
+  "command_id": "move_to",
+  "created_sequence": 4,
+  "dataset_id": "<id-1>",
+  "id": "<unrelated Task>",
+  "input": {
+    "latitude": 41,
+    "longitude": -71
+  },
+  "scheduling": "queued",
+  "status": "pending",
+  "submission_id": "<unrelated submission>",
+  "version": 1
+}
+```
+
+SDK `GET /entities/<beta>/tasks` with <alpha credential>
+
+→ **200**
+```json
+{
+  "coverage": {
+    "asset_id": "<beta>",
+    "scope": "asset"
+  },
+  "dataset_id": "<id-1>",
+  "tasks": [
+    {
+      "acceptance_sequence": 1,
+      "asset_id": "<beta>",
+      "change_sequence": 4,
+      "command_id": "move_to",
+      "created_sequence": 4,
+      "dataset_id": "<id-1>",
+      "id": "<unrelated Task>",
+      "input": {
+        "latitude": 41,
+        "longitude": -71
+      },
+      "scheduling": "queued",
+      "status": "pending",
+      "submission_id": "<unrelated submission>",
+      "version": 1
+    }
+  ]
+}
+```
+
+SDK `GET /tasks` with <alpha credential>
+
+→ **200**
+```json
+{
+  "coverage": {
+    "scope": "full"
+  },
+  "dataset_id": "<id-1>",
+  "tasks": [
+    {
+      "acceptance_sequence": 1,
+      "asset_id": "<alpha>",
+      "change_sequence": 3,
+      "command_id": "move_to",
+      "created_sequence": 3,
+      "dataset_id": "<id-1>",
+      "id": "<own Task>",
+      "input": {
+        "latitude": 40,
+        "longitude": -70
+      },
+      "scheduling": "queued",
+      "status": "pending",
+      "submission_id": "<own submission>",
+      "version": 1
+    },
+    {
+      "acceptance_sequence": 1,
+      "asset_id": "<beta>",
+      "change_sequence": 4,
+      "command_id": "move_to",
+      "created_sequence": 4,
+      "dataset_id": "<id-1>",
+      "id": "<unrelated Task>",
+      "input": {
+        "latitude": 41,
+        "longitude": -71
+      },
+      "scheduling": "queued",
+      "status": "pending",
+      "submission_id": "<unrelated submission>",
+      "version": 1
+    }
+  ]
+}
+```
+
+SDK `GET /queries/full` with <alpha credential>
+
+→ **200**
+```json
+{
+  "baseline": "<cursor-1>",
+  "baseline_sequence": 4,
+  "coverage": {
+    "scope": "full"
+  },
+  "dataset_id": "<id-1>",
+  "entities": [
+    {
+      "alias": "Beta",
+      "change_sequence": 2,
+      "command_manifest": [
+        {
+          "cancellation": true,
+          "command_id": "move_to",
+          "progress": true,
+          "scheduling": [
+            "queued"
+          ]
+        }
+      ],
+      "components": {
+        "communications": {
+          "link_state": "offline"
+        },
+        "heartbeat": {
+          "last_seen": null
+        },
+        "status": {
+          "reported_at": null,
+          "value": "unknown"
+        }
+      },
+      "dataset_id": "<id-1>",
+      "id": "<beta>",
+      "kind": "asset",
+      "subtype": null,
+      "version": 1
+    },
+    {
+      "alias": "Alpha",
+      "change_sequence": 1,
+      "command_manifest": [
+        {
+          "cancellation": true,
+          "command_id": "move_to",
+          "progress": true,
+          "scheduling": [
+            "queued"
+          ]
+        }
+      ],
+      "components": {
+        "communications": {
+          "link_state": "offline"
+        },
+        "heartbeat": {
+          "last_seen": null
+        },
+        "status": {
+          "reported_at": null,
+          "value": "unknown"
+        }
+      },
+      "dataset_id": "<id-1>",
+      "id": "<alpha>",
+      "kind": "asset",
+      "subtype": null,
+      "version": 1
+    }
+  ],
+  "next_cursor": "<cursor-2>",
+  "tasks": []
+}
+```
 
 Observed local and full Task counts:
 ```json
@@ -272,7 +508,7 @@ Observed local and full Task counts:
 }
 ```
 
-## 7. Cancellation intent and the later outcome remain in scope
+## 8. Cancellation intent and the later outcome remain in scope
 
 SDK `PATCH /tasks/<own Task>/status` with <operator key>
 ```json
@@ -342,14 +578,14 @@ Observed scoped Task outcome:
 "completed"
 ```
 
-## 8. Take an Asset-scoped continuation cursor
+## 9. Take an Asset-scoped continuation cursor
 
 direct `GET /queries/full?scope=asset` with <alpha credential>
 
 → **200**
 ```json
 {
-  "baseline": "<cursor-1>",
+  "baseline": "<cursor-3>",
   "baseline_sequence": 7,
   "coverage": {
     "asset_id": "<alpha>",
@@ -389,12 +625,12 @@ direct `GET /queries/full?scope=asset` with <alpha credential>
       "version": 2
     }
   ],
-  "next_cursor": "<cursor-2>",
+  "next_cursor": "<cursor-4>",
   "tasks": []
 }
 ```
 
-## 9. Scope credentials and cursors cannot cross identities
+## 10. Scope credentials and cursors cannot cross identities
 
 direct `GET /queries/full?scope=asset` with <operator key>
 
@@ -406,7 +642,7 @@ direct `GET /queries/full?scope=asset` with <operator key>
 }
 ```
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <beta credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <beta credential>
 
 → **400**
 ```json
@@ -416,7 +652,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <beta cre
 }
 ```
 
-direct `GET /queries/changed-since?cursor=<cursor-1>` with <alpha credential>
+direct `GET /queries/changed-since?cursor=<cursor-3>` with <alpha credential>
 
 → **400**
 ```json
@@ -426,7 +662,7 @@ direct `GET /queries/changed-since?cursor=<cursor-1>` with <alpha credential>
 }
 ```
 
-## 10. Unrelated traffic does not cause a false scoped gap
+## 11. Unrelated traffic does not cause a false scoped gap
 
 SDK `POST /entities/<beta>/checkin` with <beta credential>
 ```json
@@ -780,7 +1016,7 @@ SDK `POST /entities/<beta>/checkin` with <beta credential>
 }
 ```
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <alpha credential>
 
 → **200**
 ```json
@@ -790,7 +1026,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha cr
     "asset_id": "<alpha>",
     "scope": "asset"
   },
-  "cursor": "<cursor-3>",
+  "cursor": "<cursor-5>",
   "dataset_id": "<id-1>",
   "through_sequence": 15
 }
@@ -805,7 +1041,7 @@ Observed excluded changes and scoped continuation:
 }
 ```
 
-## 11. Scoped payloads contain no unrelated resource and record wire bytes
+## 12. Scoped payloads contain no unrelated resource and record wire bytes
 
 Observed Asset-scoped response bytes:
 ```json
@@ -815,7 +1051,44 @@ Observed Asset-scoped response bytes:
 }
 ```
 
-## 12. An unavailable own picture does not fall back to HTTP
+## 13. An unavailable own picture does not fall back to HTTP
+
+SDK `GET /entities/<beta>` with <alpha credential>
+
+→ **200**
+```json
+{
+  "alias": "Beta",
+  "change_sequence": 15,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "healthy"
+    },
+    "heartbeat": {
+      "last_seen": "<time>"
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<beta>",
+  "kind": "asset",
+  "subtype": null,
+  "version": 9
+}
+```
 
 Observed own picture after stop:
 ```json

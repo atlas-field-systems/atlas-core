@@ -1,5 +1,5 @@
 import { PictureError } from "./errors.js";
-import { feedHelloTypeValues, feedProgressTypeValues } from "./generated/protocol.js";
+import { feedHelloTypeValues, feedProgressTypeValues, type components } from "./generated/protocol.js";
 import type { FeedChange, FeedGap, FeedHello, FeedProgress } from "./types.js";
 
 /**
@@ -35,7 +35,7 @@ export class FeedConnection {
   }
 
   /** Authenticates on a new socket and resolves with Core's FeedHello. */
-  static open(socket: WebSocket, apiKey: string, scope?: "asset"): Promise<{ connection: FeedConnection; hello: FeedHello }> {
+  static open(socket: WebSocket, apiKey: string, scope?: components["schemas"]["FeedAuthentication"]["scope"]): Promise<{ connection: FeedConnection; hello: FeedHello }> {
     return new Promise((resolve, reject) => {
       const connection = new FeedConnection(socket, {
         hello: (hello) => { clearTimeout(timeout); resolve({ connection, hello }); },

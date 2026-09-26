@@ -1,4 +1,5 @@
 import { AtlasError, PictureError, isCursorExpired } from "./errors.js";
+import { pictureCoverageScopeValues } from "./generated/protocol.js";
 import type { FeedConnection } from "./feed.js";
 import type { Picture } from "./picture.js";
 import type { ChangePage, EntityPage, FeedChange, FeedHello } from "./types.js";
@@ -118,7 +119,7 @@ export class Synchronization {
         const message = await settled(connection.next(), signal);
         if (message.type === "gap") throw new PictureError("cursor_expired", "The feed fell behind Core's change log.");
         if (message.type === "progress") {
-          await this.#replayThrough(message.through_sequence, signal);
+          if (this.assetId) this.picture.advance(message.through_sequence, message.cursor);
           continue;
         }
         await this.#receive(message, signal);
@@ -141,6 +142,9 @@ export class Synchronization {
       const page = await settled(this.remote.changesSince(this.picture.cursor, replayPageSize), signal);
       if (page.dataset_id !== this.picture.datasetId) throw new PictureError("dataset_changed", "Replay belongs to another Dataset.");
       this.#checkCoverage(page.coverage);
+      if (!Number.isSafeInteger(page.through_sequence) || page.through_sequence < 0 || typeof page.cursor !== "string") {
+        throw new PictureError("invalid_replay", "Core returned invalid replay progress.");
+      }
       for (const change of page.changes) {
         if (this.assetId && change.sequence > this.picture.applied + 1) this.picture.advance(change.sequence - 1, this.picture.cursor);
         if (change.sequence > this.picture.applied) this.picture.apply(change);
@@ -154,8 +158,8 @@ export class Synchronization {
   #checkCoverage(coverage: EntityPage["coverage"] | undefined): void {
     if (!coverage) throw new PictureError("invalid_coverage", "Core did not declare picture coverage.");
     if (this.assetId) {
-      if (coverage.scope !== "asset" || coverage.asset_id !== this.assetId) throw new PictureError("invalid_coverage", "Core returned another picture scope.");
-    } else if (coverage.scope !== "full") throw new PictureError("invalid_coverage", "Core returned a scoped picture.");
+      if (coverage.scope !== pictureCoverageScopeValues[1] || coverage.asset_id !== this.assetId) throw new PictureError("invalid_coverage", "Core returned another picture scope.");
+    } else if (coverage.scope !== pictureCoverageScopeValues[0]) throw new PictureError("invalid_coverage", "Core returned a scoped picture.");
   }
 }
 

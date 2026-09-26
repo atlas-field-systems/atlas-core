@@ -4,11 +4,12 @@ import { newAssetCredential } from "./credentials.js";
 import { PictureError, WaitTimeoutError, unwrap } from "./errors.js";
 import { FeedConnection } from "./feed.js";
 import { commandCatalog } from "./generated/catalog.js";
+import { componentsParametersPictureScopeValues } from "./generated/protocol.js";
 import { HttpReads } from "./http-reads.js";
 import { HybridReads } from "./hybrid-reads.js";
 import { Picture } from "./picture.js";
 import { Synchronization } from "./synchronization.js";
-import type { AssetStatus, ChangeListener, EntityReads, Operation, OperationReport, OperationSubmission, Readiness, Task, TaskSubmission, TaskStatusUpdate } from "./types.js";
+import type { AssetStatus, ChangeListener, EntityReads, FullScope, Operation, OperationReport, OperationSubmission, Readiness, Task, TaskSubmission, TaskStatusUpdate } from "./types.js";
 
 type Schemas = components["schemas"];
 export type AssetEnrollmentFacts = Pick<Schemas["AssetEnrollmentRequest"], "alias" | "subtype" | "components" | "command_manifest">;
@@ -74,7 +75,7 @@ export interface Page {
   cursor?: string;
   limit?: number;
   /** In hybrid mode, request a one-off full Core list. */
-  scope?: "full";
+  scope?: FullScope;
 }
 
 /** Authenticated access to one Core with a mode-selected read source. */
@@ -95,13 +96,15 @@ export class AtlasClient {
       return;
     }
     const assetId = options.mode === "hybrid" ? options.assetId : undefined;
+    if (options.mode === "hybrid" && !options.assetId.trim()) throw new PictureError("invalid_asset_id", "Hybrid mode requires an Asset ID.");
+    const scope = options.mode === "hybrid" ? componentsParametersPictureScopeValues[0] : undefined;
     this.#assetId = assetId;
     this.#picture = new Picture({ maxEntities: options.maxEntities ?? 10_000, maxTasks: options.maxTasks ?? 10_000, localHistoryLimit: options.localHistoryLimit ?? 1_000 }, onListenerError, assetId);
-    this.#reads = assetId ? new HybridReads(assetId, this.#picture, http) : this.#picture;
+    this.#reads = options.mode === "hybrid" ? new HybridReads(options.assetId, this.#picture, http) : this.#picture;
     this.#synchronization = new Synchronization(this.#picture, {
-      snapshotPage: (cursor, limit) => http.queryFull(cursor, limit, assetId ? "asset" : undefined),
-      changesSince: (cursor, limit) => http.changedSince(cursor, limit, assetId ? "asset" : undefined),
-      openFeed: () => FeedConnection.open(openSocket(), options.apiKey, assetId ? "asset" : undefined),
+      snapshotPage: (cursor, limit) => http.queryFull(cursor, limit, scope),
+      changesSince: (cursor, limit) => http.changedSince(cursor, limit, scope),
+      openFeed: () => FeedConnection.open(openSocket(), options.apiKey, scope),
     }, options.snapshotPageSize ?? 100, assetId);
   }
 
@@ -225,11 +228,11 @@ export class AtlasClient {
 
   entity(id: string) { return this.#reads.entity(id); }
   assetStatus(id: string) { return this.#reads.assetStatus(id); }
-  task(id: string, options: { scope?: "full" } = {}) { return this.#reads.task(id, options); }
+  task(id: string, options: { scope?: FullScope } = {}) { return this.#reads.task(id, options); }
   tasks(page: Page = {}) { return this.#reads.tasks(page.cursor, page.limit, page.scope); }
   assignedTasks(assetId: string, page: Page = {}) { return this.#reads.assignedTasks(assetId, page.cursor, page.limit); }
-  queryFull(cursor?: string, limit?: number, scope?: "full") { return this.#reads.queryFull(cursor, limit, scope); }
-  changedSince(cursor: string, limit?: number, scope?: "full") { return this.#reads.changedSince(cursor, limit, scope); }
+  queryFull(cursor?: string, limit?: number, scope?: FullScope) { return this.#reads.queryFull(cursor, limit, scope); }
+  changedSince(cursor: string, limit?: number, scope?: FullScope) { return this.#reads.changedSince(cursor, limit, scope); }
   subscribeFeed(listener: ChangeListener) { return this.#reads.subscribe(listener); }
 
   get synchronization() {

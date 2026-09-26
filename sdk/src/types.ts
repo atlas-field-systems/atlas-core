@@ -8,6 +8,7 @@ export type EntityChange = Schemas["EntityChange"];
 export type Task = Schemas["Task"];
 export type TaskPage = Schemas["TaskPage"];
 export type PictureCoverage = Schemas["PictureCoverage"];
+export type FullScope = Exclude<PictureCoverage["scope"], components["parameters"]["PictureScope"]>;
 export type TaskSubmission = Schemas["TaskSubmission"];
 export type TaskStatusUpdate = Schemas["TaskStatusUpdate"];
 export type ChangePage = Schemas["ChangePage"];
@@ -27,11 +28,11 @@ export type ChangeListener = (change: EntityChange) => void;
 export interface EntityReads {
   entity(id: string): Promise<Entity>;
   assetStatus(id: string): Promise<AssetStatusView>;
-  task(id: string, options?: { scope?: "full" }): Promise<Task>;
-  tasks(cursor?: string, limit?: number, scope?: "full"): Promise<TaskPage>;
+  task(id: string, options?: { scope?: FullScope }): Promise<Task>;
+  tasks(cursor?: string, limit?: number, scope?: FullScope): Promise<TaskPage>;
   assignedTasks(assetId: string, cursor?: string, limit?: number): Promise<TaskPage>;
-  queryFull(cursor?: string, limit?: number, scope?: "full"): Promise<EntityPage>;
-  changedSince(cursor: string, limit?: number, scope?: "full"): Promise<ChangePage>;
+  queryFull(cursor?: string, limit?: number, scope?: FullScope): Promise<EntityPage>;
+  changedSince(cursor: string, limit?: number, scope?: FullScope): Promise<ChangePage>;
   /** Calls listener for each committed change; resolves to an unsubscribe function. */
   subscribe(listener: ChangeListener): Promise<() => void>;
 }

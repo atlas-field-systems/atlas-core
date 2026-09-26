@@ -19,9 +19,10 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     assetId: alpha.identity.assetId,
     fetch: async (input, init) => {
       const request = new Request(input, init);
-      const response = await fetch(request);
       const url = new URL(request.url);
-      if (url.searchParams.get("scope") === "asset") scopedPayloads.push({ path: url.pathname, body: await response.clone().text() });
+      const scoped = url.searchParams.get("scope") === "asset";
+      const response = scoped ? await fetch(request) : await s.transcript.fetch(request);
+      if (scoped) scopedPayloads.push({ path: url.pathname, body: await response.clone().text() });
       return response;
     },
     webSocketFactory: (url) => {
@@ -31,6 +32,11 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     },
   });
   s.context.after(() => hybrid.stopSynchronization());
+
+  await s.step("Reject an empty hybrid Asset ID", () => {
+    assert.throws(() => new AtlasClient({ baseUrl: core.baseUrl, apiKey: alpha.identity.credential, mode: "hybrid", assetId: "" }),
+      (error) => error instanceof PictureError && error.code === "invalid_asset_id");
+  });
 
   await s.step("Load the Asset subset and disclose coverage", async () => {
     await assert.rejects(hybrid.entity(alpha.identity.assetId), (error) => error instanceof PictureError && error.code === "not_ready");
@@ -72,9 +78,13 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     assert.deepEqual((await hybrid.tasks()).tasks.map((task) => task.id), [ownTask.id]);
     assert.equal((await hybrid.tasks()).coverage.asset_id, alpha.identity.assetId);
     assert.equal((await hybrid.assignedTasks(beta.identity.assetId)).coverage.asset_id, beta.identity.assetId);
-    assert.equal((await hybrid.tasks({ scope: "full" })).coverage.scope, "full");
-    assert.equal((await hybrid.tasks({ scope: "full" })).tasks.length, 2);
-    s.transcript.observe("local and full Task counts", { local: (await hybrid.tasks()).tasks.length, full: (await hybrid.tasks({ scope: "full" })).tasks.length });
+    const fullTasks = await hybrid.tasks({ scope: "full" });
+    const fullPicture = await hybrid.queryFull(undefined, undefined, "full");
+    assert.equal(fullTasks.coverage.scope, "full");
+    assert.equal(fullTasks.tasks.length, 2);
+    assert.equal(fullPicture.coverage.scope, "full");
+    assert.equal(fullPicture.entities.length, 2);
+    s.transcript.observe("local and full Task counts", { local: (await hybrid.tasks()).tasks.length, full: fullTasks.tasks.length });
   });
 
   await s.step("Cancellation intent and the later outcome remain in scope", async () => {
@@ -111,6 +121,7 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
   });
 
   await s.step("Unrelated traffic does not cause a false scoped gap", async () => {
+    const replayRequests = scopedPayloads.filter(({ path }) => path === "/queries/changed-since").length;
     for (let sequence = 1; sequence <= 8; sequence++) {
       await beta.client.checkInAsset(beta.identity.assetId, { datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence });
     }
@@ -119,6 +130,7 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     assert.deepEqual(replay.body.changes, []);
     assert.equal(replay.body.coverage.asset_id, alpha.identity.assetId);
     await eventually(() => hybrid.synchronization.sequence >= replay.body.through_sequence, "scoped continuation");
+    assert.equal(scopedPayloads.filter(({ path }) => path === "/queries/changed-since").length, replayRequests);
     assert.equal(hybrid.synchronization.generation, 1);
     assert.equal((await hybrid.queryFull()).entities.length, 1);
     s.transcript.observe("excluded changes and scoped continuation", { changes: replay.body.changes.length, through: replay.body.through_sequence, generation: hybrid.synchronization.generation });
@@ -309,7 +321,10 @@ scenario("An expired Asset replay rebuilds before satisfying a scoped wait", asy
       written = await alpha.client.checkInAsset(alpha.identity.assetId, { datasetId: alpha.identity.datasetId, reportId: crypto.randomUUID(), sequence });
     }
     await beta.client.checkInAsset(beta.identity.assetId, { datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence: 1 });
-    await eventually(() => feeds[0].held.length === 8, "held scoped changes");
+    await eventually(() => feeds[0].held.some((raw) => {
+      const message = JSON.parse(raw);
+      return message.type === "change" && message.change.sequence === written.change_sequence;
+    }), "held final own change");
     await assert.rejects(hybrid.waitForSynchronization(written, 50), (error) => error instanceof PictureError && error.code === "sync_timeout");
     return written;
   });
