@@ -53,9 +53,8 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 	if caller.Kind != identity.Asset || caller.ID != current.AssetId.String() {
 		return api.Task{}, errNotAssigned
 	}
-	status, err := validateReport(current, capabilities, update)
-	if err != nil {
-		return api.Task{}, err
+	if update.ReportId == nil || update.Sequence == nil || update.RequestId != nil {
+		return api.Task{}, errInvalidStatus
 	}
 	// Include the Task identity in the report digest: one report ID cannot be
 	// reused to change another Task even if its body happens to match.
@@ -72,6 +71,10 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 			current.ReceiptSequence = &contact.ChangeSequence
 		}
 		return current, nil
+	}
+	status, err := validateReport(current, capabilities, update)
+	if err != nil {
+		return api.Task{}, err
 	}
 	if update.Status == nil && current.Status != api.TaskStatusInProgress && current.Status != api.TaskStatusCancellationRequested {
 		return api.Task{}, errInvalidStatus
@@ -93,9 +96,6 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 }
 
 func validateReport(current api.Task, capabilities taskCapabilities, update api.TaskStatusUpdate) (api.TaskStatus, error) {
-	if update.ReportId == nil || update.Sequence == nil || update.RequestId != nil {
-		return "", errInvalidStatus
-	}
 	if update.ProgressPercent != nil && !capabilities.Progress {
 		return "", errUnsupportedProgress
 	}
@@ -113,7 +113,7 @@ func validateReport(current api.Task, capabilities taskCapabilities, update api.
 	} else if update.CancellationRequestId != nil {
 		return "", errInvalidStatus
 	}
-	if status == api.TaskStatusFailed && (update.FailureReason == nil || *update.FailureReason == "") {
+	if status == api.TaskStatusFailed && update.FailureReason == nil {
 		return "", errInvalidStatus
 	}
 	if status != api.TaskStatusFailed && update.FailureReason != nil {

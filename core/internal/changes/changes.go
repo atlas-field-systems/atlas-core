@@ -66,7 +66,7 @@ func (l *Log) Append(ctx context.Context, tx *sql.Tx, kind api.EntityChangeKind,
 		return 0, fmt.Errorf("encode change of Entity %s: %w", entity.Id, err)
 	}
 	queries := l.queries.WithTx(tx)
-	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded), ResourceType: "entity"})
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded), ResourceType: string(api.EntityChangeResourceTypeEntity)})
 	if err != nil {
 		return 0, fmt.Errorf("append change of Entity %s: %w", entity.Id, err)
 	}
@@ -83,7 +83,7 @@ func (l *Log) AppendTask(ctx context.Context, tx *sql.Tx, kind api.EntityChangeK
 		return 0, fmt.Errorf("encode change of Task %s: %w", task.Id, err)
 	}
 	queries := l.queries.WithTx(tx)
-	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: task.Id.String(), Kind: string(kind), Entity: "{}", ResourceType: "task", Task: sql.NullString{String: string(encoded), Valid: true}})
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: task.Id.String(), Kind: string(kind), Entity: "{}", ResourceType: string(api.EntityChangeResourceTypeTask), Task: sql.NullString{String: string(encoded), Valid: true}})
 	if err != nil {
 		return 0, fmt.Errorf("append change of Task %s: %w", task.Id, err)
 	}

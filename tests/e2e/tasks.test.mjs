@@ -200,6 +200,37 @@ scenario("Direct Protocol Task writes agree with SDK reads", async (s) => {
     assert.equal(response.body.status, "completed");
     assert.equal((await operator.entity(asset.identity.assetId)).change_sequence, response.body.change_sequence - 1);
   });
+  await s.step("Protocol rejects an empty failure reason before contact changes", async () => {
+    const before = await operator.entity(asset.identity.assetId);
+    const body = report(s, asset.identity, 2, "failed", { failure_reason: "" });
+    const response = await s.request(core, `/tasks/${task.id}/status`, { method: "PATCH", credential: asset.identity.credential, body });
+    assert.equal(response.status, 400);
+    assert.equal(response.body.code, "invalid_request");
+    assert.deepEqual(await operator.entity(asset.identity.assetId), before);
+  });
+});
+
+scenario("A matching progress report retry survives a later Task failure", async (s) => {
+  const core = await s.startCore();
+  const asset = await s.step("Enroll the assigned Asset", () => enrollAsset(s, core));
+  const operator = s.client(core, core.installation.operatorKey);
+  const submission = await s.step("Prepare Move To", () => operator.prepareMoveTo(asset.identity.assetId, { latitude: 40, longitude: -70 }));
+  s.transcript.name(submission.submission_id, "Move To submission");
+  const task = await s.step("Create Move To", () => operator.submitTask(submission));
+  s.transcript.name(task.id, "Move To task");
+
+  await s.step("Asset reports progress and then failure", async () => {
+    await asset.client.reportTask(task.id, report(s, asset.identity, 1, "in_progress", { progress_percent: 20 }));
+    const progress = report(s, asset.identity, 2, undefined, { progress_percent: 30 });
+    delete progress.status;
+    await asset.client.reportTask(task.id, progress);
+    const failed = await asset.client.reportTask(task.id, report(s, asset.identity, 3, "failed", { failure_reason: "route blocked" }));
+    const contact = await operator.entity(asset.identity.assetId);
+    const retried = await asset.client.reportTask(task.id, progress);
+    assert.deepEqual(retried, failed);
+    assert.deepEqual(await operator.entity(asset.identity.assetId), contact);
+    assert.deepEqual(await operator.task(task.id), failed);
+  });
 });
 
 scenario("A Task receipt waits for every earlier change before local application", async (s) => {

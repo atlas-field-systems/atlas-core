@@ -1085,6 +1085,7 @@ components:
           maximum: 100
         failure_reason:
           type: string
+          minLength: 1
           maxLength: 512
         cancellation_request_id:
           type: string
@@ -1136,6 +1137,7 @@ components:
           maximum: 100
         failure_reason:
           type: string
+          minLength: 1
           maxLength: 512
         cancellation_request_id:
           type: string
