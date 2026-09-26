@@ -71,12 +71,14 @@ export class Picture implements EntityReads {
     if (change.dataset_id !== this.#datasetId) throw new PictureError("dataset_changed", "A change belongs to another Dataset.");
     let stored = false;
     if (change.resource_type === "entity") {
+      if (!change.entity || change.entity.id !== change.resource_id || "task" in change) throw new PictureError("invalid_change", "A change has no matching resource.");
       const current = this.#entities.get(change.resource_id);
       if (!current || change.entity.version > current.version) {
         this.#store(change.entity);
         stored = true;
       }
     } else if (change.resource_type === "task") {
+      if (!change.task || change.task.id !== change.resource_id || "entity" in change) throw new PictureError("invalid_change", "A change has no matching resource.");
       const current = this.#tasks.get(change.resource_id);
       if (!current || change.task.version > current.version) {
         this.#storeTask(change.task);
