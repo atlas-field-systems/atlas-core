@@ -146,6 +146,9 @@ export class Synchronization {
         throw new PictureError("invalid_replay", "Core returned invalid replay progress.");
       }
       for (const change of page.changes) {
+        if (!Number.isSafeInteger(change.sequence) || change.sequence < 1 || change.sequence > page.through_sequence) {
+          throw new PictureError("invalid_replay", "Core returned an invalid replay change.");
+        }
         if (this.assetId && change.sequence > this.picture.applied + 1) this.picture.advance(change.sequence - 1, this.picture.cursor);
         if (change.sequence > this.picture.applied) this.picture.apply(change);
       }
