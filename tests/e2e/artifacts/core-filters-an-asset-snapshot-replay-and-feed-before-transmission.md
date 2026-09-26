@@ -337,12 +337,53 @@ SDK `POST /tasks` with <operator key>
 
 ## 5. The scoped feed sends the assigned Task and excluded-sequence proof
 
-Observed scoped feed coverage and change count:
+Observed scoped feed frames:
 ```json
-{
-  "scope": "asset",
-  "changes": 1
-}
+[
+  {
+    "coverage": {
+      "asset_id": "<alpha>",
+      "scope": "asset"
+    },
+    "cursor": "<cursor-1>",
+    "dataset_id": "<id-1>",
+    "sequence": 2,
+    "type": "hello"
+  },
+  {
+    "change": {
+      "dataset_id": "<id-1>",
+      "kind": "create",
+      "resource_id": "<own Task>",
+      "resource_type": "task",
+      "sequence": 3,
+      "task": {
+        "acceptance_sequence": 1,
+        "asset_id": "<alpha>",
+        "change_sequence": 3,
+        "command_id": "move_to",
+        "created_sequence": 3,
+        "dataset_id": "<id-1>",
+        "id": "<own Task>",
+        "input": {
+          "latitude": 40,
+          "longitude": -70
+        },
+        "scheduling": "queued",
+        "status": "pending",
+        "submission_id": "<id-6>",
+        "version": 1
+      }
+    },
+    "cursor": "<cursor-3>",
+    "type": "change"
+  },
+  {
+    "cursor": "<cursor-4>",
+    "through_sequence": 4,
+    "type": "progress"
+  }
+]
 ```
 
 ## 6. Snapshot pages contain only the Asset and its assigned Task
@@ -352,7 +393,7 @@ direct `GET /queries/full?scope=asset&limit=1` with <alpha credential>
 → **200**
 ```json
 {
-  "baseline": "<cursor-3>",
+  "baseline": "<cursor-4>",
   "baseline_sequence": 4,
   "coverage": {
     "asset_id": "<alpha>",
@@ -399,17 +440,17 @@ direct `GET /queries/full?scope=asset&limit=1` with <alpha credential>
       "version": 1
     }
   ],
-  "next_cursor": "<cursor-4>",
+  "next_cursor": "<cursor-5>",
   "tasks": []
 }
 ```
 
-direct `GET /queries/full?scope=asset&limit=1&cursor=<cursor-4>` with <alpha credential>
+direct `GET /queries/full?scope=asset&limit=1&cursor=<cursor-5>` with <alpha credential>
 
 → **200**
 ```json
 {
-  "baseline": "<cursor-3>",
+  "baseline": "<cursor-4>",
   "baseline_sequence": 4,
   "coverage": {
     "asset_id": "<alpha>",
@@ -476,7 +517,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha cr
     "asset_id": "<alpha>",
     "scope": "asset"
   },
-  "cursor": "<cursor-3>",
+  "cursor": "<cursor-4>",
   "dataset_id": "<id-1>",
   "through_sequence": 4
 }
@@ -484,7 +525,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha cr
 
 ## 8. Cursors and scope stay bound to the authenticated Asset
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <beta credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-4>` with <beta credential>
 
 → **400**
 ```json
@@ -494,7 +535,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <beta cre
 }
 ```
 
-direct `GET /queries/changed-since?cursor=<cursor-3>` with <alpha credential>
+direct `GET /queries/changed-since?cursor=<cursor-4>` with <alpha credential>
 
 → **400**
 ```json
@@ -516,7 +557,7 @@ direct `GET /queries/full?scope=asset` with <operator key>
 
 ## 9. Pruning unrelated traffic does not expire the scoped cursor
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <alpha credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-4>` with <alpha credential>
 
 → **200**
 ```json
@@ -526,7 +567,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-3>` with <alpha cr
     "asset_id": "<alpha>",
     "scope": "asset"
   },
-  "cursor": "<cursor-5>",
+  "cursor": "<cursor-6>",
   "dataset_id": "<id-1>",
   "through_sequence": 12
 }

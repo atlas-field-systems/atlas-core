@@ -42,7 +42,8 @@ scenario("Core filters an Asset snapshot replay and feed before transmission", a
     await eventually(() => frames.some(({ body }) => body.type === "progress" && body.through_sequence >= unrelated.change_sequence), "scoped feed progress");
     assert.deepEqual(frames.filter(({ body }) => body.type === "change").map(({ body }) => body.change.resource_id), [own.id]);
     assert.ok(frames.every(({ raw }) => !raw.includes(beta.identity.assetId) && !raw.includes(unrelated.id)));
-    s.transcript.observe("scoped feed coverage and change count", { scope: frames[0].body.coverage.scope, changes: 1 });
+    const through = frames.findIndex(({ body }) => body.type === "progress" && body.through_sequence >= unrelated.change_sequence);
+    s.transcript.observe("scoped feed frames", frames.slice(0, through + 1).map(({ body }) => body));
   });
 
   await s.step("Snapshot pages contain only the Asset and its assigned Task", async () => {
