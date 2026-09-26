@@ -5,6 +5,7 @@ import { PictureError, WaitTimeoutError, unwrap } from "./errors.js";
 import { FeedConnection } from "./feed.js";
 import { commandCatalog } from "./generated/catalog.js";
 import { HttpReads } from "./http-reads.js";
+import { HybridReads } from "./hybrid-reads.js";
 import { Picture } from "./picture.js";
 import { Synchronization } from "./synchronization.js";
 import type { AssetStatus, ChangeListener, EntityReads, Operation, OperationReport, OperationSubmission, Readiness, Task, TaskSubmission, TaskStatusUpdate } from "./types.js";
@@ -39,12 +40,10 @@ export interface AssetReport {
   commandManifest?: Schemas["CommandSupport"][];
 }
 
-export interface AtlasClientOptions {
+interface CommonClientOptions {
   baseUrl: string;
   apiKey: string;
   fetch?: typeof fetch;
-  /** "http" reads Core on every call; "full" serves reads from a synchronized local picture. Default "http". */
-  mode?: "http" | "full";
   /** Entities a full picture may hold before synchronization fails. Default 10,000. */
   maxEntities?: number;
   /** Tasks a full picture may hold before synchronization fails. Default 10,000. */
@@ -58,6 +57,11 @@ export interface AtlasClientOptions {
   onListenerError?: (error: unknown) => void;
 }
 
+export type AtlasClientOptions = CommonClientOptions & (
+  { mode?: "http" | "full"; assetId?: never } |
+  { mode: "hybrid"; assetId: string }
+);
+
 /** How long waitForSynchronization and waitForOperation wait by default. */
 const defaultWaitMs = 10_000;
 
@@ -69,31 +73,36 @@ const terminalStatuses: ReadonlySet<Operation["status"]> = new Set(["completed",
 export interface Page {
   cursor?: string;
   limit?: number;
+  /** In hybrid mode, request a one-off full Core list. */
+  scope?: "full";
 }
 
-/** Authenticated access to one Core. Reads behave the same in either mode. */
+/** Authenticated access to one Core with a mode-selected read source. */
 export class AtlasClient {
   readonly #api: ReturnType<typeof createClient<paths>>;
   readonly #reads: EntityReads;
   readonly #picture?: Picture;
   readonly #synchronization?: Synchronization;
+  readonly #assetId?: string;
 
   constructor(options: AtlasClientOptions) {
     this.#api = createClient<paths>({ baseUrl: options.baseUrl, headers: { Authorization: `Bearer ${options.apiKey}` }, fetch: options.fetch });
     const onListenerError = options.onListenerError ?? console.error;
     const openSocket = () => (options.webSocketFactory ?? ((url) => new WebSocket(url)))(feedUrl(options.baseUrl));
     const http = new HttpReads(this.#api, openSocket, options.apiKey, onListenerError);
-    if (options.mode !== "full") {
+    if (options.mode !== "full" && options.mode !== "hybrid") {
       this.#reads = http;
       return;
     }
-    this.#picture = new Picture({ maxEntities: options.maxEntities ?? 10_000, maxTasks: options.maxTasks ?? 10_000, localHistoryLimit: options.localHistoryLimit ?? 1_000 }, onListenerError);
-    this.#reads = this.#picture;
+    const assetId = options.mode === "hybrid" ? options.assetId : undefined;
+    this.#assetId = assetId;
+    this.#picture = new Picture({ maxEntities: options.maxEntities ?? 10_000, maxTasks: options.maxTasks ?? 10_000, localHistoryLimit: options.localHistoryLimit ?? 1_000 }, onListenerError, assetId);
+    this.#reads = assetId ? new HybridReads(assetId, this.#picture, http) : this.#picture;
     this.#synchronization = new Synchronization(this.#picture, {
-      snapshotPage: (cursor, limit) => http.queryFull(cursor, limit),
-      changesSince: (cursor, limit) => http.changedSince(cursor, limit),
-      openFeed: () => FeedConnection.open(openSocket(), options.apiKey),
-    }, options.snapshotPageSize ?? 100);
+      snapshotPage: (cursor, limit) => http.queryFull(cursor, limit, assetId ? "asset" : undefined),
+      changesSince: (cursor, limit) => http.changedSince(cursor, limit, assetId ? "asset" : undefined),
+      openFeed: () => FeedConnection.open(openSocket(), options.apiKey, assetId ? "asset" : undefined),
+    }, options.snapshotPageSize ?? 100, assetId);
   }
 
   async health() {
@@ -216,15 +225,15 @@ export class AtlasClient {
 
   entity(id: string) { return this.#reads.entity(id); }
   assetStatus(id: string) { return this.#reads.assetStatus(id); }
-  task(id: string) { return this.#reads.task(id); }
-  tasks(page: Page = {}) { return this.#reads.tasks(page.cursor, page.limit); }
+  task(id: string, options: { scope?: "full" } = {}) { return this.#reads.task(id, options); }
+  tasks(page: Page = {}) { return this.#reads.tasks(page.cursor, page.limit, page.scope); }
   assignedTasks(assetId: string, page: Page = {}) { return this.#reads.assignedTasks(assetId, page.cursor, page.limit); }
-  queryFull(cursor?: string, limit?: number) { return this.#reads.queryFull(cursor, limit); }
-  changedSince(cursor: string, limit?: number) { return this.#reads.changedSince(cursor, limit); }
+  queryFull(cursor?: string, limit?: number, scope?: "full") { return this.#reads.queryFull(cursor, limit, scope); }
+  changedSince(cursor: string, limit?: number, scope?: "full") { return this.#reads.changedSince(cursor, limit, scope); }
   subscribeFeed(listener: ChangeListener) { return this.#reads.subscribe(listener); }
 
   get synchronization() {
-    return this.#picture?.status ?? { state: "http" as const, datasetId: null, sequence: null, generation: null };
+    return this.#picture?.status ?? { state: "http" as const, datasetId: null, sequence: null, generation: null, coverage: { scope: "full" as const } };
   }
 
   /** Loads the full picture and follows Core; resolves when local reads are ready. */
@@ -233,13 +242,17 @@ export class AtlasClient {
   stopSynchronization() { this.#synchronization?.stop(); }
 
   /** Resolves once the local picture includes the commit that returned a resource. */
-  waitForSynchronization(receipt: Pick<Task, "dataset_id" | "change_sequence" | "receipt_sequence">, timeoutMs = defaultWaitMs) {
+  async waitForSynchronization(receipt: Pick<Task, "dataset_id" | "change_sequence" | "receipt_sequence"> & { id?: string; asset_id?: string }, timeoutMs = defaultWaitMs) {
     this.#requireSynchronization();
+    if (this.#assetId) {
+      const owner = receipt.asset_id ?? receipt.id;
+      if (owner !== this.#assetId) throw new PictureError("out_of_scope", "This write is outside the Asset picture.");
+    }
     return this.#picture!.waitFor(receipt, timeoutMs);
   }
 
   #requireSynchronization(): Synchronization {
-    if (!this.#synchronization) throw new PictureError("unsupported", "This client reads over HTTP; create it with mode \"full\" to synchronize.");
+    if (!this.#synchronization) throw new PictureError("unsupported", "This client reads over HTTP; create it with a synchronized mode to synchronize.");
     return this.#synchronization;
   }
 }

@@ -1,5 +1,6 @@
 import type createClient from "openapi-fetch";
 import type { paths } from "./generated/protocol.js";
+import { componentsParametersPictureScopeValues } from "./generated/protocol.js";
 import { unwrap } from "./errors.js";
 import { FeedConnection } from "./feed.js";
 import { notify, type ChangeListener, type EntityReads } from "./types.js";
@@ -35,12 +36,12 @@ export class HttpReads implements EntityReads {
     return unwrap(await this.api.GET("/entities/{entity_id}/tasks", { params: { path: { entity_id: assetId }, query: { cursor, limit } } }));
   }
 
-  async queryFull(cursor?: string, limit?: number) {
-    return unwrap(await this.api.GET("/queries/full", { params: { query: { cursor, limit } } }));
+  async queryFull(cursor?: string, limit?: number, scope?: "full" | "asset") {
+    return unwrap(await this.api.GET("/queries/full", { params: { query: { cursor, limit, scope: scope === componentsParametersPictureScopeValues[0] ? scope : undefined } } }));
   }
 
-  async changedSince(cursor: string, limit?: number) {
-    return unwrap(await this.api.GET("/queries/changed-since", { params: { query: { cursor, limit } } }));
+  async changedSince(cursor: string, limit?: number, scope?: "full" | "asset") {
+    return unwrap(await this.api.GET("/queries/changed-since", { params: { query: { cursor, limit, scope: scope === componentsParametersPictureScopeValues[0] ? scope : undefined } } }));
   }
 
   /** Delivers live changes from a feed connection until unsubscribed or disconnected. */

@@ -1,6 +1,6 @@
 # SDK data access
 
-The SDK has three agreed read modes: HTTP, full synchronization, and Asset hybrid. They share the same application-facing operations; the selected mode determines their data source. This is a design document, not an implemented SDK interface. Exact method names and the detailed policies marked as proposals remain open.
+The SDK has three agreed read modes: HTTP, full synchronization, and Asset hybrid. They share the same application-facing operations; the selected mode determines their data source. The current implementation covers Entities and Tasks. Object metadata, queue revisions, and additional direct dependencies extend this contract when those resources arrive.
 
 ## Agreed modes
 
@@ -60,21 +60,27 @@ History results never populate the live picture, emit its local feed events, or 
 Asset hybrid is the agreed third mode, designed to reduce bandwidth on an Asset's link. It automatically synchronizes:
 
 - The Asset's own Entity.
-- Its outstanding Tasks and their outcomes as they occur.
-- Task cancellation requests and queue-order changes, including confirmation state.
-- Directly referenced Entities and Object metadata needed to execute those Tasks.
+- Its assigned Tasks, including terminal Tasks until Reset, and their outcomes as they occur.
+- When those resources arrive, Task cancellation requests and queue-order changes, including confirmation state.
+- When Tasks reference them, the Entities and Object metadata needed to execute those Tasks.
 
 Reaffirmed on 23 September 2026: keep the maintained subset because Task dependencies can change while the Asset works. For example, when a Task depends on a Track, its relevant telemetry updates reach the Asset through the feed without repeated application polling or reissuing the Task. A one-time work document is not a substitute for this behavior. Future edge radio designs should preserve it through their transport translation; no new radio transport or delivery-latency guarantee is selected here.
 
-File bytes remain explicit downloads. Unrelated Assets, Tasks, and Objects are not included in the background subscription. The current Protocol scope includes the authenticated Asset Entity and every Task whose immutable `asset_id` names it, including terminal Tasks until Reset. Move To has no further direct resource dependency; later resource tickets extend the scoped snapshot, change index, feed and replay together when they add references. Synchronization does not recursively subscribe to the entire relationship graph.
+File bytes remain explicit downloads. Unrelated Assets, Tasks, and Objects are not included in the background subscription. The current direct-dependency rule is specified below; synchronization does not recursively subscribe to the entire relationship graph.
 
 Hybrid scope limits bandwidth, not authorization. Every authenticated client may still request the full operational picture.
 
-Core filters initial queries, recovery queries, and live feed delivery before transmission. Downloading everything and discarding unrelated records in the SDK would not meet the bandwidth goal. The scope applies consistently across loading and recovery, including resources entering and leaving the subset. A scope removal must not be confused with global deletion, and unrelated Core changes must not trigger false recovery gaps. An Asset credential selects `scope=asset`; scoped cursors bind the Dataset and identity, while `through_sequence` and feed progress prove excluded global changes, including gaps before a later scoped change. Per-Asset pruning boundaries prevent unrelated traffic from expiring scoped replay.
+Core filters initial queries, recovery queries, and live feed delivery before transmission. Downloading everything and discarding unrelated records in the SDK would not meet the bandwidth goal. The scope applies consistently across loading and recovery, including resources entering and leaving the subset. A scope removal must not be confused with global deletion, and unrelated Core changes must not trigger false recovery gaps. The implemented filter and cursor mechanics are specified below.
 
 Reads within the synchronized scope use the local picture. Reads outside it make a one-off API request without expanding the background subscription. Those responses do not become local feed updates or imply ongoing synchronization of the fetched data. The local feed always describes only changes applied to the synchronized subset. Query results must make their coverage clear; a scoped snapshot must never appear to be the entire Core dataset.
 
-In-scope reads retain the same readiness and freshness rules as full synchronization. An unready or stale local picture does not trigger fallback. One-off API failures remain API failures. Local cursors stay scoped to the SDK instance, picture generation, and subset; out-of-scope Core queries use separate Core cursors. Exact request/result scope metadata remains to be specified.
+In-scope reads retain the same readiness and freshness rules as full synchronization. An unready or stale local picture does not trigger fallback. One-off API failures remain API failures. Local cursors stay scoped to the SDK instance, picture generation, and subset; out-of-scope Core queries use separate Core cursors.
+
+The current direct-dependency rule includes the authenticated Asset Entity and every Task whose immutable `asset_id` names it, including terminal Tasks until Reset. Move To has no other resource reference. When a later Task field directly names an Entity or Object, that resource ticket must add its owner to Core's scoped snapshot, change index, feed/replay membership and SDK coverage together. Scope entry and removal must be represented as subset changes without claiming a global deletion. References do not recursively expand the subset.
+
+`new AtlasClient({ mode: "hybrid", assetId, ... })` starts this scope. `entity(ownId)`, `assignedTasks(ownId)`, ordinary Task reads, lists, queries and feed subscriptions use the local subset. An unrelated Entity ID or assigned-Tasks list uses one Core request. For an unrelated Task ID whose owner cannot be inferred locally, use `task(id, { scope: "full" })`; `tasks({ scope: "full" })` and `queryFull(cursor, limit, "full")` explicitly ask Core for broader results. Task lists, `queryFull` and `changedSince` disclose their result coverage. An explicit synchronization wait rejects an out-of-scope receipt.
+
+Core accepts `scope=asset` on snapshot/replay only for an Asset credential. The authenticated identity selects the subset; caller-supplied Asset IDs cannot widen it. Snapshot, replay and feed hello disclose `coverage`. Scoped replay's `through_sequence` and cursor prove the global sequence through which Core filtered, while feed progress carries that proof across excluded changes, including before a later scoped change. Cursors bind the Dataset and scope. Core retains a per-Asset pruned-change boundary, so pruning unrelated changes does not falsely expire scoped replay. Full reads remain available to every authenticated client.
 
 All writes still go to Core. Successful writes reconcile locally only when their results belong in the synchronized scope; they do not expand that scope. Asset hybrid adds neither disk persistence nor an offline-write queue.
 
@@ -164,8 +170,8 @@ Core, Assets and SDK clients may use different versions within declared supporte
 
 ## Open decisions
 
-- Hybrid scope/dependency encoding, terminal-Task retention, scope-entry/removal events, and request/result coverage metadata.
-- SDK constructor/options and method names for selecting the read mode.
+- Extension of the hybrid dependency scope for later resource tickets, including scope-entry/removal events when those resources exist.
+- Coverage for future resource-specific query results.
 - Exact readiness/error/status shapes and freshness requirements for particular consumers.
 - Detailed local query pagination, history limits/cursor encoding, and local feed start/rebuild behavior.
 - Cache lifecycle and concrete resource limits for the full in-memory picture.

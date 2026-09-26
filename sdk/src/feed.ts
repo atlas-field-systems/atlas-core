@@ -1,5 +1,6 @@
 import { PictureError } from "./errors.js";
-import type { FeedChange, FeedGap, FeedHello } from "./types.js";
+import { feedHelloTypeValues, feedProgressTypeValues } from "./generated/protocol.js";
+import type { FeedChange, FeedGap, FeedHello, FeedProgress } from "./types.js";
 
 /**
  * Messages Core may send before the reader takes them. A reader that falls
@@ -10,7 +11,7 @@ const maxQueuedMessages = 1_000;
 /** Time Core has to answer authentication with FeedHello. */
 const helloTimeoutMs = 5_000;
 
-type Delivery = FeedChange | FeedGap;
+type Delivery = FeedChange | FeedGap | FeedProgress;
 
 interface FeedEvents {
   hello(hello: FeedHello): void;
@@ -34,14 +35,14 @@ export class FeedConnection {
   }
 
   /** Authenticates on a new socket and resolves with Core's FeedHello. */
-  static open(socket: WebSocket, apiKey: string): Promise<{ connection: FeedConnection; hello: FeedHello }> {
+  static open(socket: WebSocket, apiKey: string, scope?: "asset"): Promise<{ connection: FeedConnection; hello: FeedHello }> {
     return new Promise((resolve, reject) => {
       const connection = new FeedConnection(socket, {
         hello: (hello) => { clearTimeout(timeout); resolve({ connection, hello }); },
         failed: (error) => { clearTimeout(timeout); reject(error); },
       });
       const timeout = setTimeout(() => connection.#fail(new PictureError("feed_timeout", "The feed did not confirm its subscription.")), helloTimeoutMs);
-      socket.addEventListener("open", () => socket.send(JSON.stringify({ api_key: apiKey })));
+      socket.addEventListener("open", () => socket.send(JSON.stringify({ api_key: apiKey, ...(scope ? { scope } : {}) })));
     });
   }
 
@@ -60,7 +61,7 @@ export class FeedConnection {
   #receive(data: string): void {
     const message = parseMessage(data);
     if (!message) return this.#fail(new PictureError("feed_invalid", "Core sent a malformed feed message."));
-    if (message.type === "hello") return this.#events.hello(message);
+    if (message.type === feedHelloTypeValues[0]) return this.#events.hello(message);
     if (this.#waiting) {
       this.#waiting.resolve(message);
       this.#waiting = undefined;
@@ -92,8 +93,9 @@ function parseMessage(data: string): FeedHello | Delivery | undefined {
     return undefined;
   }
   if (!isRecord(message)) return undefined;
-  if (message.type === "hello" && typeof message.cursor === "string" && Number.isSafeInteger(message.sequence)) return message as FeedHello;
+  if (message.type === feedHelloTypeValues[0] && typeof message.cursor === "string" && Number.isSafeInteger(message.sequence)) return message as FeedHello;
   if (message.type === "gap") return message as FeedGap;
+  if (message.type === feedProgressTypeValues[0] && typeof message.cursor === "string" && Number.isSafeInteger(message.through_sequence)) return message as FeedProgress;
   if (message.type === "change" && typeof message.cursor === "string" && isChange(message.change)) return message as FeedChange;
   return undefined;
 }

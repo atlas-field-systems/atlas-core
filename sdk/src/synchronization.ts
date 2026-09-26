@@ -36,6 +36,7 @@ export class Synchronization {
     private readonly picture: Picture,
     private readonly remote: Remote,
     private readonly snapshotPageSize: number,
+    private readonly assetId?: string,
   ) {}
 
   /** Starts synchronizing and resolves at the first ready state. */
@@ -92,9 +93,12 @@ export class Synchronization {
   async #loadSnapshot(signal: AbortSignal): Promise<void> {
     this.picture.reset();
     const first = await settled(this.remote.snapshotPage(undefined, this.snapshotPageSize), signal);
+    this.#checkCoverage(first.coverage);
     this.picture.load(first);
     for (let page = first; page.next_cursor;) {
       page = await settled(this.remote.snapshotPage(page.next_cursor, this.snapshotPageSize), signal);
+      this.#checkCoverage(page.coverage);
+      if (page.dataset_id !== first.dataset_id || page.baseline_sequence !== first.baseline_sequence) throw new PictureError("snapshot_changed", "Snapshot pages have different baselines.");
       this.picture.load(page);
     }
     this.picture.setBaseline(first.dataset_id, first.baseline_sequence, first.baseline);
@@ -106,12 +110,17 @@ export class Synchronization {
     signal.addEventListener("abort", closeOnStop, { once: true });
     try {
       if (hello.dataset_id !== this.picture.datasetId) throw new PictureError("dataset_changed", "The feed belongs to another Dataset.");
+      this.#checkCoverage(hello.coverage);
       await this.#replayThrough(hello.sequence, signal);
       this.picture.markReady();
       onReady();
       for (;;) {
         const message = await settled(connection.next(), signal);
         if (message.type === "gap") throw new PictureError("cursor_expired", "The feed fell behind Core's change log.");
+        if (message.type === "progress") {
+          await this.#replayThrough(message.through_sequence, signal);
+          continue;
+        }
         await this.#receive(message, signal);
       }
     } finally {
@@ -130,12 +139,23 @@ export class Synchronization {
   async #replayThrough(target: number, signal: AbortSignal): Promise<void> {
     while (this.picture.applied < target) {
       const page = await settled(this.remote.changesSince(this.picture.cursor, replayPageSize), signal);
-      if (page.changes.length === 0) throw new PictureError("replay_gap", "Core did not return the missing changes.");
+      if (page.dataset_id !== this.picture.datasetId) throw new PictureError("dataset_changed", "Replay belongs to another Dataset.");
+      this.#checkCoverage(page.coverage);
       for (const change of page.changes) {
+        if (this.assetId && change.sequence > this.picture.applied + 1) this.picture.advance(change.sequence - 1, this.picture.cursor);
         if (change.sequence > this.picture.applied) this.picture.apply(change);
       }
-      this.picture.cursor = page.cursor;
+      if (page.through_sequence <= this.picture.applied && page.changes.length === 0) throw new PictureError("replay_gap", "Core did not prove the missing changes.");
+      if (this.assetId) this.picture.advance(page.through_sequence, page.cursor);
+      else this.picture.cursor = page.cursor;
     }
+  }
+
+  #checkCoverage(coverage: EntityPage["coverage"] | undefined): void {
+    if (!coverage) throw new PictureError("invalid_coverage", "Core did not declare picture coverage.");
+    if (this.assetId) {
+      if (coverage.scope !== "asset" || coverage.asset_id !== this.assetId) throw new PictureError("invalid_coverage", "Core returned another picture scope.");
+    } else if (coverage.scope !== "full") throw new PictureError("invalid_coverage", "Core returned a scoped picture.");
   }
 }
 

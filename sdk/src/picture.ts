@@ -1,5 +1,5 @@
 import { PictureError } from "./errors.js";
-import { notify, type ChangeListener, type ChangePage, type Entity, type EntityChange, type EntityPage, type EntityReads, type Task, type TaskPage } from "./types.js";
+import { notify, type ChangeListener, type ChangePage, type Entity, type EntityChange, type EntityPage, type EntityReads, type PictureCoverage, type Task, type TaskPage } from "./types.js";
 
 export type SynchronizationState = "initializing" | "ready" | "stale" | "stopped" | "failed";
 
@@ -26,16 +26,18 @@ export class Picture implements EntityReads {
   #datasetId = "";
   #generation = 0;
   #applied = 0;
+  readonly #assetId?: string;
   /** Core's replay cursor after the last applied change. */
   cursor = "";
 
   constructor(
     private readonly limits: PictureLimits,
     private readonly onListenerError: (error: unknown) => void,
-  ) {}
+    assetId?: string,
+  ) { this.#assetId = assetId; }
 
   get status() {
-    return { state: this.#state, datasetId: this.#datasetId || null, sequence: this.#applied, generation: this.#generation };
+    return { state: this.#state, datasetId: this.#datasetId || null, sequence: this.#applied, generation: this.#generation, coverage: this.#coverage() };
   }
 
   get applied() { return this.#applied; }
@@ -95,6 +97,14 @@ export class Picture implements EntityReads {
     this.#notifyWaiters();
   }
 
+  /** Advances over changes Core proved excluded from this scoped picture. */
+  advance(through: number, cursor: string): void {
+    if (through < this.#applied) return;
+    this.#applied = through;
+    this.cursor = cursor;
+    this.#notifyWaiters();
+  }
+
   markReady(): void { this.#setState("ready"); }
   markStale(): void { this.#setState("stale"); }
   markStopped(): void { this.#setState("stopped"); }
@@ -134,7 +144,7 @@ export class Picture implements EntityReads {
     if (assetId !== undefined && !this.#entities.has(assetId)) throw new PictureError("not_found", "The Entity is not in the local picture.");
     const tasks = [...this.#tasks.values()].filter((task) => assetId === undefined || task.asset_id === assetId).sort((a, b) => assetId === undefined ? a.created_sequence - b.created_sequence : a.acceptance_sequence - b.acceptance_sequence);
     const end = offset + limit;
-    return { dataset_id: this.#datasetId, coverage: assetId ? { scope: "asset", asset_id: assetId } : { scope: "full" }, tasks: structuredClone(tasks.slice(offset, end)), ...(end < tasks.length ? { next_cursor: this.#cursor(list, end) } : {}) };
+    return { dataset_id: this.#datasetId, coverage: assetId ? { scope: "asset", asset_id: assetId } : this.#coverage(), tasks: structuredClone(tasks.slice(offset, end)), ...(end < tasks.length ? { next_cursor: this.#cursor(list, end) } : {}) };
   }
 
   async queryFull(cursor?: string, limit = 50): Promise<EntityPage> {
@@ -148,7 +158,7 @@ export class Picture implements EntityReads {
     const pageTasks = tasks.slice(Math.max(0, offset - entities.length), Math.max(0, end - entities.length));
     return {
       dataset_id: this.#datasetId,
-      coverage: { scope: "full" },
+      coverage: this.#coverage(),
       baseline: this.#cursor("changes", 0),
       baseline_sequence: this.#applied,
       entities: structuredClone(pageEntities),
@@ -164,7 +174,7 @@ export class Picture implements EntityReads {
     if (after < this.#historyStart) throw new PictureError("cursor_expired", "Local change history no longer covers this cursor.");
     const changes = this.#history.filter((change) => change.sequence > after).slice(0, limit);
     const last = changes.length < limit ? this.#applied : changes.at(-1)!.sequence;
-    return { dataset_id: this.#datasetId, changes: structuredClone(changes), cursor: this.#cursor("changes", 0, last), through_sequence: last, coverage: { scope: "full" } };
+    return { dataset_id: this.#datasetId, changes: structuredClone(changes), cursor: this.#cursor("changes", 0, last), through_sequence: last, coverage: this.#coverage() };
   }
 
   async subscribe(listener: ChangeListener) {
@@ -198,6 +208,10 @@ export class Picture implements EntityReads {
       throw new PictureError("resource_limit", "The local picture exceeds its Entity limit.");
     }
     this.#entities.set(entity.id, entity);
+  }
+
+  #coverage(): PictureCoverage {
+    return this.#assetId ? { scope: "asset" as const, asset_id: this.#assetId } : { scope: "full" as const };
   }
 
   #storeTask(task: Task): void {
