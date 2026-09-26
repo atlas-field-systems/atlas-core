@@ -44,7 +44,7 @@ The CLI/TUI identifies the target installation and requires an explicit destruct
 
 The coordinator must remain able to finish cleanup after Core stops. Serialize it against other lifecycle/configuration actions. Record that cleanup is in progress outside the data being removed, and block ordinary startup until it finishes. On failure or coordinator interruption, leave serving disabled and report the incomplete cleanup; rerunning or resuming the local action completes the remaining cleanup. Do not claim success while any required target remains uncleared. The progress marker is removed after successful cleanup; no pre-reset activity/log archive is retained by Atlas.
 
-After cleanup, return to local first-time setup without automatically restoring old settings, Plugins or credentials. Provision fresh setup authorization and a new Dataset before enabling operational service. Old credentials, connections, Dataset submissions and retry records cannot authorize or repopulate the fresh installation. Operator profiles start empty. Exact CLI spelling, TUI layout, coordinator placement and cleanup ordering remain implementation details.
+After cleanup, return to local first-time setup without automatically restoring old settings, Plugins or credentials. Provision fresh setup authorization and a new Dataset before enabling operational service. Old credentials, connections, Dataset submissions and retry records cannot authorize or repopulate the fresh installation. Operator profiles start empty. [ADR-0017](0017-deploy-core-and-plugins-as-docker-containers.md#ownership-and-lifecycle) places the shared coordinator on the host. Exact CLI spelling, TUI layout, private coordination and cleanup ordering remain implementation details.
 
 ## Dataset boundary
 

@@ -30,11 +30,19 @@ Plugin installation, removal, updates, configuration, enable/disable, start/stop
 
 Local administrative actions contribute to [activity history](#activity-history). [ADR-0002](../adr/0002-core-manages-installed-plugins.md) defines independent Plugin lifecycles, and [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) defines active-work protection.
 
-Use the private Docker integration described in [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md). Its host-versus-Core placement, coordination channel and installation/update workflows remain open; no separate management service is required.
+Use the host-side private Docker integration selected in [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md). Its coordination channel and installation/update workflows remain open; no separate management service is required.
 
 Managed Plugins run with Core and stop when it is spun down, under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md#core-and-plugin-runtime-lifetime). Local administration while Core is stopped is a management capability, not a way to run Plugin Operations without Core.
 
 [Hard Reset](../adr/0015-separate-start-stop-restart-and-reset.md#hard-reset) is a separate local CLI/TUI action available while Core is running. Its coordinator stops Core and managed Plugins, wipes operational and installation state, and returns to first-time setup. Ordinary Reset preserves Operator profiles, personal settings and installation setup. Neither reset action adds a public endpoint or SDK lifecycle method.
+
+### Local lifecycle coordination
+
+Concentrate lifecycle execution and interrupted-action recovery in the shared host-side local management module. The CLI and TUI use the same interface; neither owns a second implementation of shutdown ordering, cleanup progress or startup gating. Core's Plugins module retains Plugin lifecycle policy. The management module coordinates that policy with process actions and each module's private state cleanup.
+
+The management implementation must remain available after Core stops. It owns lifecycle-action serialization, the cleanup progress needed to resume an interrupted Hard Reset, and refusal to start an installation whose cleanup is incomplete. These responsibilities implement [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md); they do not change what each lifecycle action retains or discards. Module owners decide which of their records and files are valid. The coordinator must not reconstruct those decisions by inspecting their private tables.
+
+This placement of responsibility gives recovery rules locality and gives both local callers leverage through one interface. Keep the Docker adapter concrete and on the host under [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md#ownership-and-lifecycle). A general process framework or interchangeable runtime system adds no required capability. Private coordination, unexpected-Core-loss detection and the coordinator's process lifetime remain engineering work. In particular, host placement does not select an always-running management process; runtime-lifetime enforcement must still work after local callers exit.
 
 ## Identity and access
 
@@ -85,6 +93,14 @@ Clients identify Objects and access their content through Core APIs exposed by t
 [ADR-0009](../adr/0009-expose-objects-only-when-ready.md) owns ready-only visibility, private staging, restart-from-beginning upload retries and completed-request deduplication. [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md) owns retention and Reset cleanup across metadata, content and transfer state. Objects implements these guarantees independently of the selected storage provider.
 
 [ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md) selects SQLite and private local Object files. Resumable uploads are deferred; failed transfers restart from the beginning.
+
+### Object publication and recovery ownership
+
+Keep publication, successful-upload retry lookup, deletion identity and interrupted-publication recovery together inside the Objects module. Upload handling and lifecycle coordination use its interface; they do not independently decide whether files and metadata represent a ready Object. This gives readiness rules locality and lets upload and Restart share the same implementation.
+
+System operations coordinates startup and shutdown, while Objects reconciles its own staging, published content and private identity records. A generic cleanup module must not infer Object validity or remove content from stale metadata. The local-files adapter and SQLite remain private implementation details, with bulk transfer outside short database transactions. [ADR-0009](../adr/0009-expose-objects-only-when-ready.md#publication-and-recovery-ordering) selects durable file publication before the ready-state SQLite commit and defines recovery ownership. Exact filesystem primitives remain implementation work.
+
+Tasks retains assigned-Asset declarations, required-result references and Task transitions. Objects owns content readiness and enforces deletion protection through ordinary collaboration with Tasks. That seam must preserve [declaration/publication/deletion serialization](../adr/0009-expose-objects-only-when-ready.md#required-result-protection) without direct access to another module's private tables. Both result arrival orders remain supported. Keep this collaboration out of the independent Object MVP fixture until the scan workflow needs it.
 
 ## Core tasking and Asset execution
 

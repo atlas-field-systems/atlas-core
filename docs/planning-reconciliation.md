@@ -68,3 +68,15 @@ The user chooses observable behavior; engineering selects internal mechanisms th
 | Initial SDK | TypeScript is sufficient to start; keep mandatory SDK use without requiring another language | [Stack](adr/0016-use-go-sqlite-and-openapi-tooling.md#tradeoffs-and-implementation-checks) |
 
 Keep cancellation requests and queue reordering under their [existing contracts](adr/0007-reconcile-asset-tasks-after-disconnection.md), not new Commands/Tasks. Retain [Protocol-defined components](data-components.md#component-definitions), Entity identity reservations and the exclusion of active mission continuity across Core restart. A single UUID/hash is not accepted as a replacement for all retry, authorization and retention rules. Retained setup evolution and local activity recording while Core is stopped still need concrete engineering designs; this review does not select a database split or a migration tool.
+
+## Module ownership decisions, 26 September 2026
+
+The user accepted all three ownership directions from the documentation architecture review. They refine the dedicated-module design without introducing implementation or changing the existing lifecycle, Object or synchronization guarantees.
+
+| Topic | Accepted direction | Authoritative detail |
+| --- | --- | --- |
+| Local lifecycle | One shared host-side management module owns Docker control, lifecycle execution and interrupted-action recovery; Core retains Plugin policy | [Local lifecycle coordination](architecture/system-design.md#local-lifecycle-coordination), [host placement](adr/0017-deploy-core-and-plugins-as-docker-containers.md#ownership-and-lifecycle) |
+| Object publication | Objects keeps publication and recovery together; durable content precedes the ready metadata/retry identity/change-record commit. Tasks retains required-result declarations and transitions | [Object ownership](architecture/system-design.md#object-publication-and-recovery-ownership), [publication ordering](adr/0009-expose-objects-only-when-ready.md#publication-and-recovery-ordering) |
+| SDK picture | One SDK module owns coupled picture state. Only snapshot/feed/replay update it; write responses confirm the write without entering reconciliation | [Picture ownership](sdk-data-access.md#local-operational-picture-ownership), [write confirmation](adr/0018-confirm-writes-when-core-commits.md) |
+
+The user selected host-side Docker control, file-first publication and synchronization-only picture updates in the same review. Engineering still needs to specify supervision and private coordination, filesystem durability primitives and SDK wire/interface shapes under these decisions. These remaining details do not reopen the selected ownership or add a general runtime, storage or cache framework.

@@ -46,11 +46,13 @@ These supporting responsibilities have proposed homes within the seven groups:
 | Background loops and shutdown | System operations coordinates lifetimes; each module owns its job's meaning, retry rules and limits |
 | Presence and report authority | Entities records observations such as last report; Identity and access authenticates callers; Tasks checks assigned-Asset reporting |
 | Plugin configuration and secrets | Plugins owns extension settings and validation; System operations supplies loading facilities; Identity and access owns Atlas credentials; provider authentication belongs to the integration |
-| Runtime retention and Reset | System operations coordinates retained-state startup, Reset and Hard Reset across stores; each module owns its state rules. Removing a Plugin does not itself reset data |
+| Runtime retention and Reset | System operations coordinates retained-state startup; the shared host-side local management module owns lifecycle execution and interrupted-action recovery across Core shutdown. Each module owns its state rules. Removing a Plugin does not itself reset data. See [local lifecycle coordination](system-design.md#local-lifecycle-coordination) |
 | Activity history | System operations supplies recording/query facilities; Identity and access supplies actors; owning modules supply action meaning. See [activity history](system-design.md#activity-history) |
 | Installation and release tooling | Local tools coordinate with Core lifecycle owners; publishing the shared release is outside the running server |
 
 Shared facilities do not need independent top-level modules merely because several modules use them.
+
+Objects keeps publication and recovery under [one implementation owner](system-design.md#object-publication-and-recovery-ownership). The sibling SDK keeps coupled picture state under [one local operational picture owner](../sdk-data-access.md#local-operational-picture-ownership). These ownership choices do not prescribe package layout or add independently deployed modules.
 
 ## Define each module with the same short brief
 
