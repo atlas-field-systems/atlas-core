@@ -97,16 +97,21 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     await eventually(() => hybrid.synchronization.sequence >= unrelated.change_sequence, "excluded progress before next snapshot page");
     const second = await hybrid.queryFull(first.next_cursor, 1);
     assert.deepEqual(second.tasks.map((task) => task.id), [ownTask.id]);
+    assert.equal(second.baseline, first.baseline);
+    assert.equal(second.baseline_sequence, first.baseline_sequence);
     s.transcript.observe("local snapshot pages after excluded progress", {
-      first: first.entities.length, second: second.tasks.length,
+      first: first.entities.length, second: second.tasks.length, sameBaseline: second.baseline === first.baseline,
     });
   });
 
   await s.step("Cancellation intent and the later outcome remain in scope", async () => {
+    const before = await hybrid.queryFull(undefined, 1);
+    assert.ok(before.next_cursor);
     const cancellationId = crypto.randomUUID();
     s.transcript.name(cancellationId, "cancellation request");
     const cancelled = await operator.cancelTask(ownTask.id, alpha.identity.datasetId, cancellationId);
     await hybrid.waitForSynchronization(cancelled);
+    await assert.rejects(hybrid.queryFull(before.next_cursor, 1), (error) => error instanceof PictureError && error.code === "cursor_expired");
     assert.equal((await hybrid.task(ownTask.id)).status, "cancellation_requested");
     const reportId = crypto.randomUUID();
     s.transcript.name(reportId, "completion report");

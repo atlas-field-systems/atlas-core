@@ -478,7 +478,8 @@ Observed local snapshot pages after excluded progress:
 ```json
 {
   "first": 1,
-  "second": 1
+  "second": 1,
+  "sameBaseline": true
 }
 ```
 

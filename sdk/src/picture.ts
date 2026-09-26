@@ -153,20 +153,20 @@ export class Picture implements EntityReads {
   async queryFull(cursor?: string, limit = 50): Promise<EntityPage> {
     this.#requireReadable();
     requirePositive(limit);
-    const offset = cursor ? this.#readCursor(cursor, "snapshot").offset : 0;
+    const position = cursor ? this.#readCursor(cursor, "snapshot") : { offset: 0, sequence: this.#applied };
     const entities = [...this.#entities.values()].sort((a, b) => a.id.localeCompare(b.id));
     const tasks = [...this.#tasks.values()].sort((a, b) => a.id.localeCompare(b.id));
-    const end = offset + limit;
-    const pageEntities = entities.slice(offset, end);
-    const pageTasks = tasks.slice(Math.max(0, offset - entities.length), Math.max(0, end - entities.length));
+    const end = position.offset + limit;
+    const pageEntities = entities.slice(position.offset, end);
+    const pageTasks = tasks.slice(Math.max(0, position.offset - entities.length), Math.max(0, end - entities.length));
     return {
       dataset_id: this.#datasetId,
       coverage: this.#coverage(),
-      baseline: this.#cursor("changes", 0),
-      baseline_sequence: this.#applied,
+      baseline: this.#cursor("changes", 0, position.sequence),
+      baseline_sequence: position.sequence,
       entities: structuredClone(pageEntities),
       tasks: structuredClone(pageTasks),
-      ...(end < entities.length + tasks.length ? { next_cursor: this.#cursor("snapshot", end, this.#contentRevision) } : {}),
+      ...(end < entities.length + tasks.length ? { next_cursor: this.#cursor("snapshot", end, position.sequence) } : {}),
     };
   }
 
@@ -246,11 +246,11 @@ export class Picture implements EntityReads {
 
   /** Local cursors name this picture instance and generation, so they never reach Core or outlive a rebuild. */
   #cursor(list: string, offset: number, sequence = this.#applied): string {
-    return `local.${btoa(JSON.stringify({ instance: this.#instance, generation: this.#generation, list, sequence, offset }))}`;
+    return `local.${btoa(JSON.stringify({ instance: this.#instance, generation: this.#generation, list, sequence, offset, ...(list === "snapshot" ? { revision: this.#contentRevision } : {}) }))}`;
   }
 
   #readCursor(cursor: string, list: string): { sequence: number; offset: number } {
-    let position: { instance?: string; generation?: number; list?: string; sequence?: number; offset?: number };
+    let position: { instance?: string; generation?: number; list?: string; sequence?: number; offset?: number; revision?: number };
     try {
       position = JSON.parse(atob(cursor.replace(/^local\./, "")));
     } catch {
@@ -262,7 +262,7 @@ export class Picture implements EntityReads {
     if (position.instance !== this.#instance || position.generation !== this.#generation) {
       throw new PictureError("cursor_expired", "The local cursor belongs to an earlier picture.");
     }
-    if (list === "snapshot" && position.sequence !== this.#contentRevision) {
+    if (list === "snapshot" && position.revision !== this.#contentRevision) {
       throw new PictureError("cursor_expired", "The picture changed during pagination.");
     }
     return { sequence: position.sequence!, offset: position.offset! };
