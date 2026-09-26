@@ -101,6 +101,9 @@ SDK `GET /tasks` with <operator key>
 → **200**
 ```json
 {
+  "coverage": {
+    "scope": "full"
+  },
   "dataset_id": "<id-1>",
   "tasks": [
     {

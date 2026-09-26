@@ -151,6 +151,66 @@ func (q *Queries) GetReport(ctx context.Context, reportID string) (AssetReport, 
 	return i, err
 }
 
+const listAssetAtBaseline = `-- name: ListAssetAtBaseline :many
+SELECT id, kind, alias, subtype, status, status_reported_at, link_state, last_seen, latitude, longitude, altitude_m, speed_mps, heading_deg, battery_percent, command_manifest, version, last_report_sequence, created_sequence, change_sequence FROM entities WHERE id = ?1 AND created_sequence <= ?2
+AND id > ?3 ORDER BY id LIMIT ?4
+`
+
+type ListAssetAtBaselineParams struct {
+	AssetID  string
+	Baseline sql.NullInt64
+	AfterID  string
+	Limit    int64
+}
+
+func (q *Queries) ListAssetAtBaseline(ctx context.Context, arg ListAssetAtBaselineParams) ([]Entity, error) {
+	rows, err := q.db.QueryContext(ctx, listAssetAtBaseline,
+		arg.AssetID,
+		arg.Baseline,
+		arg.AfterID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Entity
+	for rows.Next() {
+		var i Entity
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Alias,
+			&i.Subtype,
+			&i.Status,
+			&i.StatusReportedAt,
+			&i.LinkState,
+			&i.LastSeen,
+			&i.Latitude,
+			&i.Longitude,
+			&i.AltitudeM,
+			&i.SpeedMps,
+			&i.HeadingDeg,
+			&i.BatteryPercent,
+			&i.CommandManifest,
+			&i.Version,
+			&i.LastReportSequence,
+			&i.CreatedSequence,
+			&i.ChangeSequence,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEntitiesAtBaseline = `-- name: ListEntitiesAtBaseline :many
 SELECT id, kind, alias, subtype, status, status_reported_at, link_state, last_seen, latitude, longitude, altitude_m, speed_mps, heading_deg, battery_percent, command_manifest, version, last_report_sequence, created_sequence, change_sequence FROM entities WHERE created_sequence <= ?1 AND id > ?2 ORDER BY id LIMIT ?3
 `

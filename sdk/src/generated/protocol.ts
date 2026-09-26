@@ -218,6 +218,9 @@ export interface paths {
          *     Entities created after the baseline are left to replay from
          *     `baseline`; Entities on later pages may already include changes made
          *     after the baseline, so apply replayed changes only when newer.
+         *     `scope=asset` selects the authenticated Asset's Entity and assigned
+         *     Tasks. It is available only to an Asset credential and does not limit
+         *     that credential's ordinary full-picture read access.
          */
         get: operations["queryFull"];
         put?: never;
@@ -235,7 +238,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Replay committed changes after a Dataset-bound cursor */
+        /**
+         * Replay committed changes after a Dataset-bound cursor
+         * @description `scope=asset` returns only changes in the authenticated Asset's subset.
+         *     `through_sequence` proves how far Core examined the global log, even
+         *     when no scoped changes were returned. A cursor is bound to its scope.
+         */
         get: operations["queryChangedSince"];
         put?: never;
         post?: never;
@@ -258,7 +266,9 @@ export interface paths {
          *     the client sends FeedAuthentication as its first message instead of
          *     an Authorization header; the security below lists the kinds of
          *     credential it may carry. Core then sends FeedHello and a FeedChange
-         *     for every later commit, in sequence order. If the client falls
+         *     for each later in-scope commit, in sequence order. An Asset credential
+         *     may request `scope=asset`; FeedProgress proves excluded global changes
+         *     without transmitting their resources. If the client falls
          *     behind the retained change log, Core sends FeedGap and closes.
          */
         get: operations["getFeed"];
@@ -666,6 +676,7 @@ export interface components {
         TaskPage: {
             /** Format: uuid */
             dataset_id: string;
+            coverage: components["schemas"]["PictureCoverage"];
             tasks: components["schemas"]["Task"][];
             next_cursor?: string;
         };
@@ -758,6 +769,7 @@ export interface components {
             baseline: string;
             /** Format: int64 */
             baseline_sequence: number;
+            coverage: components["schemas"]["PictureCoverage"];
             entities: components["schemas"]["Entity"][];
             tasks: components["schemas"]["Task"][];
             next_cursor?: string;
@@ -796,11 +808,28 @@ export interface components {
             /** Format: uuid */
             dataset_id: string;
             changes: components["schemas"]["EntityChange"][];
-            /** @description Cursor after the last returned change, or unchanged when there are none. */
+            /** @description Cursor through the examined sequence. A scoped cursor advances over excluded changes even when no changes are returned. */
             cursor: string;
+            /**
+             * Format: int64
+             * @description Core has examined every sequence through this value for the requested scope.
+             */
+            through_sequence: number;
+            coverage: components["schemas"]["PictureCoverage"];
+        };
+        PictureCoverage: {
+            /** @enum {string} */
+            scope: "full" | "asset";
+            /**
+             * Format: uuid
+             * @description Present only for an Asset-scoped picture.
+             */
+            asset_id?: string;
         };
         FeedAuthentication: {
             api_key: string;
+            /** @enum {string} */
+            scope?: "full" | "asset";
         };
         FeedHello: {
             /** @enum {string} */
@@ -811,6 +840,7 @@ export interface components {
             cursor: string;
             /** Format: int64 */
             sequence: number;
+            coverage: components["schemas"]["PictureCoverage"];
         };
         FeedChange: {
             /** @enum {string} */
@@ -824,6 +854,13 @@ export interface components {
             type: "gap";
             /** @enum {string} */
             code: "cursor_expired";
+        };
+        FeedProgress: {
+            /** @enum {string} */
+            type: "progress";
+            cursor: string;
+            /** Format: int64 */
+            through_sequence: number;
         };
         Plugin: {
             id: string;
@@ -964,6 +1001,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Omit for the full picture; asset selects the authenticated Asset's own picture. */
+        PictureScope: "asset";
         Cursor: string;
         PluginId: string;
         OperationId: string;
@@ -1387,6 +1426,8 @@ export interface operations {
     queryFull: {
         parameters: {
             query?: {
+                /** @description Omit for the full picture; asset selects the authenticated Asset's own picture. */
+                scope?: components["parameters"]["PictureScope"];
                 cursor?: string;
                 /** @description Page size. Defaults to 50. */
                 limit?: components["parameters"]["Limit"];
@@ -1415,6 +1456,8 @@ export interface operations {
     queryChangedSince: {
         parameters: {
             query: {
+                /** @description Omit for the full picture; asset selects the authenticated Asset's own picture. */
+                scope?: components["parameters"]["PictureScope"];
                 cursor: string;
                 /** @description Page size. Defaults to 50. */
                 limit?: components["parameters"]["Limit"];
@@ -1693,10 +1736,14 @@ export const assetEnrollmentRequestKindValues: ReadonlyArray<FlattenedDeepRequir
 export const entityChangeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityChangeKind"]> = ["create", "update"];
 export const entityResourceChangeResource_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityResourceChange"]["resource_type"]> = ["entity"];
 export const taskResourceChangeResource_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskResourceChange"]["resource_type"]> = ["task"];
+export const pictureCoverageScopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PictureCoverage"]["scope"]> = ["full", "asset"];
+export const feedAuthenticationScopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedAuthentication"]["scope"]> = ["full", "asset"];
 export const feedHelloTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedHello"]["type"]> = ["hello"];
 export const feedChangeTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedChange"]["type"]> = ["change"];
 export const feedGapTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedGap"]["type"]> = ["gap"];
 export const feedGapCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedGap"]["code"]> = ["cursor_expired"];
+export const feedProgressTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedProgress"]["type"]> = ["progress"];
 export const pluginAvailabilityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Plugin"]["availability"]> = ["available", "unavailable", "faulted"];
 export const operationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OperationStatus"]> = ["pending", "in_progress", "cancellation_requested", "completed", "canceled", "failed", "interrupted"];
 export const operationReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["OperationReport"]["status"]> = ["in_progress", "completed", "failed", "canceled"];
+export const componentsParametersPictureScopeValues: ReadonlyArray<FlattenedDeepRequired<components>["parameters"]["PictureScope"]> = ["asset"];

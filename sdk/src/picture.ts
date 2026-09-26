@@ -134,7 +134,7 @@ export class Picture implements EntityReads {
     if (assetId !== undefined && !this.#entities.has(assetId)) throw new PictureError("not_found", "The Entity is not in the local picture.");
     const tasks = [...this.#tasks.values()].filter((task) => assetId === undefined || task.asset_id === assetId).sort((a, b) => assetId === undefined ? a.created_sequence - b.created_sequence : a.acceptance_sequence - b.acceptance_sequence);
     const end = offset + limit;
-    return { dataset_id: this.#datasetId, tasks: structuredClone(tasks.slice(offset, end)), ...(end < tasks.length ? { next_cursor: this.#cursor(list, end) } : {}) };
+    return { dataset_id: this.#datasetId, coverage: assetId ? { scope: "asset", asset_id: assetId } : { scope: "full" }, tasks: structuredClone(tasks.slice(offset, end)), ...(end < tasks.length ? { next_cursor: this.#cursor(list, end) } : {}) };
   }
 
   async queryFull(cursor?: string, limit = 50): Promise<EntityPage> {
@@ -148,6 +148,7 @@ export class Picture implements EntityReads {
     const pageTasks = tasks.slice(Math.max(0, offset - entities.length), Math.max(0, end - entities.length));
     return {
       dataset_id: this.#datasetId,
+      coverage: { scope: "full" },
       baseline: this.#cursor("changes", 0),
       baseline_sequence: this.#applied,
       entities: structuredClone(pageEntities),
@@ -163,7 +164,7 @@ export class Picture implements EntityReads {
     if (after < this.#historyStart) throw new PictureError("cursor_expired", "Local change history no longer covers this cursor.");
     const changes = this.#history.filter((change) => change.sequence > after).slice(0, limit);
     const last = changes.length < limit ? this.#applied : changes.at(-1)!.sequence;
-    return { dataset_id: this.#datasetId, changes: structuredClone(changes), cursor: this.#cursor("changes", 0, last) };
+    return { dataset_id: this.#datasetId, changes: structuredClone(changes), cursor: this.#cursor("changes", 0, last), through_sequence: last, coverage: { scope: "full" } };
   }
 
   async subscribe(listener: ChangeListener) {

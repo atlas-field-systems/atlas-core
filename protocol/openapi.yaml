@@ -405,11 +405,15 @@ paths:
         Entities created after the baseline are left to replay from
         `baseline`; Entities on later pages may already include changes made
         after the baseline, so apply replayed changes only when newer.
+        `scope=asset` selects the authenticated Asset's Entity and assigned
+        Tasks. It is available only to an Asset credential and does not limit
+        that credential's ordinary full-picture read access.
       security:
         - operator: []
         - asset: []
         - plugin: []
       parameters:
+        - $ref: '#/components/parameters/PictureScope'
         - name: cursor
           in: query
           schema:
@@ -435,11 +439,16 @@ paths:
     get:
       operationId: queryChangedSince
       summary: Replay committed changes after a Dataset-bound cursor
+      description: |
+        `scope=asset` returns only changes in the authenticated Asset's subset.
+        `through_sequence` proves how far Core examined the global log, even
+        when no scoped changes were returned. A cursor is bound to its scope.
       security:
         - operator: []
         - asset: []
         - plugin: []
       parameters:
+        - $ref: '#/components/parameters/PictureScope'
         - name: cursor
           in: query
           required: true
@@ -473,7 +482,9 @@ paths:
         the client sends FeedAuthentication as its first message instead of
         an Authorization header; the security below lists the kinds of
         credential it may carry. Core then sends FeedHello and a FeedChange
-        for every later commit, in sequence order. If the client falls
+        for each later in-scope commit, in sequence order. An Asset credential
+        may request `scope=asset`; FeedProgress proves excluded global changes
+        without transmitting their resources. If the client falls
         behind the retained change log, Core sends FeedGap and closes.
       security:
         - operator: []
@@ -695,6 +706,13 @@ paths:
           $ref: '#/components/responses/Conflict'
 components:
   parameters:
+    PictureScope:
+      name: scope
+      in: query
+      description: Omit for the full picture; asset selects the authenticated Asset's own picture.
+      schema:
+        type: string
+        enum: [asset]
     Cursor:
       name: cursor
       in: query
@@ -1292,11 +1310,13 @@ components:
     TaskPage:
       type: object
       additionalProperties: false
-      required: [dataset_id, tasks]
+      required: [dataset_id, tasks, coverage]
       properties:
         dataset_id:
           type: string
           format: uuid
+        coverage:
+          $ref: '#/components/schemas/PictureCoverage'
         tasks:
           type: array
           items:
@@ -1473,7 +1493,7 @@ components:
     EntityPage:
       type: object
       additionalProperties: false
-      required: [dataset_id, baseline, baseline_sequence, entities, tasks]
+      required: [dataset_id, baseline, baseline_sequence, coverage, entities, tasks]
       properties:
         dataset_id:
           type: string
@@ -1485,6 +1505,8 @@ components:
           type: integer
           format: int64
           minimum: 0
+        coverage:
+          $ref: '#/components/schemas/PictureCoverage'
         entities:
           type: array
           items:
@@ -1556,7 +1578,7 @@ components:
     ChangePage:
       type: object
       additionalProperties: false
-      required: [dataset_id, changes, cursor]
+      required: [dataset_id, changes, cursor, through_sequence, coverage]
       properties:
         dataset_id:
           type: string
@@ -1567,7 +1589,26 @@ components:
             $ref: '#/components/schemas/EntityChange'
         cursor:
           type: string
-          description: Cursor after the last returned change, or unchanged when there are none.
+          description: Cursor through the examined sequence. A scoped cursor advances over excluded changes even when no changes are returned.
+        through_sequence:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Core has examined every sequence through this value for the requested scope.
+        coverage:
+          $ref: '#/components/schemas/PictureCoverage'
+    PictureCoverage:
+      type: object
+      additionalProperties: false
+      required: [scope]
+      properties:
+        scope:
+          type: string
+          enum: [full, asset]
+        asset_id:
+          type: string
+          format: uuid
+          description: Present only for an Asset-scoped picture.
     FeedAuthentication:
       type: object
       additionalProperties: false
@@ -1576,10 +1617,13 @@ components:
         api_key:
           type: string
           maxLength: 128
+        scope:
+          type: string
+          enum: [full, asset]
     FeedHello:
       type: object
       additionalProperties: false
-      required: [type, dataset_id, cursor, sequence]
+      required: [type, dataset_id, cursor, sequence, coverage]
       properties:
         type:
           type: string
@@ -1594,6 +1638,8 @@ components:
           type: integer
           format: int64
           minimum: 0
+        coverage:
+          $ref: '#/components/schemas/PictureCoverage'
     FeedChange:
       type: object
       additionalProperties: false
@@ -1618,6 +1664,20 @@ components:
         code:
           type: string
           enum: [cursor_expired]
+    FeedProgress:
+      type: object
+      additionalProperties: false
+      required: [type, cursor, through_sequence]
+      properties:
+        type:
+          type: string
+          enum: [progress]
+        cursor:
+          type: string
+        through_sequence:
+          type: integer
+          format: int64
+          minimum: 0
     Plugin:
       type: object
       additionalProperties: false

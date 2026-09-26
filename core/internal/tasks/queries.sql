@@ -34,3 +34,7 @@ ORDER BY acceptance_sequence LIMIT sqlc.arg(limit);
 -- name: ListTasksAtBaseline :many
 SELECT * FROM tasks WHERE created_sequence <= sqlc.arg(baseline) AND id > sqlc.arg(after_id)
 ORDER BY id LIMIT sqlc.arg(limit);
+
+-- name: ListAssetTasksAtBaseline :many
+SELECT * FROM tasks WHERE asset_id = sqlc.arg(asset_id) AND created_sequence <= sqlc.arg(baseline)
+AND id > sqlc.arg(after_id) ORDER BY id LIMIT sqlc.arg(limit);

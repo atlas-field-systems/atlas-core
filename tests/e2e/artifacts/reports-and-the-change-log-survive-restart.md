@@ -65,6 +65,9 @@ SDK `GET /queries/full` with <operator key>
 {
   "baseline": "<cursor-1>",
   "baseline_sequence": 1,
+  "coverage": {
+    "scope": "full"
+  },
   "dataset_id": "<id-1>",
   "entities": [
     {
@@ -281,7 +284,11 @@ SDK `GET /queries/changed-since?cursor=<cursor-1>` with <operator key>
       "sequence": 3
     }
   ],
+  "coverage": {
+    "scope": "full"
+  },
   "cursor": "<cursor-3>",
-  "dataset_id": "<id-1>"
+  "dataset_id": "<id-1>",
+  "through_sequence": 3
 }
 ```

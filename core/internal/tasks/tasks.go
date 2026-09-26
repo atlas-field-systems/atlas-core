@@ -225,6 +225,9 @@ func (s *Service) List(ctx context.Context, assetID *uuid.UUID, cursor *string, 
 	if err != nil {
 		return api.TaskPage{}, err
 	}
+	if assetID != nil {
+		page.Coverage = api.PictureCoverage{Scope: api.PictureCoverageScopeAsset, AssetId: assetID}
+	}
 	if hasMore {
 		last := rows[len(rows)-1].CreatedSequence
 		if assetID != nil {
@@ -261,8 +264,29 @@ func (s *Service) Snapshot(ctx context.Context, baseline int64, afterID string, 
 	return page, nil
 }
 
+// AssetSnapshot pages one Asset's Tasks, including terminal outcomes.
+func (s *Service) AssetSnapshot(ctx context.Context, assetID string, baseline int64, afterID string, limit int) (api.TaskPage, error) {
+	rows, err := s.queries.ListAssetTasksAtBaseline(ctx, db.ListAssetTasksAtBaselineParams{AssetID: assetID, Baseline: baseline, AfterID: afterID, Limit: int64(limit + 1)})
+	if err != nil {
+		return api.TaskPage{}, fmt.Errorf("list Asset snapshot Tasks: %w", err)
+	}
+	hasMore := len(rows) > limit
+	if hasMore {
+		rows = rows[:limit]
+	}
+	page, err := s.pageRows(rows)
+	if err != nil {
+		return api.TaskPage{}, err
+	}
+	if hasMore {
+		next := rows[len(rows)-1].ID
+		page.NextCursor = &next
+	}
+	return page, nil
+}
+
 func (s *Service) pageRows(rows []db.Task) (api.TaskPage, error) {
-	page := api.TaskPage{DatasetId: s.datasets.Current().ID, Tasks: make([]api.Task, 0, len(rows))}
+	page := api.TaskPage{DatasetId: s.datasets.Current().ID, Tasks: make([]api.Task, 0, len(rows)), Coverage: api.PictureCoverage{Scope: api.PictureCoverageScopeFull}}
 	for _, row := range rows {
 		task, err := s.toAPI(row)
 		if err != nil {

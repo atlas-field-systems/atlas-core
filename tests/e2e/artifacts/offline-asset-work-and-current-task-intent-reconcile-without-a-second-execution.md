@@ -376,6 +376,10 @@ SDK `GET /entities/<asset>/tasks?limit=1` with <asset credential>
 → **200**
 ```json
 {
+  "coverage": {
+    "asset_id": "<asset>",
+    "scope": "asset"
+  },
   "dataset_id": "<id-1>",
   "next_cursor": "<cursor-1>",
   "tasks": [
@@ -511,6 +515,9 @@ SDK `GET /tasks` with <operator key>
 → **200**
 ```json
 {
+  "coverage": {
+    "scope": "full"
+  },
   "dataset_id": "<id-1>",
   "tasks": [
     {
@@ -617,6 +624,10 @@ SDK `GET /entities/<asset>/tasks?limit=1` with <asset credential>
 → **200**
 ```json
 {
+  "coverage": {
+    "asset_id": "<asset>",
+    "scope": "asset"
+  },
   "dataset_id": "<id-1>",
   "next_cursor": "<cursor-1>",
   "tasks": [
@@ -646,6 +657,10 @@ SDK `GET /entities/<asset>/tasks?cursor=<cursor-1>&limit=1` with <asset credenti
 → **200**
 ```json
 {
+  "coverage": {
+    "asset_id": "<asset>",
+    "scope": "asset"
+  },
   "dataset_id": "<id-1>",
   "next_cursor": "<cursor-2>",
   "tasks": [
@@ -676,6 +691,10 @@ SDK `GET /entities/<asset>/tasks?cursor=<cursor-2>&limit=1` with <asset credenti
 → **200**
 ```json
 {
+  "coverage": {
+    "asset_id": "<asset>",
+    "scope": "asset"
+  },
   "dataset_id": "<id-1>",
   "tasks": [
     {
@@ -704,6 +723,10 @@ SDK `GET /entities/<other>/tasks` with <asset credential>
 → **200**
 ```json
 {
+  "coverage": {
+    "asset_id": "<other>",
+    "scope": "asset"
+  },
   "dataset_id": "<id-1>",
   "tasks": [
     {
@@ -847,6 +870,10 @@ SDK `GET /entities/<asset>/tasks` with <asset credential>
 → **200**
 ```json
 {
+  "coverage": {
+    "asset_id": "<asset>",
+    "scope": "asset"
+  },
   "dataset_id": "<id-1>",
   "tasks": [
     {

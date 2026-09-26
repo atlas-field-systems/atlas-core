@@ -3,8 +3,11 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -49,43 +52,66 @@ func (a *App) feedHandler() http.Handler {
 		}
 		defer connection.CloseNow()
 		connection.SetReadLimit(feedReadLimit)
-		if !a.authenticateFeed(ctx, connection) {
+		caller, scope, ok := a.authenticateFeed(ctx, connection)
+		if !ok {
 			connection.Close(websocket.StatusPolicyViolation, "a valid credential is required")
 			return
 		}
 		// CloseRead ends ctx when the client closes; the client sends nothing after authenticating.
 		ctx = connection.CloseRead(ctx)
-		a.closeFeed(ctx, connection, a.streamChanges(ctx, connection))
+		a.closeFeed(ctx, connection, a.streamChanges(ctx, connection, caller, scope))
 	})
 }
 
-func (a *App) authenticateFeed(ctx context.Context, connection *websocket.Conn) bool {
+func (a *App) authenticateFeed(ctx context.Context, connection *websocket.Conn) (identity.Caller, api.FeedAuthenticationScope, bool) {
 	ctx, cancel := context.WithTimeout(ctx, feedAuthenticationTimeout)
 	defer cancel()
 	var message api.FeedAuthentication
 	if err := wsjson.Read(ctx, connection, &message); err != nil {
-		return false
+		return identity.Caller{}, "", false
 	}
 	caller, err := a.identity.Authenticate(ctx, message.ApiKey)
-	return err == nil && feedCallers[caller.Kind]
+	if err != nil || !feedCallers[caller.Kind] {
+		return identity.Caller{}, "", false
+	}
+	if message.Scope != nil && !message.Scope.Valid() {
+		return identity.Caller{}, "", false
+	}
+	scope := api.FeedAuthenticationScopeFull
+	if message.Scope != nil {
+		scope = *message.Scope
+	}
+	if scope == api.FeedAuthenticationScopeAsset && caller.Kind != identity.Asset {
+		return identity.Caller{}, "", false
+	}
+	return caller, scope, true
 }
 
-func (a *App) streamChanges(ctx context.Context, connection *websocket.Conn) error {
+func (a *App) streamChanges(ctx context.Context, connection *websocket.Conn, caller identity.Caller, scope api.FeedAuthenticationScope) error {
 	latest, err := a.changes.Latest(ctx)
 	if err != nil {
 		return err
 	}
 	cursor, err := a.changes.Cursor(latest)
-	if err != nil {
-		return err
+	coverage := api.PictureCoverage{Scope: api.PictureCoverageScopeFull}
+	if scope == api.FeedAuthenticationScopeAsset {
+		cursor, err = a.changes.AssetCursor(caller.ID, latest)
+		id, parseErr := uuid.Parse(caller.ID)
+		if parseErr != nil {
+			return fmt.Errorf("parse Asset ID %s for feed coverage: %w", caller.ID, parseErr)
+		}
+		coverage = api.PictureCoverage{Scope: api.PictureCoverageScopeAsset, AssetId: &id}
 	}
-	hello := api.FeedHello{Type: api.Hello, DatasetId: a.datasets.Current().ID, Cursor: cursor, Sequence: latest}
+	if err != nil {
+		return fmt.Errorf("encode feed cursor for caller %s: %w", caller.ID, err)
+	}
+	hello := api.FeedHello{Type: api.Hello, DatasetId: a.datasets.Current().ID, Cursor: cursor, Sequence: latest, Coverage: coverage}
 	if err := writeFeed(ctx, connection, hello); err != nil {
 		return err
 	}
 	for {
 		committed := a.changes.Committed()
-		if cursor, err = a.deliverChanges(ctx, connection, cursor); err != nil {
+		if cursor, err = a.deliverChanges(ctx, connection, cursor, caller.ID, scope); err != nil {
 			return err
 		}
 		select {
@@ -98,23 +124,42 @@ func (a *App) streamChanges(ctx context.Context, connection *websocket.Conn) err
 
 // deliverChanges sends every change after cursor and returns the cursor after
 // the last one sent.
-func (a *App) deliverChanges(ctx context.Context, connection *websocket.Conn, cursor string) (string, error) {
+func (a *App) deliverChanges(ctx context.Context, connection *websocket.Conn, cursor, assetID string, scope api.FeedAuthenticationScope) (string, error) {
 	for {
-		page, err := a.changes.Since(ctx, cursor, feedBatch)
+		var page api.ChangePage
+		var err error
+		if scope == api.FeedAuthenticationScopeAsset {
+			page, err = a.changes.SinceAsset(ctx, assetID, cursor, feedBatch)
+		} else {
+			page, err = a.changes.Since(ctx, cursor, feedBatch)
+		}
 		if changes.IsExpired(err) {
 			return cursor, errors.Join(errFeedExpired, writeFeed(ctx, connection, api.FeedGap{Type: api.Gap, Code: api.FeedGapCodeCursorExpired}))
 		}
 		if err != nil {
 			return cursor, err
 		}
+		last := int64(0)
 		for _, change := range page.Changes {
-			if cursor, err = a.changes.Cursor(change.Sequence); err != nil {
-				return cursor, err
+			if scope == api.FeedAuthenticationScopeAsset {
+				cursor, err = a.changes.AssetCursor(assetID, change.Sequence)
+			} else {
+				cursor, err = a.changes.Cursor(change.Sequence)
+			}
+			if err != nil {
+				return cursor, fmt.Errorf("encode feed cursor at change %d: %w", change.Sequence, err)
 			}
 			if err := writeFeed(ctx, connection, api.FeedChange{Type: api.Change, Change: change, Cursor: cursor}); err != nil {
 				return cursor, err
 			}
+			last = change.Sequence
 		}
+		if scope == api.FeedAuthenticationScopeAsset && page.ThroughSequence > last && page.Cursor != cursor {
+			if err := writeFeed(ctx, connection, api.FeedProgress{Type: api.Progress, Cursor: page.Cursor, ThroughSequence: page.ThroughSequence}); err != nil {
+				return cursor, err
+			}
+		}
+		cursor = page.Cursor
 		if len(page.Changes) < feedBatch {
 			return cursor, nil
 		}

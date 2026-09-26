@@ -8,7 +8,7 @@ import (
 )
 
 func (a *App) QueryFull(ctx context.Context, request api.QueryFullRequestObject) (api.QueryFullResponseObject, error) {
-	page, err := a.snapshot.Full(ctx, request.Params.Cursor, request.Params.Limit)
+	page, err := a.snapshot.Query(ctx, callerFrom(ctx), request.Params.Scope, request.Params.Cursor, request.Params.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -16,7 +16,7 @@ func (a *App) QueryFull(ctx context.Context, request api.QueryFullRequestObject)
 }
 
 func (a *App) QueryChangedSince(ctx context.Context, request api.QueryChangedSinceRequestObject) (api.QueryChangedSinceResponseObject, error) {
-	page, err := a.changes.Since(ctx, request.Params.Cursor, pagination.Limit(request.Params.Limit))
+	page, err := a.changes.Query(ctx, callerFrom(ctx), request.Params.Scope, request.Params.Cursor, pagination.Limit(request.Params.Limit))
 	if err != nil {
 		return nil, err
 	}

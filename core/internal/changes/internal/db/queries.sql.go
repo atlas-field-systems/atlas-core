@@ -10,8 +10,19 @@ import (
 	"database/sql"
 )
 
+const assetPrunedThrough = `-- name: AssetPrunedThrough :one
+SELECT CAST(COALESCE((SELECT through_sequence FROM asset_change_pruned WHERE asset_id = ?), 0) AS INTEGER)
+`
+
+func (q *Queries) AssetPrunedThrough(ctx context.Context, assetID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, assetPrunedThrough, assetID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const insertChange = `-- name: InsertChange :one
-INSERT INTO changes (resource_id, kind, entity, resource_type, task) VALUES (?, ?, ?, ?, ?) RETURNING sequence
+INSERT INTO changes (resource_id, kind, entity, resource_type, task, scope_asset_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING sequence
 `
 
 type InsertChangeParams struct {
@@ -20,6 +31,7 @@ type InsertChangeParams struct {
 	Entity       string
 	ResourceType string
 	Task         sql.NullString
+	ScopeAssetID sql.NullString
 }
 
 func (q *Queries) InsertChange(ctx context.Context, arg InsertChangeParams) (int64, error) {
@@ -29,6 +41,7 @@ func (q *Queries) InsertChange(ctx context.Context, arg InsertChangeParams) (int
 		arg.Entity,
 		arg.ResourceType,
 		arg.Task,
+		arg.ScopeAssetID,
 	)
 	var sequence int64
 	err := row.Scan(&sequence)
@@ -46,8 +59,56 @@ func (q *Queries) LatestSequence(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
+const listAssetChangesAfter = `-- name: ListAssetChangesAfter :many
+SELECT sequence, resource_id, kind, entity, resource_type, task, scope_asset_id FROM changes WHERE scope_asset_id = ?1 AND sequence > ?2
+AND sequence <= ?3 ORDER BY sequence LIMIT ?4
+`
+
+type ListAssetChangesAfterParams struct {
+	AssetID         sql.NullString
+	AfterSequence   int64
+	ThroughSequence int64
+	Limit           int64
+}
+
+func (q *Queries) ListAssetChangesAfter(ctx context.Context, arg ListAssetChangesAfterParams) ([]Change, error) {
+	rows, err := q.db.QueryContext(ctx, listAssetChangesAfter,
+		arg.AssetID,
+		arg.AfterSequence,
+		arg.ThroughSequence,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Change
+	for rows.Next() {
+		var i Change
+		if err := rows.Scan(
+			&i.Sequence,
+			&i.ResourceID,
+			&i.Kind,
+			&i.Entity,
+			&i.ResourceType,
+			&i.Task,
+			&i.ScopeAssetID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listChangesAfter = `-- name: ListChangesAfter :many
-SELECT sequence, resource_id, kind, entity, resource_type, task FROM changes WHERE sequence > ? ORDER BY sequence LIMIT ?
+SELECT sequence, resource_id, kind, entity, resource_type, task, scope_asset_id FROM changes WHERE sequence > ? ORDER BY sequence LIMIT ?
 `
 
 type ListChangesAfterParams struct {
@@ -71,6 +132,7 @@ func (q *Queries) ListChangesAfter(ctx context.Context, arg ListChangesAfterPara
 			&i.Entity,
 			&i.ResourceType,
 			&i.Task,
+			&i.ScopeAssetID,
 		); err != nil {
 			return nil, err
 		}
@@ -102,5 +164,17 @@ DELETE FROM changes WHERE sequence <= ?
 
 func (q *Queries) PruneChanges(ctx context.Context, sequence int64) error {
 	_, err := q.db.ExecContext(ctx, pruneChanges, sequence)
+	return err
+}
+
+const recordPrunedAssetChanges = `-- name: RecordPrunedAssetChanges :exec
+INSERT INTO asset_change_pruned (asset_id, through_sequence)
+SELECT scope_asset_id, MAX(sequence) FROM changes
+WHERE sequence <= ? AND scope_asset_id IS NOT NULL GROUP BY scope_asset_id
+ON CONFLICT (asset_id) DO UPDATE SET through_sequence = excluded.through_sequence
+`
+
+func (q *Queries) RecordPrunedAssetChanges(ctx context.Context, sequence int64) error {
+	_, err := q.db.ExecContext(ctx, recordPrunedAssetChanges, sequence)
 	return err
 }

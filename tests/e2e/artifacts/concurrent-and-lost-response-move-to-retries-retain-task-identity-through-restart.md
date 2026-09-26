@@ -221,6 +221,9 @@ SDK `GET /tasks` with <operator key>
 → **200**
 ```json
 {
+  "coverage": {
+    "scope": "full"
+  },
   "dataset_id": "<id-1>",
   "tasks": [
     {
@@ -358,6 +361,10 @@ SDK `GET /entities/<asset>/tasks` with <operator key>
 → **200**
 ```json
 {
+  "coverage": {
+    "asset_id": "<asset>",
+    "scope": "asset"
+  },
   "dataset_id": "<id-1>",
   "tasks": [
     {

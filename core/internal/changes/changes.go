@@ -13,6 +13,7 @@ import (
 
 	"github.com/atlas-field-systems/atlas-core/core/internal/api"
 	"github.com/atlas-field-systems/atlas-core/core/internal/changes/internal/db"
+	"github.com/atlas-field-systems/atlas-core/core/internal/identity"
 	"github.com/atlas-field-systems/atlas-core/core/internal/pagination"
 	"github.com/atlas-field-systems/atlas-core/core/internal/problem"
 	"github.com/atlas-field-systems/atlas-core/core/internal/signal"
@@ -41,6 +42,7 @@ type position struct {
 
 // Log is the Dataset's change log.
 type Log struct {
+	storage   *sql.DB
 	queries   *db.Queries
 	cursors   pagination.Codec
 	dataset   uuid.UUID
@@ -50,6 +52,7 @@ type Log struct {
 
 func New(operational *sql.DB, dataset uuid.UUID, retention int) *Log {
 	return &Log{
+		storage:   operational,
 		queries:   db.New(operational),
 		cursors:   pagination.NewCodec(dataset),
 		dataset:   dataset,
@@ -66,9 +69,16 @@ func (l *Log) Append(ctx context.Context, tx *sql.Tx, kind api.EntityChangeKind,
 		return 0, fmt.Errorf("encode change of Entity %s: %w", entity.Id, err)
 	}
 	queries := l.queries.WithTx(tx)
-	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded), ResourceType: string(api.EntityResourceChangeResourceTypeEntity)})
+	scope := sql.NullString{}
+	if entity.Kind == api.EntityKindAsset {
+		scope = sql.NullString{String: entity.Id.String(), Valid: true}
+	}
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded), ResourceType: string(api.EntityResourceChangeResourceTypeEntity), ScopeAssetID: scope})
 	if err != nil {
 		return 0, fmt.Errorf("append change of Entity %s: %w", entity.Id, err)
+	}
+	if err := queries.RecordPrunedAssetChanges(ctx, sequence-l.retention); err != nil {
+		return 0, fmt.Errorf("record pruned Asset changes: %w", err)
 	}
 	if err := queries.PruneChanges(ctx, sequence-l.retention); err != nil {
 		return 0, fmt.Errorf("prune change log: %w", err)
@@ -83,9 +93,12 @@ func (l *Log) AppendTask(ctx context.Context, tx *sql.Tx, kind api.EntityChangeK
 		return 0, fmt.Errorf("encode change of Task %s: %w", task.Id, err)
 	}
 	queries := l.queries.WithTx(tx)
-	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: task.Id.String(), Kind: string(kind), Entity: "{}", ResourceType: string(api.TaskResourceChangeResourceTypeTask), Task: sql.NullString{String: string(encoded), Valid: true}})
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: task.Id.String(), Kind: string(kind), Entity: "{}", ResourceType: string(api.TaskResourceChangeResourceTypeTask), Task: sql.NullString{String: string(encoded), Valid: true}, ScopeAssetID: sql.NullString{String: task.AssetId.String(), Valid: true}})
 	if err != nil {
 		return 0, fmt.Errorf("append change of Task %s: %w", task.Id, err)
+	}
+	if err := queries.RecordPrunedAssetChanges(ctx, sequence-l.retention); err != nil {
+		return 0, fmt.Errorf("record pruned Asset changes: %w", err)
 	}
 	if err := queries.PruneChanges(ctx, sequence-l.retention); err != nil {
 		return 0, fmt.Errorf("prune change log: %w", err)
@@ -120,6 +133,22 @@ func (l *Log) Cursor(sequence int64) (string, error) {
 	return l.cursors.Encode(cursorList, position{Sequence: sequence})
 }
 
+// AssetCursor cannot be replayed as a full-picture or another Asset's cursor.
+func (l *Log) AssetCursor(assetID string, sequence int64) (string, error) {
+	return l.cursors.Encode(cursorList+":asset:"+assetID, position{Sequence: sequence})
+}
+
+// Query selects the declared replay scope and enforces Asset ownership.
+func (l *Log) Query(ctx context.Context, caller identity.Caller, scope *api.QueryChangedSinceParamsScope, cursor string, limit int) (api.ChangePage, error) {
+	if scope == nil {
+		return l.Since(ctx, cursor, limit)
+	}
+	if *scope != api.QueryChangedSinceParamsScopeAsset || caller.Kind != identity.Asset {
+		return api.ChangePage{}, problem.Forbidden("forbidden", "This credential may not call this operation.")
+	}
+	return l.SinceAsset(ctx, caller.ID, cursor, limit)
+}
+
 // Since returns up to limit changes after cursor, in sequence order.
 func (l *Log) Since(ctx context.Context, cursor string, limit int) (api.ChangePage, error) {
 	var after position
@@ -133,7 +162,7 @@ func (l *Log) Since(ctx context.Context, cursor string, limit int) (api.ChangePa
 	if err != nil {
 		return api.ChangePage{}, fmt.Errorf("list changes: %w", err)
 	}
-	page := api.ChangePage{DatasetId: l.dataset, Changes: make([]api.EntityChange, 0, len(rows)), Cursor: cursor}
+	page := api.ChangePage{DatasetId: l.dataset, Changes: make([]api.EntityChange, 0, len(rows)), Cursor: cursor, ThroughSequence: after.Sequence, Coverage: api.PictureCoverage{Scope: api.PictureCoverageScopeFull}}
 	for _, row := range rows {
 		change, err := l.decode(row)
 		if err != nil {
@@ -143,8 +172,66 @@ func (l *Log) Since(ctx context.Context, cursor string, limit int) (api.ChangePa
 	}
 	if len(rows) > 0 {
 		page.Cursor, err = l.Cursor(rows[len(rows)-1].Sequence)
+		page.ThroughSequence = rows[len(rows)-1].Sequence
 	}
 	return page, err
+}
+
+// SinceAsset returns only committed changes owned by one Asset. The cursor's
+// through sequence proves which excluded global changes Core examined.
+func (l *Log) SinceAsset(ctx context.Context, assetID, cursor string, limit int) (api.ChangePage, error) {
+	var after position
+	if err := l.cursors.Decode(cursor, cursorList+":asset:"+assetID, &after); err != nil {
+		return api.ChangePage{}, err
+	}
+	tx, err := l.storage.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return api.ChangePage{}, fmt.Errorf("read Asset changes: %w", err)
+	}
+	defer tx.Rollback()
+	queries := l.queries.WithTx(tx)
+	latest, err := queries.LatestSequence(ctx)
+	if err != nil {
+		return api.ChangePage{}, fmt.Errorf("read latest change for Asset %s: %w", assetID, err)
+	}
+	if after.Sequence > latest {
+		return api.ChangePage{}, errFutureCursor
+	}
+	pruned, err := queries.AssetPrunedThrough(ctx, assetID)
+	if err != nil {
+		return api.ChangePage{}, fmt.Errorf("read Asset change retention: %w", err)
+	}
+	if after.Sequence < pruned {
+		return api.ChangePage{}, errExpired
+	}
+	rows, err := queries.ListAssetChangesAfter(ctx, db.ListAssetChangesAfterParams{AssetID: sql.NullString{String: assetID, Valid: true}, AfterSequence: after.Sequence, ThroughSequence: latest, Limit: int64(limit)})
+	if err != nil {
+		return api.ChangePage{}, fmt.Errorf("list Asset changes: %w", err)
+	}
+	through := latest
+	if len(rows) == limit {
+		through = rows[len(rows)-1].Sequence
+	}
+	next, err := l.AssetCursor(assetID, through)
+	if err != nil {
+		return api.ChangePage{}, fmt.Errorf("encode change cursor for Asset %s: %w", assetID, err)
+	}
+	id, err := uuid.Parse(assetID)
+	if err != nil {
+		return api.ChangePage{}, fmt.Errorf("parse Asset ID %s for change coverage: %w", assetID, err)
+	}
+	page := api.ChangePage{DatasetId: l.dataset, Changes: make([]api.EntityChange, 0, len(rows)), Cursor: next, ThroughSequence: through, Coverage: api.PictureCoverage{Scope: api.PictureCoverageScopeAsset, AssetId: &id}}
+	for _, row := range rows {
+		change, err := l.decode(row)
+		if err != nil {
+			return api.ChangePage{}, err
+		}
+		page.Changes = append(page.Changes, change)
+	}
+	if err := tx.Commit(); err != nil {
+		return api.ChangePage{}, fmt.Errorf("finish change read for Asset %s: %w", assetID, err)
+	}
+	return page, nil
 }
 
 func (l *Log) checkRetained(ctx context.Context, after int64) error {

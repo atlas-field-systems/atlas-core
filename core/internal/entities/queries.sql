@@ -39,3 +39,7 @@ WHERE id = ?;
 
 -- name: ListEntitiesAtBaseline :many
 SELECT * FROM entities WHERE created_sequence <= sqlc.arg(baseline) AND id > sqlc.arg(after_id) ORDER BY id LIMIT sqlc.arg(limit);
+
+-- name: ListAssetAtBaseline :many
+SELECT * FROM entities WHERE id = sqlc.arg(asset_id) AND created_sequence <= sqlc.arg(baseline)
+AND id > sqlc.arg(after_id) ORDER BY id LIMIT sqlc.arg(limit);

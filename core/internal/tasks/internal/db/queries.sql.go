@@ -108,6 +108,66 @@ func (q *Queries) GetTaskBySubmission(ctx context.Context, submissionID string) 
 	return i, err
 }
 
+const listAssetTasksAtBaseline = `-- name: ListAssetTasksAtBaseline :many
+SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence, execution_status FROM tasks WHERE asset_id = ?1 AND created_sequence <= ?2
+AND id > ?3 ORDER BY id LIMIT ?4
+`
+
+type ListAssetTasksAtBaselineParams struct {
+	AssetID  string
+	Baseline int64
+	AfterID  string
+	Limit    int64
+}
+
+func (q *Queries) ListAssetTasksAtBaseline(ctx context.Context, arg ListAssetTasksAtBaselineParams) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, listAssetTasksAtBaseline,
+		arg.AssetID,
+		arg.Baseline,
+		arg.AfterID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.SubmissionID,
+			&i.AssetID,
+			&i.FactsDigest,
+			&i.CommandID,
+			&i.DestinationLatitude,
+			&i.DestinationLongitude,
+			&i.Scheduling,
+			&i.CancellationSupported,
+			&i.ProgressSupported,
+			&i.AcceptanceSequence,
+			&i.Status,
+			&i.ProgressPercent,
+			&i.FailureReason,
+			&i.CancellationRequestID,
+			&i.Version,
+			&i.CreatedSequence,
+			&i.ChangeSequence,
+			&i.ExecutionStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAssignedTasks = `-- name: ListAssignedTasks :many
 SELECT id, submission_id, asset_id, facts_digest, command_id, destination_latitude, destination_longitude, scheduling, cancellation_supported, progress_supported, acceptance_sequence, status, progress_percent, failure_reason, cancellation_request_id, version, created_sequence, change_sequence, execution_status FROM tasks WHERE asset_id = ?1 AND acceptance_sequence > ?2
 ORDER BY acceptance_sequence LIMIT ?3

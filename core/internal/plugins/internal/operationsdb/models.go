@@ -17,6 +17,11 @@ type Activity struct {
 	RecordedAt int64
 }
 
+type AssetChangePruned struct {
+	AssetID         string
+	ThroughSequence int64
+}
+
 type AssetRegistration struct {
 	RequestID   string
 	AssetID     string
@@ -42,6 +47,7 @@ type Change struct {
 	Entity       string
 	ResourceType string
 	Task         sql.NullString
+	ScopeAssetID sql.NullString
 }
 
 type Dataset struct {
