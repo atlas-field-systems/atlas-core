@@ -80,3 +80,14 @@ The user accepted all three ownership directions from the documentation architec
 | SDK picture | One SDK module owns coupled picture state. Only snapshot/feed/replay update it; write responses confirm the write without entering reconciliation | [Picture ownership](sdk-data-access.md#local-operational-picture-ownership), [write confirmation](adr/0018-confirm-writes-when-core-commits.md) |
 
 The user selected host-side Docker control, file-first publication and synchronization-only picture updates in the same review. Engineering still needs to specify supervision and private coordination, filesystem durability primitives and SDK wire/interface shapes under these decisions. These remaining details do not reopen the selected ownership or add a general runtime, storage or cache framework.
+
+### Reporting and hybrid coverage ownership
+
+In the follow-up review on 26 September 2026, the user accepted two further ownership decisions. These refine internal collaboration; detailed behavior and interface choices remain open where the linked contracts say so.
+
+| Topic | Accepted direction | Authoritative detail |
+| --- | --- | --- |
+| Asset report acceptance | Entities owns shared acceptance; Tasks collaborates in the same transaction and retains Task validation; Identity and access verifies the principal | [Shared acceptance](architecture/system-design.md#shared-asset-report-acceptance) |
+| Asset hybrid coverage | Synchronization owns shared membership and continuation across initial queries, feed and replay; Tasks supplies dependency meaning and the SDK consumes Core coverage | [Coverage ownership](architecture/system-design.md#asset-hybrid-coverage-ownership) |
+
+The user also selected explicit Protocol-defined Command dependency references, validated by Tasks, and retention of each Asset's terminal Task records in its hybrid subset until Reset. The [hybrid contract](sdk-data-access.md#asset-hybrid-mode) records these choices and their transfer/memory tradeoff. The user subsequently chose to end subscriptions needed only by terminal Tasks, while retaining shared dependencies needed by other nonterminal Tasks and always retaining the Asset's own Entity. Scope removal changes neither Core retention nor historical references.

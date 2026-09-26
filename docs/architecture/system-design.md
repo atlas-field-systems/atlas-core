@@ -112,6 +112,14 @@ Asset check-in and component patches share Protocol-defined partial-update valid
 
 Registration/fencing machinery from Modernization is not a required subsystem. Reject unauthorized, duplicate or obsolete reports through the smallest contract satisfying these guarantees. Exact reconciliation messages remain open.
 
+### Shared Asset report acceptance
+
+Accepted on 26 September 2026: Entities owns shared Asset report acceptance, including report freshness, duplicate handling, ordering facts and contact updates. Check-in, Entity updates, Task lifecycle reports and queue reports use that implementation through ordinary interfaces. Identity and access verifies the authenticated principal; Tasks retains assigned-Asset checks and Task transition validation.
+
+Tasks collaborates with Entities in the same transaction so report acceptance facts, affected Task state, Entity contact and their change records commit together. Each module keeps its private data access. This gives shared acceptance rules locality without introducing a separate top-level report-acceptance module. It does not combine separately arriving Asset and Task reports or let one report imply the other.
+
+The [reporting contract](../asset-status.md#heartbeat-and-freshness) and [Task reconciliation decision](../adr/0007-reconcile-asset-tasks-after-disconnection.md) retain their behavior. Exact report identities, freshness windows, ordering scope and interface shapes remain engineering work.
+
 ## Plugin Operations
 
 [ADR-0002](../adr/0002-core-manages-installed-plugins.md) owns accepted attempts, submission retry identity and retained effects. [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) owns stopping and fault outcomes. Plugins implements these contracts separately from Tasks. Use Plugin packaging for an internal capability only when it needs the independently managed extension lifecycle.
@@ -135,6 +143,14 @@ This keeps a useful shared delivery function small. It does not establish a gene
 Core must not silently drop committed changes while allowing a consumer to treat its picture as current. When a slow consumer, expired replay history or another delivery gap prevents complete replay, make that condition detectable through the synchronization contract. The SDK marks its picture stale and obtains a fresh snapshot with a consistent continuation point before treating it as current again.
 
 Retain a bounded replay window and an explicit earliest recoverable boundary, updated consistently with pruning. Restart retains the remaining window; Reset creates a new Dataset. Scope entry/removal and deletion must be recoverable for Asset hybrid clients without transmitting the full picture. Exact payloads, scope rules, buffer sizes, transport signaling and numeric replay limits remain implementation choices. Full-picture read access is available to every authenticated SDK client; automatic synchronization is still opt-in. Dataset changes additionally follow [the Reset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary).
+
+### Asset hybrid coverage ownership
+
+Accepted on 26 September 2026: Synchronization owns one implementation of Asset hybrid membership, scope changes and continuation evidence, shared by initial queries, live feed delivery and replay. Tasks supplies the meaning of its dependencies through ordinary collaboration; Synchronization does not infer those meanings from private Task storage. Resource owners retain their public representations and private data access.
+
+The SDK consumes Core's coverage under the [hybrid contract](../sdk-data-access.md#asset-hybrid-mode), rather than independently reconstructing membership. Its local operational picture module still owns application of synchronized state. Concentrating coverage decisions inside Synchronization gives the three delivery paths leverage from one implementation without adding a general subscription framework.
+
+The [hybrid contract](../sdk-data-access.md#asset-hybrid-mode) selects explicit Command-defined dependencies and retains the Asset's terminal Task records in scope until Reset. Dependencies stay subscribed only while needed by a nonterminal Task, except that the Asset's own Entity always remains in scope. Dependency encoding, scope-event shapes and cursor mechanics remain open. Filtering before transmission and distinguishing scope removal from global deletion remain required.
 
 ## Movement history
 

@@ -60,13 +60,21 @@ History results never populate the live picture, emit its local feed events, or 
 Asset hybrid is the agreed third mode, designed to reduce bandwidth on an Asset's link. It automatically synchronizes:
 
 - The Asset's own Entity.
-- Its outstanding Tasks and their outcomes as they occur.
+- Its assigned Tasks, including terminal outcomes retained in the subset until Dataset Reset.
 - Task cancellation requests and queue-order changes, including confirmation state.
-- Directly referenced Entities and Object metadata needed to execute those Tasks.
+- Directly referenced Entities and Object metadata needed by its nonterminal Tasks.
 
 Reaffirmed on 23 September 2026: keep the maintained subset because Task dependencies can change while the Asset works. For example, when a Task depends on a Track, its relevant telemetry updates reach the Asset through the feed without repeated application polling or reissuing the Task. A one-time work document is not a substitute for this behavior. Future edge radio designs should preserve it through their transport translation; no new radio transport or delivery-latency guarantee is selected here.
 
-File bytes remain explicit downloads. Unrelated Assets, Tasks, and Objects are not included in the background subscription. Exact dependency declarations and retention of completed Tasks remain to be specified; synchronization does not recursively subscribe to the entire relationship graph.
+File bytes remain explicit downloads. Unrelated Assets, Tasks, and Objects are not included in the background subscription. Synchronization does not recursively subscribe to the entire relationship graph.
+
+Accepted on 26 September 2026: Protocol-defined Commands explicitly identify the typed Entity and Object references that establish Task dependencies. Tasks validates those declarations and supplies the direct dependency set to Synchronization. Synchronization does not infer references from arbitrary strings or search untyped input for IDs. Exact declaration and wire encoding remain implementation work.
+
+The Asset's terminal Task records remain in its hybrid subset until Dataset Reset, including initial loading and rebuilding after a disconnection or SDK restart. This preserves local outcome reads without a separate outcome-delivery acknowledgement or expiry policy. It increases picture size and initial transfer as the Dataset accumulates Tasks; resource limits must report an inability to maintain the defined scope rather than silently dropping retained Tasks. Core's existing Task retention is unchanged. Terminal Task records do not, by themselves, keep their dependency subscriptions alive.
+
+When a Task becomes terminal, stop synchronizing dependencies needed only by that Task. A dependency stays in scope while another nonterminal Task needs it, and the Asset's own Entity always stays in scope. Paused Tasks and Tasks with cancellation requested remain nonterminal, so those statuses alone do not release their dependencies. Retaining a terminal Task's historical references does not keep the referenced resources subscribed.
+
+Apply this membership rule consistently during initial loading, live delivery and replay recovery. Removing a resource from the subset does not delete it in Core, erase historical references or release required-result protection. Subsequent reads outside the subset use the existing one-off request behavior. Exact scope-change encoding and coordinated picture application remain engineering work under the existing coverage and ordering guarantees.
 
 Hybrid scope limits bandwidth, not authorization. Every authenticated client may still request the full operational picture.
 
@@ -172,7 +180,7 @@ Core, Assets and SDK clients may use different versions within declared supporte
 
 ## Open decisions
 
-- Hybrid scope/dependency encoding, terminal-Task retention, scope-entry/removal events, and request/result coverage metadata.
+- Hybrid dependency encoding, scope-entry/removal events, and request/result coverage metadata.
 - SDK constructor/options and method names for selecting the read mode.
 - Exact readiness/error/status shapes and freshness requirements for particular consumers.
 - Detailed local query pagination, history limits/cursor encoding, and local feed start/rebuild behavior.
