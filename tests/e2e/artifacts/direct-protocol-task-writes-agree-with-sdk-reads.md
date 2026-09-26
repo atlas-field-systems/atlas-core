@@ -153,7 +153,187 @@ SDK `GET /tasks/<direct task>` with <operator key>
 }
 ```
 
-## 3. Report through direct Protocol and read the same authoritative outcome
+## 3. Protocol rejects incomplete and mixed Task update variants
+
+SDK `GET /entities/<asset>` with <operator key>
+
+→ **200**
+```json
+{
+  "alias": "Scout One",
+  "change_sequence": 1,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "offline"
+    },
+    "health": {
+      "battery_percent": 75
+    },
+    "heartbeat": {
+      "last_seen": null
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    },
+    "telemetry": {
+      "latitude": 42.2743,
+      "longitude": -71.8081
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<asset>",
+  "kind": "asset",
+  "subtype": "ground vehicle",
+  "version": 1
+}
+```
+
+direct `PATCH /tasks/<direct task>/status` with <asset credential>
+```json
+{
+  "dataset_id": "<id-1>"
+}
+```
+
+→ **400**
+```json
+{
+  "code": "invalid_request",
+  "message": "The request does not match the Protocol at /: value doesn't match any schema from \"oneOf\"."
+}
+```
+
+direct `PATCH /tasks/<direct task>/status` with <asset credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "status": "completed",
+  "sequence": 1
+}
+```
+
+→ **400**
+```json
+{
+  "code": "invalid_request",
+  "message": "The request does not match the Protocol at /: value doesn't match any schema from \"oneOf\"."
+}
+```
+
+direct `PATCH /tasks/<direct task>/status` with <asset credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<mixed report>",
+  "sequence": 1
+}
+```
+
+→ **400**
+```json
+{
+  "code": "invalid_request",
+  "message": "The request does not match the Protocol at /: value doesn't match any schema from \"oneOf\"."
+}
+```
+
+direct `PATCH /tasks/<direct task>/status` with <operator key>
+```json
+{
+  "dataset_id": "<id-1>",
+  "status": "cancellation_requested",
+  "request_id": "<mixed cancellation request>",
+  "report_id": "<mixed report>"
+}
+```
+
+→ **400**
+```json
+{
+  "code": "invalid_request",
+  "message": "The request does not match the Protocol at /: value doesn't match any schema from \"oneOf\"."
+}
+```
+
+SDK `GET /tasks/<direct task>` with <operator key>
+
+→ **200**
+```json
+{
+  "acceptance_sequence": 1,
+  "asset_id": "<asset>",
+  "change_sequence": 2,
+  "command_id": "move_to",
+  "created_sequence": 2,
+  "dataset_id": "<id-1>",
+  "id": "<direct task>",
+  "input": {
+    "latitude": 43,
+    "longitude": -72
+  },
+  "scheduling": "queued",
+  "status": "pending",
+  "submission_id": "<direct submission>",
+  "version": 1
+}
+```
+
+SDK `GET /entities/<asset>` with <operator key>
+
+→ **200**
+```json
+{
+  "alias": "Scout One",
+  "change_sequence": 1,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "offline"
+    },
+    "health": {
+      "battery_percent": 75
+    },
+    "heartbeat": {
+      "last_seen": null
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    },
+    "telemetry": {
+      "latitude": 42.2743,
+      "longitude": -71.8081
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<asset>",
+  "kind": "asset",
+  "subtype": "ground vehicle",
+  "version": 1
+}
+```
+
+## 4. Report through direct Protocol and read the same authoritative outcome
 
 direct `PATCH /tasks/<direct task>/status` with <asset credential>
 ```json
@@ -256,7 +436,7 @@ SDK `GET /entities/<asset>` with <operator key>
 }
 ```
 
-## 4. Protocol rejects an empty failure reason before contact changes
+## 5. Protocol rejects an empty failure reason before contact changes
 
 SDK `GET /entities/<asset>` with <operator key>
 
@@ -317,7 +497,7 @@ direct `PATCH /tasks/<direct task>/status` with <asset credential>
 ```json
 {
   "code": "invalid_request",
-  "message": "The request does not match the Protocol at /failure_reason: minimum string length is 1."
+  "message": "The request does not match the Protocol at /: value doesn't match any schema from \"oneOf\"."
 }
 ```
 

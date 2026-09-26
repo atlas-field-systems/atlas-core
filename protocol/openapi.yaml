@@ -1108,20 +1108,36 @@ components:
           minimum: 1
           description: Present in a Task write response when Asset contact has a later change than the Task. Wait for this sequence to cover the request; otherwise use change_sequence. A matching retry may return a newer contact sequence.
     TaskStatusUpdate:
+      oneOf:
+        - $ref: '#/components/schemas/TaskCancellationRequest'
+        - $ref: '#/components/schemas/TaskExecutionReport'
+        - $ref: '#/components/schemas/TaskProgressReport'
+    TaskCancellationRequest:
       type: object
       additionalProperties: false
-      required: [dataset_id]
+      required: [dataset_id, status, request_id]
       properties:
         dataset_id:
           type: string
           format: uuid
         status:
-          $ref: '#/components/schemas/TaskStatus'
-          description: Omit only for a progress-only report from the assigned Asset.
+          type: string
+          enum: [cancellation_requested]
         request_id:
           type: string
           format: uuid
           description: Stable identity of a tasking client's cancellation request.
+    TaskExecutionReport:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, status, report_id, sequence]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [acknowledged, in_progress, completed, failed, cancelled]
         report_id:
           type: string
           format: uuid
@@ -1143,6 +1159,27 @@ components:
           type: string
           format: uuid
           description: The cancellation request confirmed by a cancelled report.
+    TaskProgressReport:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, report_id, sequence, progress_percent]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        report_id:
+          type: string
+          format: uuid
+          description: Stable identity of an assigned Asset report.
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        progress_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
     TaskPage:
       type: object
       additionalProperties: false

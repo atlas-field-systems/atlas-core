@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -17,6 +18,31 @@ import (
 // UpdateStatus records tasking-client cancellation or an assigned-Asset report.
 // Asset contact, Task state and both change records commit in one transaction.
 func (s *Service) UpdateStatus(ctx context.Context, caller identity.Caller, id uuid.UUID, update api.TaskStatusUpdate) (api.Task, error) {
+	// The generated Protocol union carries JSON; decode its validated variant
+	// once into the facts shared by cancellation and Asset reports.
+	encoded, err := json.Marshal(update)
+	if err != nil {
+		return api.Task{}, errInvalidStatus
+	}
+	var facts statusUpdate
+	if err := json.Unmarshal(encoded, &facts); err != nil {
+		return api.Task{}, errInvalidStatus
+	}
+	return s.updateStatus(ctx, caller, id, facts)
+}
+
+type statusUpdate struct {
+	DatasetId             uuid.UUID       `json:"dataset_id"`
+	Status                *api.TaskStatus `json:"status,omitempty"`
+	RequestId             *uuid.UUID      `json:"request_id,omitempty"`
+	ReportId              *uuid.UUID      `json:"report_id,omitempty"`
+	Sequence              *int64          `json:"sequence,omitempty"`
+	ProgressPercent       *float64        `json:"progress_percent,omitempty"`
+	FailureReason         *string         `json:"failure_reason,omitempty"`
+	CancellationRequestId *uuid.UUID      `json:"cancellation_request_id,omitempty"`
+}
+
+func (s *Service) updateStatus(ctx context.Context, caller identity.Caller, id uuid.UUID, update statusUpdate) (api.Task, error) {
 	if err := s.datasets.RequireCurrent(update.DatasetId); err != nil {
 		return api.Task{}, err
 	}
@@ -49,7 +75,7 @@ type taskCapabilities struct {
 	Progress     bool
 }
 
-func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, caller identity.Caller, id uuid.UUID, current api.Task, capabilities taskCapabilities, update api.TaskStatusUpdate) (api.Task, error) {
+func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, caller identity.Caller, id uuid.UUID, current api.Task, capabilities taskCapabilities, update statusUpdate) (api.Task, error) {
 	if caller.Kind != identity.Asset || caller.ID != current.AssetId.String() {
 		return api.Task{}, errNotAssigned
 	}
@@ -59,8 +85,8 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 	// Include the Task identity in the report digest: one report ID cannot be
 	// reused to change another Task even if its body happens to match.
 	facts := struct {
-		TaskID uuid.UUID            `json:"task_id"`
-		Update api.TaskStatusUpdate `json:"update"`
+		TaskID uuid.UUID    `json:"task_id"`
+		Update statusUpdate `json:"update"`
 	}{id, update}
 	contact, resent, err := s.entities.AcceptTaskReport(ctx, tx, caller, current.AssetId.String(), update.DatasetId, update.ReportId.String(), *update.Sequence, facts)
 	if err != nil {
@@ -98,7 +124,7 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 	return s.storeReport(ctx, tx, queries, id, current, status, update)
 }
 
-func validateReport(current api.Task, capabilities taskCapabilities, update api.TaskStatusUpdate) (api.TaskStatus, error) {
+func validateReport(current api.Task, capabilities taskCapabilities, update statusUpdate) (api.TaskStatus, error) {
 	if update.ProgressPercent != nil && !capabilities.Progress {
 		return "", errUnsupportedProgress
 	}
@@ -125,7 +151,7 @@ func validateReport(current api.Task, capabilities taskCapabilities, update api.
 	return status, nil
 }
 
-func (s *Service) storeReport(ctx context.Context, tx *sql.Tx, queries *db.Queries, id uuid.UUID, current api.Task, status api.TaskStatus, update api.TaskStatusUpdate) (api.Task, error) {
+func (s *Service) storeReport(ctx context.Context, tx *sql.Tx, queries *db.Queries, id uuid.UUID, current api.Task, status api.TaskStatus, update statusUpdate) (api.Task, error) {
 	progress := current.ProgressPercent
 	if update.ProgressPercent != nil {
 		progress = update.ProgressPercent
@@ -141,7 +167,7 @@ func (s *Service) storeReport(ctx context.Context, tx *sql.Tx, queries *db.Queri
 	return task, s.changes.Commit(tx)
 }
 
-func (s *Service) cancel(ctx context.Context, tx *sql.Tx, queries *db.Queries, caller identity.Caller, current api.Task, capabilities taskCapabilities, update api.TaskStatusUpdate) (api.Task, error) {
+func (s *Service) cancel(ctx context.Context, tx *sql.Tx, queries *db.Queries, caller identity.Caller, current api.Task, capabilities taskCapabilities, update statusUpdate) (api.Task, error) {
 	if caller.Kind != identity.Operator && caller.Kind != identity.Plugin {
 		return api.Task{}, errInvalidStatus
 	}
@@ -196,7 +222,7 @@ func allowed(current, next api.TaskStatus) bool {
 	}
 }
 
-func sameTerminalFacts(current api.Task, update api.TaskStatusUpdate) bool {
+func sameTerminalFacts(current api.Task, update statusUpdate) bool {
 	if current.Status == api.TaskStatusFailed && (current.FailureReason == nil || update.FailureReason == nil || *current.FailureReason != *update.FailureReason) {
 		return false
 	}

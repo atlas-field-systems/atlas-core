@@ -209,6 +209,25 @@ scenario("Direct Protocol Task writes agree with SDK reads", async (s) => {
     assert.deepEqual(await operator.task(response.body.id), response.body);
     return response.body;
   });
+  await s.step("Protocol rejects incomplete and mixed Task update variants", async () => {
+    const requestId = crypto.randomUUID();
+    const reportId = crypto.randomUUID();
+    s.transcript.name(requestId, "mixed cancellation request");
+    s.transcript.name(reportId, "mixed report");
+    const before = await operator.entity(asset.identity.assetId);
+    for (const [body, credential] of [
+      [{ dataset_id: asset.identity.datasetId }, asset.identity.credential],
+      [{ dataset_id: asset.identity.datasetId, status: "completed", sequence: 1 }, asset.identity.credential],
+      [{ dataset_id: asset.identity.datasetId, report_id: reportId, sequence: 1 }, asset.identity.credential],
+      [{ dataset_id: asset.identity.datasetId, status: "cancellation_requested", request_id: requestId, report_id: reportId }, core.installation.operatorKey],
+    ]) {
+      const response = await s.request(core, `/tasks/${task.id}/status`, { method: "PATCH", credential, body });
+      assert.equal(response.status, 400);
+      assert.equal(response.body.code, "invalid_request");
+    }
+    assert.deepEqual(await operator.task(task.id), task);
+    assert.deepEqual(await operator.entity(asset.identity.assetId), before);
+  });
   await s.step("Report through direct Protocol and read the same authoritative outcome", async () => {
     const body = report(s, asset.identity, 1, "completed", { progress_percent: 100 });
     const response = await s.request(core, `/tasks/${task.id}/status`, { method: "PATCH", credential: asset.identity.credential, body });

@@ -1,5 +1,5 @@
 import createClient from "openapi-fetch";
-import { taskStatusValues, type components, type paths } from "./generated/protocol.js";
+import type { components, paths } from "./generated/protocol.js";
 import { newAssetCredential } from "./credentials.js";
 import { PictureError, WaitTimeoutError, unwrap } from "./errors.js";
 import { FeedConnection } from "./feed.js";
@@ -63,8 +63,6 @@ const defaultWaitMs = 10_000;
 
 /** How often waitForOperation reads an attempt; outcomes are not on the feed. */
 const operationPollMs = 100;
-
-const taskStatuses = Object.fromEntries(taskStatusValues.map((status) => [status, status]));
 
 const terminalStatuses: ReadonlySet<Operation["status"]> = new Set(["completed", "canceled", "failed", "interrupted"]);
 
@@ -154,7 +152,7 @@ export class AtlasClient {
 
   /** Persist requestId before sending so an uncertain response can be retried. */
   async cancelTask(id: string, datasetId: string, requestId: string): Promise<Task> {
-    return unwrap(await this.#api.PATCH("/tasks/{task_id}/status", { params: { path: { task_id: id } }, body: { dataset_id: datasetId, status: taskStatuses.cancellation_requested, request_id: requestId } }));
+    return unwrap(await this.#api.PATCH("/tasks/{task_id}/status", { params: { path: { task_id: id } }, body: { dataset_id: datasetId, status: "cancellation_requested", request_id: requestId } }));
   }
 
   /** For the assigned Asset: report execution with a stable report identity. */
