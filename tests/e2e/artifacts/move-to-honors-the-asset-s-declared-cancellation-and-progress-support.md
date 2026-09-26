@@ -125,7 +125,108 @@ SDK `POST /tasks` with <operator key>
 }
 ```
 
-## 4. Unsupported cancellation and progress fail without changing the Task
+## 4. The catalog rejects unsupported manifest scheduling
+
+SDK `GET /entities/<asset>` with <operator key>
+
+→ **200**
+```json
+{
+  "alias": "Limited",
+  "change_sequence": 1,
+  "command_manifest": [
+    {
+      "cancellation": false,
+      "command_id": "move_to",
+      "progress": false,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "offline"
+    },
+    "heartbeat": {
+      "last_seen": null
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<asset>",
+  "kind": "asset",
+  "subtype": null,
+  "version": 1
+}
+```
+
+SDK `PATCH /entities/<asset>` with <asset credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<unsupported manifest report>",
+  "sequence": 1,
+  "command_manifest": [
+    {
+      "command_id": "move_to",
+      "scheduling": [
+        "immediate"
+      ]
+    }
+  ]
+}
+```
+
+→ **400**
+```json
+{
+  "code": "invalid_command_manifest",
+  "message": "The Asset advertises an unsupported Command or scheduling combination."
+}
+```
+
+SDK `GET /entities/<asset>` with <operator key>
+
+→ **200**
+```json
+{
+  "alias": "Limited",
+  "change_sequence": 1,
+  "command_manifest": [
+    {
+      "cancellation": false,
+      "command_id": "move_to",
+      "progress": false,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "offline"
+    },
+    "heartbeat": {
+      "last_seen": null
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<asset>",
+  "kind": "asset",
+  "subtype": null,
+  "version": 1
+}
+```
+
+## 5. Unsupported cancellation and progress fail without changing the Task
 
 SDK `PATCH /tasks/<limited task>/status` with <operator key>
 ```json
@@ -186,7 +287,7 @@ SDK `GET /tasks/<limited task>` with <operator key>
 }
 ```
 
-## 5. The assigned Asset can still complete the Task
+## 6. The assigned Asset can still complete the Task
 
 SDK `PATCH /tasks/<limited task>/status` with <asset credential>
 ```json

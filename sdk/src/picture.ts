@@ -129,6 +129,7 @@ export class Picture implements EntityReads {
     this.#requireReadable();
     requirePositive(limit);
     const offset = cursor ? this.#readCursor(cursor, list).offset : 0;
+    if (assetId !== undefined && !this.#entities.has(assetId)) throw new PictureError("not_found", "The Entity is not in the local picture.");
     const tasks = [...this.#tasks.values()].filter((task) => assetId === undefined || task.asset_id === assetId).sort((a, b) => assetId === undefined ? a.created_sequence - b.created_sequence : a.acceptance_sequence - b.acceptance_sequence);
     const end = offset + limit;
     return { dataset_id: this.#datasetId, tasks: structuredClone(tasks.slice(offset, end)), ...(end < tasks.length ? { next_cursor: this.#cursor(list, end) } : {}) };

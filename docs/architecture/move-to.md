@@ -1,6 +1,6 @@
 # Move To implementation
 
-Ticket #8 implements one Protocol Command, `move_to`. Its input is a latitude and longitude in degrees. The Command Catalog is authored in `protocol/command-catalog.json` and copied into the SDK's generated local catalog. Protocol also owns the request and response schemas in `protocol/openapi.yaml`. Assets advertise `move_to` with `queued` scheduling; Core rejects unknown Commands and unsupported scheduling when an Asset enrolls, updates its manifest, or receives a Task.
+Ticket #8 implements one Protocol Command, `move_to`. Its input is a latitude and longitude in degrees. The Command Catalog is authored in `protocol/command-catalog.json` and copied into the SDK's generated local catalog and Core's embedded validation catalog. Protocol also owns the request and response schemas in `protocol/openapi.yaml`. Assets advertise `move_to` with `queued` scheduling; Core rejects unknown Commands and unsupported scheduling when an Asset enrolls, updates its manifest, or receives a Task.
 
 `POST /tasks` accepts an explicit Dataset ID and a caller-persisted submission UUID. Core stores a digest of the original request, an immutable Task assignment, typed destination coordinates, the Asset's declared cancellation/progress support, and the next per-Asset acceptance sequence in one SQLite transaction. A matching retry returns the current Task without allocating another sequence. A changed retry conflicts. Asset contact or busy status does not gate acceptance. Task IDs and acceptance sequences survive same-release Restart until Reset.
 

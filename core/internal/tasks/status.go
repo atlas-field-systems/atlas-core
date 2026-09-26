@@ -92,6 +92,9 @@ func (s *Service) report(ctx context.Context, tx *sql.Tx, queries *db.Queries, c
 	if current.Status == api.TaskStatusCancellationRequested && (status == api.TaskStatusAcknowledged || status == api.TaskStatusInProgress) {
 		status = current.Status
 	}
+	if status == api.TaskStatusAcknowledged && update.ProgressPercent != nil && *update.ProgressPercent > 0 {
+		return api.Task{}, errInvalidStatus
+	}
 	return s.storeReport(ctx, tx, queries, id, current, status, update)
 }
 

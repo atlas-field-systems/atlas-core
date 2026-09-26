@@ -195,6 +195,16 @@ direct `GET /tasks/<Move To task>` with <operator key>
 }
 ```
 
+SDK `GET /entities/<missing Entity>/tasks` with <operator key>
+
+→ **404**
+```json
+{
+  "code": "not_found",
+  "message": "Entity not found."
+}
+```
+
 ## 5. A matching retry returns the same Task and a changed retry conflicts
 
 SDK `POST /tasks` with <operator key>
@@ -353,6 +363,25 @@ SDK `PATCH /tasks/<Move To task>/status` with <other credential>
 {
   "code": "forbidden",
   "message": "Only the assigned Asset may report Task execution."
+}
+```
+
+SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<task report 1>",
+  "sequence": 1,
+  "status": "acknowledged",
+  "progress_percent": 20
+}
+```
+
+→ **400**
+```json
+{
+  "code": "invalid_task_status",
+  "message": "The status update does not match the actor or transition."
 }
 ```
 

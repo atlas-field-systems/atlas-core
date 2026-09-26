@@ -35,6 +35,10 @@ scenario("Move To is accepted once and the assigned Asset reports its outcome", 
     assert.deepEqual(direct.body, created);
     await picture.waitForSynchronization(created);
     assert.deepEqual(await picture.task(created.id), created);
+    const missingEntity = crypto.randomUUID();
+    s.transcript.name(missingEntity, "missing Entity");
+    await assert.rejects(operator.assignedTasks(missingEntity), (error) => error instanceof AtlasError && error.code === "not_found");
+    await assert.rejects(picture.assignedTasks(missingEntity), (error) => error instanceof PictureError && error.code === "not_found");
     return created;
   });
 
@@ -49,6 +53,7 @@ scenario("Move To is accepted once and the assigned Asset reports its outcome", 
     const other = await enrollAsset(s, core, { alias: "Other" }, "other");
     const acknowledged = report(s, asset.identity, 1, "acknowledged");
     await assert.rejects(other.client.reportTask(task.id, acknowledged), (error) => error instanceof AtlasError && error.status === 403);
+    await assert.rejects(asset.client.reportTask(task.id, report(s, asset.identity, 1, "acknowledged", { progress_percent: 20 })), (error) => error instanceof AtlasError && error.code === "invalid_task_status");
     const first = await asset.client.reportTask(task.id, acknowledged);
     assert.equal(first.status, "acknowledged");
     const running = await asset.client.reportTask(task.id, report(s, asset.identity, 2, "in_progress", { progress_percent: 40 }));
@@ -91,6 +96,18 @@ scenario("Move To honors the Asset's declared cancellation and progress support"
     const created = await operator.submitTask(submission);
     s.transcript.name(created.id, "limited task");
     return created;
+  });
+  await s.step("The catalog rejects unsupported manifest scheduling", async () => {
+    const reportId = crypto.randomUUID();
+    s.transcript.name(reportId, "unsupported manifest report");
+    const before = await operator.entity(asset.identity.assetId);
+    await assert.rejects(asset.client.patchEntity(asset.identity.assetId, {
+      datasetId: asset.identity.datasetId,
+      reportId,
+      sequence: 1,
+      commandManifest: [{ command_id: "move_to", scheduling: ["immediate"] }],
+    }), (error) => error instanceof AtlasError && error.code === "invalid_command_manifest");
+    assert.deepEqual(await operator.entity(asset.identity.assetId), before);
   });
   await s.step("Unsupported cancellation and progress fail without changing the Task", async () => {
     const cancellationId = crypto.randomUUID();
