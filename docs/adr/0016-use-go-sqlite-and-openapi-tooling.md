@@ -24,7 +24,7 @@ Protocol owns the public HTTP contract. Private SQL schemas and queries own stor
 
 SQLite removes a separate database server but permits only one writer at a time. Keep transactions short and bulk Object transfers outside them. Commit resource mutations and change records together. The expected resource counts are not a capacity benchmark; validate write contention and latency with the first workflow. [SQLite's deployment guidance](https://sqlite.org/whentouse.html) and [WAL documentation](https://sqlite.org/wal.html) describe this tradeoff.
 
-Local files remove the object-service dependency, but file publication and SQL commit remain separate operations. The Objects implementation must handle staging, interrupted writes and missing content without exposing an unusable Object. Storage follows [ADR-0015](0015-separate-start-stop-restart-and-reset.md), including retained same-release restarts and explicit release-update Reset.
+Local files remove the object-service dependency, but file publication and SQL commit remain separate operations. [ADR-0009](0009-expose-objects-only-when-ready.md#publication-and-recovery-ordering) selects durable content before the ready-state SQLite commit, with Objects-owned recovery of interrupted publication. Storage follows [ADR-0015](0015-separate-start-stop-restart-and-reset.md), including retained same-release restarts and explicit release-update Reset.
 
 PostgreSQL remains a reconsideration option if measured workload requires it. A TypeScript/Fastify server was considered for language consolidation; Go was chosen with its generated server interfaces and the existing Core experience. TypeSpec is deferred: start by authoring OpenAPI directly. These alternatives are not additional supported deployment profiles.
 

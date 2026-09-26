@@ -76,7 +76,7 @@ Reads within the synchronized scope use the local picture. Reads outside it make
 
 In-scope reads retain the same readiness and freshness rules as full synchronization. An unready or stale local picture does not trigger fallback. One-off API failures remain API failures. Local cursors stay scoped to the SDK instance, picture generation, and subset; out-of-scope Core queries use separate Core cursors. Exact request/result scope metadata remains to be specified.
 
-All writes still go to Core. Successful writes reconcile locally only when their results belong in the synchronized scope; they do not expand that scope. Asset hybrid adds neither disk persistence nor an offline-write queue.
+All writes still go to Core. Their effects enter the local picture only through synchronization when they belong in the synchronized scope; write responses neither update nor expand that scope. Asset hybrid adds neither disk persistence nor an offline-write queue.
 
 ## Keeping the picture current
 
@@ -111,6 +111,14 @@ This mode does couple Core and the SDK through a documented synchronization cont
 
 Protocol describes event and resource shapes. Core owns committed state and the recovery log. The SDK owns the local projection, event ordering, connection recovery, and reporting synchronization state. These are public behavioral contracts rather than dependencies on private implementation details.
 
+### Local operational picture ownership
+
+Within the SDK, one local operational picture module owns the state that must agree: resource versions and deletions, coverage, applied recovery position, local history/cursors, picture generation, and readiness. Initial loading, feed delivery and replay recovery cooperate through that owner. Reads, queries and local subscriptions observe its reconciled state; individual SDK resource methods do not separately advance cursors or emit picture changes.
+
+Full synchronization and Asset hybrid share these reconciliation rules while retaining their different coverage. HTTP mode does not construct a picture. HTTP reads and local picture reads are the two concrete adapters at the agreed read-source seam; this does not require a general cache-provider interface. Keep loading, buffering and history helpers private where useful. Depth comes from hiding their coordination, not from putting the entire implementation in one file.
+
+For synchronized modes, rejecting obsolete Dataset inputs, invalidating rebuilt pictures and deduplicating notifications have locality in this module, giving reads and subscriptions leverage from one implementation. All modes still enforce the [Dataset Reset rules](#dataset-reset-boundary). The [write-confirmation rule](#writes) remains independent: a committed result can return while the picture is behind. Snapshot loading, feed delivery and replay recovery are the only picture data inputs; write responses do not participate. Interface shapes, cursor encoding, coverage messages and limits remain design work.
+
 ## Freshness and failures
 
 The picture represents the latest state the SDK has successfully received. It is not guaranteed to contain a change committed to Core at the exact instant of a local read.
@@ -136,9 +144,9 @@ The [SDK operations catalog](sdk-operations.md) describes Asset self-registratio
 
 All modes return Core's authoritative write result once Core confirms the commit and the SDK validates the response and Dataset, following [ADR-0018](adr/0018-confirm-writes-when-core-commits.md). Do not wait for the local picture to catch up. For example, a Task creation can return its accepted Task while a synchronized Task-list read still shows the older picture. Acceptance does not establish Asset receipt or execution. Report synchronization state separately; ordinary write success is not a local read-after-write guarantee.
 
-The returned result is separate from local picture state. In full-synchronization or Asset hybrid mode, apply in-scope committed changes through the ordered synchronization path. A response must not bypass that path by immediately changing picture reads, emitting local feed notifications or appending local history. If a response contributes to reconciliation, it must identify its Dataset and ordering boundary and be deduplicated against feed/recovery delivery. Exact envelopes remain Protocol work.
+The returned result is separate from local picture state. In full-synchronization or Asset hybrid mode, apply in-scope committed changes only through snapshot loading, feed delivery and replay recovery, under their ordering rules. A write response never changes picture reads, emits local feed notifications, appends local history or contributes a reconciliation input, even if it includes a newer resource. The caller may use the returned result separately from picture reads. Exact response envelopes remain Protocol work.
 
-For example, if the picture has applied N and a successful write response for N+2 arrives before N+1, return the write result without waiting for N+1. The picture still applies N+1 before N+2 and emits each local change once. A single-resource response cannot stand in for other resources changed by the same commit. Version checks prevent an older response from replacing newer already-applied state or resurrecting a deleted resource. A mutation response alone never advances the global recovery cursor. Hybrid recovery uses Core's scoped continuation/barrier proof for excluded changes; it must not download out-of-scope resources or wait for every integer sequence to appear.
+For example, if the picture has applied N and a successful write response for N+2 arrives before N+1, return the write result without waiting for N+1. The picture waits for synchronization to supply the relevant changes, applies N+1 before N+2 and emits each local change once. A single-resource response cannot stand in for other resources changed by the same commit. Version checks on synchronization inputs prevent stale overwrites and resurrection; a late write response cannot change the picture at all. Hybrid recovery uses Core's scoped continuation/barrier proof for excluded changes; it must not download out-of-scope resources or wait for every integer sequence to appear.
 
 If synchronization is interrupted or replay expires, preserve the successful write result and recover or rebuild the picture under the ordinary synchronization rules. Keep its stale/not-ready status accurate, invalidate local cursors on rebuild and do not automatically resubmit an accepted mutation. A Dataset change follows the Reset rule below and cannot insert the old result into the new picture. Any separate opt-in helper for waiting until the picture reflects a commit remains engineering work; no such wait is part of ordinary write success.
 
