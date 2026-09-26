@@ -386,15 +386,179 @@ Observed scoped feed frames:
 ]
 ```
 
-## 6. Snapshot pages contain only the Asset and its assigned Task
+## 6. The scoped feed proves an excluded sequence before the next own change
+
+SDK `POST /entities/<beta>/checkin` with <beta credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<id-8>",
+  "sequence": 1
+}
+```
+
+→ **200**
+```json
+{
+  "alias": "Beta",
+  "change_sequence": 5,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "healthy"
+    },
+    "health": {
+      "battery_percent": 75
+    },
+    "heartbeat": {
+      "last_seen": "<time>"
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    },
+    "telemetry": {
+      "latitude": 42.2743,
+      "longitude": -71.8081
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<beta>",
+  "kind": "asset",
+  "subtype": "ground vehicle",
+  "version": 2
+}
+```
+
+SDK `POST /entities/<alpha>/checkin` with <alpha credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<id-9>",
+  "sequence": 1
+}
+```
+
+→ **200**
+```json
+{
+  "alias": "Alpha",
+  "change_sequence": 6,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "healthy"
+    },
+    "health": {
+      "battery_percent": 75
+    },
+    "heartbeat": {
+      "last_seen": "<time>"
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    },
+    "telemetry": {
+      "latitude": 42.2743,
+      "longitude": -71.8081
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<alpha>",
+  "kind": "asset",
+  "subtype": "ground vehicle",
+  "version": 2
+}
+```
+
+Observed excluded sequence before own change:
+```json
+[
+  {
+    "cursor": "<cursor-5>",
+    "through_sequence": 5,
+    "type": "progress"
+  },
+  {
+    "change": {
+      "dataset_id": "<id-1>",
+      "entity": {
+        "alias": "Alpha",
+        "change_sequence": 6,
+        "command_manifest": [
+          {
+            "cancellation": true,
+            "command_id": "move_to",
+            "progress": true,
+            "scheduling": [
+              "queued"
+            ]
+          }
+        ],
+        "components": {
+          "communications": {
+            "link_state": "healthy"
+          },
+          "health": {
+            "battery_percent": 75
+          },
+          "heartbeat": {
+            "last_seen": "<time>"
+          },
+          "status": {
+            "reported_at": null,
+            "value": "unknown"
+          },
+          "telemetry": {
+            "latitude": 42.2743,
+            "longitude": -71.8081
+          }
+        },
+        "dataset_id": "<id-1>",
+        "id": "<alpha>",
+        "kind": "asset",
+        "subtype": "ground vehicle",
+        "version": 2
+      },
+      "kind": "update",
+      "resource_id": "<alpha>",
+      "resource_type": "entity",
+      "sequence": 6
+    },
+    "cursor": "<cursor-6>",
+    "type": "change"
+  }
+]
+```
+
+## 7. Snapshot pages contain only the Asset and its assigned Task
 
 direct `GET /queries/full?scope=asset&limit=1` with <alpha credential>
 
 → **200**
 ```json
 {
-  "baseline": "<cursor-4>",
-  "baseline_sequence": 4,
+  "baseline": "<cursor-6>",
+  "baseline_sequence": 6,
   "coverage": {
     "asset_id": "<alpha>",
     "scope": "asset"
@@ -403,7 +567,7 @@ direct `GET /queries/full?scope=asset&limit=1` with <alpha credential>
   "entities": [
     {
       "alias": "Alpha",
-      "change_sequence": 1,
+      "change_sequence": 6,
       "command_manifest": [
         {
           "cancellation": true,
@@ -416,13 +580,13 @@ direct `GET /queries/full?scope=asset&limit=1` with <alpha credential>
       ],
       "components": {
         "communications": {
-          "link_state": "offline"
+          "link_state": "healthy"
         },
         "health": {
           "battery_percent": 75
         },
         "heartbeat": {
-          "last_seen": null
+          "last_seen": "<time>"
         },
         "status": {
           "reported_at": null,
@@ -437,21 +601,21 @@ direct `GET /queries/full?scope=asset&limit=1` with <alpha credential>
       "id": "<alpha>",
       "kind": "asset",
       "subtype": "ground vehicle",
-      "version": 1
+      "version": 2
     }
   ],
-  "next_cursor": "<cursor-5>",
+  "next_cursor": "<cursor-7>",
   "tasks": []
 }
 ```
 
-direct `GET /queries/full?scope=asset&limit=1&cursor=<cursor-5>` with <alpha credential>
+direct `GET /queries/full?scope=asset&limit=1&cursor=<cursor-7>` with <alpha credential>
 
 → **200**
 ```json
 {
-  "baseline": "<cursor-4>",
-  "baseline_sequence": 4,
+  "baseline": "<cursor-6>",
+  "baseline_sequence": 6,
   "coverage": {
     "asset_id": "<alpha>",
     "scope": "asset"
@@ -480,7 +644,7 @@ direct `GET /queries/full?scope=asset&limit=1&cursor=<cursor-5>` with <alpha cre
 }
 ```
 
-## 7. Replay proves the excluded Task sequence
+## 8. Replay proves the excluded Task sequence
 
 direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha credential>
 
@@ -511,21 +675,66 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha cr
         "submission_id": "<id-6>",
         "version": 1
       }
+    },
+    {
+      "dataset_id": "<id-1>",
+      "entity": {
+        "alias": "Alpha",
+        "change_sequence": 6,
+        "command_manifest": [
+          {
+            "cancellation": true,
+            "command_id": "move_to",
+            "progress": true,
+            "scheduling": [
+              "queued"
+            ]
+          }
+        ],
+        "components": {
+          "communications": {
+            "link_state": "healthy"
+          },
+          "health": {
+            "battery_percent": 75
+          },
+          "heartbeat": {
+            "last_seen": "<time>"
+          },
+          "status": {
+            "reported_at": null,
+            "value": "unknown"
+          },
+          "telemetry": {
+            "latitude": 42.2743,
+            "longitude": -71.8081
+          }
+        },
+        "dataset_id": "<id-1>",
+        "id": "<alpha>",
+        "kind": "asset",
+        "subtype": "ground vehicle",
+        "version": 2
+      },
+      "kind": "update",
+      "resource_id": "<alpha>",
+      "resource_type": "entity",
+      "sequence": 6
     }
   ],
   "coverage": {
     "asset_id": "<alpha>",
     "scope": "asset"
   },
-  "cursor": "<cursor-4>",
+  "cursor": "<cursor-6>",
   "dataset_id": "<id-1>",
-  "through_sequence": 4
+  "through_sequence": 6
 }
 ```
 
-## 8. Cursors and scope stay bound to the authenticated Asset
+## 9. Cursors and scope stay bound to the authenticated Asset
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-4>` with <beta credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-6>` with <beta credential>
 
 → **400**
 ```json
@@ -535,7 +744,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-4>` with <beta cre
 }
 ```
 
-direct `GET /queries/changed-since?cursor=<cursor-4>` with <alpha credential>
+direct `GET /queries/changed-since?cursor=<cursor-6>` with <alpha credential>
 
 → **400**
 ```json
@@ -555,9 +764,9 @@ direct `GET /queries/full?scope=asset` with <operator key>
 }
 ```
 
-## 9. Pruning unrelated traffic does not expire the scoped cursor
+## 10. Pruning unrelated traffic does not expire the scoped cursor
 
-direct `GET /queries/changed-since?scope=asset&cursor=<cursor-4>` with <alpha credential>
+direct `GET /queries/changed-since?scope=asset&cursor=<cursor-6>` with <alpha credential>
 
 → **200**
 ```json
@@ -567,9 +776,9 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-4>` with <alpha cr
     "asset_id": "<alpha>",
     "scope": "asset"
   },
-  "cursor": "<cursor-6>",
+  "cursor": "<cursor-8>",
   "dataset_id": "<id-1>",
-  "through_sequence": 12
+  "through_sequence": 14
 }
 ```
 

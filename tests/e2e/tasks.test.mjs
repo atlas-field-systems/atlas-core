@@ -11,6 +11,52 @@ function report(s, identity, sequence, status, extra = {}) {
   return { dataset_id: identity.datasetId, report_id: reportId, sequence, status, ...extra };
 }
 
+scenario("Task mutations reject an obsolete Dataset without changing operational state", async (s) => {
+  const core = await s.startCore();
+  const asset = await s.step("Enroll a Move To capable Asset", () => enrollAsset(s, core));
+  const operator = s.client(core, core.installation.operatorKey);
+  const obsoleteDatasetId = crypto.randomUUID();
+  s.transcript.name(obsoleteDatasetId, "obsolete Dataset");
+  const submission = await s.step("Prepare Move To", async () => {
+    const prepared = await operator.prepareMoveTo(asset.identity.assetId, { latitude: 40, longitude: -70 });
+    s.transcript.name(prepared.submission_id, "Move To submission");
+    return prepared;
+  });
+
+  await s.step("An obsolete Dataset cannot create a Task", async () => {
+    const response = await s.request(core, "/tasks", {
+      method: "POST", credential: core.installation.operatorKey,
+      body: { ...submission, dataset_id: obsoleteDatasetId },
+    });
+    assert.equal(response.status, 409);
+    assert.equal(response.body.code, "dataset_changed");
+    assert.deepEqual((await operator.tasks()).tasks, []);
+  });
+
+  const task = await s.step("Create a Task on the current Dataset", async () => {
+    const created = await operator.submitTask(submission);
+    s.transcript.name(created.id, "Move To task");
+    return created;
+  });
+
+  await s.step("An obsolete Dataset cannot report or cancel the Task", async () => {
+    const entityBefore = await operator.entity(asset.identity.assetId);
+    const reportId = crypto.randomUUID();
+    s.transcript.name(reportId, "obsolete report");
+    const response = await s.request(core, `/tasks/${task.id}/status`, {
+      method: "PATCH", credential: asset.identity.credential,
+      body: { dataset_id: obsoleteDatasetId, report_id: reportId, sequence: 1, status: "acknowledged" },
+    });
+    assert.equal(response.status, 409);
+    assert.equal(response.body.code, "dataset_changed");
+    const cancellationId = crypto.randomUUID();
+    s.transcript.name(cancellationId, "obsolete cancellation");
+    await assert.rejects(operator.cancelTask(task.id, obsoleteDatasetId, cancellationId), (error) => error instanceof AtlasError && error.code === "dataset_changed");
+    assert.deepEqual(await operator.task(task.id), task);
+    assert.deepEqual(await operator.entity(asset.identity.assetId), entityBefore);
+  });
+});
+
 scenario("Move To is accepted once and the assigned Asset reports its outcome", async (s) => {
   const core = await s.startCore();
   const asset = await s.step("Enroll a Move To capable Asset", () => enrollAsset(s, core));

@@ -109,9 +109,10 @@ func (a *App) streamChanges(ctx context.Context, connection *websocket.Conn, cal
 	if err := writeFeed(ctx, connection, hello); err != nil {
 		return err
 	}
+	position := feedPosition{cursor: cursor, sequence: latest}
 	for {
 		committed := a.changes.Committed()
-		if cursor, err = a.deliverChanges(ctx, connection, cursor, caller.ID, scope); err != nil {
+		if position, err = a.deliverChanges(ctx, connection, position, caller.ID, scope); err != nil {
 			return err
 		}
 		select {
@@ -122,46 +123,61 @@ func (a *App) streamChanges(ctx context.Context, connection *websocket.Conn, cal
 	}
 }
 
-// deliverChanges sends every change after cursor and returns the cursor after
-// the last one sent.
-func (a *App) deliverChanges(ctx context.Context, connection *websocket.Conn, cursor, assetID string, scope api.FeedAuthenticationScope) (string, error) {
+type feedPosition struct {
+	cursor   string
+	sequence int64
+}
+
+// deliverChanges sends changes and proof of excluded sequences, then returns
+// the last delivered cursor and sequence.
+func (a *App) deliverChanges(ctx context.Context, connection *websocket.Conn, position feedPosition, assetID string, scope api.FeedAuthenticationScope) (feedPosition, error) {
 	for {
 		var page api.ChangePage
 		var err error
 		if scope == api.FeedAuthenticationScopeAsset {
-			page, err = a.changes.SinceAsset(ctx, assetID, cursor, feedBatch)
+			page, err = a.changes.SinceAsset(ctx, assetID, position.cursor, feedBatch)
 		} else {
-			page, err = a.changes.Since(ctx, cursor, feedBatch)
+			page, err = a.changes.Since(ctx, position.cursor, feedBatch)
 		}
 		if changes.IsExpired(err) {
-			return cursor, errors.Join(errFeedExpired, writeFeed(ctx, connection, api.FeedGap{Type: api.Gap, Code: api.FeedGapCodeCursorExpired}))
+			return position, errors.Join(errFeedExpired, writeFeed(ctx, connection, api.FeedGap{Type: api.Gap, Code: api.FeedGapCodeCursorExpired}))
 		}
 		if err != nil {
-			return cursor, err
+			return position, err
 		}
-		last := int64(0)
 		for _, change := range page.Changes {
+			if scope == api.FeedAuthenticationScopeAsset && change.Sequence > position.sequence+1 {
+				before, err := a.changes.AssetCursor(assetID, change.Sequence-1)
+				if err != nil {
+					return position, fmt.Errorf("encode feed cursor before change %d: %w", change.Sequence, err)
+				}
+				if err := writeFeed(ctx, connection, api.FeedProgress{Type: api.Progress, Cursor: before, ThroughSequence: change.Sequence - 1}); err != nil {
+					return position, err
+				}
+				position = feedPosition{cursor: before, sequence: change.Sequence - 1}
+			}
+			var next string
 			if scope == api.FeedAuthenticationScopeAsset {
-				cursor, err = a.changes.AssetCursor(assetID, change.Sequence)
+				next, err = a.changes.AssetCursor(assetID, change.Sequence)
 			} else {
-				cursor, err = a.changes.Cursor(change.Sequence)
+				next, err = a.changes.Cursor(change.Sequence)
 			}
 			if err != nil {
-				return cursor, fmt.Errorf("encode feed cursor at change %d: %w", change.Sequence, err)
+				return position, fmt.Errorf("encode feed cursor at change %d: %w", change.Sequence, err)
 			}
-			if err := writeFeed(ctx, connection, api.FeedChange{Type: api.Change, Change: change, Cursor: cursor}); err != nil {
-				return cursor, err
+			if err := writeFeed(ctx, connection, api.FeedChange{Type: api.Change, Change: change, Cursor: next}); err != nil {
+				return position, err
 			}
-			last = change.Sequence
+			position = feedPosition{cursor: next, sequence: change.Sequence}
 		}
-		if scope == api.FeedAuthenticationScopeAsset && page.ThroughSequence > last && page.Cursor != cursor {
+		if scope == api.FeedAuthenticationScopeAsset && page.ThroughSequence > position.sequence {
 			if err := writeFeed(ctx, connection, api.FeedProgress{Type: api.Progress, Cursor: page.Cursor, ThroughSequence: page.ThroughSequence}); err != nil {
-				return cursor, err
+				return position, err
 			}
 		}
-		cursor = page.Cursor
+		position = feedPosition{cursor: page.Cursor, sequence: page.ThroughSequence}
 		if len(page.Changes) < feedBatch {
-			return cursor, nil
+			return position, nil
 		}
 	}
 }

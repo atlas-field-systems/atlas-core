@@ -46,6 +46,23 @@ scenario("Core filters an Asset snapshot replay and feed before transmission", a
     s.transcript.observe("scoped feed frames", frames.slice(0, through + 1).map(({ body }) => body));
   });
 
+  await s.step("The scoped feed proves an excluded sequence before the next own change", async () => {
+    const start = frames.length;
+    const excluded = await beta.client.checkInAsset(beta.identity.assetId, {
+      datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence: 1,
+    });
+    const included = await alpha.client.checkInAsset(alpha.identity.assetId, {
+      datasetId: alpha.identity.datasetId, reportId: crypto.randomUUID(), sequence: 1,
+    });
+    await eventually(() => frames.some(({ body }) => body.type === "change" && body.change.sequence === included.change_sequence), "own change after excluded sequence");
+    const newFrames = frames.slice(start);
+    const proof = newFrames.findIndex(({ body }) => body.type === "progress" && body.through_sequence >= excluded.change_sequence);
+    const change = newFrames.findIndex(({ body }) => body.type === "change" && body.change.sequence === included.change_sequence);
+    assert.ok(proof >= 0 && proof < change);
+    assert.ok(newFrames.every(({ raw }) => !raw.includes(beta.identity.assetId)));
+    s.transcript.observe("excluded sequence before own change", newFrames.slice(0, change + 1).map(({ body }) => body));
+  });
+
   await s.step("Snapshot pages contain only the Asset and its assigned Task", async () => {
     const pages = [];
     let cursor;
@@ -65,7 +82,7 @@ scenario("Core filters an Asset snapshot replay and feed before transmission", a
   const replayCursor = await s.step("Replay proves the excluded Task sequence", async () => {
     const response = await s.request(core, `/queries/changed-since?scope=asset&cursor=${encodeURIComponent(before)}`, { credential: alpha.identity.credential });
     assert.equal(response.status, 200);
-    assert.deepEqual(response.body.changes.map((change) => change.resource_id), [own.id]);
+    assert.deepEqual(response.body.changes.map((change) => change.resource_id), [own.id, alpha.identity.assetId]);
     assert.ok(response.body.through_sequence >= unrelated.change_sequence);
     return response.body.cursor;
   });
@@ -81,7 +98,7 @@ scenario("Core filters an Asset snapshot replay and feed before transmission", a
 
   await s.step("Pruning unrelated traffic does not expire the scoped cursor", async () => {
     await s.transcript.unrecorded(async () => {
-      for (let sequence = 1; sequence <= 8; sequence++) {
+      for (let sequence = 2; sequence <= 9; sequence++) {
         await beta.client.checkInAsset(beta.identity.assetId, { datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence });
       }
     });
