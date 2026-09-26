@@ -73,6 +73,8 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
   await s.step("The Task arrives locally; an unrelated Task is a one-off read", async () => {
     await hybrid.waitForSynchronization(ownTask);
     assert.deepEqual(await hybrid.task(ownTask.id), ownTask);
+    await assert.rejects(hybrid.waitForSynchronization({ dataset_id: ownTask.dataset_id, change_sequence: ownTask.change_sequence, receipt_sequence: ownTask.receipt_sequence }),
+      (error) => error instanceof PictureError && error.code === "invalid_receipt");
     await assert.rejects(hybrid.waitForSynchronization(unrelatedTask), (error) => error instanceof PictureError && error.code === "out_of_scope");
     await assert.rejects(hybrid.task(unrelatedTask.id), (error) => error instanceof PictureError && error.code === "outside_coverage");
     assert.deepEqual(await hybrid.task(unrelatedTask.id, { scope: "full" }), unrelatedTask);
@@ -83,6 +85,21 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     assert.equal(fullTasks.coverage.scope, "full");
     assert.equal(fullTasks.tasks.length, 2);
     s.transcript.observe("local and full Task counts", { local: (await hybrid.tasks()).tasks.length, full: fullTasks.tasks.length });
+  });
+
+  await s.step("Excluded progress preserves a local snapshot page cursor", async () => {
+    const first = await hybrid.queryFull(undefined, 1);
+    assert.deepEqual(first.entities.map((entity) => entity.id), [alpha.identity.assetId]);
+    assert.ok(first.next_cursor);
+    const unrelated = await beta.client.checkInAsset(beta.identity.assetId, {
+      datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence: 1,
+    });
+    await eventually(() => hybrid.synchronization.sequence >= unrelated.change_sequence, "excluded progress before next snapshot page");
+    const second = await hybrid.queryFull(first.next_cursor, 1);
+    assert.deepEqual(second.tasks.map((task) => task.id), [ownTask.id]);
+    s.transcript.observe("local snapshot pages after excluded progress", {
+      first: first.entities.length, second: second.tasks.length,
+    });
   });
 
   await s.step("Cancellation intent and the later outcome remain in scope", async () => {
@@ -121,7 +138,7 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
   await s.step("Unrelated traffic does not cause a false scoped gap", async () => {
     const replayRequests = scopedPayloads.filter(({ path }) => path === "/queries/changed-since").length;
     const frameStart = feedPayloads.length;
-    for (let sequence = 1; sequence <= 8; sequence++) {
+    for (let sequence = 2; sequence <= 9; sequence++) {
       const written = await beta.client.checkInAsset(beta.identity.assetId, { datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence });
       await eventually(() => hybrid.synchronization.sequence >= written.change_sequence, "scoped progress for unrelated check-in");
     }

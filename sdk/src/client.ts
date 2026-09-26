@@ -78,6 +78,10 @@ export interface Page {
   scope?: FullScope;
 }
 
+/** A write receipt identifies its owner so hybrid waits can check scope. */
+type SynchronizationReceipt = Pick<Task, "dataset_id" | "change_sequence" | "receipt_sequence"> &
+  ({ id: string; asset_id?: string } | { id?: string; asset_id: string });
+
 /** Authenticated access to one Core with a mode-selected read source. */
 export class AtlasClient {
   readonly #api: ReturnType<typeof createClient<paths>>;
@@ -245,10 +249,11 @@ export class AtlasClient {
   stopSynchronization() { this.#synchronization?.stop(); }
 
   /** Resolves once the local picture includes the commit that returned a resource. */
-  async waitForSynchronization(receipt: Pick<Task, "dataset_id" | "change_sequence" | "receipt_sequence"> & { id?: string; asset_id?: string }, timeoutMs = defaultWaitMs) {
+  async waitForSynchronization(receipt: SynchronizationReceipt, timeoutMs = defaultWaitMs) {
     this.#requireSynchronization();
     if (this.#assetId) {
       const owner = receipt.asset_id ?? receipt.id;
+      if (!owner) throw new PictureError("invalid_receipt", "A hybrid synchronization receipt needs an Entity ID or Task Asset ID.");
       if (owner !== this.#assetId) throw new PictureError("out_of_scope", "This write is outside the Asset picture.");
     }
     return this.#picture!.waitFor(receipt, timeoutMs);

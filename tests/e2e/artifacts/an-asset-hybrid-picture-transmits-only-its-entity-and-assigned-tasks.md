@@ -428,7 +428,61 @@ Observed local and full Task counts:
 }
 ```
 
-## 8. Cancellation intent and the later outcome remain in scope
+## 8. Excluded progress preserves a local snapshot page cursor
+
+SDK `POST /entities/<beta>/checkin` with <beta credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<id-6>",
+  "sequence": 1
+}
+```
+
+→ **200**
+```json
+{
+  "alias": "Beta",
+  "change_sequence": 5,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "healthy"
+    },
+    "heartbeat": {
+      "last_seen": "<time>"
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<beta>",
+  "kind": "asset",
+  "subtype": null,
+  "version": 2
+}
+```
+
+Observed local snapshot pages after excluded progress:
+```json
+{
+  "first": 1,
+  "second": 1
+}
+```
+
+## 9. Cancellation intent and the later outcome remain in scope
 
 SDK `PATCH /tasks/<own Task>/status` with <operator key>
 ```json
@@ -445,7 +499,7 @@ SDK `PATCH /tasks/<own Task>/status` with <operator key>
   "acceptance_sequence": 1,
   "asset_id": "<alpha>",
   "cancellation_request_id": "<cancellation request>",
-  "change_sequence": 5,
+  "change_sequence": 6,
   "command_id": "move_to",
   "created_sequence": 3,
   "dataset_id": "<id-1>",
@@ -477,7 +531,7 @@ direct `PATCH /tasks/<own Task>/status` with <alpha credential>
   "acceptance_sequence": 1,
   "asset_id": "<alpha>",
   "cancellation_request_id": "<cancellation request>",
-  "change_sequence": 7,
+  "change_sequence": 8,
   "command_id": "move_to",
   "created_sequence": 3,
   "dataset_id": "<id-1>",
@@ -498,7 +552,7 @@ Observed scoped Task outcome:
 "completed"
 ```
 
-## 9. Take an Asset-scoped continuation cursor
+## 10. Take an Asset-scoped continuation cursor
 
 direct `GET /queries/full?scope=asset` with <alpha credential>
 
@@ -506,7 +560,7 @@ direct `GET /queries/full?scope=asset` with <alpha credential>
 ```json
 {
   "baseline": "<cursor-1>",
-  "baseline_sequence": 7,
+  "baseline_sequence": 8,
   "coverage": {
     "asset_id": "<alpha>",
     "scope": "asset"
@@ -515,7 +569,7 @@ direct `GET /queries/full?scope=asset` with <alpha credential>
   "entities": [
     {
       "alias": "Alpha",
-      "change_sequence": 6,
+      "change_sequence": 7,
       "command_manifest": [
         {
           "cancellation": true,
@@ -550,7 +604,7 @@ direct `GET /queries/full?scope=asset` with <alpha credential>
 }
 ```
 
-## 10. Scope credentials and cursors cannot cross identities
+## 11. Scope credentials and cursors cannot cross identities
 
 direct `GET /queries/full?scope=asset` with <operator key>
 
@@ -582,51 +636,7 @@ direct `GET /queries/changed-since?cursor=<cursor-1>` with <alpha credential>
 }
 ```
 
-## 11. Unrelated traffic does not cause a false scoped gap
-
-SDK `POST /entities/<beta>/checkin` with <beta credential>
-```json
-{
-  "dataset_id": "<id-1>",
-  "report_id": "<id-6>",
-  "sequence": 1
-}
-```
-
-→ **200**
-```json
-{
-  "alias": "Beta",
-  "change_sequence": 8,
-  "command_manifest": [
-    {
-      "cancellation": true,
-      "command_id": "move_to",
-      "progress": true,
-      "scheduling": [
-        "queued"
-      ]
-    }
-  ],
-  "components": {
-    "communications": {
-      "link_state": "healthy"
-    },
-    "heartbeat": {
-      "last_seen": "<time>"
-    },
-    "status": {
-      "reported_at": null,
-      "value": "unknown"
-    }
-  },
-  "dataset_id": "<id-1>",
-  "id": "<beta>",
-  "kind": "asset",
-  "subtype": null,
-  "version": 2
-}
-```
+## 12. Unrelated traffic does not cause a false scoped gap
 
 SDK `POST /entities/<beta>/checkin` with <beta credential>
 ```json
@@ -936,6 +946,50 @@ SDK `POST /entities/<beta>/checkin` with <beta credential>
 }
 ```
 
+SDK `POST /entities/<beta>/checkin` with <beta credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<id-14>",
+  "sequence": 9
+}
+```
+
+→ **200**
+```json
+{
+  "alias": "Beta",
+  "change_sequence": 16,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "healthy"
+    },
+    "heartbeat": {
+      "last_seen": "<time>"
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<beta>",
+  "kind": "asset",
+  "subtype": null,
+  "version": 10
+}
+```
+
 direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha credential>
 
 → **200**
@@ -948,7 +1002,7 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha cr
   },
   "cursor": "<cursor-3>",
   "dataset_id": "<id-1>",
-  "through_sequence": 15
+  "through_sequence": 16
 }
 ```
 
@@ -956,7 +1010,7 @@ Observed unrelated traffic progress bytes:
 ```json
 {
   "frames": 8,
-  "bytes": 1644
+  "bytes": 1646
 }
 ```
 
@@ -964,18 +1018,18 @@ Observed excluded changes and scoped continuation:
 ```json
 {
   "changes": 0,
-  "through": 15,
+  "through": 16,
   "generation": 1
 }
 ```
 
-## 12. An own change after excluded traffic needs no replay
+## 13. An own change after excluded traffic needs no replay
 
 SDK `POST /entities/<alpha>/checkin` with <alpha credential>
 ```json
 {
   "dataset_id": "<id-1>",
-  "report_id": "<id-14>",
+  "report_id": "<id-15>",
   "sequence": 2
 }
 ```
@@ -984,7 +1038,7 @@ SDK `POST /entities/<alpha>/checkin` with <alpha credential>
 ```json
 {
   "alias": "Alpha",
-  "change_sequence": 16,
+  "change_sequence": 17,
   "command_manifest": [
     {
       "cancellation": true,
@@ -1020,7 +1074,7 @@ Observed replay requests after own change:
 0
 ```
 
-## 13. Scoped payloads contain no unrelated resource and record wire bytes
+## 14. Scoped payloads contain no unrelated resource and record wire bytes
 
 Observed Asset-scoped response bytes:
 ```json
@@ -1030,7 +1084,7 @@ Observed Asset-scoped response bytes:
 }
 ```
 
-## 14. An unavailable own picture does not fall back to HTTP
+## 15. An unavailable own picture does not fall back to HTTP
 
 SDK `GET /entities/<beta>` with <alpha credential>
 
@@ -1038,7 +1092,7 @@ SDK `GET /entities/<beta>` with <alpha credential>
 ```json
 {
   "alias": "Beta",
-  "change_sequence": 15,
+  "change_sequence": 16,
   "command_manifest": [
     {
       "cancellation": true,
@@ -1065,7 +1119,7 @@ SDK `GET /entities/<beta>` with <alpha credential>
   "id": "<beta>",
   "kind": "asset",
   "subtype": null,
-  "version": 9
+  "version": 10
 }
 ```
 

@@ -26,6 +26,7 @@ export class Picture implements EntityReads {
   #datasetId = "";
   #generation = 0;
   #applied = 0;
+  #contentRevision = 0;
   readonly #assetId?: string;
   /** Core's replay cursor after the last applied change. */
   cursor = "";
@@ -49,6 +50,7 @@ export class Picture implements EntityReads {
     this.#entities.clear();
     this.#tasks.clear();
     this.#history = [];
+    this.#contentRevision = 0;
     this.#setState("initializing");
   }
 
@@ -91,6 +93,7 @@ export class Picture implements EntityReads {
     }
     this.#applied = change.sequence;
     if (stored) {
+      this.#contentRevision++;
       this.#remember(change);
       for (const listener of this.#listeners) notify(listener, change, this.onListenerError);
     }
@@ -163,7 +166,7 @@ export class Picture implements EntityReads {
       baseline_sequence: this.#applied,
       entities: structuredClone(pageEntities),
       tasks: structuredClone(pageTasks),
-      ...(end < entities.length + tasks.length ? { next_cursor: this.#cursor("snapshot", end) } : {}),
+      ...(end < entities.length + tasks.length ? { next_cursor: this.#cursor("snapshot", end, this.#contentRevision) } : {}),
     };
   }
 
@@ -259,7 +262,7 @@ export class Picture implements EntityReads {
     if (position.instance !== this.#instance || position.generation !== this.#generation) {
       throw new PictureError("cursor_expired", "The local cursor belongs to an earlier picture.");
     }
-    if (list === "snapshot" && position.sequence !== this.#applied) {
+    if (list === "snapshot" && position.sequence !== this.#contentRevision) {
       throw new PictureError("cursor_expired", "The picture changed during pagination.");
     }
     return { sequence: position.sequence!, offset: position.offset! };
