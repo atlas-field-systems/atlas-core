@@ -22,6 +22,37 @@ function observeStatus(s, client) {
   s.transcript.observe("synchronization", { state, sequence, generation });
 }
 
+scenario("A Task receipt waits while the initial picture loads", async (s) => {
+  const core = await s.startCore();
+  const asset = await s.step("Enroll an Asset", () => enrollAsset(s, core));
+  const operator = s.client(core, core.installation.operatorKey);
+  const task = await s.step("Create a Task before the picture starts", async () => {
+    const submission = await operator.prepareMoveTo(asset.identity.assetId, { latitude: 40, longitude: -70 });
+    s.transcript.name(submission.submission_id, "Move To submission");
+    const created = await operator.submitTask(submission);
+    s.transcript.name(created.id, "Move To task");
+    return created;
+  });
+  const snapshotHeld = new Gate();
+  const picture = s.pictureClient(core, core.installation.operatorKey, { fetch: gatedFetch(isSnapshot, snapshotHeld) });
+  s.context.after(() => picture.stopSynchronization());
+
+  await s.step("The wait remains pending until the picture has a Dataset", async () => {
+    const started = picture.startSynchronization();
+    await snapshotHeld.arrived;
+    const wait = picture.waitForSynchronization(task);
+    const before = await Promise.race([
+      wait.then(() => "resolved", () => "rejected"),
+      new Promise((resolve) => setImmediate(() => resolve("pending"))),
+    ]);
+    assert.equal(before, "pending");
+    snapshotHeld.open();
+    await Promise.all([started, wait]);
+    assert.deepEqual(await picture.task(task.id), task);
+    s.transcript.observe("Task receipt after initial load", { before, state: picture.synchronization.state });
+  });
+});
+
 scenario("Snapshot pages share one baseline while writes continue", async (s) => {
   const core = await s.startCore();
   const operator = s.client(core, core.installation.operatorKey);

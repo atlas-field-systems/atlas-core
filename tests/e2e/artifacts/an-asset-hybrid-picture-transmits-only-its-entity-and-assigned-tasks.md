@@ -952,6 +952,14 @@ direct `GET /queries/changed-since?scope=asset&cursor=<cursor-1>` with <alpha cr
 }
 ```
 
+Observed unrelated traffic progress bytes:
+```json
+{
+  "frames": 8,
+  "bytes": 1644
+}
+```
+
 Observed excluded changes and scoped continuation:
 ```json
 {
@@ -961,7 +969,58 @@ Observed excluded changes and scoped continuation:
 }
 ```
 
-## 12. Scoped payloads contain no unrelated resource and record wire bytes
+## 12. An own change after excluded traffic needs no replay
+
+SDK `POST /entities/<alpha>/checkin` with <alpha credential>
+```json
+{
+  "dataset_id": "<id-1>",
+  "report_id": "<id-14>",
+  "sequence": 2
+}
+```
+
+→ **200**
+```json
+{
+  "alias": "Alpha",
+  "change_sequence": 16,
+  "command_manifest": [
+    {
+      "cancellation": true,
+      "command_id": "move_to",
+      "progress": true,
+      "scheduling": [
+        "queued"
+      ]
+    }
+  ],
+  "components": {
+    "communications": {
+      "link_state": "healthy"
+    },
+    "heartbeat": {
+      "last_seen": "<time>"
+    },
+    "status": {
+      "reported_at": null,
+      "value": "unknown"
+    }
+  },
+  "dataset_id": "<id-1>",
+  "id": "<alpha>",
+  "kind": "asset",
+  "subtype": null,
+  "version": 3
+}
+```
+
+Observed replay requests after own change:
+```json
+0
+```
+
+## 13. Scoped payloads contain no unrelated resource and record wire bytes
 
 Observed Asset-scoped response bytes:
 ```json
@@ -971,7 +1030,7 @@ Observed Asset-scoped response bytes:
 }
 ```
 
-## 13. An unavailable own picture does not fall back to HTTP
+## 14. An unavailable own picture does not fall back to HTTP
 
 SDK `GET /entities/<beta>` with <alpha credential>
 

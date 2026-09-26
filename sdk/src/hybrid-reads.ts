@@ -14,9 +14,17 @@ export class HybridReads implements EntityReads {
   entity(id: string) { return id === this.assetId ? this.picture.entity(id) : this.http.entity(id); }
   assetStatus(id: string) { return id === this.assetId ? this.picture.assetStatus(id) : this.http.assetStatus(id); }
 
-  /** An unknown ID might be an in-scope Task still in flight. Broader Task reads are explicit. */
-  task(id: string, options: { scope?: FullScope } = {}) {
-    return options.scope === "full" ? this.http.task(id) : this.picture.task(id);
+  /** An unknown ID might be an unrelated Task or an in-scope Task still in flight. */
+  async task(id: string, options: { scope?: FullScope } = {}) {
+    if (options.scope === "full") return this.http.task(id);
+    try {
+      return await this.picture.task(id);
+    } catch (error) {
+      if (error instanceof PictureError && error.code === "not_found") {
+        throw new PictureError("outside_coverage", 'The Asset picture cannot determine whether this Task exists; use { scope: "full" } for a Core lookup.');
+      }
+      throw error;
+    }
   }
 
   tasks(cursor?: string, limit?: number, scope?: FullScope) {

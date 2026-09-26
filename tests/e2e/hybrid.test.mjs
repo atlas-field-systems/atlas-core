@@ -74,6 +74,7 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     await hybrid.waitForSynchronization(ownTask);
     assert.deepEqual(await hybrid.task(ownTask.id), ownTask);
     await assert.rejects(hybrid.waitForSynchronization(unrelatedTask), (error) => error instanceof PictureError && error.code === "out_of_scope");
+    await assert.rejects(hybrid.task(unrelatedTask.id), (error) => error instanceof PictureError && error.code === "outside_coverage");
     assert.deepEqual(await hybrid.task(unrelatedTask.id, { scope: "full" }), unrelatedTask);
     assert.deepEqual((await hybrid.tasks()).tasks.map((task) => task.id), [ownTask.id]);
     assert.equal((await hybrid.tasks()).coverage.asset_id, alpha.identity.assetId);
@@ -119,8 +120,10 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
 
   await s.step("Unrelated traffic does not cause a false scoped gap", async () => {
     const replayRequests = scopedPayloads.filter(({ path }) => path === "/queries/changed-since").length;
+    const frameStart = feedPayloads.length;
     for (let sequence = 1; sequence <= 8; sequence++) {
-      await beta.client.checkInAsset(beta.identity.assetId, { datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence });
+      const written = await beta.client.checkInAsset(beta.identity.assetId, { datasetId: beta.identity.datasetId, reportId: crypto.randomUUID(), sequence });
+      await eventually(() => hybrid.synchronization.sequence >= written.change_sequence, "scoped progress for unrelated check-in");
     }
     const replay = await s.request(core, `/queries/changed-since?scope=asset&cursor=${encodeURIComponent(scoped)}`, { credential: alpha.identity.credential });
     assert.equal(replay.status, 200);
@@ -130,7 +133,25 @@ scenario("An Asset hybrid picture transmits only its Entity and assigned Tasks",
     assert.equal(scopedPayloads.filter(({ path }) => path === "/queries/changed-since").length, replayRequests);
     assert.equal(hybrid.synchronization.generation, 1);
     assert.equal((await hybrid.queryFull()).entities.length, 1);
+    const progressFrames = feedPayloads.slice(frameStart).filter((raw) => JSON.parse(raw).type === "progress");
+    assert.equal(progressFrames.length, 8);
+    s.transcript.observe("unrelated traffic progress bytes", {
+      frames: progressFrames.length,
+      bytes: progressFrames.reduce((sum, raw) => sum + Buffer.byteLength(raw), 0),
+    });
     s.transcript.observe("excluded changes and scoped continuation", { changes: replay.body.changes.length, through: replay.body.through_sequence, generation: hybrid.synchronization.generation });
+  });
+
+  await s.step("An own change after excluded traffic needs no replay", async () => {
+    const replayRequests = scopedPayloads.filter(({ path }) => path === "/queries/changed-since").length;
+    const written = await alpha.client.checkInAsset(alpha.identity.assetId, {
+      datasetId: alpha.identity.datasetId, reportId: crypto.randomUUID(), sequence: 2,
+    });
+    await hybrid.waitForSynchronization(written);
+    const replayCount = scopedPayloads.filter(({ path }) => path === "/queries/changed-since").length - replayRequests;
+    assert.equal(replayCount, 0);
+    assert.deepEqual(await hybrid.entity(alpha.identity.assetId), written);
+    s.transcript.observe("replay requests after own change", replayCount);
   });
 
   await s.step("Scoped payloads contain no unrelated resource and record wire bytes", async () => {

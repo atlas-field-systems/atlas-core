@@ -182,9 +182,8 @@ export class Picture implements EntityReads {
     return () => { this.#listeners.delete(listener); };
   }
 
-  /** Resolves once the picture has applied the commit that produced entity. */
+  /** Resolves once the ready picture has applied the receipt's commit. */
   waitFor(receipt: Pick<Task, "dataset_id" | "change_sequence" | "receipt_sequence">, timeoutMs: number): Promise<void> {
-    if (receipt.dataset_id !== this.#datasetId) return Promise.reject(new PictureError("dataset_changed", "This write belongs to another Dataset."));
     return new Promise((resolve, reject) => {
       const finish = (error?: PictureError) => {
         clearTimeout(timeout);
@@ -193,9 +192,11 @@ export class Picture implements EntityReads {
         else resolve();
       };
       const check = () => {
-        if (receipt.dataset_id !== this.#datasetId) finish(new PictureError("dataset_changed", "This write belongs to another Dataset."));
-        else if (this.#state === "stopped" || this.#state === "failed") finish(new PictureError("sync_unavailable", "Synchronization ended before the write was applied."));
-        else if (this.#state === "ready" && this.#applied >= (receipt.receipt_sequence ?? receipt.change_sequence)) finish();
+        if (this.#state === "stopped" || this.#state === "failed") finish(new PictureError("sync_unavailable", "Synchronization ended before the write was applied."));
+        else if (this.#state === "ready") {
+          if (receipt.dataset_id !== this.#datasetId) finish(new PictureError("dataset_changed", "This write belongs to another Dataset."));
+          else if (this.#applied >= (receipt.receipt_sequence ?? receipt.change_sequence)) finish();
+        }
       };
       const timeout = setTimeout(() => finish(new PictureError("sync_timeout", "The write committed, but the picture has not applied it yet.")), timeoutMs);
       this.#waiters.add(check);
