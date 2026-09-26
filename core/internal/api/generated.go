@@ -166,18 +166,15 @@ func (e EntityChangeKind) Valid() bool {
 	}
 }
 
-// Defines values for EntityChangeResourceType.
+// Defines values for EntityResourceChangeResourceType.
 const (
-	EntityChangeResourceTypeEntity EntityChangeResourceType = "entity"
-	EntityChangeResourceTypeTask   EntityChangeResourceType = "task"
+	EntityResourceChangeResourceTypeEntity EntityResourceChangeResourceType = "entity"
 )
 
-// Valid indicates whether the value is a known member of the EntityChangeResourceType enum.
-func (e EntityChangeResourceType) Valid() bool {
+// Valid indicates whether the value is a known member of the EntityResourceChangeResourceType enum.
+func (e EntityResourceChangeResourceType) Valid() bool {
 	switch e {
-	case EntityChangeResourceTypeEntity:
-		return true
-	case EntityChangeResourceTypeTask:
+	case EntityResourceChangeResourceTypeEntity:
 		return true
 	default:
 		return false
@@ -385,6 +382,36 @@ func (e TaskScheduling) Valid() bool {
 	}
 }
 
+// Defines values for TaskAcknowledgementReportStatus.
+const (
+	TaskAcknowledgementReportStatusAcknowledged TaskAcknowledgementReportStatus = "acknowledged"
+)
+
+// Valid indicates whether the value is a known member of the TaskAcknowledgementReportStatus enum.
+func (e TaskAcknowledgementReportStatus) Valid() bool {
+	switch e {
+	case TaskAcknowledgementReportStatusAcknowledged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskCancellationReportStatus.
+const (
+	TaskCancellationReportStatusCancelled TaskCancellationReportStatus = "cancelled"
+)
+
+// Valid indicates whether the value is a known member of the TaskCancellationReportStatus enum.
+func (e TaskCancellationReportStatus) Valid() bool {
+	switch e {
+	case TaskCancellationReportStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TaskCancellationRequestStatus.
 const (
 	TaskCancellationRequestStatusCancellationRequested TaskCancellationRequestStatus = "cancellation_requested"
@@ -400,27 +427,60 @@ func (e TaskCancellationRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for TaskExecutionReportStatus.
+// Defines values for TaskCompletionReportStatus.
 const (
-	TaskExecutionReportStatusAcknowledged TaskExecutionReportStatus = "acknowledged"
-	TaskExecutionReportStatusCancelled    TaskExecutionReportStatus = "cancelled"
-	TaskExecutionReportStatusCompleted    TaskExecutionReportStatus = "completed"
-	TaskExecutionReportStatusFailed       TaskExecutionReportStatus = "failed"
-	TaskExecutionReportStatusInProgress   TaskExecutionReportStatus = "in_progress"
+	TaskCompletionReportStatusCompleted TaskCompletionReportStatus = "completed"
 )
 
-// Valid indicates whether the value is a known member of the TaskExecutionReportStatus enum.
-func (e TaskExecutionReportStatus) Valid() bool {
+// Valid indicates whether the value is a known member of the TaskCompletionReportStatus enum.
+func (e TaskCompletionReportStatus) Valid() bool {
 	switch e {
-	case TaskExecutionReportStatusAcknowledged:
+	case TaskCompletionReportStatusCompleted:
 		return true
-	case TaskExecutionReportStatusCancelled:
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskFailureReportStatus.
+const (
+	TaskFailureReportStatusFailed TaskFailureReportStatus = "failed"
+)
+
+// Valid indicates whether the value is a known member of the TaskFailureReportStatus enum.
+func (e TaskFailureReportStatus) Valid() bool {
+	switch e {
+	case TaskFailureReportStatusFailed:
 		return true
-	case TaskExecutionReportStatusCompleted:
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskInProgressReportStatus.
+const (
+	TaskInProgressReportStatusInProgress TaskInProgressReportStatus = "in_progress"
+)
+
+// Valid indicates whether the value is a known member of the TaskInProgressReportStatus enum.
+func (e TaskInProgressReportStatus) Valid() bool {
+	switch e {
+	case TaskInProgressReportStatusInProgress:
 		return true
-	case TaskExecutionReportStatusFailed:
-		return true
-	case TaskExecutionReportStatusInProgress:
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskResourceChangeResourceType.
+const (
+	TaskResourceChangeResourceTypeTask TaskResourceChangeResourceType = "task"
+)
+
+// Valid indicates whether the value is a known member of the TaskResourceChangeResourceType enum.
+func (e TaskResourceChangeResourceType) Valid() bool {
+	switch e {
+	case TaskResourceChangeResourceTypeTask:
 		return true
 	default:
 		return false
@@ -684,20 +744,12 @@ type EntityKind string
 
 // EntityChange defines model for EntityChange.
 type EntityChange struct {
-	DatasetId    openapi_types.UUID       `json:"dataset_id"`
-	Entity       *Entity                  `json:"entity,omitempty"`
-	Kind         EntityChangeKind         `json:"kind"`
-	ResourceId   openapi_types.UUID       `json:"resource_id"`
-	ResourceType EntityChangeResourceType `json:"resource_type"`
-	Sequence     int64                    `json:"sequence"`
-	Task         *Task                    `json:"task,omitempty"`
+	Sequence int64 `json:"sequence"`
+	union    json.RawMessage
 }
 
-// EntityChangeKind defines model for EntityChange.Kind.
+// EntityChangeKind defines model for EntityChangeKind.
 type EntityChangeKind string
-
-// EntityChangeResourceType defines model for EntityChange.ResourceType.
-type EntityChangeResourceType string
 
 // EntityPage defines model for EntityPage.
 type EntityPage struct {
@@ -709,6 +761,19 @@ type EntityPage struct {
 	NextCursor       *string            `json:"next_cursor,omitempty"`
 	Tasks            []Task             `json:"tasks"`
 }
+
+// EntityResourceChange defines model for EntityResourceChange.
+type EntityResourceChange struct {
+	DatasetId    openapi_types.UUID               `json:"dataset_id"`
+	Entity       Entity                           `json:"entity"`
+	Kind         EntityChangeKind                 `json:"kind"`
+	ResourceId   openapi_types.UUID               `json:"resource_id"`
+	ResourceType EntityResourceChangeResourceType `json:"resource_type"`
+	Sequence     int64                            `json:"sequence"`
+}
+
+// EntityResourceChangeResourceType defines model for EntityResourceChange.ResourceType.
+type EntityResourceChangeResourceType string
 
 // Error defines model for Error.
 type Error struct {
@@ -893,6 +958,36 @@ type TaskCommandId string
 // TaskScheduling defines model for Task.Scheduling.
 type TaskScheduling string
 
+// TaskAcknowledgementReport defines model for TaskAcknowledgementReport.
+type TaskAcknowledgementReport struct {
+	DatasetId       openapi_types.UUID `json:"dataset_id"`
+	ProgressPercent *float64           `json:"progress_percent,omitempty"`
+
+	// ReportId Stable identity of an assigned Asset report.
+	ReportId openapi_types.UUID              `json:"report_id"`
+	Sequence int64                           `json:"sequence"`
+	Status   TaskAcknowledgementReportStatus `json:"status"`
+}
+
+// TaskAcknowledgementReportStatus defines model for TaskAcknowledgementReport.Status.
+type TaskAcknowledgementReportStatus string
+
+// TaskCancellationReport defines model for TaskCancellationReport.
+type TaskCancellationReport struct {
+	// CancellationRequestId The cancellation request confirmed by a cancelled report.
+	CancellationRequestId openapi_types.UUID `json:"cancellation_request_id"`
+	DatasetId             openapi_types.UUID `json:"dataset_id"`
+	ProgressPercent       *float64           `json:"progress_percent,omitempty"`
+
+	// ReportId Stable identity of an assigned Asset report.
+	ReportId openapi_types.UUID           `json:"report_id"`
+	Sequence int64                        `json:"sequence"`
+	Status   TaskCancellationReportStatus `json:"status"`
+}
+
+// TaskCancellationReportStatus defines model for TaskCancellationReport.Status.
+type TaskCancellationReportStatus string
+
 // TaskCancellationRequest defines model for TaskCancellationRequest.
 type TaskCancellationRequest struct {
 	DatasetId openapi_types.UUID `json:"dataset_id"`
@@ -905,22 +1000,53 @@ type TaskCancellationRequest struct {
 // TaskCancellationRequestStatus defines model for TaskCancellationRequest.Status.
 type TaskCancellationRequestStatus string
 
-// TaskExecutionReport defines model for TaskExecutionReport.
-type TaskExecutionReport struct {
-	// CancellationRequestId The cancellation request confirmed by a cancelled report.
-	CancellationRequestId *openapi_types.UUID `json:"cancellation_request_id,omitempty"`
-	DatasetId             openapi_types.UUID  `json:"dataset_id"`
-	FailureReason         *string             `json:"failure_reason,omitempty"`
-	ProgressPercent       *float64            `json:"progress_percent,omitempty"`
+// TaskCompletionReport defines model for TaskCompletionReport.
+type TaskCompletionReport struct {
+	DatasetId       openapi_types.UUID `json:"dataset_id"`
+	ProgressPercent *float64           `json:"progress_percent,omitempty"`
 
 	// ReportId Stable identity of an assigned Asset report.
-	ReportId openapi_types.UUID        `json:"report_id"`
-	Sequence int64                     `json:"sequence"`
-	Status   TaskExecutionReportStatus `json:"status"`
+	ReportId openapi_types.UUID         `json:"report_id"`
+	Sequence int64                      `json:"sequence"`
+	Status   TaskCompletionReportStatus `json:"status"`
 }
 
-// TaskExecutionReportStatus defines model for TaskExecutionReport.Status.
-type TaskExecutionReportStatus string
+// TaskCompletionReportStatus defines model for TaskCompletionReport.Status.
+type TaskCompletionReportStatus string
+
+// TaskExecutionReport defines model for TaskExecutionReport.
+type TaskExecutionReport struct {
+	union json.RawMessage
+}
+
+// TaskFailureReport defines model for TaskFailureReport.
+type TaskFailureReport struct {
+	DatasetId       openapi_types.UUID `json:"dataset_id"`
+	FailureReason   string             `json:"failure_reason"`
+	ProgressPercent *float64           `json:"progress_percent,omitempty"`
+
+	// ReportId Stable identity of an assigned Asset report.
+	ReportId openapi_types.UUID      `json:"report_id"`
+	Sequence int64                   `json:"sequence"`
+	Status   TaskFailureReportStatus `json:"status"`
+}
+
+// TaskFailureReportStatus defines model for TaskFailureReport.Status.
+type TaskFailureReportStatus string
+
+// TaskInProgressReport defines model for TaskInProgressReport.
+type TaskInProgressReport struct {
+	DatasetId       openapi_types.UUID `json:"dataset_id"`
+	ProgressPercent *float64           `json:"progress_percent,omitempty"`
+
+	// ReportId Stable identity of an assigned Asset report.
+	ReportId openapi_types.UUID         `json:"report_id"`
+	Sequence int64                      `json:"sequence"`
+	Status   TaskInProgressReportStatus `json:"status"`
+}
+
+// TaskInProgressReportStatus defines model for TaskInProgressReport.Status.
+type TaskInProgressReportStatus string
 
 // TaskPage defines model for TaskPage.
 type TaskPage struct {
@@ -938,6 +1064,19 @@ type TaskProgressReport struct {
 	ReportId openapi_types.UUID `json:"report_id"`
 	Sequence int64              `json:"sequence"`
 }
+
+// TaskResourceChange defines model for TaskResourceChange.
+type TaskResourceChange struct {
+	DatasetId    openapi_types.UUID             `json:"dataset_id"`
+	Kind         EntityChangeKind               `json:"kind"`
+	ResourceId   openapi_types.UUID             `json:"resource_id"`
+	ResourceType TaskResourceChangeResourceType `json:"resource_type"`
+	Sequence     int64                          `json:"sequence"`
+	Task         Task                           `json:"task"`
+}
+
+// TaskResourceChangeResourceType defines model for TaskResourceChange.ResourceType.
+type TaskResourceChangeResourceType string
 
 // TaskStatus defines model for TaskStatus.
 type TaskStatus string
@@ -1073,6 +1212,241 @@ type CreateTaskJSONRequestBody = TaskSubmission
 
 // UpdateTaskStatusJSONRequestBody defines body for UpdateTaskStatus for application/json ContentType.
 type UpdateTaskStatusJSONRequestBody = TaskStatusUpdate
+
+// AsEntityResourceChange returns the union data inside the EntityChange as a EntityResourceChange
+func (t EntityChange) AsEntityResourceChange() (EntityResourceChange, error) {
+	var body EntityResourceChange
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEntityResourceChange overwrites any union data inside the EntityChange as the provided EntityResourceChange
+func (t *EntityChange) FromEntityResourceChange(v EntityResourceChange) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEntityResourceChange performs a merge with any union data inside the EntityChange, using the provided EntityResourceChange
+func (t *EntityChange) MergeEntityResourceChange(v EntityResourceChange) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTaskResourceChange returns the union data inside the EntityChange as a TaskResourceChange
+func (t EntityChange) AsTaskResourceChange() (TaskResourceChange, error) {
+	var body TaskResourceChange
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTaskResourceChange overwrites any union data inside the EntityChange as the provided TaskResourceChange
+func (t *EntityChange) FromTaskResourceChange(v TaskResourceChange) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTaskResourceChange performs a merge with any union data inside the EntityChange, using the provided TaskResourceChange
+func (t *EntityChange) MergeTaskResourceChange(v TaskResourceChange) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t EntityChange) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	object := make(map[string]json.RawMessage)
+	if t.union != nil {
+		err = json.Unmarshal(b, &object)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	object["sequence"], err = json.Marshal(t.Sequence)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'sequence': %w", err)
+	}
+
+	b, err = json.Marshal(object)
+	return b, err
+}
+
+func (t *EntityChange) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	if err != nil {
+		return err
+	}
+	object := make(map[string]json.RawMessage)
+	err = json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["sequence"]; found {
+		err = json.Unmarshal(raw, &t.Sequence)
+		if err != nil {
+			return fmt.Errorf("error reading 'sequence': %w", err)
+		}
+	}
+
+	return err
+}
+
+// AsTaskAcknowledgementReport returns the union data inside the TaskExecutionReport as a TaskAcknowledgementReport
+func (t TaskExecutionReport) AsTaskAcknowledgementReport() (TaskAcknowledgementReport, error) {
+	var body TaskAcknowledgementReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTaskAcknowledgementReport overwrites any union data inside the TaskExecutionReport as the provided TaskAcknowledgementReport
+func (t *TaskExecutionReport) FromTaskAcknowledgementReport(v TaskAcknowledgementReport) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTaskAcknowledgementReport performs a merge with any union data inside the TaskExecutionReport, using the provided TaskAcknowledgementReport
+func (t *TaskExecutionReport) MergeTaskAcknowledgementReport(v TaskAcknowledgementReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTaskInProgressReport returns the union data inside the TaskExecutionReport as a TaskInProgressReport
+func (t TaskExecutionReport) AsTaskInProgressReport() (TaskInProgressReport, error) {
+	var body TaskInProgressReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTaskInProgressReport overwrites any union data inside the TaskExecutionReport as the provided TaskInProgressReport
+func (t *TaskExecutionReport) FromTaskInProgressReport(v TaskInProgressReport) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTaskInProgressReport performs a merge with any union data inside the TaskExecutionReport, using the provided TaskInProgressReport
+func (t *TaskExecutionReport) MergeTaskInProgressReport(v TaskInProgressReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTaskCompletionReport returns the union data inside the TaskExecutionReport as a TaskCompletionReport
+func (t TaskExecutionReport) AsTaskCompletionReport() (TaskCompletionReport, error) {
+	var body TaskCompletionReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTaskCompletionReport overwrites any union data inside the TaskExecutionReport as the provided TaskCompletionReport
+func (t *TaskExecutionReport) FromTaskCompletionReport(v TaskCompletionReport) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTaskCompletionReport performs a merge with any union data inside the TaskExecutionReport, using the provided TaskCompletionReport
+func (t *TaskExecutionReport) MergeTaskCompletionReport(v TaskCompletionReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTaskFailureReport returns the union data inside the TaskExecutionReport as a TaskFailureReport
+func (t TaskExecutionReport) AsTaskFailureReport() (TaskFailureReport, error) {
+	var body TaskFailureReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTaskFailureReport overwrites any union data inside the TaskExecutionReport as the provided TaskFailureReport
+func (t *TaskExecutionReport) FromTaskFailureReport(v TaskFailureReport) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTaskFailureReport performs a merge with any union data inside the TaskExecutionReport, using the provided TaskFailureReport
+func (t *TaskExecutionReport) MergeTaskFailureReport(v TaskFailureReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTaskCancellationReport returns the union data inside the TaskExecutionReport as a TaskCancellationReport
+func (t TaskExecutionReport) AsTaskCancellationReport() (TaskCancellationReport, error) {
+	var body TaskCancellationReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTaskCancellationReport overwrites any union data inside the TaskExecutionReport as the provided TaskCancellationReport
+func (t *TaskExecutionReport) FromTaskCancellationReport(v TaskCancellationReport) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTaskCancellationReport performs a merge with any union data inside the TaskExecutionReport, using the provided TaskCancellationReport
+func (t *TaskExecutionReport) MergeTaskCancellationReport(v TaskCancellationReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t TaskExecutionReport) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *TaskExecutionReport) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsTaskCancellationRequest returns the union data inside the TaskStatusUpdate as a TaskCancellationRequest
 func (t TaskStatusUpdate) AsTaskCancellationRequest() (TaskCancellationRequest, error) {
@@ -4686,106 +5060,109 @@ func (sh *strictHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"7H1tc9w2kvBfQfHZKj9XRY/GspNLpE9a29lVXXLx2d7bqvPoxhiyZwZrEqABUPJEpf9+hQZAghxyhhy9",
-	"RIn9JbEkvDQa3Y1+53WUiLwQHLhW0cl1VFBJc9Ag8aeXpVRCmn8xHp1En0uQmyiOOM0hOokS+9c4Uska",
-	"cmqG5fTLz8BXeh2dfPfsOI70pjAjlZaMr6Kbmzh6zTXTm/O0WrSgel2vCfjnOUujOJLwuWQS0uhEyxLC",
-	"bZZC5lRHJ1FZ4sjtbX5mOdNmaAoqkazQTJjN3tAVEMV+gwl5BUtaZloRLch300kUd54xw3VaR2R5mUcn",
-	"z6bTOMoZdz9VUDCuYQUSwfi1AEnN3r0HFn7E7c/8JitXrH+nAv+8b5uCag3SzP7fD/TpbxfmP9OnPz69",
-	"uJ7G3x/f/KVz5/dUferdV1P16baHuzGTVSG4AiTMv9L0LXwuQeEdJ4Jr4PhPWhQZSxChR/9S5s6vg23+",
-	"ImEZnUT/76gm+iP7V3X0Wkoh7VZNmnm/BiLtZiQVoAgXmuRUJ2ui10CqC3yiiF2LCElkmYGaRDdx9FLw",
-	"ZcaSBwY0cbsqcsX0mlAiQVPGISUstTwWEyFTkAZYc4yklBK4Jq+opgq0BR0Z/PWXwl7aw8DvwEzWlK+A",
-	"ZGJFuCCZ4CuQJBGXIBXRa6aIlT6nJBM0JZRwuCKK00KthQX+JyEXLE2BPwzgiQRELM2eKPKJ8ZTkdIOk",
-	"ktAssyBXpIIA/qfQP4mSPxhilShlAjUJwxemLKreC/EL5RvHUephALLSitBMAk03ZE0VYVoRJ16JWJKS",
-	"Lxlnag0pMUIpL7TlqH9wWuq1kOy3h6DKX5hSjK8Mn5T8ExdXPLjrCYo/t4bZ4kwp0C9FnpfcwaFe+s0Q",
-	"wDRl5rc0eyMNOWhmBNqSZgriqAh+dR1ljH+aK0017IO9uV9kpaUXtR/ChS4q0SoW/4JEG3R6kO2qb4xg",
-	"GwnpGmim1/ugxH3+jkPtJgZzmupSDZp5zpnB+Ds74yaONGSQg5abQdPf+9Fu75u9mFAjsZA0b2EIUH2E",
-	"chOPx2l7ttQLoHroAnZ0Y40Rd2MvpTH7wNsJ1mhRsQMnbuM5PGwveb/mUmRZDlwHasOIu6UZs/zdlA3/",
-	"4OxzCYQmUihFULVloGLCVlwYzYUkVIFRLQO9+NnxD6g2Vj/Hgc41m73b1n7skSlP5znlbOmgZxpyNUQy",
-	"UJ6+K4tCSERHTr+c25nfv6h2olLSjdsoIP6hPBmwjFmjko7bCDOCH2c+UaQpSWNSSCioNMKep7UesNig",
-	"evLu1X+QBSyFBPxxyaTS/lUwCA7UVqozqubU7DL/cPb0f6wCO396cf3ieZf+Gkep1XmMkrpfF42jgcOM",
-	"EmAGAjf2wYcIIQpItB7plLah+6tyYX93fTu6ajFYgAU8YwMud5zG7Q7iNlVmo5kNEbXvvUYltklvQxFY",
-	"SMYTVgyd0MKTBa+1ShuMXty0hfU41CzwRjfzAmTiZlfAp6JcZGCFTZeFOq1A4mW+cAZqeLD24nvOMExT",
-	"aPL/WygymoAiSgvD6vaVOyW8zDKSZECl0QINQ5vfUHMeZys+Ujy0382RKh5Veq7A2ij1AaiGp5rl0IGG",
-	"3aRZr9cL87bIvmdd71Cd4q70vaZGsRMp7yroRiDkkmYljNCSti7NLtB7YW8Bn+5xfPYrd+/sUyHZinGq",
-	"K5N6Qs7IUoJaE4krEwmJkKkixoyiiSZwCRy9BjPOBakPMyEWFEWMlbUhjBPGEwkUzSNl3gqegPUqnBp7",
-	"E3hq/kJn3O10/sp6I8wLrmgOZEkTrcxbX0quGm4IK94n5A2uo2e8hoPkIFdAGNfCixHBQZH/rwAI0GRN",
-	"CnTOWNz/2+mMf2zrTx/N2a0gQljsKv6vkxmPupT7x6iBtey28cqMvZrBqoe75cZgxvX3L6K9vtBeXaMG",
-	"Idiglx9qJvWKlTPL0YOLfMx+M+CahWm6ieJoUaoN6oilArMJoK1vpJEoCkg7dbJOu2acZLDngnROOzzR",
-	"/1wDJy+NPkuTBArDn4YUM6pBaWLlpONQ9zyWXLMMByFs7o/KjTVv5iEvSHxXAixunHfP9Q0Uak18Pk7K",
-	"PsBQPoAdql32IPa/GVz93n6L39XzcJdegw4dYtwz/DPVTJcpoEmbCb5yP0kgqiyKjBmuFyvQa5ATS2fh",
-	"ms+23RB2vXnerfG29Fo8pHmD5ymsUGJ+SbJSsUv4xavGVibs0J2ff79bd46jzB1yjxL+Y7jO0x87V/IY",
-	"2qfP/9BYC3/cWkwVAOk8L1TPYjvNgT30cIjp4zQZsmSQpcorIF73QBmqkE5CW4ja4fYFmPGlC9ZcrUUG",
-	"tWpWjc4yUmnJE3K21CBRW2J8Fc941k2Neak0WQBZCL0mhYNSSPszXZgfrUa02yTbR5s979C90urePQ+m",
-	"3f0r34KW9y4+grb3rNVF6y/RTnhDVzD2JcGJarBubJV8u11006ELV+kHTVaycUlCkb6t1qS0MyMqOye2",
-	"ERv7Q0qujL5l5KwVv1xwdMzezhe46xn3yKiO0fXMtKyDkeimPIEsoxYr1371hRAZUB76je1hekL7cwzt",
-	"97lGQ8Q3/I3H333f6VoTKwlKdcNjLj4tMzM2pBGvyH8uoUQFneU5pKwZsKr3qA2oY6R198OzFgHFUYnu",
-	"efdnQ/7tCwvw0wCu76qaapIHe81W6/mC8vSKpZj4YH0kBoIUVpKmeCaxXGaMd5/IBd1H3v9AzfZKMm3k",
-	"qoQMqILgZnrIGJdpz+pCySsogKfAk822UeZtr5LTS8qsCOo6uvPjHhiO2WvcWC6ch9p9U5a8q/wWS+uA",
-	"EHnOdO0uIXpNNSmkSMsEbTRmLS5oGFzDDIU7dCLcldtAPYb4RxDQ2G+tglReGB3obwjDGZaSahAamOy4",
-	"sRqAbdrqYpHGE3ev5i5UjDQsbNK+nkSCEbhxVBZpn+T1SSTDTXA33l+v38wBG2NyWDdNHG6P45p78PDe",
-	"jNlJJYHp3TxGEw0Okf13f4AetaAK8K3Y1nysTEqcAqSt+9KlPT1RxM88tfbFhiylyAnTbV2poKtu9ccv",
-	"MB+G/2kX/g8hXDZabeySghy+6HmtNW5tZShj+D6WRtq77KKZ6uK6EBmc1EPSSTXonBzrwkmh88A5KOXo",
-	"b/ebjyvU47sA+wkgPSv12pwiqZTOMa92weafYNMVt94TcXUT+6A6SLwm1aQxJkqvSdJkTMdtTPmgSxfh",
-	"t4Wig+hiHzr8Q2WH77QvDHb+RosDyakCDDeYg0sEvRhwlhUthh/EbNcH/d8hy8RY+IddkpOe5aIaQwrB",
-	"uD4lcAlyg7546RRCwhRJIWOXICGd3EESyS3kaxvXa0TRUGw3jdQqhX+XEvP3KuY74hLUlklADfr2w7nD",
-	"0f2LuIT34pwX5fhI+yN0Um5F7x2M4SZdaKiqCkY7DAq6YJlTE7dtJdQAfbiqM5h0W6oH/7jt1fOH2iK7",
-	"aaGxeI1AUeoB07ZT11x0zmYB20VOyScotHUvUe5T0siSskwRIY3cMKwrZVloKzl6jl5DVxdqdN2S+2u/",
-	"NT80flJRUZ1iocpFzpRy1Sij/V84pKlENxaMGzUorYPEIXn6i43rAI67szp6G5DrTiY5QAGv1MNBemLN",
-	"jqNV0jYCcbudpzkoclqxXTsby25tszIMyUIaY3RA8GxDaJaJK8yuIJRokDnjNDNkn4h8K6t1evyinX64",
-	"RZeHsN3bMFEjZLzgEa7RtP3oMD6vfJLWuM9Ao0POnhfpjieQdSo2w5+mNjdtIbvaOiZ+w9jhHFEeSAn0",
-	"UHuET2Y8/FMOlCubOJBQjnUcStNFxpQrR3LXgxEbj4TCpuIgWzXQEXiQ5y7b06IkwFOFngBlAUSd6mCN",
-	"jUoA3Oqt2mMvjHdh8dGE+EupwrKvGr4nRsIXpfbVX2hy67rCpUor6iTY20ncncK2Q552Ua4Fc6wtZ526",
-	"1QU1cVW5fE+ILDnHLDCeEprmTGvzU0UfakICD/EJcSk58Yzjv6rCGwk0WZshE4Jlm5CeWCbIhNIhto1i",
-	"j6vMuKXW07COyHGHwuKsBVQVPTa3JhMJzWY8p5yuIAeOeThSK3SgrCjjTa6qHdtNN7fhEwSxkzWqW2m/",
-	"NT02Vf2U4KpdmUSbEAFMeQxN+p23HZ66McGB+s1u0EHrcP3Edu9PsqPp+3uP32Kw2gW6xjh1fcjE89Hw",
-	"qXbzvUffCsoYKfM5Y/vLyLZntp8/u0xcgXIx6AkeFgrqS9xpYKxrw/fO3TtGemHKnXnX5rfwM9sSk4Ev",
-	"TtdTO3judhDrwMgTa7j8c3EJcy26xZTTrvsjZ3/LxIJm3j+igjiauRGCCzDB47qWx9VJ2QCDOiCANvKV",
-	"Nw9AKWEugaqt+DX2J9ijsI7VJnZxV+i7CALld1TCYJgnAVboHRfmM5CY0efxjq4k01gajJX11oi1yaU+",
-	"GXxNFaHeE1YFRDGTApeYkH9SpolNTGKqJgMtbLU2jnT0fkqEXoO8YgpIqYC06HpCzqyCZV59CVpu8Jm2",
-	"eR22xBv9cRayatZ4MmqmIbSyDzqDUYMMaoOPw23puwtttvXASk7FzYSHysSu0RF3isbACg+in20BMSwg",
-	"apD0MpCFh9Vjjk4FDuVtKwHAWE9QtUUw8osSTdUnrN/MGHD9RJFQfHtyblBer5936znsMbouxun6/kKC",
-	"o/Wh+/UXSMqDfQc7Hq6OLggdaMJeFEzmtpiT+jGQugz2QWh8aMl/D+I5yEbfT4GcUKXYyryaYbb/MJK7",
-	"i1T2yshJjIWUQbpyhv9Ad0p2G5IeWA9iiPsAU2IkLf3eQeX+UDGe393GQ1RUfJVMcUCpxhae+i5vO22u",
-	"9tTtZrwhjrtBHBkC8g+b+WNsTQ6/LqOTD/tpuestv4n3z2s/SkPmtGj95sJDf6iTcZwFN9qGOtQpOcKM",
-	"GK/K3qPDcYSiuc0RyKNJKZnevDNnbfUCaEqHM04Amwx4UdDRT2IhSp4aO4Rp15tjQ85fTXwzN0xNBipB",
-	"1odea13YlCTfwGB761dQZGKD3sF6GHEdifSGOL3Y6DroTyQKdFlMyLlGawYjK3aihVwNgsi2juoK4pyl",
-	"RnopLalml2EfKsKUKrcAweZkgKbZZtDOReUebu1LrJ80dY7HJzbQubJ+3cZNOEDQvLSgBC5WxpWmWebr",
-	"/vfAc4N8shQd1m25yFhCznRGXXxE1E7mGZ/x15jUUSmlVEoGigjewBlV5OOZ6y6Fc0/IXxEQMiun0+fJ",
-	"J9jgP+DjhLymyXrGPdFa9z+QBWTiinCag7GcsROYWGITMJCn5g2rwCIZU9oFthhP1YxjrrGhEuwZxvTE",
-	"HkQCutsIJfmuZlQ2jPdi+sw622fbA+wjWnKzMaQWODfpufVta6Yzg22LxjdSaJGILDD8TqLp5Nlk6miS",
-	"04JFJ9HzyXTy3HZhWSPbHqV1RvvK/k+ErRCjv4H2Se+t1n7H0+mdNfXyW3S09XrZ7HdXKxoGdy75nTg/",
-	"N3YdezF91rddBf9RozUZTnq+f1LdqS4Ugvj61mz/4cK8kKFgsr9xAtL+4Hn1w8XNhRHPeU7lxsgspmpn",
-	"TKvTH256FCZhFkLpbvPOM8/5Kxsltr0FMlfHb1G43CBP1ZCGbp0Zt36drpJ/q9IhOR5Pp6fEV+7YxUue",
-	"OvgVzcGsY0ER0k08f1U1PbSk3CS4lyiWX/u8Yzf9ryLd3Bm19XSaumm+oViHco80392Bp6uxnXe1Bc8Y",
-	"3s5px7UwVdVXITccW254WIgtKP7hd1w53c9gQbfQh2JkM+PH/TOq5qBbnN/i9AY7W1wZUR7wTFrrJTR8",
-	"wJr8fXRdddi92SWcK0YJGwL3mAP1kKOqu68B+N5I3CeA90t11z7kQa/7xf4ZVcvPvYJ+kFh/CzRtaBQ0",
-	"I3VyfOGLlNutYbJN0EWCaQXZ0jna0ZpGvWZni5hTosDNt6YY+v9tWxbX+LYtfrFi+m6I6p4EtzcqH1Za",
-	"DyXloIDDOz0eufQbxQ63Fpc1v7Q4BMnTqxJBEyFX7kfrggZvSvYLzKNkDcknawx5JamlZZgB5/zMt4j7",
-	"Ruff6Pwh6BzpjjAMthusYeyqocBhzSpq7U6I7yDzOgrQpx6EzWwep47Q7omzg/LscWPSbBET4uprUSS8",
-	"K821nwowYPUBTHi6jWpxYAc5Mr6BHIKwrYdYAO6QfO9JSjfaZD06We2Q+00yD9ZAAubCFPZAY1d1sl23",
-	"OK4CjJ3S+GemDD1jWOw9jjycouO9Y90XYQaMtF9guVcZX8V/O0j1Vw5Y5Yw+Tx81RPz8uej2DuW/x9KV",
-	"kJ9QzopSkzoM6fzOYAN3fEWY0yGWgN9hMP+su8P2aQ6ulvAeqcLt0CW+hASCSWry0rp37Qcv/vD+Xav+",
-	"FVIkoBTJ2CXYl9pciZ2zW368cWPGSo5HJQ2C1PKOuz+3YaYqXKWM9nH+yiobf25X4kEioQoZsC3EGbVQ",
-	"r4FJ0sj+D6nt6Lqq9NvpZnR5+mPprvrS1QMQ1O7v1/zZLYNzrgpINIZ02pTQe+NHdeR1gNipa4FuQQd/",
-	"MM2lWZzaQWFvq5z58MtH37TtWxGzoTlC63yFqjChuo4K3TFmmyttvzSCNm9nVNTF58061v70BeDuYyUp",
-	"U4WPszFNtAhKtWKiBKEzbnMDbKOx1Ihdzm24f6lBXlF0vNtST6VFgWkBbwFzb2wxnV7DjKM5XCfkDDGV",
-	"q/Ctg/l0xpsx1yqeSt5j40SmCBeEllrkVLOESJAl7wq2YkJWm71vK+Xv3tLuqlIdZGsf3z0Ifc+MpycW",
-	"kCumKLAsI4uawCCNiS/CYPZTahjMndh+hKn7oufPom7ds9WQXGLZhjTGQEDKk8bnL7e+zPhVi6U4enE8",
-	"YEL7A3t3I84slxFK0lJisuyWGBvyQh9dh58gHaCt3QVD73+Ewy+nPsxTvIcDvw4f8I430XYp0KruwpCI",
-	"HA4gsSObj9yfanRW74nv65raL1bWss6ION+XgFCjntrysXrEjBuVdQG23Ls7Xzr4pIIrnvbfVGBazbg7",
-	"YUyu1ixZox9baSd2qzxrI3RtorXZv+qS4eCf8SBxpu5GPCE2bdoWxleH5WAMLvPIWwHuTIyubCac/lXz",
-	"YyNS6Oqx/uwc6lNXgyIrsUTb7C5E/5Gj/n7GrAI8jl1QZRVXLdU3DPic1dVfM97uIYOKSp6X2rWKgAKo",
-	"8ywSVSYJQKpiG7y3v53x6rvG+Bkj2z3Fr+ZTeikn2PCmi3GsO/73ZZx7VGR/n4DRQSz7Lbi/JRX6GR9j",
-	"SL7+B3ucVA8w5l4ZEeAyWirr1jzS3py10uBzCYZBjtwr9FQxVxDVqfD9VwnSdb5M3zFX2dRkk64v5lct",
-	"Bfu/9t6uxdwqOXkMLprgKwidoYRmm3B0Jzcj2N5P2m4KCvmfy90cRy+eDThK82Pyd/UiYpPjZOsyLK6p",
-	"z3F/amuBHGk2eGFZZlnAAs1btiUjPoxomMz3WiZqTaXrSuZb/XoOtB+nxRbLM+4/ClzVBdUysJpHJZAM",
-	"ltpa31Xf5hn/6Id8PK2+LkwEd/0YzA62k5H/iDrjSVamUKEhpynM+PaO1vOEORh2vwB1WKCEpTrYb6Hr",
-	"EUXJ8JNB3DiJ8AeTAEH/7j0B5vpupI0xE8a7ai2+xZm2fbICzc6C+q9UhqkRBUt0KcF6MtGe8w22kYdl",
-	"2ISpz2lRd2q6R1KpN+n05bs2i2ErI2R65NqHNFu+szPu/8xnmmRAlQ0cyS0EbIzqH/SDmtxzaLyCQGkh",
-	"DdM2ukohMe3Psjksu+YPmTHz+BNl7i4gVAnsuvWNVeDCqE9XMRm2crgfg65V1f7A9pz7OEZ/xVhQJlYF",
-	"kbCh1H2WifVBhRv7j6h+syh3ckWvlLRN3Iywdt8aQrNyq+NGICqPrs3/9oUMHI+ME5lm0n27Gfuoyae4",
-	"YnOzr8Hlb+7cdy+wLQSqb+O0LzooDKgywJs3bjuIBK1NbnX19yRXw14nj0Synm1dQGAnVh+IDmqev/nP",
-	"9L161T2GK/n31BUf+7Y19hYVyEtP2aXMXJuKk6OjZ8f/PplOppNnJz9Mf5hGNxc3/xcAAP//",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

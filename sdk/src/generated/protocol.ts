@@ -562,11 +562,12 @@ export interface components {
              */
             request_id: string;
         };
-        TaskExecutionReport: {
+        TaskExecutionReport: components["schemas"]["TaskAcknowledgementReport"] | components["schemas"]["TaskInProgressReport"] | components["schemas"]["TaskCompletionReport"] | components["schemas"]["TaskFailureReport"] | components["schemas"]["TaskCancellationReport"];
+        TaskAcknowledgementReport: {
             /** Format: uuid */
             dataset_id: string;
             /** @enum {string} */
-            status: "acknowledged" | "in_progress" | "completed" | "failed" | "cancelled";
+            status: "acknowledged";
             /**
              * Format: uuid
              * @description Stable identity of an assigned Asset report.
@@ -576,12 +577,72 @@ export interface components {
             sequence: number;
             /** Format: double */
             progress_percent?: number;
-            failure_reason?: string;
+        };
+        TaskInProgressReport: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** @enum {string} */
+            status: "in_progress";
+            /**
+             * Format: uuid
+             * @description Stable identity of an assigned Asset report.
+             */
+            report_id: string;
+            /** Format: int64 */
+            sequence: number;
+            /** Format: double */
+            progress_percent?: number;
+        };
+        TaskCompletionReport: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** @enum {string} */
+            status: "completed";
+            /**
+             * Format: uuid
+             * @description Stable identity of an assigned Asset report.
+             */
+            report_id: string;
+            /** Format: int64 */
+            sequence: number;
+            /** Format: double */
+            progress_percent?: number;
+        };
+        TaskFailureReport: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** @enum {string} */
+            status: "failed";
+            /**
+             * Format: uuid
+             * @description Stable identity of an assigned Asset report.
+             */
+            report_id: string;
+            /** Format: int64 */
+            sequence: number;
+            /** Format: double */
+            progress_percent?: number;
+            failure_reason: string;
+        };
+        TaskCancellationReport: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** @enum {string} */
+            status: "cancelled";
+            /**
+             * Format: uuid
+             * @description Stable identity of an assigned Asset report.
+             */
+            report_id: string;
+            /** Format: int64 */
+            sequence: number;
+            /** Format: double */
+            progress_percent?: number;
             /**
              * Format: uuid
              * @description The cancellation request confirmed by a cancelled report.
              */
-            cancellation_request_id?: string;
+            cancellation_request_id: string;
         };
         TaskProgressReport: {
             /** Format: uuid */
@@ -696,18 +757,34 @@ export interface components {
             next_cursor?: string;
         };
         EntityChange: {
+            /** Format: int64 */
+            sequence: number;
+        } & (components["schemas"]["EntityResourceChange"] | components["schemas"]["TaskResourceChange"]);
+        /** @enum {string} */
+        EntityChangeKind: "create" | "update";
+        EntityResourceChange: {
             /** Format: uuid */
             dataset_id: string;
             /** Format: int64 */
             sequence: number;
             /** @enum {string} */
-            resource_type: "entity" | "task";
+            resource_type: "entity";
             /** Format: uuid */
             resource_id: string;
+            kind: components["schemas"]["EntityChangeKind"];
+            entity: components["schemas"]["Entity"];
+        };
+        TaskResourceChange: {
+            /** Format: uuid */
+            dataset_id: string;
+            /** Format: int64 */
+            sequence: number;
             /** @enum {string} */
-            kind: "create" | "update";
-            entity?: components["schemas"]["Entity"];
-            task?: components["schemas"]["Task"];
+            resource_type: "task";
+            /** Format: uuid */
+            resource_id: string;
+            kind: components["schemas"]["EntityChangeKind"];
+            task: components["schemas"]["Task"];
         };
         ChangePage: {
             /** Format: uuid */
@@ -1600,10 +1677,15 @@ export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["
 export const taskCommand_idValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Task"]["command_id"]> = ["move_to"];
 export const taskSchedulingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Task"]["scheduling"]> = ["queued"];
 export const taskCancellationRequestStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskCancellationRequest"]["status"]> = ["cancellation_requested"];
-export const taskExecutionReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskExecutionReport"]["status"]> = ["acknowledged", "in_progress", "completed", "failed", "cancelled"];
+export const taskAcknowledgementReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskAcknowledgementReport"]["status"]> = ["acknowledged"];
+export const taskInProgressReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskInProgressReport"]["status"]> = ["in_progress"];
+export const taskCompletionReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskCompletionReport"]["status"]> = ["completed"];
+export const taskFailureReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskFailureReport"]["status"]> = ["failed"];
+export const taskCancellationReportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskCancellationReport"]["status"]> = ["cancelled"];
 export const assetEnrollmentRequestKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AssetEnrollmentRequest"]["kind"]> = ["asset"];
-export const entityChangeResource_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityChange"]["resource_type"]> = ["entity", "task"];
-export const entityChangeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityChange"]["kind"]> = ["create", "update"];
+export const entityChangeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityChangeKind"]> = ["create", "update"];
+export const entityResourceChangeResource_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EntityResourceChange"]["resource_type"]> = ["entity"];
+export const taskResourceChangeResource_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskResourceChange"]["resource_type"]> = ["task"];
 export const feedHelloTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedHello"]["type"]> = ["hello"];
 export const feedChangeTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedChange"]["type"]> = ["change"];
 export const feedGapTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FeedGap"]["type"]> = ["gap"];

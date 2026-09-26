@@ -1128,6 +1128,13 @@ components:
           format: uuid
           description: Stable identity of a tasking client's cancellation request.
     TaskExecutionReport:
+      oneOf:
+        - $ref: '#/components/schemas/TaskAcknowledgementReport'
+        - $ref: '#/components/schemas/TaskInProgressReport'
+        - $ref: '#/components/schemas/TaskCompletionReport'
+        - $ref: '#/components/schemas/TaskFailureReport'
+        - $ref: '#/components/schemas/TaskCancellationReport'
+    TaskAcknowledgementReport:
       type: object
       additionalProperties: false
       required: [dataset_id, status, report_id, sequence]
@@ -1137,7 +1144,79 @@ components:
           format: uuid
         status:
           type: string
-          enum: [acknowledged, in_progress, completed, failed, cancelled]
+          enum: [acknowledged]
+        report_id:
+          type: string
+          format: uuid
+          description: Stable identity of an assigned Asset report.
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        progress_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 0
+    TaskInProgressReport:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, status, report_id, sequence]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [in_progress]
+        report_id:
+          type: string
+          format: uuid
+          description: Stable identity of an assigned Asset report.
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        progress_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+    TaskCompletionReport:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, status, report_id, sequence]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [completed]
+        report_id:
+          type: string
+          format: uuid
+          description: Stable identity of an assigned Asset report.
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        progress_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+    TaskFailureReport:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, status, report_id, sequence, failure_reason]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [failed]
         report_id:
           type: string
           format: uuid
@@ -1155,6 +1234,30 @@ components:
           type: string
           minLength: 1
           maxLength: 512
+    TaskCancellationReport:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, status, report_id, sequence, cancellation_request_id]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [cancelled]
+        report_id:
+          type: string
+          format: uuid
+          description: Stable identity of an assigned Asset report.
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        progress_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
         cancellation_request_id:
           type: string
           format: uuid
@@ -1388,8 +1491,22 @@ components:
           type: string
     EntityChange:
       type: object
+      required: [sequence]
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+      oneOf:
+        - $ref: '#/components/schemas/EntityResourceChange'
+        - $ref: '#/components/schemas/TaskResourceChange'
+    EntityChangeKind:
+      type: string
+      enum: [create, update]
+    EntityResourceChange:
+      type: object
       additionalProperties: false
-      required: [dataset_id, sequence, resource_type, resource_id, kind]
+      required: [dataset_id, sequence, resource_type, resource_id, kind, entity]
       properties:
         dataset_id:
           type: string
@@ -1400,15 +1517,34 @@ components:
           minimum: 1
         resource_type:
           type: string
-          enum: [entity, task]
+          enum: [entity]
         resource_id:
           type: string
           format: uuid
         kind:
-          type: string
-          enum: [create, update]
+          $ref: '#/components/schemas/EntityChangeKind'
         entity:
           $ref: '#/components/schemas/Entity'
+    TaskResourceChange:
+      type: object
+      additionalProperties: false
+      required: [dataset_id, sequence, resource_type, resource_id, kind, task]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        resource_type:
+          type: string
+          enum: [task]
+        resource_id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/EntityChangeKind'
         task:
           $ref: '#/components/schemas/Task'
     ChangePage:

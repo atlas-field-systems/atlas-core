@@ -66,7 +66,7 @@ func (l *Log) Append(ctx context.Context, tx *sql.Tx, kind api.EntityChangeKind,
 		return 0, fmt.Errorf("encode change of Entity %s: %w", entity.Id, err)
 	}
 	queries := l.queries.WithTx(tx)
-	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded), ResourceType: string(api.EntityChangeResourceTypeEntity)})
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: entity.Id.String(), Kind: string(kind), Entity: string(encoded), ResourceType: string(api.EntityResourceChangeResourceTypeEntity)})
 	if err != nil {
 		return 0, fmt.Errorf("append change of Entity %s: %w", entity.Id, err)
 	}
@@ -83,7 +83,7 @@ func (l *Log) AppendTask(ctx context.Context, tx *sql.Tx, kind api.EntityChangeK
 		return 0, fmt.Errorf("encode change of Task %s: %w", task.Id, err)
 	}
 	queries := l.queries.WithTx(tx)
-	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: task.Id.String(), Kind: string(kind), Entity: "{}", ResourceType: string(api.EntityChangeResourceTypeTask), Task: sql.NullString{String: string(encoded), Valid: true}})
+	sequence, err := queries.InsertChange(ctx, db.InsertChangeParams{ResourceID: task.Id.String(), Kind: string(kind), Entity: "{}", ResourceType: string(api.TaskResourceChangeResourceTypeTask), Task: sql.NullString{String: string(encoded), Valid: true}})
 	if err != nil {
 		return 0, fmt.Errorf("append change of Task %s: %w", task.Id, err)
 	}
@@ -166,21 +166,21 @@ func (l *Log) checkRetained(ctx context.Context, after int64) error {
 }
 
 func (l *Log) decode(row db.Change) (api.EntityChange, error) {
-	change := api.EntityChange{
-		DatasetId:    l.dataset,
-		Sequence:     row.Sequence,
-		ResourceType: api.EntityChangeResourceType(row.ResourceType),
-		Kind:         api.EntityChangeKind(row.Kind),
-	}
-	switch change.ResourceType {
-	case api.EntityChangeResourceTypeEntity:
+	change := api.EntityChange{Sequence: row.Sequence}
+	switch row.ResourceType {
+	case string(api.EntityResourceChangeResourceTypeEntity):
 		var entity api.Entity
 		if err := json.Unmarshal([]byte(row.Entity), &entity); err != nil {
 			return api.EntityChange{}, fmt.Errorf("decode Entity change %d: %w", row.Sequence, err)
 		}
 		entity.ChangeSequence = row.Sequence
-		change.ResourceId, change.Entity = entity.Id, &entity
-	case api.EntityChangeResourceTypeTask:
+		if err := change.FromEntityResourceChange(api.EntityResourceChange{
+			DatasetId: l.dataset, Sequence: row.Sequence, ResourceType: api.EntityResourceChangeResourceTypeEntity,
+			ResourceId: entity.Id, Kind: api.EntityChangeKind(row.Kind), Entity: entity,
+		}); err != nil {
+			return api.EntityChange{}, fmt.Errorf("encode Entity change %d: %w", row.Sequence, err)
+		}
+	case string(api.TaskResourceChangeResourceTypeTask):
 		var task api.Task
 		if !row.Task.Valid {
 			return api.EntityChange{}, fmt.Errorf("Task change %d has no Task", row.Sequence)
@@ -192,7 +192,12 @@ func (l *Log) decode(row db.Change) (api.EntityChange, error) {
 		if task.CreatedSequence == 0 {
 			task.CreatedSequence = row.Sequence
 		}
-		change.ResourceId, change.Task = task.Id, &task
+		if err := change.FromTaskResourceChange(api.TaskResourceChange{
+			DatasetId: l.dataset, Sequence: row.Sequence, ResourceType: api.TaskResourceChangeResourceTypeTask,
+			ResourceId: task.Id, Kind: api.EntityChangeKind(row.Kind), Task: task,
+		}); err != nil {
+			return api.EntityChange{}, fmt.Errorf("encode Task change %d: %w", row.Sequence, err)
+		}
 	default:
 		return api.EntityChange{}, fmt.Errorf("unknown change resource type %q", row.ResourceType)
 	}

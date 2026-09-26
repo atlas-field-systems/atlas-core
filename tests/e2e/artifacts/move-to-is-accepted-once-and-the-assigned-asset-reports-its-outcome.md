@@ -380,8 +380,8 @@ SDK `PATCH /tasks/<Move To task>/status` with <asset credential>
 → **400**
 ```json
 {
-  "code": "invalid_task_status",
-  "message": "The status update does not match the actor or transition."
+  "code": "invalid_request",
+  "message": "The request does not match the Protocol at /: value doesn't match any schema from \"oneOf\"."
 }
 ```
 

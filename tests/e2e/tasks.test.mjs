@@ -53,7 +53,7 @@ scenario("Move To is accepted once and the assigned Asset reports its outcome", 
     const other = await enrollAsset(s, core, { alias: "Other" }, "other");
     const acknowledged = report(s, asset.identity, 1, "acknowledged");
     await assert.rejects(other.client.reportTask(task.id, acknowledged), (error) => error instanceof AtlasError && error.status === 403);
-    await assert.rejects(asset.client.reportTask(task.id, report(s, asset.identity, 1, "acknowledged", { progress_percent: 20 })), (error) => error instanceof AtlasError && error.code === "invalid_task_status");
+    await assert.rejects(asset.client.reportTask(task.id, report(s, asset.identity, 1, "acknowledged", { progress_percent: 20 })), (error) => error instanceof AtlasError && error.code === "invalid_request");
     const first = await asset.client.reportTask(task.id, acknowledged);
     assert.equal(first.status, "acknowledged");
     const running = await asset.client.reportTask(task.id, report(s, asset.identity, 2, "in_progress", { progress_percent: 40 }));
@@ -225,6 +225,18 @@ scenario("Direct Protocol Task writes agree with SDK reads", async (s) => {
       assert.equal(response.status, 400);
       assert.equal(response.body.code, "invalid_request");
     }
+    await s.transcript.unrecorded(async () => {
+      for (const body of [
+        { dataset_id: asset.identity.datasetId, status: "failed", report_id: reportId, sequence: 1 },
+        { dataset_id: asset.identity.datasetId, status: "cancelled", report_id: reportId, sequence: 1 },
+        { dataset_id: asset.identity.datasetId, status: "completed", report_id: reportId, sequence: 1, failure_reason: "contradictory" },
+        { dataset_id: asset.identity.datasetId, status: "acknowledged", report_id: reportId, sequence: 1, progress_percent: 20 },
+      ]) {
+        const response = await s.request(core, `/tasks/${task.id}/status`, { method: "PATCH", credential: asset.identity.credential, body });
+        assert.equal(response.status, 400);
+        assert.equal(response.body.code, "invalid_request");
+      }
+    });
     assert.deepEqual(await operator.task(task.id), task);
     assert.deepEqual(await operator.entity(asset.identity.assetId), before);
   });
@@ -299,7 +311,9 @@ scenario("A Task receipt waits for every earlier change before local application
     feeds[0].release(1);
     await picture.waitForSynchronization(two);
     assert.deepEqual((await picture.tasks()).tasks.map((task) => task.id), [one.id, two.id]);
-    assert.deepEqual((await picture.changedSince(baseline)).changes.map((change) => change.sequence), [one.change_sequence, two.change_sequence]);
+    const changes = (await picture.changedSince(baseline)).changes;
+    assert.deepEqual(changes.map((change) => change.sequence), [one.change_sequence, two.change_sequence]);
+    assert.ok(changes.every((change) => change.resource_type === "task" && !("entity" in change)));
     assert.deepEqual(observed, [one.change_sequence, two.change_sequence]);
   });
 });

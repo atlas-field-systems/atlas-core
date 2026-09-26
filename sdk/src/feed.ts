@@ -100,8 +100,8 @@ function parseMessage(data: string): FeedHello | Delivery | undefined {
 
 function isChange(change: unknown): boolean {
   if (!isRecord(change) || !Number.isSafeInteger(change.sequence)) return false;
-  if (change.resource_type === "entity") return isRecord(change.entity) && change.entity.id === change.resource_id;
-  if (change.resource_type === "task") return isRecord(change.task) && change.task.id === change.resource_id;
+  if (change.resource_type === "entity") return !("task" in change) && isRecord(change.entity) && change.entity.id === change.resource_id;
+  if (change.resource_type === "task") return !("entity" in change) && isRecord(change.task) && change.task.id === change.resource_id;
   return false;
 }
 

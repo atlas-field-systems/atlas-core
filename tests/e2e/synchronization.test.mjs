@@ -45,6 +45,8 @@ scenario("Snapshot pages share one baseline while writes continue", async (s) =>
     assert.deepEqual(aliases, ["Alpha", "Bravo"]);
     assert.equal(second.baseline, first.baseline);
     assert.deepEqual(replay.changes.map((change) => change.resource_id), [charlie.identity.assetId]);
+    assert.equal(replay.changes[0].resource_type, "entity");
+    assert.equal("task" in replay.changes[0], false);
   });
 });
 

@@ -70,13 +70,13 @@ export class Picture implements EntityReads {
     if (change.sequence !== this.#applied + 1) throw new PictureError("replay_gap", `Expected change ${this.#applied + 1}, got ${change.sequence}.`);
     if (change.dataset_id !== this.#datasetId) throw new PictureError("dataset_changed", "A change belongs to another Dataset.");
     let stored = false;
-    if (change.resource_type === "entity" && change.entity) {
+    if (change.resource_type === "entity") {
       const current = this.#entities.get(change.resource_id);
       if (!current || change.entity.version > current.version) {
         this.#store(change.entity);
         stored = true;
       }
-    } else if (change.resource_type === "task" && change.task) {
+    } else if (change.resource_type === "task") {
       const current = this.#tasks.get(change.resource_id);
       if (!current || change.task.version > current.version) {
         this.#storeTask(change.task);
