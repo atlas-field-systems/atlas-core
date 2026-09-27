@@ -34,6 +34,10 @@ Local management coordinates this lifetime and reports incomplete shutdown rathe
 
 Local administration may still run while Core is stopped to perform setup, lifecycle actions and their activity recording. That capability does not require running Plugins or permitting offline Plugin Operations.
 
+## Reset execution
+
+Clarified on 26 September 2026: Reset is Start with a fresh Dataset. The host coordinator records a fresh-Dataset directive on the installation mount before stopping anything, stops managed Plugins and Core, clears Atlas-managed diagnostic logs and starts Core. Core opens every module fresh: one SQLite transaction clears all Dataset tables and establishes the new Dataset ID, then Objects removes the old Dataset's content by ownership. Core serves operational requests and removes the directive only after every module is ready. An interruption at any point leaves the directive, so the next Start completes the Reset rather than serving a partially cleared Dataset. The coordinator does not clear module tables itself. This does not change what Reset retains or discards. See [opening a Dataset](../architecture/system-design.md#opening-a-dataset).
+
 ## Hard Reset
 
 Accepted on 23 September 2026: provide a distinct Hard Reset action in the local CLI/TUI that can be invoked while Atlas is running, or while it is stopped. It removes all Atlas-managed state and returns the installation to first-time setup. It has no public HTTP endpoint or SDK operation. Ordinary Reset continues to preserve installation setup and Operator profiles.
@@ -58,7 +62,7 @@ Commit the binding check with registration and serialize it against credential p
 
 ## Unfinished work after Stop or Restart
 
-Retention preserves evidence; it does not claim that execution continued. Stop records interrupted Core-owned work when possible. Before serving retained state on Start, Core classifies any remaining unfinished attempts from the previous Core run. Preserve confirmed terminal outcomes first.
+Retention preserves evidence; it does not claim that execution continued. Stop records interrupted Core-owned work when possible. Before serving retained state on Start, Core classifies any remaining unfinished attempts from the previous Core run through each module's [retained opening](../architecture/system-design.md#opening-a-dataset). Preserve confirmed terminal outcomes first.
 
 | Retained work | Behavior after Start |
 | --- | --- |

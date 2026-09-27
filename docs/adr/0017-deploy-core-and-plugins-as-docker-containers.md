@@ -15,8 +15,9 @@ Docker host
     Plugin B container
 
   Mounted storage
-    Operational database, Object content and Atlas-managed logs
-    Retained installation setup, configuration and credentials
+    Core database (Dataset and installation tables), Object content and Atlas-managed logs
+    Installation setup: configuration, secret material, Plugin artifacts,
+      Reset directive and local activity journal
 ```
 
 The containers are siblings managed by the host Docker Engine. A Compose project groups them; it is not a containing runtime or a nested Docker installation. Image layers package files, not Atlas subsystems. See [Docker's multi-container model](https://docs.docker.com/get-started/docker-concepts/running-containers/multi-container-applications/).
@@ -35,6 +36,6 @@ SDK and Protocol are release artifacts and need no standalone runtime containers
 
 ## Storage and scope
 
-Use mounted persistent storage whose lifetime is independent of container replacement. Keep operational data separate from retained installation setup so [Reset](0015-separate-start-stop-restart-and-reset.md) can clear the former while preserving the latter. Stop/Restart preserve both. Reset must also clear Atlas-managed diagnostic logs, including any managed through Docker; merely restarting a container is not Reset. [Hard Reset](0015-separate-start-stop-restart-and-reset.md#hard-reset) additionally removes this installation's setup, managed Plugin containers/data/artifacts and managed logs while retaining Core software and unrelated Docker resources. Its coordinator must outlive Core shutdown and prevent automatic restart during cleanup. Volume names, mount layout and log-cleanup mechanics remain implementation choices. See [Docker volume lifecycles](https://docs.docker.com/engine/storage/volumes/).
+Use mounted persistent storage whose lifetime is independent of container replacement. Keep operational data separate from retained installation setup so [Reset](0015-separate-start-stop-restart-and-reset.md) can clear the former while preserving the latter. Clarified on 26 September 2026: this separation is by lifetime, not necessarily by mount. One SQLite database holds both Dataset tables and installation tables such as Asset principal bindings, credential verifiers and API-key creation identities, because registration, Asset deletion and credential revocation must commit atomically with their Entity effects and SQLite in WAL mode does not guarantee atomic commits across attached databases. Reset clears Dataset tables through Core's [fresh opening](0015-separate-start-stop-restart-and-reset.md#reset-execution) rather than by removing a mount. Stop/Restart preserve both. Reset must also clear Atlas-managed diagnostic logs, including any managed through Docker; merely restarting a container is not Reset. [Hard Reset](0015-separate-start-stop-restart-and-reset.md#hard-reset) additionally removes this installation's setup, managed Plugin containers/data/artifacts and managed logs while retaining Core software and unrelated Docker resources. Its coordinator must outlive Core shutdown and prevent automatic restart during cleanup. Volume names, mount layout and log-cleanup mechanics remain implementation choices. See [Docker volume lifecycles](https://docs.docker.com/engine/storage/volumes/).
 
 Separate containers for Entities, Tasks and Objects were rejected because they would introduce network calls and partial failures into closely related responsibilities. Containers are selected for independently managed Plugins. Registry choice, Plugin manifest/install format, host support matrix, resource limits and update tooling remain open. Docker Compose is the deployment choice; no Compose implementation, container images or new management service are created by this decision.

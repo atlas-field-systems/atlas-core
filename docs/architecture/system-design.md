@@ -22,6 +22,8 @@ Keep the Core API small and explicit. The SDK owns client-side conveniences such
 
 Core remains responsible for authentication, authorization, Task transitions, Object readiness and committed-state consistency at its API boundary. The SDK is the supported client entry point, not a substitute for those server responsibilities.
 
+Accepted on 26 September 2026: software acting as an Asset uses one SDK Asset client module for all Asset-originated traffic: check-in, component and status reports, Task lifecycle reports, queue adoption/conflict reports and reading assigned work. It owns report identity and ordering, the Core-issued process generation, Pause/Resume report correlation, queue revision adoption, lost-response retries, discarding obsolete work on a Dataset change and reconnect reconciliation. After a process restart, the Asset OS supplies its onboard execution evidence to the Asset client's reconciliation; the Asset client reports what that evidence establishes and withholds uncertain work from the Asset's work stream until explicit recovery. The Asset OS still owns scheduling and execution, and the SDK keeps no disk persistence. Route-level Task status helpers remain for tasking clients such as an operator requesting cancellation. The Asset client is the SDK side of [Asset report acceptance](#shared-asset-report-acceptance); HTTP and a future gateway are its transport adapters. See the [SDK operations catalog](../sdk-operations.md#asset-client).
+
 ## Local administration
 
 The CLI and TUI share a local management implementation for Core lifecycle, Reset, Hard Reset, updates and installed Plugin management. They use private internal coordination, not the public API or SDK. Local tooling can start Core when it is stopped. Core's Plugins module owns its lifecycle policy; local tools coordinate with it instead of duplicating the rules.
@@ -43,6 +45,14 @@ Concentrate lifecycle execution and interrupted-action recovery in the shared ho
 The management implementation must remain available after Core stops. It owns lifecycle-action serialization, the cleanup progress needed to resume an interrupted Hard Reset, and refusal to start an installation whose cleanup is incomplete. These responsibilities implement [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md); they do not change what each lifecycle action retains or discards. Module owners decide which of their records and files are valid. The coordinator must not reconstruct those decisions by inspecting their private tables.
 
 This placement of responsibility gives recovery rules locality and gives both local callers leverage through one interface. Keep the Docker adapter concrete and on the host under [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md#ownership-and-lifecycle). A general process framework or interchangeable runtime system adds no required capability. Private coordination, unexpected-Core-loss detection and the coordinator's process lifetime remain engineering work. In particular, host placement does not select an always-running management process; runtime-lifetime enforcement must still work after local callers exit.
+
+### Opening a Dataset
+
+Accepted on 26 September 2026. Every Core module holding Dataset state implements one opening interface, `open(retained | fresh)`, and System operations serves operational requests only after every module reports ready. Retained opening checks the writing release, then lets each module reconcile its own state from the previous Core run: Objects reconciles interrupted publication, Plugins marks unfinished Operations Interrupted, Synchronization restores its replay window, and Tasks and Entities validate their retained records. Fresh opening clears each module's Dataset tables and establishes the new Dataset ID in one SQLite transaction; Objects then removes the old Dataset's content by ownership. A module that cannot open reports an integrity failure rather than serving partial state. Exact method names remain implementation work.
+
+Reset is Start with a fresh Dataset. The host coordinator records a fresh-Dataset directive before stopping anything, stops managed Plugins and Core, clears Atlas-managed logs and starts Core, which opens fresh and removes the directive only after every module is ready. An interruption at any point leaves the directive in place, so the next Start completes the Reset rather than serving a half-cleared Dataset. The coordinator never clears module tables itself. Hard Reset still removes all Atlas-managed storage without per-module decisions. See [Reset execution](../adr/0015-separate-start-stop-restart-and-reset.md#reset-execution).
+
+Start, Restart and Reset share this one path, and each module keeps the locality of its own recovery and cleanup rules. The interface has an adapter in every stateful module, so it is a real seam rather than a hypothetical one.
 
 ## Identity and access
 
@@ -106,7 +116,7 @@ Keep publication, successful-upload retry lookup, deletion identity and interrup
 
 System operations coordinates startup and shutdown, while Objects reconciles its own staging, published content and private identity records. A generic cleanup module must not infer Object validity or remove content from stale metadata. The local-files adapter and SQLite remain private implementation details, with bulk transfer outside short database transactions. [ADR-0009](../adr/0009-expose-objects-only-when-ready.md#publication-and-recovery-ordering) selects durable file publication before the ready-state SQLite commit and defines recovery ownership. Exact filesystem primitives remain implementation work.
 
-Tasks retains assigned-Asset declarations, required-result references and Task transitions. Objects owns content readiness and enforces deletion protection through ordinary collaboration with Tasks. That seam must preserve [declaration/publication/deletion serialization](../adr/0009-expose-objects-only-when-ready.md#required-result-protection) without direct access to another module's private tables. Both result arrival orders remain supported. Keep this collaboration out of the independent Object MVP fixture until the scan workflow needs it.
+Tasks retains assigned-Asset declarations, required-result references and Task transitions. Objects owns content readiness and the protection holds derived from those declarations. Accepted on 26 September 2026: when Tasks accepts a required-result declaration, it calls Objects to place a hold on each declared Object ID for that Task in the same commit; the hold fails with the deleted-result outcome if any ID was already deleted. Publication returns the Tasks whose holds the new Object satisfies, and the upload handler passes them to [Task transitions](#task-transitions) in the same commit. Objects therefore decides deletion protection without calling Tasks, and the dependency runs one way. This preserves [declaration/publication/deletion serialization](../adr/0009-expose-objects-only-when-ready.md#required-result-protection) without direct access to another module's private tables. Both result arrival orders remain supported. Keep this collaboration out of the independent Object MVP fixture until the scan workflow needs it.
 
 ## Core tasking and Asset execution
 
@@ -114,7 +124,7 @@ Tasks implements the [Core-owned Command boundary](../adr/0004-core-owns-command
 
 The Asset OS owns execution, interruption and its confirmed onboard queue. Core records immutable submission order and operator reorder requests separately from Asset-confirmed order. Assets execute queued Tasks sequentially in submission order by default, following confirmed reordering of eligible, unstarted queued Tasks; a disconnected Asset may continue its last confirmed order. Immediate Commands are ordinary Tasks that can overlap queued work. Immediate Pause interrupts current queued work, and the Asset reports its paused condition and waits without advancing the queue. Core records intent and outcomes without starting Tasks or gating them on connectivity. See [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md).
 
-Asset check-in and component patches share Protocol-defined partial-update validation, report identity and freshness rules. Core verifies authorship across every reporting path; ordinary operator edits cannot manufacture Asset contact. Registration through Entity creation and subsequent check-in are documented in the [SDK operations catalog](../sdk-operations.md). This replaces the separate execution-runtime registration API.
+Asset check-in and component patches share Protocol-defined partial-update validation, report identity and freshness rules. Core verifies authorship across every reporting path through [Asset report acceptance](#shared-asset-report-acceptance); ordinary operator edits cannot manufacture Asset contact. Registration through Entity creation and subsequent check-in are documented in the [SDK operations catalog](../sdk-operations.md). This replaces the separate execution-runtime registration API.
 
 Registration/fencing machinery from Modernization is not a required subsystem. Reject unauthorized, duplicate or obsolete reports through the smallest contract satisfying these guarantees. Exact reconciliation messages remain open.
 
@@ -128,6 +138,25 @@ Entities owns the private accepted-report identities and ordering state and coor
 
 The [reporting contract](../asset-status.md#heartbeat-and-freshness) and [Task reconciliation decision](../adr/0007-reconcile-asset-tasks-after-disconnection.md) retain their behavior. Exact report identities, freshness windows, ordering scope and interface shapes remain engineering work.
 
+Refined in the second review on 26 September 2026: every reporting path hands shared acceptance the authenticated principal and report before applying anything, and it returns one outcome:
+
+| Outcome | Meaning | Effect |
+| --- | --- | --- |
+| Fresh | The bound Asset's current process sent a new, newest report | Apply it, refresh contact and capture supplied movement samples |
+| Late | A new report from that process, but newer reports have already been accepted | Apply only facts that cannot regress, such as Task outcomes and movement samples with their observation time; do not refresh contact or overwrite newer component values |
+| Duplicate | A report already accepted | No new effect; return current recorded state |
+| Rejected | Wrong principal, obsolete process, or not an Asset report | No effect; explicit rejection |
+
+It also owns the check that the authenticated principal is bound to the reporting Asset (Tasks still checks Task assignment), the Core-issued process generation and authority transfer from [Asset recovery](../adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart), report identities and ordering boundaries, contact and communications derivation, component no-regression and movement-sample capture. Entities and Tasks apply an Asset-reported effect only when given the accepted-report value it returns, so a new reporting route cannot skip authorship or freshness. The acceptance runs inside the same [write commit](#write-commits) as the applied effect.
+
+Registration is not a report: it creates the Asset with offline defaults and follows its [retry identity](#retry-identity). Operators may edit descriptive fields such as the alias without passing through acceptance, and such edits never touch contact; an operator cannot submit Asset-reported components. Exact report identity, ordering scope and freshness windows remain schema work.
+
+### Task transitions
+
+Accepted on 26 September 2026. Tasks keeps its lifecycle rules in one pure transition module: given a Task's recorded state and an event (an accepted Asset report, a cancellation request, satisfied required results or a control action), it returns the next state or an explicit rejection. It owns the [transition table](../adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions), terminal immutability, cancellation intent, [holding completion until required results are ready](../adr/0008-complete-scan-tasks-when-required-results-are-available.md) and Pause/Resume [control ordering](../adr/0007-reconcile-asset-tasks-after-disconnection.md#control-ordering-and-expiry). Handlers translate requests into events and persist the returned decision; none decides a transition itself.
+
+Queue revisions remain a separate part of Tasks because requested and confirmed order is different state with its own revision contract. They ask the transition module whether a Task has started. The transition module is the test surface for the independently specified state model in the [testing strategy](../testing-strategy.md#required-scenario-coverage); it does not replace integration coverage.
+
 ## Plugin Operations
 
 [ADR-0002](../adr/0002-core-manages-installed-plugins.md) owns accepted attempts, submission retry identity and retained effects. [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) owns stopping and fault outcomes. Plugins implements these contracts separately from Tasks. Use Plugin packaging for an internal capability only when it needs the independently managed extension lifecycle.
@@ -140,11 +169,35 @@ Removing a Plugin withdraws its capability and any UI contribution; retained res
 
 [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) selects a separate Docker container per installed Plugin. Invocation fields, Plugin manifest/distribution details and any UI contribution contract remain open. If supported, Core may expose contribution metadata or serve static assets; the external Command Interface owns rendering, navigation, map interaction and resource views. UI delivery is not a selected implementation.
 
+## Write commits
+
+Accepted on 26 September 2026. Core keeps one SQLite database. Its tables are grouped by lifetime: Dataset tables are cleared by Reset, and installation tables such as Asset principal bindings, credential verifiers and API-key creation identities survive until Hard Reset. One database keeps registration, Asset deletion and credential revocation atomic with their Entity effects; SQLite does not guarantee atomic commits across attached databases in WAL mode. Configuration files, secret material, Plugin artifacts, the Reset directive and the local activity journal stay on the installation mount under [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md#storage-and-scope).
+
+Every write goes through shared commit code with two entry points:
+
+- A Dataset commit takes the Dataset the request targets and rejects an obsolete one before any module logic runs. Inside it, a module runs [Asset report acceptance](#shared-asset-report-acceptance) and [retry identity](#retry-identity) claims where relevant, applies its mutation and returns its public change records and activity records; the commit appends both in order with the mutation. Registration and Asset deletion write their installation facts inside this same transaction.
+- An installation commit serves writes that belong to no Dataset, such as API-key creation and credential revocation. It has no change log entry and records activity when a Dataset exists.
+
+Both acquire SQLite's write lock at the start of the transaction, which serializes concurrent retries of the same identity. The commit code enforces the [Dataset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary), the change-record obligation and the activity obligation once; owning modules still supply the meaning of every record, and the commit code never inspects their private tables. This is the concrete shared transaction facility allowed above, not a module framework or event bus under [ADR-0014](../adr/0014-build-dedicated-atlas-systems.md). Wire placement of the Dataset identity remains implementation design.
+
+### Retry identity
+
+Accepted on 26 September 2026. One retry identity module serves every lost-response retry: Task creation, Asset registration, Object upload, Plugin Operation submission, queue edit, cancellation request and API-key creation. Inside the caller's commit, a claim supplies the kind, scope (Dataset or installation), identity and canonical original request facts. It returns one of:
+
+- First: no earlier claim; the caller performs the effect and records its result against the identity.
+- Replay: an identical earlier claim; return its recorded result without repeating the effect.
+- Conflict: the identity was used with different original facts; fail explicitly.
+- Ended: the recorded result was later deleted or revoked; return the explicit deleted-result or revoked outcome without resurrection.
+
+Comparison always uses the original facts, never editable current state. Dataset-scoped identities are cleared by Reset; installation-scoped identities survive until Hard Reset. Each kind keeps its own facts, authorization checks and retention rules in its owning contract; the module shares only the mechanism, not the single UUID/hash replacement that the [planning reconciliation](../planning-reconciliation.md) rejected. Asset report identities stay in report acceptance because they also carry ordering and freshness. Movement-sample and activity deduplication follow the identity of the action that produced them.
+
 ## Change publication
 
-The module making a change supplies its public representation. This ownership rule is accepted. The write-owning module commits its mutation and change record together in SQLite. A private ordered change log includes replay payloads and deletion records; both feed delivery and changed-since read the committed log. Shared publication code delivers committed records in an order consistent with state. For example, Tasks describes a Task status change; delivery code does not inspect private Task tables to reconstruct its meaning.
+The module making a change supplies its public representation. This ownership rule is accepted. The write-owning module returns its mutation's change record to the [write commit](#write-commits), which commits both together in SQLite. A private ordered change log includes replay payloads and deletion records; both feed delivery and changed-since read the committed log. Shared publication code delivers committed records in an order consistent with state. For example, Tasks describes a Task status change; delivery code does not inspect private Task tables to reconstruct its meaning.
 
 This keeps a useful shared delivery function small. It does not establish a general event bus or require every internal call to emit an event. Preserve consistency between resource changes and their published records within the current run.
+
+Accepted in the second review on 26 September 2026: Tasks supplies each Task's direct dependency set with its published change record, derived from the Command-defined references selected under [Asset hybrid coverage ownership](#asset-hybrid-coverage-ownership). Synchronization indexes membership from those sets and never parses Command input or reads private Task storage. Dependency encoding and scope-event shapes remain open in [SDK data access](../sdk-data-access.md#asset-hybrid-mode).
 
 ## Detectable synchronization gaps
 
@@ -180,7 +233,7 @@ Records contain a stable action identity, authenticated actor identity/type, act
 
 For database actions, record the activity in the same transaction as the accepted change. An idempotent retry must not create another logical action. For process operations, record the accepted request and later known outcome linked by action identity; an accepted request is not proof of completion. A crash may leave an outcome unknown. Do not claim a transaction spans the process effect. These records explain a limited set of operational actions, not every rejected request or all external effects.
 
-The local CLI/TUI uses the same private management recording facility while Core is stopped; Plugins and public clients cannot directly write arbitrary log entries. Read access follows the operator administrative boundary. History queries use explicit SDK methods outside the synchronized picture. Retain the log across Restart and clear it on Reset under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md). Exact local coordination, field formats, query limits and failure presentation remain implementation details.
+While Core runs, local management records its actions through the private coordination channel. While Core is stopped, it appends each action to a local activity journal on the installation mount, keyed by action identity and recording the accepted request or its later known outcome. Opening the retained Dataset imports the journal inside a write commit before serving and removes entries only after import, so a repeated import creates no duplicate records. Reset discards pending entries because it clears activity history; Hard Reset deletes the journal. This keeps SQLite accessed only by Core under [ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md). Plugins and public clients cannot directly write arbitrary log entries. Read access follows the operator administrative boundary. History queries use explicit SDK methods outside the synchronized picture. Retain the log across Restart and clear it on Reset under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md). Exact local coordination, field formats, query limits and failure presentation remain implementation details.
 
 ## Basic operational protections
 
@@ -207,6 +260,8 @@ Use a pinned toolchain and deterministic regeneration. Independently authored wi
 | [Movement history](#movement-history) | Sparse accepted-report capture, retry deduplication, independent historical reads and retention until Reset |
 | [Change publication](#change-publication), [synchronization gaps](#detectable-synchronization-gaps) and [activity history](#activity-history) | Consistent committed changes and attributed actions; slow consumers detect gaps and rebuild a current picture |
 | [Operational protections](#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
+| [Asset report acceptance](#shared-asset-report-acceptance) and [Task transitions](#task-transitions) | Fresh, late, duplicate and rejected outcomes through every reporting path; state-model sequences through the pure transition module |
+| [Write commits](#write-commits), [retry identity](#retry-identity) and [Dataset opening](#opening-a-dataset) | Obsolete-Dataset rejection at the commit; first/replay/conflict/ended claims for every retry kind; crash-then-open recovery per module, interrupted Reset completion and activity journal re-import |
 
 The [selected stack](../adr/0016-use-go-sqlite-and-openapi-tooling.md) must also pass a representative generation check without output patches, and [Docker deployment](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) must preserve the lifecycle guarantees across container changes.
 

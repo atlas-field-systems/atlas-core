@@ -76,6 +76,14 @@ _Avoid_: Asset cluster
 The Asset-side software that owns scheduling, execution, interruption and connected/offline behavior. Also written "Asset operating system"; its implementation is outside Atlas Core.
 _Avoid_: Atlas Core, server scheduler
 
+**Check-in**:
+An Asset's report of its current Entity data, establishing contact when fresh. It does not deliver or reconcile Tasks.
+_Avoid_: reconnect reconciliation, heartbeat packet, registration
+
+**Reconnect reconciliation**:
+The workflow in which a reconnecting Asset checks in, catches up on its current Tasks, cancellations and queue revisions, and reports outcomes of work performed while away.
+_Avoid_: check-in, replaying every historical instruction
+
 **Track**:
 An Entity representing an observed subject, whether stationary or moving. A detected house is a Track.
 _Avoid_: Asset, stream item
