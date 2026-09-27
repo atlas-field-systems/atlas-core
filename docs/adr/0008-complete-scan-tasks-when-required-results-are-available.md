@@ -12,7 +12,7 @@ Cancellation during acquisition or upload follows [the Task transition rules](00
 
 ## Both completion conditions
 
-Core requires both an authenticated completion report from the assigned Asset and the availability of every required result Object declared by that Asset. They may arrive in either order. Core retains the report or ready result until both conditions hold; the final transition still obeys the confirmed-cancellation and terminal-state rules.
+Core requires both an authenticated completion report from the assigned Asset and the availability of every required result Object declared by that Asset. They may arrive in either order. Core retains the report or ready result until both conditions hold; the final transition still obeys the confirmed-cancellation and terminal-state rules. When publication satisfies the last required result, it identifies the waiting Task so the transition commits with that publication; see [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership).
 
 The SDK allocates the eventual Object ID before upload and uses that same ID in the Task completion report and whole-file upload. An unresolved result reference does not publish an Object or satisfy readiness. See [result identity before upload](0009-expose-objects-only-when-ready.md#result-identity-before-upload).
 

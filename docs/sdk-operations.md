@@ -26,6 +26,8 @@ The initial operations and behaviors below are approved; the names describe beha
 | Invoke Plugin Operation | Submit a declared capability with stable Dataset-scoped identity; retries retrieve the same attempt | `POST /plugins/{plugin_id}/operations` |
 | Inspect/cancel Plugin Operation | Query recorded progress/outcome or request cancellation; caller disconnect does not stop accepted work | Plugin Operation read/list/cancel endpoints; direct API access outside the operational picture |
 
+Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset, required-result uploads and queue adoption reports are Asset-originated; software acting as an Asset submits them through the [Asset client](#asset-client) rather than calling their routes separately. Tasking clients still use the route-level Task status helpers, for example to request cancellation.
+
 The SDK exposes typed methods and documentation for these operations. No machine-readable SDK-operation discovery function is planned without a concrete consumer. Local lookup of the Protocol Command Catalog remains a separate agreed SDK function. Further SDK coverage can follow the approved endpoints without inventing additional API families.
 
 ## One read interface in all three modes
@@ -50,31 +52,38 @@ Upload retries resend the complete file after interruption. Producers retain the
 
 A retry after an allowed Object deletion returns an explicit deleted-result error. The SDK never allocates a replacement identity and silently uploads again; an intentional new upload requires new Object and request identities. [Upload identity contract](adr/0009-expose-objects-only-when-ready.md#retrying-an-upload-after-allowed-deletion).
 
+## Asset client
+
+Accepted on 26 September 2026. The Asset client is the SDK module for software acting as an Asset. It registers the Asset, submits every Asset-originated report and reads the Asset's assigned work, and it owns what each Asset runtime would otherwise reimplement:
+
+- Registration under deployment-supplied enrollment authorization, with the stable Asset ID and [registration retry identity](#registration-retry-identity), before a normal Asset credential exists. The Asset client prepares the registration identity and hands it to the Asset OS or deployment layer to retain before submission, so a lost response followed by an Asset process restart can still retry with it. Recovery still requires the enrollment proof.
+- Required-result uploads: the Asset client preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the existing upload operation, retaining its request identity. No new route is added.
+- Report identity and ordering, and the Core-issued process generation, matching [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) in Core.
+- Pause/Resume report correlation and queue revision adoption under [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md).
+- Lost-response retries with stable identities, and discarding obsolete work and submissions when the Dataset changes.
+- Reconnect reconciliation: check in, catch up on current Tasks, cancellations and queue revisions, then report outcomes of work performed while away.
+
+After an Asset process restart, the Asset OS passes its onboard execution evidence to the Asset client's reconciliation. The Asset client reports the outcomes that evidence establishes, obtains a new process generation through authenticated reconciliation and withholds uncertain work from the Asset's work stream until explicit recovery. It never schedules, starts or reruns work; the Asset OS still owns execution. It keeps no disk persistence; the Asset OS or deployment layer retains any identity that must survive a process restart. HTTP is its initial transport adapter; a future gateway can supply another without changing its interface. Exact method names remain open.
+
 ## Task status updates
 
-Task lifecycle helpers share `PATCH /tasks/{task_id}/status`; there are no separate cancellation request/confirmation endpoints. The caller supplies a requested status or progress-only update and transition-specific data. Core derives report authority from authentication and applies the [Task transition rules](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions). A tasking client requests `cancellation_requested`; the assigned Asset confirms `cancelled`. Helpers must return the authoritative recorded state, including pending Object readiness or retained cancellation intent, rather than echoing the requested status as success.
+Task lifecycle helpers share `PATCH /tasks/{task_id}/status`; there are no separate cancellation request/confirmation endpoints. They submit a requested status or progress-only update under the [Task transition rules](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions). Helpers return Core's recorded state, including pending Object readiness or cancellation intent, rather than echoing the requested status as success.
 
 The [testing strategy](testing-strategy.md) requires these helpers and the queue operations to pass real SDK–Core parity, retry and race scenarios. Exact helper names and wire envelopes remain schema work.
 
 ## Immediate Commands and Pause
 
-Task creation selects supported queued/immediate scheduling through the same SDK operation and `POST /tasks`. Pause and Resume are immediate Commands. Lights and similar supported Commands can be queued or immediate; an immediate lights change can run alongside Move To without changing the path. Task identity, retries and outcomes remain visible in both cases. The Asset's outstanding-work reads and hybrid picture include immediate control Tasks even while it is paused.
-
-The Asset reports its paused condition through ordinary Entity status reporting and reports the interrupted Task's suspension through the Task status endpoint. The Pause Task completes once applied. A separate immediate Resume continues the interrupted Task first, or reports that Task failed if it cannot safely resume. The resumed Task keeps its identity/progress; it is not a new execution. The SDK must not optimistically set these states merely because task creation succeeded. See the [Pause and scheduling contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling); the Asset validates Command-specific expiry and preserves newer Pause/Resume intent despite delayed older requests. Control/report correlation fields remain open.
+Pause and Resume use the ordinary Task-creation operation with immediate scheduling. The Asset reports its condition and Task execution through the Asset client, which correlates them with the applied control action. The SDK must not optimistically set either state when creation succeeds. [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling) owns scheduling, Pause/Resume effects and control ordering.
 
 ## Assigned Task queue
 
-The Asset fetches all outstanding assigned Tasks, following pagination as needed. Retained work must first satisfy the recovery/reconciliation contract; fetching it does not authorize repeating an execution. Eligible queued work executes locally one at a time, oldest submission first by default, following confirmed queue reordering. Repeated move-to Tasks form a sequence of destinations. Fetching or caching the Tasks does not automatically acknowledge or start them.
-
-Core assigns a permanent increasing submission sequence within each Asset's queue when accepting a Task. Reads return that default order; a repeated read or Task-creation retry does not create another execution or move a Task to the end. The Asset acknowledges a Task when it accepts it into its local queue and reports in progress when execution begins. Eligible, unstarted queued Tasks, including acknowledged Tasks, can be reordered without rewriting submission sequence. Requested and Asset-confirmed order are separate; started, paused, cancellation-requested and terminal Tasks cannot move. A disconnected Asset can continue using its last received order. Use whole-list requests with expected revisions and stable retry identity, plus assigned-Asset adoption/conflict reports, under the [queue contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions). Communication state does not gate Task creation or change Core scheduling behavior. Core accepts and retains valid Tasks even while the Asset is offline; the Asset owns execution when it receives them. See [Asset status](asset-status.md).
+Assigned-work reads use the selected SDK mode and follow pagination to obtain all outstanding Tasks. Reading or caching work does not acknowledge or start it; execution reports go through the Asset client. The reorder and adoption/conflict operations follow the [queue revision contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions).
 
 ## Recovery and historical Tasks
 
-After unexpected Asset-process restart, reconcile retained Tasks before executing any uncertain work. Hold the affected queue if execution cannot be established; neither reading outstanding Tasks nor reinitializing the SDK authorizes a rerun. See [recovery](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart). Failed resumption leaves the Asset paused until a new explicit Resume.
+Reinitializing the SDK does not authorize rerunning work; the Asset client follows [ADR-0007's recovery contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart) using the Asset OS's execution evidence. Reads may filter to current work without changing [terminal-record retention](adr/0007-reconcile-asset-tasks-after-disconnection.md#completed-task-retention).
 
-Task reads can filter to current work for normal interfaces. Terminal records stay in Core until Reset and have no delete operation; their visibility in a particular interface is not a retention rule.
-
-Deleting an Object through the SDK returns Core's conflict if any Task has an accepted required-result reference to that Object. The SDK must not remove it from a synchronized picture on a rejected deletion. Required-result protection begins at declaration acceptance and lasts until Reset, regardless of later Task status; optional attachments follow ordinary deletion rules.
+Object deletion helpers return Core's conflict for a [protected required result](adr/0009-expose-objects-only-when-ready.md#required-result-protection). A rejected deletion must not remove the Object from a synchronized picture.
 
 ## Asset startup
 
@@ -121,7 +130,7 @@ Core distinguishes fresh reports from arrival of delayed data. Duplicate reports
 
 ## Remaining decisions
 
-- SDK method names, argument shapes, and whether registration offers a convenience option to perform the first check-in.
+- SDK method names, argument shapes, the Asset client's interface shape, and whether registration offers a convenience option to perform the first check-in.
 - Registration identity encoding and credential proof/delivery fields for the agreed stable-ID/retry model.
 - Report identity/ordering fields, relay origin, freshness windows, and clock assumptions that enforce the agreed fresh-contact and no-regression rules.
 - Version preconditions for frequent component reports and how the SDK handles conflicts.

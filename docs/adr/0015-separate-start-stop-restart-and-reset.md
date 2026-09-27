@@ -34,6 +34,10 @@ Local management coordinates this lifetime and reports incomplete shutdown rathe
 
 Local administration may still run while Core is stopped to perform setup, lifecycle actions and their activity recording. That capability does not require running Plugins or permitting offline Plugin Operations.
 
+## Reset execution
+
+Clarified on 26 September 2026: Reset is Start with a fresh Dataset. The host coordinator records a fresh-Dataset directive with a Reset identity on the installation mount before stopping anything, stops managed Plugins and Core, clears Atlas-managed diagnostic logs and the pending local activity journal, and starts Core. Core opens every module fresh: one SQLite transaction clears all Dataset tables, establishes the new Dataset ID and records the Reset identity in Dataset metadata. Objects then removes, by ownership, content belonging to any Dataset other than the new one, so an interrupted and retried Reset cannot leave earlier content behind. Core serves operational requests after every module is ready; the host removes the directive only after compatible enabled Plugins have started. If the next Start finds a directive whose Reset identity is not recorded, Core opens fresh. If it is recorded, Core opens retained so post-Reset data survives, and the host completes Plugin startup. An interruption at any point therefore completes the Reset without serving a partially cleared Dataset or clearing it twice. The coordinator does not clear module tables itself. This does not change what Reset retains or discards. See [opening a Dataset](../architecture/system-design.md#opening-a-dataset).
+
 ## Hard Reset
 
 Accepted on 23 September 2026: provide a distinct Hard Reset action in the local CLI/TUI that can be invoked while Atlas is running, or while it is stopped. It removes all Atlas-managed state and returns the installation to first-time setup. It has no public HTTP endpoint or SDK operation. Ordinary Reset continues to preserve installation setup and Operator profiles.
@@ -58,7 +62,7 @@ Commit the binding check with registration and serialize it against credential p
 
 ## Unfinished work after Stop or Restart
 
-Retention preserves evidence; it does not claim that execution continued. Stop records interrupted Core-owned work when possible. Before serving retained state on Start, Core classifies any remaining unfinished attempts from the previous Core run. Preserve confirmed terminal outcomes first.
+Retention preserves evidence; it does not claim that execution continued. Stop records interrupted Core-owned work when possible. Before serving retained state on Start, Core classifies any remaining unfinished attempts from the previous Core run through each module's [retained opening](../architecture/system-design.md#opening-a-dataset). Preserve confirmed terminal outcomes first.
 
 | Retained work | Behavior after Start |
 | --- | --- |

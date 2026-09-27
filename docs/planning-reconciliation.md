@@ -102,3 +102,25 @@ The user accepted both remaining ownership directions from the follow-up archite
 | Asset deletion | Entities keeps deletion admission, serialization and commit coordination behind its existing interface, collaborating with Tasks, Identity and access, and Synchronization | [Deletion coordination](architecture/system-design.md#asset-deletion-coordination) |
 
 Start with report acceptance when implementing reporting. Define the narrower deletion workflow when implementing deletion. Package layout, private interface shapes and concurrency mechanisms remain engineering work; neither direction adds a general framework or a public operation.
+
+## Module ownership decisions, second review, 26 September 2026
+
+A second architecture review looked for rules that every caller had to repeat. The user accepted all eight deepening directions and the fixes for the contradictions it found. They refine module ownership, including the reporting and hybrid coverage decisions above, without changing what Atlas promises to operators, Assets or Plugins.
+
+| Topic | Accepted direction | Authoritative detail |
+| --- | --- | --- |
+| Asset reports | Refines shared acceptance in Entities: it decides accepted, duplicate or rejected for every Asset-originated report, separately decides whether the report is fresh contact evidence, and owns process generation; Entities and Tasks apply effects only from its accepted value | [Shared acceptance](architecture/system-design.md#shared-asset-report-acceptance) |
+| Write commits | One SQLite database grouped by Dataset or installation lifetime; shared commit code rejects obsolete Datasets and appends module-supplied change and activity records | [Write commits](architecture/system-design.md#write-commits), [storage](adr/0017-deploy-core-and-plugins-as-docker-containers.md#storage-and-scope) |
+| Task transitions | One pure transition module in Tasks decides every lifecycle transition; queue revisions stay separate | [Task transitions](architecture/system-design.md#task-transitions) |
+| Asset side of the SDK | One Asset client owns all Asset-originated traffic, report identity, process generation, Pause/Resume correlation, queue adoption and reconnect reconciliation | [Asset client](sdk-operations.md#asset-client) |
+| Retry identity | One mechanism returns first, replay, conflict or ended for seven retry kinds; each contract keeps its facts and retention | [Retry identity](architecture/system-design.md#retry-identity) |
+| Dataset opening | Every stateful module opens retained or fresh; Reset is Start with a fresh Dataset, completed after interruption by a host-recorded directive | [Opening a Dataset](architecture/system-design.md#opening-a-dataset), [Reset execution](adr/0015-separate-start-stop-restart-and-reset.md#reset-execution) |
+| Hybrid dependencies | Tasks supplies each Task's dependency set, from the Command-defined references selected above, with its published change record; Synchronization never parses Command input | [Change publication](architecture/system-design.md#change-publication), [coverage ownership](architecture/system-design.md#asset-hybrid-coverage-ownership) |
+| Required-result holds | Tasks places holds through Objects and learns which held Objects are already published; later publication returns the Tasks whose holds it satisfies, so both arrival orders resolve and the dependency runs one way | [Object ownership](architecture/system-design.md#object-publication-and-recovery-ownership) |
+
+The review also resolved four contradictions between documents:
+
+- **Check-in.** Some documents said check-in reconciles Tasks, while the operations catalog made it an Entity report. Check-in now means only the Entity report, and [reconnect reconciliation](../CONTEXT.md) names the workflow.
+- **Queue order.** The responsibility map gave the Asset OS "queue order" while ADR-0007 kept requested and confirmed revisions in Core. The Asset OS owns execution and the confirmed order it adopts; Core records submission sequence, requested revisions and confirmations.
+- **Activity while Core is stopped.** Local actions are journaled on the installation mount and imported when the retained Dataset or a new installation's first Dataset opens, keeping SQLite accessed only by Core. This resolves the local activity recording left open in the 23 September architecture review above.
+- **Credentials and separate storage.** Separate operational and installation storage could not keep registration and Asset deletion atomic with credential facts. One database grouped by lifetime settles the database split that review left unselected.
