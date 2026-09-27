@@ -124,3 +124,17 @@ The review also resolved four contradictions between documents:
 - **Queue order.** The responsibility map gave the Asset OS "queue order" while ADR-0007 kept requested and confirmed revisions in Core. The Asset OS owns execution and the confirmed order it adopts; Core records submission sequence, requested revisions and confirmations.
 - **Activity while Core is stopped.** Local actions are journaled on the installation mount and imported when the retained Dataset or a new installation's first Dataset opens, keeping SQLite accessed only by Core. This resolves the local activity recording left open in the 23 September architecture review above.
 - **Credentials and separate storage.** Separate operational and installation storage could not keep registration and Asset deletion atomic with credential facts. One database grouped by lifetime settles the database split that review left unselected.
+
+## Deep-module review correction, 27 September 2026
+
+The user accepted the revised review direction: optimize the knowledge and coordination removed from callers, not the size of each implementation. [Code conventions](agents/code-conventions.md#structure-and-interfaces) owns that review criterion, including the distinction between hiding mechanisms and exposing meaningful readiness, freshness and uncertainty.
+
+| Topic | Disposition | Authoritative detail |
+| --- | --- | --- |
+| Unified SDK | Retain one public resource-read, query and feed interface across HTTP, full synchronization and Asset hybrid. Withdraw the proposed public API/picture split; preserve existing local queries, changed-since history and no-fallback semantics | [SDK boundary](architecture/system-design.md#sdk-as-the-supported-entry-point), [existing mode contract](sdk-data-access.md#agreed-modes) |
+| Workflow ownership | Keep complete required coordination behind its existing domain owner. Internal separation is justified by reduced coupling, not by exporting mechanism choices or creating more services | [Architecture](architecture/system-design.md#architecture), [conventions](agents/code-conventions.md#structure-and-interfaces) |
+| Asset retirement | Add one owned administrative operation that ends participation without requiring an unavailable Asset to confirm its Task outcomes. Preserve ordinary deletion's guard, retained evidence and required-result protection | [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) |
+
+The earlier review's storage-format compatibility change, alternative terminal-Task replication, observation/source ownership model and route-as-one-Task proposal remain hypotheses, not accepted redesigns. This correction changes none of their existing contracts and adds no new planning tickets. Existing workload measurement and real-Asset validation requirements remain required; the correction does not claim that those tests ran.
+
+Retirement is the deliberate new behavior, not a relabeling of existing deletion. Its exact wire binding and SDK method remain to be designed within the agreed single-operation boundary. Other simplifications require their own evidence and an explicit scope decision before changing supported behavior.

@@ -9,6 +9,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/architecture/system-design.md#mvp-integration-checks) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
 | Collaboration between Core, SDK, Protocol and local tools | [System design](docs/architecture/system-design.md) |
+| Deep-module design and review criteria | [Structure and interfaces](docs/agents/code-conventions.md#structure-and-interfaces) |
 | Selected technology stack and generation tools | [Stack decision](docs/adr/0016-use-go-sqlite-and-openapi-tooling.md) |
 | Docker containers, Plugin separation and mounted storage | [Deployment decision](docs/adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
 | Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
@@ -29,6 +30,7 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | HTTP, full synchronization and Asset hybrid modes | [SDK data access](docs/sdk-data-access.md) |
 | Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
 | Asset status, communications and heartbeat | [Asset status](docs/asset-status.md) |
+| Administrative retirement without invented execution outcomes | [Retirement decision](docs/adr/0019-retire-assets-without-inventing-task-outcomes.md) |
 | Movement and activity history scope | [Movement history](docs/architecture/system-design.md#movement-history) and [activity log](docs/architecture/system-design.md#activity-history) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |
