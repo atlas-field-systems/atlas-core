@@ -39,8 +39,8 @@ These conventions govern code quality. The [system design](../architecture/syste
 
 ## Tests
 
-- Favor end-to-end workflows through the real SDK, Core and relevant storage or Plugin integrations. The [testing strategy](../testing-strategy.md) owns required scenarios, fault coverage and completion evidence.
-- Test deep modules through their small public interfaces, exercising observable behavior rather than internal implementation details. Use focused integration or unit tests where they expose failures or edge cases that broader workflows cannot exercise effectively.
+- Default to end-to-end workflows under the [testing strategy's workflow-first policy](../testing-strategy.md#end-to-end-workflows-first). It owns test selection, required scenarios, fault coverage and completion evidence.
+- Test deep modules through their small public interfaces, exercising observable behavior rather than internal implementation details. Justify focused integration or unit tests using that policy.
 - Author expected outcomes independently of the implementation and generator. Tests that merely repeat implementation logic provide little evidence.
 - Execute behavior instead of reading source text to infer correctness. Structural rules that tooling can enforce belong in lint or build checks.
 - Preserve the real failure mode. Use controlled fault injection where needed, while keeping the relevant database, filesystem or transport integration real. A mock that removes the failure being tested cannot prove recovery.

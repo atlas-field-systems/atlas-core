@@ -10,7 +10,7 @@ Before changing lifecycle, storage, logs or client synchronization, read `docs/a
 
 Before changing Protocol, generators, module interfaces, storage ownership or shared infrastructure, read `docs/architecture/system-design.md` and its linked decisions.
 
-Before adding or changing tests, read the applicable coverage in `docs/testing-strategy.md`. Before implementation or review of API and SDK behavior, use the API and SDK plans indexed in `README.md`.
+Before planning, adding, changing or reviewing tests, read the workflow-first policy and applicable coverage in `docs/testing-strategy.md`. Before implementation or review of API and SDK behavior, use the API and SDK plans indexed in `README.md`.
 
 When accepting or implementing a behavior or design change from Atlas Modernization, update `docs/architecture/modernization-differences.md` with baseline evidence and a link to the successor decision. Distinguish confirmed differences, carried-forward behavior and proposals.
 
