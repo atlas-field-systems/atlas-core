@@ -8,6 +8,8 @@ These conventions govern code quality. The [system design](../architecture/syste
 
 - Follow established patterns in the affected area. Inspect an existing implementation before introducing another way to solve the same problem. Consolidate only when it is relevant to the requested change.
 - Prefer deep modules that hide complex behavior behind small, explicit interfaces. Put coupled behavior and private data access behind those interfaces so callers do not reconstruct the rules or read the module's tables.
+- Judge a boundary by the total knowledge and coordination it removes from callers and collaborators, not by making each implementation smaller. Keep a complete required workflow behind one owner; do not export transport, storage or reconciliation choices merely to simplify that owner's code. Internal decomposition also must earn its interfaces rather than hide a tightly coupled network behind a facade.
+- Hide mechanisms, not consequential facts: readiness, stale or incomplete coverage, unknown outcomes and the difference between accepted intent and confirmed execution must remain understandable. Different internal paths alone do not justify separate public APIs. Removing a supported capability is a scope decision, not automatically a deeper-module design.
 - Share utilities for concrete repeated needs. An interface, framework or dependency should remove demonstrated complexity or serve a required integration, rather than prepare for hypothetical variation.
 - Keep transport adapters focused on translating requests and results. Domain decisions belong to their owning modules. Wire types can be used directly where their meaning fits; convert explicitly where internal meaning differs.
 - Make collaborators, transaction ownership and background-work lifetime explicit. A caller should be able to tell who commits, cancels and stops work without following hidden global state.
@@ -51,6 +53,7 @@ These conventions govern code quality. The [system design](../architecture/syste
 
 - Check the requested behavior against its issue or specification and the applicable accepted documents. Passing conventions does not prove that the right behavior was implemented.
 - Check interface ownership, unnecessary complexity, type safety, failure handling and the quality of test evidence. Explain findings using the affected behavior or maintenance cost, rather than personal style preference.
+- Check safety and progress separately: prevent incorrect transitions, but also examine how a legitimate workflow can finish when a participant never returns. Challenge a requirement that creates an avoidable dead end before adding coordination machinery; never resolve uncertainty by fabricating an outcome.
 - Use existing automated checks for mechanical rules. Report missing or failing enforcement instead of repeatedly reviewing what a reliable check can decide.
 - State which checks ran and what remains unverified. Do not treat unrun integration coverage as passing.
 - Update a convention when an accepted change makes it obsolete. Keep each rule in one authoritative home and link to detailed policy rather than repeating it in `AGENTS.md`.

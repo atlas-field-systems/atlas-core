@@ -9,6 +9,7 @@ The initial operations and behaviors below are approved; the names describe beha
 | SDK operation | Behavior | Existing API mapping |
 | --- | --- | --- |
 | Register Asset | The Asset creates its Entity with identity, descriptive data, initial components, and supported Command declarations | `POST /entities` with type `asset` |
+| Retire Asset | An operator withdraws participation through one Core operation, retaining the Entity and unresolved work while blocking assignment/provisioning and revoking bound access | Accepted operation; HTTP binding and SDK signature pending under [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) |
 | Check in | Report current component data and contact after registration, and subsequently as needed | `POST /entities/{entity_id}/checkin` |
 | Update Asset components | Submit only changed component fields; Core merges and validates the resulting Entity | `PATCH /entities/{entity_id}` |
 | Report Asset status | Convenience operation for an operational status report | `PATCH /entities/{entity_id}/status` |
@@ -51,6 +52,10 @@ Historical reads are explicit API-backed operations in every SDK mode, separate 
 Upload retries resend the complete file after interruption. Producers retain the source file until publication succeeds. The SDK allocates the Object ID before upload and retains it alongside a stable Dataset-scoped request identity, so reports can reference results before their files arrive and a lost success response does not create another Object; it does not keep persistent partial-transfer progress or add an offline write queue. Reset invalidates the old request identity. Detailed content-equivalence verification follows [ADR-0009](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries).
 
 A retry after an allowed Object deletion returns an explicit deleted-result error. The SDK never allocates a replacement identity and silently uploads again; an intentional new upload requires new Object and request identities. [Upload identity contract](adr/0009-expose-objects-only-when-ready.md#retrying-an-upload-after-allowed-deletion).
+
+## Asset retirement
+
+Retirement is an operator administrative operation, unavailable to Asset and Plugin integration identities. The SDK submits one request to Core in every mode and returns its committed result; callers do not coordinate revocation, assignment blocking or record preservation. The response does not update a local picture or prove physical stopping. Entity changes arrive through ordinary synchronization. Use the shared [Dataset-scoped retirement retry contract](architecture/system-design.md#retry-identity); discard obsolete submissions on Reset. [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) owns the workflow and retained authority rules. The HTTP binding, SDK signature and record fields remain open.
 
 ## Asset client
 
