@@ -91,3 +91,14 @@ In the follow-up review on 26 September 2026, the user accepted two further owne
 | Asset hybrid coverage | Synchronization owns shared membership and continuation across initial queries, feed and replay; Tasks supplies dependency meaning and the SDK consumes Core coverage | [Coverage ownership](architecture/system-design.md#asset-hybrid-coverage-ownership) |
 
 The user also selected explicit Protocol-defined Command dependency references, validated by Tasks, and retention of each Asset's terminal Task records in its hybrid subset until Reset. The [hybrid contract](sdk-data-access.md#asset-hybrid-mode) records these choices and their transfer/memory tradeoff. The user subsequently chose to end subscriptions needed only by terminal Tasks, while retaining shared dependencies needed by other nonterminal Tasks and always retaining the Asset's own Entity. Scope removal changes neither Core retention nor historical references.
+
+### Asset ownership follow-up
+
+The user accepted both remaining ownership directions from the follow-up architecture report. These are planning decisions, not implemented modules or changes to the accepted reporting and deletion behavior.
+
+| Topic | Accepted direction | Authoritative detail |
+| --- | --- | --- |
+| Asset report acceptance | Entities owns shared report acceptance state and commit coordination; Identity and access and Tasks retain their domain decisions | [Acceptance ownership](architecture/system-design.md#shared-asset-report-acceptance) |
+| Asset deletion | Entities keeps deletion admission, serialization and commit coordination behind its existing interface, collaborating with Tasks, Identity and access, and Synchronization | [Deletion coordination](architecture/system-design.md#asset-deletion-coordination) |
+
+Start with report acceptance when implementing reporting. Define the narrower deletion workflow when implementing deletion. Package layout, private interface shapes and concurrency mechanisms remain engineering work; neither direction adds a general framework or a public operation.

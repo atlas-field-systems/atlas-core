@@ -65,6 +65,8 @@ Core derives communication state from the Asset or transport integration's repor
 
 ### Heartbeat and freshness
 
+Entities owns [shared Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance), its private state and commit coordination across reporting paths, alongside contact and reported values.
+
 Heartbeat is required on every Asset and begins with `last_seen: null`. Registration creates the record and is followed by check-in. Every accepted fresh Asset-originated update refreshes Core-recorded contact, including telemetry patches, status updates, and check-ins. A separate heartbeat packet is not required while other reports are arriving.
 
 The Asset authors its reported Entity data; interfaces send Tasks rather than edit the Asset directly. Core verifies Asset identity across component, check-in, status and Task-reporting paths, following [report authority](architecture/system-design.md#identity-and-access). Core maintains derived fields, but its own changes never refresh heartbeat. Clients cannot supply Core's contact timestamp. Fresh Asset-originated Task acknowledgements, starts, progress, outcomes and queue adoption/conflict reports also refresh contact. Interface-originated Task creation or cancellation does not.
