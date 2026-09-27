@@ -55,7 +55,7 @@ Evidence: [feed consumption contract](https://github.com/the-Drunken-coder/Atlas
 
 ### 3. Deliver and execute a Task
 
-Core accepts a Command from the Protocol catalog and checks it against the Asset's registered manifest. The Task has one immutable Asset assignment. Core coordinates delivery and lifecycle; the Asset executes the work. Runtime registration, readiness, and generation fencing distinguish the current process from a replaced process. In that source implementation, a check-in reports observed state and does not deliver Tasks. The successor supersedes that split: Asset check-in reconciles reported outcomes with current Tasks, cancellations and new instructions while Core remains running.
+Core accepts a Command from the Protocol catalog and checks it against the Asset's registered manifest. The Task has one immutable Asset assignment. Core coordinates delivery and lifecycle; the Asset executes the work. Runtime registration, readiness, and generation fencing distinguish the current process from a replaced process. In that source implementation, a check-in reports observed state and does not deliver Tasks. The successor keeps check-in as an Entity report; [reconnect reconciliation](../../adr/0007-reconcile-asset-tasks-after-disconnection.md) combines it with catching up on current Tasks, cancellations and new instructions and reporting outcomes while Core remains running.
 
 There is an important limit to the old system as a specification. The production Command catalog at this SHA is `[]`, and its authoring directory contains only a README. Task tests use fixture Commands. This is an intentional documented state, not a newly reproduced defect. It proves substantial machinery exists, but not that its policy fits the first real Asset.
 
