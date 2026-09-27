@@ -26,7 +26,7 @@ The initial operations and behaviors below are approved; the names describe beha
 | Invoke Plugin Operation | Submit a declared capability with stable Dataset-scoped identity; retries retrieve the same attempt | `POST /plugins/{plugin_id}/operations` |
 | Inspect/cancel Plugin Operation | Query recorded progress/outcome or request cancellation; caller disconnect does not stop accepted work | Plugin Operation read/list/cancel endpoints; direct API access outside the operational picture |
 
-Check-in, component and status updates, Task lifecycle reports from the assigned Asset and queue adoption reports are Asset-originated; software acting as an Asset submits them through the [Asset client](#asset-client) rather than calling their routes separately. Tasking clients still use the route-level Task status helpers, for example to request cancellation.
+Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset and queue adoption reports are Asset-originated; software acting as an Asset submits them through the [Asset client](#asset-client) rather than calling their routes separately. Tasking clients still use the route-level Task status helpers, for example to request cancellation.
 
 The SDK exposes typed methods and documentation for these operations. No machine-readable SDK-operation discovery function is planned without a concrete consumer. Local lookup of the Protocol Command Catalog remains a separate agreed SDK function. Further SDK coverage can follow the approved endpoints without inventing additional API families.
 
@@ -54,7 +54,9 @@ A retry after an allowed Object deletion returns an explicit deleted-result erro
 
 ## Asset client
 
-Accepted on 26 September 2026. The Asset client is the SDK module for software acting as an Asset. It submits every Asset-originated report and reads the Asset's assigned work, and it owns what each Asset runtime would otherwise reimplement:
+Accepted on 26 September 2026. The Asset client is the SDK module for software acting as an Asset. It registers the Asset, submits every Asset-originated report and reads the Asset's assigned work, and it owns what each Asset runtime would otherwise reimplement:
+
+- Registration under deployment-supplied enrollment authorization, with the stable Asset ID and [registration retry identity](#registration-retry-identity), before a normal Asset credential exists.
 
 - Report identity and ordering, and the Core-issued process generation, matching [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) in Core.
 - Pause/Resume report correlation and queue revision adoption under [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md).

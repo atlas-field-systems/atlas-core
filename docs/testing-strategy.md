@@ -56,9 +56,10 @@ The [second-review ownership choices](planning-reconciliation.md#module-ownershi
 
 - Asset report acceptance: drive fresh, late, duplicate and rejected outcomes through every reporting route, including obsolete process generations and operator attempts to submit Asset-reported components.
 - Task transitions: run state-model sequences, including Pause/Resume ordering and results arriving in both orders, through the pure transition module without SQLite. Integration scenarios still cover the edges.
-- Write commits and retry identity: obsolete-Dataset rejection at the commit, and first, replay, conflict and ended claims for every retry kind under concurrent identical requests.
-- Dataset opening: crash each module's state, then open retained; interrupt Reset at each step and verify the next Start completes it; import the local activity journal twice without duplicate records.
-- Asset client: reconnect reconciliation and recovery from supplied execution evidence against real Core, with the simulated Asset built on the Asset client.
+- Write commits and retry identity: obsolete-Dataset rejection at the commit; first, replay and conflict claims for every retry kind under concurrent identical requests; and ended claims for the kinds whose results can later be deleted or revoked (registration after Asset deletion, upload after allowed Object deletion, and API-key creation after revocation).
+- Dataset opening: crash each module's state, then open retained; interrupt Reset at each step, including partway through old-content removal, and verify the next Start completes it without leaving content from any earlier Dataset; import the local activity journal twice without duplicate records, and import first-time setup actions into the first Dataset.
+- Asset client: registration retries, reconnect reconciliation and recovery from supplied execution evidence against real Core, with the simulated Asset built on the Asset client.
+- Required-result holds: upload before declaration and declaration before upload both complete the Task in the same commit that makes the last required result available.
 
 Inject dropped requests, lost successful responses, reconnects, duplication, reordering, latency and bandwidth limits at appropriate transport boundaries. Use deterministic barriers and observable readiness rather than arbitrary sleeps. Include targeted crashes between accepted database writes and delivery to verify recovery behavior. Keep test fixtures isolated and resettable.
 
