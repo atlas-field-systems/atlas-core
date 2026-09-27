@@ -60,6 +60,10 @@ An optional, editable Entity name, unique across Entity types ignoring case. Rel
 **Asset status**:
 An Asset's reported operational condition. It does not establish a Task outcome or prove current contact.
 
+**Asset report acceptance**:
+Core's decision to record an authenticated Asset report and its valid effects, distinguishing report identity, ordering of reported facts and evidence of fresh contact. Accepting a historical outcome does not establish current contact.
+_Avoid_: Task acceptance, proof of execution, heartbeat alone
+
 **Asset**:
 An Entity representing a taskable or reporting system participating in Atlas.
 _Avoid_: Plugin, device record

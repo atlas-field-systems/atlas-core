@@ -78,6 +78,12 @@ An allowed Asset deletion also decommissions its authenticated access. Core atom
 
 At revocation commit, stop authorizing new reads, writes and feed delivery for those credentials and terminate their live feed connections under the [revocation rule](#credential-revocation). A queued event cannot bypass revocation. Previously transmitted data cannot be recalled. Retain revoked credential state across Restart and ordinary Reset; Reset does not reactivate the removed device. Registration retries cannot resurrect its deleted identity or revive revoked credentials. A deliberate new enrollment must satisfy the current enrollment policy and use a permitted new identity. Keep historical Task, Object and movement associations under the existing retention rules. No separate decommission endpoint is required.
 
+#### Asset deletion coordination
+
+Keep Asset deletion coordination inside the Entities module, behind its existing deletion interface. Entities owns the workflow's admission, serialization and commit coordination; the transport adapter does not assemble separate deletion, credential and Task operations. Tasks supplies the nonterminal-work guard, Identity and access owns credential revocation, and Synchronization owns committed-change delivery and connection handling. Each collaborator retains its domain rules and private storage access.
+
+Coordinate the deletion transaction with the competing assignment, registration, provisioning and reporting paths described above. Use the credential owner's shared revocation behavior to enforce the delivery cut-off when revocation commits; closing a connection later cannot permit buffered events to bypass it. A rejected deletion leaves the Entity and credentials unchanged. Keep this workflow within Entities rather than adding a general transaction coordinator or a new public operation. Exact internal interfaces and serialization mechanics remain implementation work.
+
 ## Bandwidth and authenticated reporting
 
 Design for normal Internet connectivity at Core and constrained links toward Assets. SDK ownership of the client pipeline is intended to permit later transport optimization without changing the meaning of Task, Entity or Object operations. Prefer partial component updates, the Asset hybrid scope, stable retry identities and bounded recovery over repeated full snapshots. Filter before transmission. Do not require the full command catalog, identity metadata or an enrollment exchange on each telemetry update.
@@ -117,6 +123,8 @@ Registration/fencing machinery from Modernization is not a required subsystem. R
 Accepted on 26 September 2026: Entities owns shared Asset report acceptance, including report freshness, duplicate handling, ordering facts and contact updates. Check-in, Entity updates, Task lifecycle reports and queue reports use that implementation through ordinary interfaces. Identity and access verifies the authenticated principal; Tasks retains assigned-Asset checks and Task transition validation.
 
 Tasks collaborates with Entities in the same transaction so report acceptance facts, affected Task state, Entity contact and their change records commit together. Each module keeps its private data access. This gives shared acceptance rules locality without introducing a separate top-level report-acceptance module. It does not combine separately arriving Asset and Task reports or let one report imply the other.
+
+Entities owns the private accepted-report identities and ordering state and coordinates persistence with each report's valid effects. Transport adapters translate reports and results rather than reconstructing acceptance and commit coordination. Keep report deduplication, ordering of affected state and proof of fresh contact distinct: later telemetry must not discard an unrecorded Task outcome solely because the outcome has an earlier sequence, and accepting historical work must not refresh contact. Retain acceptance state across Restart and clear it on Reset under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md).
 
 The [reporting contract](../asset-status.md#heartbeat-and-freshness) and [Task reconciliation decision](../adr/0007-reconcile-asset-tasks-after-disconnection.md) retain their behavior. Exact report identities, freshness windows, ordering scope and interface shapes remain engineering work.
 
