@@ -138,14 +138,15 @@ Entities owns the private accepted-report identities and ordering state and coor
 
 The [reporting contract](../asset-status.md#heartbeat-and-freshness) and [Task reconciliation decision](../adr/0007-reconcile-asset-tasks-after-disconnection.md) retain their behavior. Exact report identities, freshness windows, ordering scope and interface shapes remain engineering work.
 
-Refined in the second review on 26 September 2026: every reporting path hands shared acceptance the authenticated principal and report before applying anything, and it returns one outcome:
+Refined in the second review on 26 September 2026: every reporting path hands shared acceptance the authenticated principal and report before applying anything. It returns two independent answers. The disposition decides what to apply:
 
-| Outcome | Meaning | Effect |
+| Disposition | Meaning | Effect |
 | --- | --- | --- |
-| Fresh | The bound Asset's current process sent a new, newest report | Apply it, refresh contact and capture supplied movement samples |
-| Late | A new report from that process, but newer reports have already been accepted | Apply only facts that cannot regress, such as Task outcomes and movement samples with their observation time; do not refresh contact or overwrite newer component values |
+| Accepted | A new report from the bound Asset's current process | Apply each reported fact that does not move its affected state backwards, judged per affected state: Task outcomes, component values and movement samples with their observation time. A newer recorded value is never overwritten |
 | Duplicate | A report already accepted | No new effect; return current recorded state |
 | Rejected | Wrong principal, obsolete process, or not an Asset report | No effect; explicit rejection |
+
+Separately, contact evidence says whether an accepted report proves the Asset is reachable now: the current process generated it within its freshness window. Only then does acceptance refresh contact. Position in the report sequence never decides contact, so a previously unrecorded historical outcome delivered as the newest report after reconnection is recorded without making a disconnected Asset appear recently reachable.
 
 It also owns the check that the authenticated principal is bound to the reporting Asset (Tasks still checks Task assignment), the Core-issued process generation and authority transfer from [Asset recovery](../adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart), report identities and ordering boundaries, contact and communications derivation, component no-regression and movement-sample capture. Entities and Tasks apply an Asset-reported effect only when given the accepted-report value it returns, so a new reporting route cannot skip authorship or freshness. The acceptance runs inside the same [write commit](#write-commits) as the applied effect.
 
@@ -176,7 +177,7 @@ Accepted on 26 September 2026. Core keeps one SQLite database. Its tables are gr
 Every write goes through shared commit code with two entry points:
 
 - A Dataset commit takes the Dataset the request targets and rejects an obsolete one before any module logic runs. Inside it, a module runs [Asset report acceptance](#shared-asset-report-acceptance) and [retry identity](#retry-identity) claims where relevant, applies its mutation and returns its public change records and activity records; the commit appends both in order with the mutation. Registration and Asset deletion write their installation facts inside this same transaction.
-- An installation commit serves writes that belong to no Dataset, such as API-key creation and credential revocation. It has no change log entry and records activity when a Dataset exists.
+- An installation commit serves writes whose records belong to no Dataset, such as API-key creation and credential revocation. A public installation write still carries the caller's Dataset and the commit rejects an obsolete one, as the [API-key retry contract](#api-key-creation-retries) requires, so a request delayed across Reset cannot create or revoke a retained credential. Local management writes made through the CLI or TUI are not public requests and carry no client Dataset. The commit has no change log entry and records activity when a Dataset exists.
 
 Both acquire SQLite's write lock at the start of the transaction, which serializes concurrent retries of the same identity. The commit code enforces the [Dataset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary), the change-record obligation and the activity obligation once; owning modules still supply the meaning of every record, and the commit code never inspects their private tables. This is the concrete shared transaction facility allowed above, not a module framework or event bus under [ADR-0014](../adr/0014-build-dedicated-atlas-systems.md). Wire placement of the Dataset identity remains implementation design.
 
@@ -260,7 +261,7 @@ Use a pinned toolchain and deterministic regeneration. Independently authored wi
 | [Movement history](#movement-history) | Sparse accepted-report capture, retry deduplication, independent historical reads and retention until Reset |
 | [Change publication](#change-publication), [synchronization gaps](#detectable-synchronization-gaps) and [activity history](#activity-history) | Consistent committed changes and attributed actions; slow consumers detect gaps and rebuild a current picture |
 | [Operational protections](#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
-| [Asset report acceptance](#shared-asset-report-acceptance) and [Task transitions](#task-transitions) | Fresh, late, duplicate and rejected outcomes through every reporting path; state-model sequences through the pure transition module |
+| [Asset report acceptance](#shared-asset-report-acceptance) and [Task transitions](#task-transitions) | Accepted, duplicate and rejected dispositions and independent contact evidence through every reporting path; state-model sequences through the pure transition module |
 | [Write commits](#write-commits), [retry identity](#retry-identity) and [Dataset opening](#opening-a-dataset) | Obsolete-Dataset rejection at the commit; first/replay/conflict claims for every retry kind and ended claims for registration, upload and API-key creation; crash-then-open recovery per module, interrupted Reset completion and activity journal re-import |
 
 The [selected stack](../adr/0016-use-go-sqlite-and-openapi-tooling.md) must also pass a representative generation check without output patches, and [Docker deployment](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) must preserve the lifecycle guarantees across container changes.

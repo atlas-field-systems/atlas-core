@@ -109,7 +109,7 @@ A second architecture review looked for rules that every caller had to repeat. T
 
 | Topic | Accepted direction | Authoritative detail |
 | --- | --- | --- |
-| Asset reports | Refines shared acceptance in Entities: it decides fresh, late, duplicate or rejected for every Asset-originated report and owns process generation; Entities and Tasks apply effects only from its accepted value | [Shared acceptance](architecture/system-design.md#shared-asset-report-acceptance) |
+| Asset reports | Refines shared acceptance in Entities: it decides accepted, duplicate or rejected for every Asset-originated report, separately decides whether the report is fresh contact evidence, and owns process generation; Entities and Tasks apply effects only from its accepted value | [Shared acceptance](architecture/system-design.md#shared-asset-report-acceptance) |
 | Write commits | One SQLite database grouped by Dataset or installation lifetime; shared commit code rejects obsolete Datasets and appends module-supplied change and activity records | [Write commits](architecture/system-design.md#write-commits), [storage](adr/0017-deploy-core-and-plugins-as-docker-containers.md#storage-and-scope) |
 | Task transitions | One pure transition module in Tasks decides every lifecycle transition; queue revisions stay separate | [Task transitions](architecture/system-design.md#task-transitions) |
 | Asset side of the SDK | One Asset client owns all Asset-originated traffic, report identity, process generation, Pause/Resume correlation, queue adoption and reconnect reconciliation | [Asset client](sdk-operations.md#asset-client) |
