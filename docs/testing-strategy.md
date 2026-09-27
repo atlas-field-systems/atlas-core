@@ -1,4 +1,14 @@
-# SDK and Core integration testing
+# Testing strategy
+
+## End-to-end workflows first
+
+Accepted on 27 September 2026. Default to end-to-end tests of complete workflows through supported interfaces, using the real components involved. These tests are the primary evidence that a feature works, including relevant failure and recovery paths. Add focused integration or unit tests only when they provide useful coverage that those workflows cannot exercise effectively, and explain that benefit. Do not require a unit test for every function or duplicate workflow assertions at every layer.
+
+For Atlas Core, end-to-end coverage includes SDK-to-Core workflows and local management workflows, with real storage and relevant Plugin containers. Simulated Assets provide controlled execution and fault inputs for the Core contract milestone. Browser automation and physical hardware are not prerequisites for that milestone; real Asset and radio claims require the later evidence described below.
+
+Start feature coverage with a complete workflow and its observable outcome, then extend it for relevant failures and retries. Operation-by-operation parity checks support that coverage but cannot alone prove that the composed workflow succeeds. The [MVP integration checks](architecture/system-design.md#mvp-integration-checks) give the initial workflow examples.
+
+## SDK and Core integration requirements
 
 Accepted on 22 September 2026. Atlas requires extensive integration testing between the real SDK and Core. External systems are expected to integrate through the SDK; demonstrating its behavioral parity with Core makes those external SDK tests useful evidence about Core integration. Cover the contracts thoroughly with independent expected outcomes, rather than maximizing test count or testing generated code against another output of the same generator.
 
@@ -40,7 +50,7 @@ Separately prove extension independence with a Plugin built in its own repositor
 | Plugin Operations | Durable acceptance before dispatch, disconnected caller, duplicate submission, progress/cancellation/terminal races, failure with known outputs, Plugin loss/removal and Core interruption. Core Stop also stops managed Plugins; shutdown failure remains explicit. Exercise unexpected Core loss after the CLI/TUI caller exits with the selected detection/shutdown mechanism, and verify starting Plugins again does not rerun interrupted Operations. |
 | Resource limits | Defined overload responses, bounded memory/storage behavior, slow links and consumers, concurrent Assets, meaningful latency/throughput and transferred-byte measurements. |
 
-Use sequence-driven tests with an independently specified state model for lifecycle and recovery combinations. Preserve failing seeds and packet schedules so randomized failures can be reproduced. Focused unit tests support the suite, especially validation and transition rules; they do not replace real integration coverage.
+Use sequence-driven tests with an independently specified state model for lifecycle and recovery combinations. Preserve failing seeds and packet schedules so randomized failures can be reproduced. Apply the [workflow-first policy](#end-to-end-workflows-first) when choosing focused tests; the transition-module case below supplements the required real integration coverage.
 
 ## Fault and bandwidth testing
 
@@ -55,7 +65,7 @@ For the [Asset ownership follow-up](planning-reconciliation.md#asset-ownership-f
 The [second-review ownership choices](planning-reconciliation.md#module-ownership-decisions-second-review-26-september-2026) add these test surfaces, again reusing the scenarios above:
 
 - Asset report acceptance: drive accepted, duplicate and rejected dispositions through every reporting route, and verify that a previously unrecorded historical outcome sent as the newest report after reconnection is recorded without refreshing contact, including obsolete process generations and operator attempts to submit Asset-reported components.
-- Task transitions: run state-model sequences, including delayed Pause/Resume reports against newer applied control intent and results arriving in both orders, through the pure transition module without SQLite. Integration scenarios still cover the edges.
+- Task transitions: run state-model sequences, including delayed Pause/Resume reports against newer applied control intent and results arriving in both orders, through the pure transition module without SQLite. This focused suite explores combinations that are costly to enumerate through complete workflows. It proves transition decisions only; the required workflows still exercise persistence, delivery, retries and recovery through real Core and SDK interfaces.
 - Write commits and retry identity: obsolete-Dataset rejection at the commit, including API-key creation and credential revocation requests delayed across Reset; first and replay claims for every retry kind under concurrent identical requests; conflict claims when the same identity is reused with different original facts; and ended claims for the kinds whose results can later be deleted or revoked (registration after Asset deletion, upload after allowed Object deletion, and API-key creation after revocation).
 - Dataset opening: crash each module's state, then open retained; interrupt Reset at each step, including partway through old-content removal and after Core serves but before Plugins start, and verify the next Start completes it without leaving content from any earlier Dataset or clearing post-Reset data; import the local activity journal twice without duplicate records, import first-time setup actions into the first Dataset, and crash after a Reset is established without importing pre-Reset entries.
 - Asset client: registration retries across an Asset process restart using the retained identity, required-result uploads in both arrival orders, reconnect reconciliation and recovery from supplied execution evidence against real Core, with the simulated Asset built on the Asset client.
@@ -77,4 +87,4 @@ Do not require raw HTTP JSON over a future constrained radio link. Compact repre
 
 As features are implemented, their contract scenarios ship with them. Require the deterministic SDK–Core integration suite and compatibility checks for relevant changes; group tests for useful feedback without skipping failures. Run broader randomized, sustained-load and impairment matrices on scheduled runs and before releases. Record exactly which suites and version combinations ran; unrun coverage is not a passing result.
 
-A feature is complete only when its applicable real integration scenarios pass, including relevant failure and retry paths. Preserve reproducible fixtures, failing seeds, versions and useful traces as test artifacts without credentials. Add regressions for demonstrated contract failures, not duplicate smoke tests or snapshots that merely mirror implementation. Exact CI jobs, tooling and numeric workload budgets follow the implementation.
+A feature is complete only when its applicable end-to-end workflows and required real integration scenarios pass, including relevant failure and retry paths. Reviewers check the observable outcomes those tests establish and the additional coverage any focused tests provide. Preserve reproducible fixtures, failing seeds, versions and useful traces as test artifacts without credentials. Add regressions for demonstrated contract failures, not duplicate smoke tests or snapshots that merely mirror implementation. Exact CI jobs, tooling and numeric workload budgets follow the implementation.
