@@ -26,7 +26,7 @@ The initial operations and behaviors below are approved; the names describe beha
 | Invoke Plugin Operation | Submit a declared capability with stable Dataset-scoped identity; retries retrieve the same attempt | `POST /plugins/{plugin_id}/operations` |
 | Inspect/cancel Plugin Operation | Query recorded progress/outcome or request cancellation; caller disconnect does not stop accepted work | Plugin Operation read/list/cancel endpoints; direct API access outside the operational picture |
 
-Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset and queue adoption reports are Asset-originated; software acting as an Asset submits them through the [Asset client](#asset-client) rather than calling their routes separately. Tasking clients still use the route-level Task status helpers, for example to request cancellation.
+Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset, required-result uploads and queue adoption reports are Asset-originated; software acting as an Asset submits them through the [Asset client](#asset-client) rather than calling their routes separately. Tasking clients still use the route-level Task status helpers, for example to request cancellation.
 
 The SDK exposes typed methods and documentation for these operations. No machine-readable SDK-operation discovery function is planned without a concrete consumer. Local lookup of the Protocol Command Catalog remains a separate agreed SDK function. Further SDK coverage can follow the approved endpoints without inventing additional API families.
 
@@ -56,14 +56,14 @@ A retry after an allowed Object deletion returns an explicit deleted-result erro
 
 Accepted on 26 September 2026. The Asset client is the SDK module for software acting as an Asset. It registers the Asset, submits every Asset-originated report and reads the Asset's assigned work, and it owns what each Asset runtime would otherwise reimplement:
 
-- Registration under deployment-supplied enrollment authorization, with the stable Asset ID and [registration retry identity](#registration-retry-identity), before a normal Asset credential exists.
-
+- Registration under deployment-supplied enrollment authorization, with the stable Asset ID and [registration retry identity](#registration-retry-identity), before a normal Asset credential exists. The Asset client prepares the registration identity and hands it to the Asset OS or deployment layer to retain before submission, so a lost response followed by an Asset process restart can still retry with it. Recovery still requires the enrollment proof.
+- Required-result uploads: the Asset client preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the existing upload operation, retaining its request identity. No new route is added.
 - Report identity and ordering, and the Core-issued process generation, matching [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) in Core.
 - Pause/Resume report correlation and queue revision adoption under [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md).
 - Lost-response retries with stable identities, and discarding obsolete work and submissions when the Dataset changes.
 - Reconnect reconciliation: check in, catch up on current Tasks, cancellations and queue revisions, then report outcomes of work performed while away.
 
-After an Asset process restart, the Asset OS passes its onboard execution evidence to the Asset client's reconciliation. The Asset client reports the outcomes that evidence establishes, obtains a new process generation through authenticated reconciliation and withholds uncertain work from the Asset's work stream until explicit recovery. It never schedules, starts or reruns work; the Asset OS still owns execution. It keeps no disk persistence. HTTP is its initial transport adapter; a future gateway can supply another without changing its interface. Exact method names remain open.
+After an Asset process restart, the Asset OS passes its onboard execution evidence to the Asset client's reconciliation. The Asset client reports the outcomes that evidence establishes, obtains a new process generation through authenticated reconciliation and withholds uncertain work from the Asset's work stream until explicit recovery. It never schedules, starts or reruns work; the Asset OS still owns execution. It keeps no disk persistence; the Asset OS or deployment layer retains any identity that must survive a process restart. HTTP is its initial transport adapter; a future gateway can supply another without changing its interface. Exact method names remain open.
 
 ## Task status updates
 
