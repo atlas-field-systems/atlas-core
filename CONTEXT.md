@@ -45,7 +45,7 @@ A local CLI/TUI action that stops Core and its managed Plugins, removes all Atla
 _Avoid_: ordinary Reset, software uninstall
 
 **Activity history**:
-The record of who issued or cancelled Atlas Tasks and who changed Plugins, credentials or configuration, retained until Reset.
+The record of who issued or cancelled Atlas Tasks, retired Assets or changed Plugins, credentials or configuration, retained until Reset.
 _Avoid_: diagnostic logs, movement history, complete telemetry history
 
 ## Resources and tasking
