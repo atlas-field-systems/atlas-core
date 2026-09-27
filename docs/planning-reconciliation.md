@@ -28,7 +28,7 @@ On 22 September 2026 the user accepted the lower-complexity options after review
 
 - Uploads restart from the beginning after interruption. Resumability is deferred. Safe staging, cleanup, ready-only publication and recognition of a completed retry remain required. [ADR-0009](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries) supersedes the earlier same-run resume promise, including partial-transfer retention.
 - Movement history is a small Core sample store with one paginated read, explicit report capture and retry deduplication, retained until Reset. Backfill, historical editing, reduced trails and historical-state reconstruction are deferred. [Movement contract](architecture/system-design.md#movement-history).
-- Activity history is a small structured log for Task issuance/cancellation and Plugin, credential and configuration changes, including local management, with honest authenticated attribution, no secrets and retention until Reset. [Activity contract](architecture/system-design.md#activity-history).
+- Activity history is a small structured log for Task issuance/cancellation, Asset retirement and Plugin, credential and configuration changes, including local management, with honest authenticated attribution, no secrets and retention until Reset. [Activity contract](architecture/system-design.md#activity-history).
 
 These historical reads use explicit SDK API methods outside the synchronized picture. They do not change the source-selection rules for live reads, local queries or feed subscriptions. The component catalog and endpoint map now include both stores and their read routes.
 
