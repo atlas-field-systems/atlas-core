@@ -261,7 +261,7 @@ Use a pinned toolchain and deterministic regeneration. Independently authored wi
 | [Change publication](#change-publication), [synchronization gaps](#detectable-synchronization-gaps) and [activity history](#activity-history) | Consistent committed changes and attributed actions; slow consumers detect gaps and rebuild a current picture |
 | [Operational protections](#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
 | [Asset report acceptance](#shared-asset-report-acceptance) and [Task transitions](#task-transitions) | Fresh, late, duplicate and rejected outcomes through every reporting path; state-model sequences through the pure transition module |
-| [Write commits](#write-commits), [retry identity](#retry-identity) and [Dataset opening](#opening-a-dataset) | Obsolete-Dataset rejection at the commit; first/replay/conflict/ended claims for every retry kind; crash-then-open recovery per module, interrupted Reset completion and activity journal re-import |
+| [Write commits](#write-commits), [retry identity](#retry-identity) and [Dataset opening](#opening-a-dataset) | Obsolete-Dataset rejection at the commit; first/replay/conflict claims for every retry kind and ended claims for registration, upload and API-key creation; crash-then-open recovery per module, interrupted Reset completion and activity journal re-import |
 
 The [selected stack](../adr/0016-use-go-sqlite-and-openapi-tooling.md) must also pass a representative generation check without output patches, and [Docker deployment](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) must preserve the lifecycle guarantees across container changes.
 
