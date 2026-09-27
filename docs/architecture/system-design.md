@@ -191,7 +191,7 @@ Both acquire SQLite's write lock at the start of the transaction, which serializ
 
 ### Retry identity
 
-Accepted on 26 September 2026. One retry identity module serves every lost-response retry: Task creation, Asset registration, Object upload, Plugin Operation submission, queue edit, cancellation request and API-key creation. Inside the caller's commit, a claim supplies the kind, scope (Dataset or installation), identity and canonical original request facts. It returns one of:
+Accepted on 26 September 2026. One retry identity module serves every lost-response retry: Task creation, Asset registration, Asset retirement, Object upload, Plugin Operation submission, queue edit, cancellation request and API-key creation. Inside the caller's commit, a claim supplies the kind, scope (Dataset or installation), identity and canonical original request facts. It returns one of:
 
 - First: no earlier claim; the caller performs the effect and records its result against the identity.
 - Replay: an identical earlier claim; return its recorded result without repeating the effect.
@@ -199,6 +199,8 @@ Accepted on 26 September 2026. One retry identity module serves every lost-respo
 - Ended: the recorded result was later deleted or revoked; return the explicit deleted-result or revoked outcome without resurrection.
 
 Comparison always uses the original facts, never editable current state. Dataset-scoped identities are cleared by Reset; installation-scoped identities survive until Hard Reset. Each kind keeps its own facts, authorization checks and retention rules in its owning contract; the module shares only the mechanism, not the single UUID/hash replacement that the [planning reconciliation](../planning-reconciliation.md) rejected. Asset report identities stay in report acceptance because they also carry ordering and freshness. Movement-sample and activity deduplication follow the identity of the action that produced them.
+
+Asset retirement uses its own Dataset-scoped claim kind inside the Entities retirement commit. Its canonical original facts include the target Asset ID and any submitted retirement parameters; compare them with the original request, not current Entity or credential state. First records the retired result with the atomic effects and activity; an authorized Replay returns that result without repeating them. Reusing the identity for another Asset or changed parameters is Conflict. If ordinary deletion later removes the retired Entity, Ended returns a deleted-result outcome without recreating it. Revoking Asset credentials does not itself end the operator's retirement claim. Reset clears the claim and rejects obsolete-Dataset retries, while the installation-scoped retirement denial remains under [ADR-0019](../adr/0019-retire-assets-without-inventing-task-outcomes.md). Exact parameter fields and encoding remain schema work.
 
 ## Change publication
 
@@ -271,7 +273,7 @@ Use a pinned toolchain and deterministic regeneration. Independently authored wi
 | [Change publication](#change-publication), [synchronization gaps](#detectable-synchronization-gaps) and [activity history](#activity-history) | Consistent committed changes and attributed actions; slow consumers detect gaps and rebuild a current picture |
 | [Operational protections](#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
 | [Asset report acceptance](#shared-asset-report-acceptance) and [Task transitions](#task-transitions) | Accepted, duplicate and rejected dispositions and independent contact evidence through every reporting path; state-model sequences through the pure transition module |
-| [Write commits](#write-commits), [retry identity](#retry-identity) and [Dataset opening](#opening-a-dataset) | Obsolete-Dataset rejection at the commit; first/replay/conflict claims for every retry kind and ended claims for registration, upload and API-key creation; crash-then-open recovery per module, interrupted Reset completion and activity journal re-import |
+| [Write commits](#write-commits), [retry identity](#retry-identity) and [Dataset opening](#opening-a-dataset) | Obsolete-Dataset rejection at the commit; first/replay/conflict claims for every retry kind and ended claims for registration, retirement, upload and API-key creation; crash-then-open recovery per module, interrupted Reset completion and activity journal re-import |
 
 The [selected stack](../adr/0016-use-go-sqlite-and-openapi-tooling.md) must also pass a representative generation check without output patches, and [Docker deployment](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) must preserve the lifecycle guarantees across container changes.
 

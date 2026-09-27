@@ -68,6 +68,10 @@ _Avoid_: Task acceptance, proof of execution, heartbeat alone
 An Entity representing a taskable or reporting system participating in Atlas.
 _Avoid_: Plugin, device record
 
+**Asset retirement**:
+The administrative withdrawal of an Asset from participation while retaining its Entity and execution evidence. A retired Asset cannot receive new Tasks or regain access through enrollment; retirement does not establish that physical execution stopped.
+_Avoid_: Entity deletion, Asset status, Task cancellation, physical stop
+
 **Asset Host**:
 The computer hosting the Asset-side software for one Asset; it does not mean the Atlas Core server. Attached controllers, sensors, and radios are its peripherals.
 _Avoid_: Asset cluster
