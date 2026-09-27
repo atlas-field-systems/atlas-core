@@ -152,7 +152,7 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | Plugin Operation attempts | Separate typed SQLite rows with unique Dataset/submission identity and validated input/output JSON | Durable acceptance, retry lookup and retained outcomes without a workflow engine |
 | Synchronization changes and retention boundary | Private SQLite log, ordered sequence and recoverable-boundary metadata | Atomic resource/change commits, deletion recovery and explicit cursor expiry |
 | Asset Task queue revisions | Typed per-Asset requested/confirmed revisions and ordered Task references | Concurrent edits and delayed confirmations cannot silently replace newer intent |
-| Dataset metadata | Private singleton SQLite record for Dataset ID and writing Core release | Preserve Reset/release boundaries; no metadata-only startup overwrite or silent migration |
+| Dataset metadata | Private singleton SQLite record for Dataset ID, writing Core release and the establishing Reset identity | Preserve Reset/release boundaries; let Start tell an established Reset directive from a pending one; no metadata-only startup overwrite or silent migration |
 | Task creation identities | Dataset/key uniqueness with canonical request facts and Task ID, committed with the Task | Lost-response retries and same-release Restart cannot duplicate an execution |
 | Task input/output | Protocol-validated JSON in SQLite | Shape depends on the Command |
 | Movement samples | Separate typed SQLite rows, indexed by Entity and time with report-identity uniqueness | Preserve sparse observed quantities; page stable history without expanding live Entity JSON |
