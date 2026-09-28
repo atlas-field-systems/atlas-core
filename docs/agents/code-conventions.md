@@ -1,5 +1,7 @@
 # Code conventions
 
+Treat every added line as a maintenance cost. Be especially critical of new code: before declaring work complete, inspect the final diff and challenge each new branch, helper, dependency, configuration option, fixture and test. Remove code left from experiments, debugging and exploratory testing. Keep an addition only when it serves accepted behavior, required validation or a concrete simplification of existing code. Reviewers should look for code that can be deleted or folded into an existing path without losing those guarantees.
+
 Implementers and reviewers assess every section against the affected behavior, including indirect effects outside the edited files. Check conventions separately from the requested behavior. For substantial changes, record a compact mapping from requirements to implementation and validation, with reasons for material exclusions. Cite the convention and concrete consequence when reporting a violation; distinguish defects from suggestions.
 
 These conventions govern code quality. The [system design](../architecture/system-design.md), [ADRs](../adr/) and accepted API and SDK plans govern behavior and ownership. Follow the [documentation guide](domain.md) when changing those decisions. This checkout is a design workspace; paths and reference implementations should be added only after the corresponding code exists.
