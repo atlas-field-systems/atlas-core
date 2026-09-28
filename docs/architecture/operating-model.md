@@ -59,6 +59,8 @@ Start, Stop and Restart preserve data and logs. Reset is the usual development f
 
 Plugins keep private operational work in [Atlas-managed working storage](../adr/0021-manage-plugin-operational-storage-through-reset.md). It survives ordinary Restart subject to the existing reconciliation rules and is cleared by Reset. Retained setup and installed reference data remain separate, so a fresh Dataset does not restore an old work queue or require reinstalling the Plugin's reference data.
 
+[Uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall) clears that Plugin's private work, saved setup, credentials, reference data and owned artifacts after stopping it, while published Atlas resources and recorded Operation outcomes retain their own lifetimes. Disable the Plugin to preserve its installation without running it. Reinstallation starts with an empty working directory and may require configuration and downloads again. Within the same Dataset, the [same authenticated publisher](../adr/0022-one-publisher-per-track.md#publisher-continuity) can continue its existing Tracks using fresh observations.
+
 ## Tasks across a disconnection
 
 An operator can cancel a scan of one area and issue another while an Asset is out of contact. During reconnect reconciliation, the Asset checks in, reports completed work and learns the current cancellations and Tasks. It may instead receive a return Task. The Asset OS chooses how to schedule, interrupt and execute its onboard work.
@@ -73,10 +75,20 @@ The operator tasks an Asset to scan an area. Its hardware determines the result:
 
 The operator separately invokes a Plugin Operation on that Object. The Plugin owns the algorithm and specialized result format. Processing does not hold the original scan Task open, and the accepted Operation continues if the operator closes or disconnects the Command Interface. A returning operator can obtain its result. Published detections enter the shared picture directly.
 
+[Tasks referencing a Geofeature follow changes to its geometry](../adr/0024-use-live-geofeature-geometry-in-tasks.md). Disconnected Assets may use their last received geometry within the Command's limits and adopt the latest on reconnect. Atlas distinguishes a saved edit from the Asset's confirmation that it applied the change. Once Core accepts that a scan has finished collecting data, later geometry edits require another scan; the existing Task still waits for its required uploads before Completed. Silent Tracks [retain last-known observations with their age](../adr/0022-one-publisher-per-track.md#observation-age). Each Command defines whether it needs current data or can use last-known observations.
+
 This example does not require every Plugin to produce a separate Object or establish general version history. Published Object content follows the [immutable-content rule](../adr/0009-expose-objects-only-when-ready.md); descriptive metadata can change. Plugins may also [initiate Asset Tasks](../adr/0004-core-owns-commands-and-assets-execute-tasks.md) through existing Commands. Area/building searches can be Operations; an aircraft-data integration can continuously publish Entities without becoming taskable.
 
 ## Details for module planning
 
-Open decisions include Asset progress/failure detail contracts, Plugin installation and invocation formats, provenance/correction of observations, shared-picture freshness and workload measurements. Settled boundaries are linked above; exact wire fields and mechanisms remain implementation work.
+The 28 September grilling round settled [stale descriptive edits](system-design.md#concurrent-descriptive-edits), [one publisher per Track](../adr/0022-one-publisher-per-track.md), [deletion protection for required Entity references](../adr/0023-protect-required-entity-references-during-tasks.md) and [Plugin-private work on uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
+
+The second round settles [same-publisher continuity and silent Tracks](../adr/0022-one-publisher-per-track.md#publisher-continuity), [live Geofeature geometry](../adr/0024-use-live-geofeature-geometry-in-tasks.md) and [Plugin setup removal on uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
+
+The third round settles [offline geometry and adoption evidence](../adr/0024-use-live-geofeature-geometry-in-tasks.md#disconnection-and-adoption), the [collection-finished boundary](../adr/0008-complete-scan-tasks-when-required-results-are-available.md#geometry-and-collection-finished-reports) and [Command-specific Track freshness](../adr/0022-one-publisher-per-track.md#track-data-used-by-commands).
+
+The fourth round permits [publisher corrections to current observations](../adr/0022-one-publisher-per-track.md#correcting-current-observations) while preserving observation age and recorded history, and [defers publisher transfers](../adr/0022-one-publisher-per-track.md#publisher-transfers). Replacement sources use separate Tracks, and existing Task references remain unchanged.
+
+The product decisions raised in these four rounds are settled. Asset progress/failure detail contracts, Command-specific freshness limits, workload measurements, exact wire fields and Plugin installation/invocation formats remain implementation work within the settled boundaries.
 
 Questions for the operator should concern consequential system-wide outcomes. Explain alternatives through the behavior the user would experience, then ask which behavior they prefer. Resolve technical implementation choices through engineering judgment rather than asking the operator to select technologies or mechanisms. Avoid asking the operator to design individual Plugins, Asset operating systems or Command Interface interactions while planning Core.

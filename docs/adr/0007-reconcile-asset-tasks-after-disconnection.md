@@ -41,6 +41,14 @@ Reading or caching an assigned Task does not acknowledge or start it. Queue chan
 
 Completed, Canceled and Failed are terminal. A repeated matching terminal report has no new effect; a conflicting report cannot change the recorded terminal outcome. Connection loss and Core Stop/Restart do not establish any Asset outcome. Automatic lost-Asset failure and an operator-forced terminal override are not part of this transition table.
 
+## Required Entity references
+
+Protocol-defined Commands identify typed Entity references, and Tasks owns which references are required for an accepted Task. Under [ADR-0023](0023-protect-required-entity-references-during-tasks.md), an unfinished Task protects its required Track and Geofeature references from deletion. The protection remains while the assigned Asset is disconnected or retired; neither condition supplies a Task outcome. A terminal Task releases that Entity-reference guard, while required-result Object holds remain protected until Reset under [ADR-0009](0009-expose-objects-only-when-ready.md).
+
+Entities coordinates the deletion and Task-admission race through the existing write-commit boundaries: a committed required reference blocks deletion, and a committed deletion rejects a new required reference. This is a local admission/deletion guarantee and does not restore per-Asset synchronization or introduce a general dependency system.
+
+[ADR-0024](0024-use-live-geofeature-geometry-in-tasks.md) makes referenced Geofeature geometry live for existing Tasks. Immutable Task input preserves the reference identity, not a frozen copy of its target's geometry. Disconnected Assets may use their last received geometry within existing Command limits and adopt the latest during reconciliation. Asset adoption reports establish what was applied without adding Core permission to execute. Edits do not create new Tasks, implicitly Resume work, clear cancellation intent or reopen terminal outcomes. A scan stops following geometry edits when Core accepts its valid collection-finished report under [ADR-0008](0008-complete-scan-tasks-when-required-results-are-available.md#geometry-and-collection-finished-reports), even if uploads remain pending.
+
 ## Status update API
 
 Use `PATCH /tasks/{task_id}/status` for lifecycle reports, progress-only updates, cancellation requests and confirmation. This replaces separate lifecycle action endpoints. Core validates the authenticated actor and transition-specific payload: tasking clients request cancellation; the assigned Asset supplies execution reports and cancellation confirmation. It is not a generic field-edit endpoint. Return the actual recorded Task when required Objects or cancellation outcome are still pending. Named SDK helpers may share this route. Wire fields and ordering/precondition details remain schema work.

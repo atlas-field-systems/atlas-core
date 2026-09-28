@@ -20,6 +20,8 @@ Retirement retains the Entity and its identity, Task assignments, histories, Obj
 
 Retirement itself never marks a Task completed, failed or cancelled, confirms a pending cancellation, resumes a queue or claims that physical execution stopped. Preserve terminal outcomes and unresolved execution facts under ADR-0007. An already-accepted completion report may still resolve under [ADR-0008](0008-complete-scan-tasks-when-required-results-are-available.md) when its required Objects arrive through an authorized upload; that is the existing evidence-based completion rule, not an outcome inferred from retirement. Retirement does not release Object holds.
 
+Retirement also does not release [required Entity-reference protection](0023-protect-required-entity-references-during-tasks.md). An unresolved Task can keep a required Track or Geofeature protected after its assigned Asset is retired or disconnected; only a terminal Task outcome releases that Entity guard. Required Object holds remain protected until Reset under [ADR-0009](0009-expose-objects-only-when-ready.md), independently of that terminal release.
+
 Keep ordinary Entity deletion and its nonterminal-Task guard unchanged. Retirement is the way to withdraw participation without deleting the execution context. This supersedes the earlier claim that Asset deletion alone suffices for decommissioning; it does not authorize force deletion or forced terminal outcomes. No installation Reset is needed to retire one Asset, and unrelated Assets continue operating.
 
 ## One workflow owner
@@ -58,6 +60,6 @@ Extend the real SDK–Core workflows under the [testing strategy](../testing-str
 | Conflicting and ended retries | Reusing a retirement identity with another target or changed original parameters conflicts; retry after allowed Entity deletion returns deleted-result without resurrection |
 | Fresh registration after Reset | Reject the retired Asset ID even with proof of the same principal, current enrollment authorization, a new Dataset and a new registration identity; create no Entity or credential |
 | Open feeds and SDK modes | Enforce the revocation cut-off; authorized observers receive the Entity change through the ordinary synchronization path; commit-first return does not mutate a local picture |
-| Results and Dataset boundaries | Existing required-result holds survive; valid pre-retirement completion evidence can resolve when results arrive; Reset rejects obsolete requests without reauthorizing the retired identity |
+| Results and Dataset boundaries | Existing required-result holds survive; required Track/Geofeature references remain protected while their Tasks are unfinished; valid pre-retirement completion evidence can resolve when results arrive; Reset rejects obsolete requests without reauthorizing the retired identity |
 
 These cases supplement rather than replace ordinary deletion tests. Do not demonstrate progress by weakening the deletion guard or by manufacturing a terminal Task state.

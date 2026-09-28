@@ -96,6 +96,10 @@ _Avoid_: check-in, replaying every historical instruction
 An Entity representing an observed subject, whether stationary or moving. A detected house is a Track.
 _Avoid_: Asset, stream item
 
+**Track publisher**:
+The single source responsible for a Track's observed data, whose identity is distinct from an individual Plugin installation. It is distinct from an operator editing descriptive fields and from any External sources it consults.
+_Avoid_: descriptive editor, Task assignee
+
 **Geofeature**:
 An Entity representing a defined spatial designation, such as a zone or rally point, with point, line, or polygon geometry.
 _Avoid_: Asset, Track
@@ -110,6 +114,10 @@ The Protocol-owned collection of Command definitions and schemas. Assets declare
 **Task**:
 One request to execute a Command on one assigned Asset, with a recorded lifecycle and outcome.
 _Avoid_: Command definition, mutable assignment
+
+**Collection finished**:
+The end of a scan's data gathering, reported by its Asset. Its required results may still be uploading.
+_Avoid_: Completed Task, Task lifecycle status
 
 **Task scheduling**:
 The selection of queued execution or immediate handling for a Task, within the Command and Asset's supported behavior.

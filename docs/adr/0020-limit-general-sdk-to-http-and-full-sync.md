@@ -22,6 +22,8 @@ The SDK no longer routes reads between an Asset subset and out-of-scope HTTP req
 
 This removes a synchronization mechanism, not Task meaning. Keep assigned-work reads, requested/confirmed queue state, cancellations, terminal-record retention, typed Command references and required-result protection. Full synchronization must still deliver coherent queue state and updates to referenced resources. A future radio integration must deliver current instructions and the changing data required by its Commands, with appropriate recovery; a one-time Task download is not sufficient for a Command that needs live Track updates. Its specialized delivery contract does not require a general partial replica in the SDK.
 
+[ADR-0024](0024-use-live-geofeature-geometry-in-tasks.md) also requires delivery of changing Geofeature geometry to existing Tasks. The full picture carries the committed Entity updates; the Asset integration delivers them to execution. This extends the concrete live-reference examples without restoring Core hybrid filtering.
+
 ## Superseded planning
 
 This supersedes the earlier three-mode plan, automatic Asset hybrid coverage and Task dependency publication used solely to maintain that coverage. The [SDK data-access plan](../sdk-data-access.md) owns the current two-mode behavior. Earlier hybrid decisions remain historical context in the [reconciliation record](../planning-reconciliation.md#sdk-and-gateway-decisions-28-september-2026).
