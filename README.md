@@ -12,6 +12,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Deep-module design and review criteria | [Structure and interfaces](docs/agents/code-conventions.md#structure-and-interfaces) |
 | Selected technology stack and generation tools | [Stack decision](docs/adr/0016-use-go-sqlite-and-openapi-tooling.md) |
 | Docker containers, Plugin separation and mounted storage | [Deployment decision](docs/adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
+| General SDK scope and radio gateway placement | [Two-mode SDK decision](docs/adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
 | Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
 | Accepted tradeoffs and their rationale | [ADRs](docs/adr/) |
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
@@ -27,7 +28,7 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | --- | --- |
 | Endpoint families and resource responsibilities | [API plan](docs/api-plan.md) |
 | Public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
-| HTTP, full synchronization and Asset hybrid modes | [SDK data access](docs/sdk-data-access.md) |
+| HTTP and full-synchronization modes | [SDK data access](docs/sdk-data-access.md) |
 | Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
 | Asset status, communications and heartbeat | [Asset status](docs/asset-status.md) |
 | Administrative retirement without invented execution outcomes | [Retirement decision](docs/adr/0019-retire-assets-without-inventing-task-outcomes.md) |

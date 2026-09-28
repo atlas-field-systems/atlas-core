@@ -4,6 +4,8 @@ Status: the API/architecture recommendations were accepted on 22 September 2026.
 
 The planning session and architecture merged in PR #1 originally disagreed. This record explains the resolutions; [the documentation guide](agents/domain.md) still assigns authority to the glossary, architecture and ADRs. The separate planning glossary has been consolidated into [CONTEXT.md](../CONTEXT.md).
 
+This is a dated decision history. The [28 September SDK decision](#sdk-and-gateway-decisions-28-september-2026) supersedes the Asset hybrid portions below. Other accepted behavior remains in force.
+
 ## Accepted resolutions
 
 | Topic | Resolution | Authoritative detail |
@@ -20,7 +22,7 @@ The planning session and architecture merged in PR #1 originally disagreed. This
 | Vocabulary | Tracks can be stationary or moving; Geofeatures are defined spatial designations with geometry. One canonical glossary | [CONTEXT.md](../CONTEXT.md) |
 | Reset | Every SDK mode checks Dataset identity; discard obsolete pictures, history, responses and pending submissions without replaying old writes into a new Dataset | [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary), [SDK boundary](sdk-data-access.md#dataset-reset-boundary) |
 | Scan completion | Require the assigned Asset's completion report and all its declared required ready Objects, in either arrival order | [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) |
-| Hybrid scope | Filter transmission to save bandwidth while retaining full-picture read permission. In-scope reads/feed stay local; out-of-scope reads use one-off HTTP requests | [SDK hybrid mode](sdk-data-access.md#asset-hybrid-mode) |
+| Hybrid scope, superseded 28 September | Originally selected transmission filtering with local in-scope reads and one-off HTTP outside scope. Now deferred with matching Core machinery | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
 
 ## Scope review after PR feedback
 
@@ -42,7 +44,7 @@ Accepted after the five follow-up review findings: cancellation intent is `cance
 
 The storage inventory now includes durable Operation attempts, bounded synchronization changes/deletion records and retention boundaries, plus authenticated principal kind and Asset binding. Asset enrollment remains automatic, and Plugins do not acquire a manual key-management workflow. [Catalog](data-components.md).
 
-Extensive real SDK–Core integration and behavioral parity tests are required, with reusable external-system scenarios, failure injection and measured bandwidth. Composed gateway/firmware tests supplement pairwise parity. [Testing strategy](testing-strategy.md). Low-bandwidth links shape partial updates, scoped synchronization and future transport design without selecting a radio encoding now. [Bandwidth contract](architecture/system-design.md#bandwidth-and-authenticated-reporting).
+Extensive real SDK–Core integration and behavioral parity tests are required, with reusable external-system scenarios, failure injection and measured bandwidth. Composed gateway/firmware tests supplement pairwise parity. [Testing strategy](testing-strategy.md). The later [gateway decision](adr/0020-limit-general-sdk-to-http-and-full-sync.md) places constrained transport between gateways and Assets and defers Core-scoped synchronization; useful partial reports and transport validation remain required without selecting a radio encoding now. [Bandwidth contract](architecture/system-design.md#bandwidth-and-authenticated-reporting).
 
 Immediate Commands and paused Asset/Task states are now accepted under the [Task contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling). Pause is an immediate Task that interrupts current queued work, puts the Asset into its own idle/holding behavior, and preserves the queued path. Independent immediate actions can overlap movement without changing the path. An immediate Resume Command continues the interrupted Task before the remaining queue; unsafe-to-resume work reports failure. Newer Pause/Resume intent wins; failed resumption leaves the Asset paused until a new explicit Resume. Command-specific validity and optional deadlines are checked by the Asset. Unexpected process restarts require reconciliation and holding uncertain work before execution. Exact schemas, authentication/enrollment proof, Task/queue report envelopes, whole-file upload retry verification and SDK method signatures remain implementation design work.
 
@@ -60,7 +62,7 @@ The user chooses observable behavior; engineering selects internal mechanisms th
 | Topic | Disposition | Authoritative detail |
 | --- | --- | --- |
 | Asset reporting authority | Establish private process/report authority before implementing recovery; exact proof and ordering remain engineering work | [Recovery](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart) |
-| Asset replica | Keep hybrid synchronization so a Task's live dependencies, such as a moving Track, update automatically through the link | [Hybrid mode](sdk-data-access.md#asset-hybrid-mode) |
+| Asset replica, superseded 28 September | Hybrid delivery is deferred. Commands may still require live resource updates; full sync and future radio integration must preserve their meaning | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
 | Write confirmation | Return Core's committed result without waiting for the local picture; Task acceptance does not establish Asset receipt or execution | [ADR-0018](adr/0018-confirm-writes-when-core-commits.md) |
 | Plugin lifetime | Plugins operate with Core and stop when it is spun down; local management mechanics remain engineering choices | [Runtime lifetime](adr/0015-separate-start-stop-restart-and-reset.md#core-and-plugin-runtime-lifetime) |
 | Scan results | Evaluate upload-first; either-order reporting and declaration-time protection remain accepted until a successor decision. Completed still requires usable results | [Evaluation boundary](adr/0008-complete-scan-tasks-when-required-results-are-available.md#upload-first-evaluation) |
@@ -85,12 +87,14 @@ The user selected host-side Docker control, file-first publication and synchroni
 
 In the follow-up review on 26 September 2026, the user accepted two further ownership decisions. These refine internal collaboration; detailed behavior and interface choices remain open where the linked contracts say so.
 
+The hybrid coverage decision and subset-retention choices in this section were superseded on 28 September by [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). Report acceptance, typed Command references and Core's Task retention remain required.
+
 | Topic | Accepted direction | Authoritative detail |
 | --- | --- | --- |
 | Asset report acceptance | Entities owns shared acceptance; Tasks collaborates in the same transaction and retains Task validation; Identity and access verifies the principal | [Shared acceptance](architecture/system-design.md#shared-asset-report-acceptance) |
 | Asset hybrid coverage | Synchronization owns shared membership and continuation across initial queries, feed and replay; Tasks supplies dependency meaning and the SDK consumes Core coverage | [Coverage ownership](architecture/system-design.md#asset-hybrid-coverage-ownership) |
 
-The user also selected explicit Protocol-defined Command dependency references, validated by Tasks, and retention of each Asset's terminal Task records in its hybrid subset until Reset. The [hybrid contract](sdk-data-access.md#asset-hybrid-mode) records these choices and their transfer/memory tradeoff. The user subsequently chose to end subscriptions needed only by terminal Tasks, while retaining shared dependencies needed by other nonterminal Tasks and always retaining the Asset's own Entity. Scope removal changes neither Core retention nor historical references.
+The user also selected explicit Protocol-defined Command dependency references, validated by Tasks, and retention of each Asset's terminal Task records in its hybrid subset until Reset. The former hybrid contract recorded these choices and their transfer/memory tradeoff. The user subsequently chose to end subscriptions needed only by terminal Tasks, while retaining shared dependencies needed by other nonterminal Tasks and always retaining the Asset's own Entity. These historical subset rules did not change Core retention or historical references; [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) now defers the subset itself.
 
 ### Asset ownership follow-up
 
@@ -115,7 +119,7 @@ A second architecture review looked for rules that every caller had to repeat. T
 | Asset side of the SDK | One Asset client owns all Asset-originated traffic, report identity, process generation, Pause/Resume correlation, queue adoption and reconnect reconciliation | [Asset client](sdk-operations.md#asset-client) |
 | Retry identity | One mechanism returns first, replay, conflict or ended for seven retry kinds; each contract keeps its facts and retention | [Retry identity](architecture/system-design.md#retry-identity) |
 | Dataset opening | Every stateful module opens retained or fresh; Reset is Start with a fresh Dataset, completed after interruption by a host-recorded directive | [Opening a Dataset](architecture/system-design.md#opening-a-dataset), [Reset execution](adr/0015-separate-start-stop-restart-and-reset.md#reset-execution) |
-| Hybrid dependencies | Tasks supplies each Task's dependency set, from the Command-defined references selected above, with its published change record; Synchronization never parses Command input | [Change publication](architecture/system-design.md#change-publication), [coverage ownership](architecture/system-design.md#asset-hybrid-coverage-ownership) |
+| Hybrid dependencies, superseded 28 September | Originally required Tasks to publish dependency sets for Synchronization. Publication and indexing used solely for hybrid coverage are now deferred; typed Command references retain their meaning | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md), [change publication](architecture/system-design.md#change-publication) |
 | Required-result holds | Tasks places holds through Objects and learns which held Objects are already published; later publication returns the Tasks whose holds it satisfies, so both arrival orders resolve and the dependency runs one way | [Object ownership](architecture/system-design.md#object-publication-and-recovery-ownership) |
 
 The review also resolved four contradictions between documents:
@@ -131,10 +135,23 @@ The user accepted the revised review direction: optimize the knowledge and coord
 
 | Topic | Disposition | Authoritative detail |
 | --- | --- | --- |
-| Unified SDK | Retain one public resource-read, query and feed interface across HTTP, full synchronization and Asset hybrid. Withdraw the proposed public API/picture split; preserve existing local queries, changed-since history and no-fallback semantics | [SDK boundary](architecture/system-design.md#sdk-as-the-supported-entry-point), [existing mode contract](sdk-data-access.md#agreed-modes) |
+| Unified SDK | Retain one public resource-read, query and feed interface. The three-mode scope selected here was reduced to HTTP and full synchronization on 28 September; the unified interface, local queries, changed-since history and no-fallback semantics remain | [SDK boundary](architecture/system-design.md#sdk-as-the-supported-entry-point), [current mode contract](sdk-data-access.md#agreed-modes) |
 | Workflow ownership | Keep complete required coordination behind its existing domain owner. Internal separation is justified by reduced coupling, not by exporting mechanism choices or creating more services | [Architecture](architecture/system-design.md#architecture), [conventions](agents/code-conventions.md#structure-and-interfaces) |
 | Asset retirement | Add one owned administrative operation that ends participation without requiring an unavailable Asset to confirm its Task outcomes. Preserve ordinary deletion's guard, retained evidence and required-result protection | [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) |
 
 The earlier review's storage-format compatibility change, alternative terminal-Task replication, observation/source ownership model and route-as-one-Task proposal remain hypotheses, not accepted redesigns. This correction changes none of their existing contracts and adds no new planning tickets. Existing workload measurement and real-Asset validation requirements remain required; the correction does not claim that those tests ran.
 
 Retirement is the deliberate new behavior, not a relabeling of existing deletion. Its exact wire binding and SDK method remain to be designed within the agreed single-operation boundary. Other simplifications require their own evidence and an explicit scope decision before changing supported behavior.
+
+## SDK and gateway decisions, 28 September 2026
+
+The user confirmed that the constrained link is between a gateway and Assets. A gateway usually runs separately from Core, may run on the Core machine and need not share its local network. Its IP connection is assumed adequate for the full operational picture. The general SDK serves Core-facing software; Asset firmware and constrained transport need not use it.
+
+| Topic | Accepted direction | Authoritative detail |
+| --- | --- | --- |
+| General SDK | Keep HTTP pass-through and full synchronization behind the unified interface; remove Asset hybrid from current scope | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
+| Core synchronization | Defer automatic Asset membership, hybrid snapshots/feed/replay, scope events and dependency publication used solely for hybrid coverage | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md#what-changes) |
+| Gateway and Asset responsibilities | Gateways may read the full picture and choose what crosses radio. Preserve Core-facing enrollment, reporting and reconciliation helpers for gateways and fixtures, per-Asset authority and Task meaning. A dedicated constrained-IP SDK is a future option, not current work | [Deployment boundary](adr/0020-limit-general-sdk-to-http-and-full-sync.md#deployment-and-responsibilities) |
+| Implementation evidence | Require real failure tests, a concrete reporting protocol in the first reporting slice and proof of Protocol code generation before expanding the shared contract | [Testing strategy](testing-strategy.md), [generation](architecture/system-design.md#generation-and-testing) |
+
+These decisions narrow synchronization scope. They do not claim implemented code, measured full-picture capacity, a completed radio protocol or executed failure tests.
