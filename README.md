@@ -13,6 +13,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Selected technology stack and generation tools | [Stack decision](docs/adr/0016-use-go-sqlite-and-openapi-tooling.md) |
 | Docker containers, Plugin separation and mounted storage | [Deployment decision](docs/adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
 | General SDK scope and radio gateway placement | [Two-mode SDK decision](docs/adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
+| Private Plugin work storage and Reset cleanup | [Plugin storage decision](docs/adr/0021-manage-plugin-operational-storage-through-reset.md) |
 | Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
 | Accepted tradeoffs and their rationale | [ADRs](docs/adr/) |
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |

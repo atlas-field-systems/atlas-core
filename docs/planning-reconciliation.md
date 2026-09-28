@@ -6,6 +6,8 @@ The planning session and architecture merged in PR #1 originally disagreed. This
 
 This is a dated decision history. The [28 September SDK decision](#sdk-and-gateway-decisions-28-september-2026) supersedes the Asset hybrid portions below. Other accepted behavior remains in force.
 
+The [28 September Plugin storage decision](#plugin-storage-decision-28-september-2026) extends Reset to Plugin-private operational storage.
+
 ## Accepted resolutions
 
 | Topic | Resolution | Authoritative detail |
@@ -156,3 +158,7 @@ The user confirmed that the constrained link is between a gateway and Assets. A 
 | Implementation evidence | Require real failure tests, a concrete reporting protocol in the first reporting slice and proof of Protocol code generation before expanding the shared contract | [Testing strategy](testing-strategy.md), [generation](architecture/system-design.md#generation-and-testing) |
 
 These decisions narrow synchronization scope. They do not claim implemented code, measured full-picture capacity, a completed radio protocol or executed failure tests.
+
+## Plugin storage decision, 28 September 2026
+
+The user accepted Atlas-managed storage for Plugin-private operational work. [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md) selects one working directory per Plugin for private files or SQLite. Restart preserves it without automatic reruns; Reset clears it while retaining separate setup and installed reference data. The [testing strategy](testing-strategy.md) requires real cleanup-failure and recovery evidence, including preservation of new work when retrying an established Reset. This records the contract without claiming implementation or executed tests.

@@ -57,6 +57,8 @@ An installed system [works without internet](../adr/0010-operate-without-interne
 
 Start, Stop and Restart preserve data and logs. Reset is the usual development fresh start and preserves Operator profiles and installation setup. Hard Reset is a separate local CLI/TUI action available while Atlas is running that wipes all Atlas-managed state and returns to first-time setup. The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) owns the action table, retained setup, release-update Reset and client dataset boundary. Local CLI/TUI tools provide [administration](system-design.md#local-administration).
 
+Plugins keep private operational work in [Atlas-managed working storage](../adr/0021-manage-plugin-operational-storage-through-reset.md). It survives ordinary Restart subject to the existing reconciliation rules and is cleared by Reset. Retained setup and installed reference data remain separate, so a fresh Dataset does not restore an old work queue or require reinstalling the Plugin's reference data.
+
 ## Tasks across a disconnection
 
 An operator can cancel a scan of one area and issue another while an Asset is out of contact. During reconnect reconciliation, the Asset checks in, reports completed work and learns the current cancellations and Tasks. It may instead receive a return Task. The Asset OS chooses how to schedule, interrupt and execute its onboard work.
