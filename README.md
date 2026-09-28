@@ -13,7 +13,10 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Selected technology stack and generation tools | [Stack decision](docs/adr/0016-use-go-sqlite-and-openapi-tooling.md) |
 | Docker containers, Plugin separation and mounted storage | [Deployment decision](docs/adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
 | General SDK scope and radio gateway placement | [Two-mode SDK decision](docs/adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
-| Private Plugin work storage and Reset cleanup | [Plugin storage decision](docs/adr/0021-manage-plugin-operational-storage-through-reset.md) |
+| Private Plugin work storage, Reset and uninstall cleanup | [Plugin storage decision](docs/adr/0021-manage-plugin-operational-storage-through-reset.md) |
+| Track publishers, corrections, observation age and deliberate combination | [Track publisher decision](docs/adr/0022-one-publisher-per-track.md) |
+| Deletion of resources required by unfinished Tasks | [Required Entity references](docs/adr/0023-protect-required-entity-references-during-tasks.md) |
+| Live Geofeature geometry, offline adoption and the scan collection boundary | [Live geometry decision](docs/adr/0024-use-live-geofeature-geometry-in-tasks.md) |
 | Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
 | Accepted tradeoffs and their rationale | [ADRs](docs/adr/) |
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
@@ -29,6 +32,7 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | --- | --- |
 | Endpoint families and resource responsibilities | [API plan](docs/api-plan.md) |
 | Public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
+| Rejection of stale edits to operator-managed data | [Concurrent descriptive edits](docs/architecture/system-design.md#concurrent-descriptive-edits) |
 | HTTP and full-synchronization modes | [SDK data access](docs/sdk-data-access.md) |
 | Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
 | Asset status, communications and heartbeat | [Asset status](docs/asset-status.md) |

@@ -18,7 +18,7 @@ The user accepted these submission and failure rules on 21 September 2026:
 - A failed Operation keeps its successful Atlas resources and effects, with known outputs attributable to the attempt. Failure does not imply that nothing happened. Core does not automatically undo effects or rerun the attempt.
 - A deliberate rerun may produce additional results. Handling existing results belongs to the Plugin. Core does not promise a complete inventory of arbitrary external effects or a transaction spanning Plugin behavior and external systems.
 
-[ADR-0017](0017-deploy-core-and-plugins-as-docker-containers.md) selects sibling Docker containers for installed Plugins. Private Docker-control coordination, installation metadata, distribution and invocation fields remain open. This decision does not select a marketplace, automatic updates or separately operated remote Plugins.
+[ADR-0017](0017-deploy-core-and-plugins-as-docker-containers.md) selects sibling Docker containers for installed Plugins. [ADR-0021](0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall) defines the Plugin-scoped cleanup when a Plugin is uninstalled; published Atlas resources and Core Operation attempts retain their own lifetimes. Private Docker-control coordination, installation metadata, distribution and invocation fields remain open. This decision does not select a marketplace, automatic updates or separately operated remote Plugins.
 
 ## Operation transitions
 

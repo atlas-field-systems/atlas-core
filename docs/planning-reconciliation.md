@@ -8,6 +8,14 @@ This is a dated decision history. The [28 September SDK decision](#sdk-and-gatew
 
 The [28 September Plugin storage decision](#plugin-storage-decision-28-september-2026) extends Reset to Plugin-private operational storage.
 
+The [first documentation grilling round](#documentation-grilling-round-one-28-september-2026) additionally settles descriptive-edit conflicts, Track publishers, required Entity-reference deletion and private Plugin work on uninstall.
+
+The [second round](#documentation-grilling-round-two-28-september-2026) settles publisher continuity, live Geofeature geometry, full Plugin-owned uninstall cleanup and silent Track retention.
+
+The [third round](#documentation-grilling-round-three-28-september-2026) settles offline geometry, adoption evidence, the scan collection boundary and Command-specific Track freshness.
+
+The [fourth round](#documentation-grilling-round-four-28-september-2026) settles current-observation corrections and defers publisher transfers, closing the product choices raised in these rounds.
+
 ## Accepted resolutions
 
 | Topic | Resolution | Authoritative detail |
@@ -140,7 +148,7 @@ The user accepted the revised review direction: optimize the knowledge and coord
 | Workflow ownership | Keep complete required coordination behind its existing domain owner. Internal separation is justified by reduced coupling, not by exporting mechanism choices or creating more services | [Architecture](architecture/system-design.md#architecture), [conventions](agents/code-conventions.md#structure-and-interfaces) |
 | Asset retirement | Add one owned administrative operation that ends participation without requiring an unavailable Asset to confirm its Task outcomes. Preserve ordinary deletion's guard, retained evidence and required-result protection | [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) |
 
-The earlier review's storage-format compatibility change, alternative terminal-Task replication, observation/source ownership model and route-as-one-Task proposal remain hypotheses, not accepted redesigns. This correction changes none of their existing contracts and adds no new planning tickets. Existing workload measurement and real-Asset validation requirements remain required; the correction does not claim that those tests ran.
+The earlier review's storage-format compatibility change, alternative terminal-Task replication, observation/source ownership model and route-as-one-Task proposal remained hypotheses at this correction, not accepted redesigns. The later [first documentation grilling round](#documentation-grilling-round-one-28-september-2026) accepts one publisher per Track; it does not adopt the earlier observation redesign as a whole. This correction changes none of their existing contracts and adds no new planning tickets. Existing workload measurement and real-Asset validation requirements remain required; the correction does not claim that those tests ran.
 
 Retirement is the deliberate new behavior, not a relabeling of existing deletion. Its exact wire binding and SDK method remain to be designed within the agreed single-operation boundary. Other simplifications require their own evidence and an explicit scope decision before changing supported behavior.
 
@@ -162,3 +170,53 @@ These decisions narrow synchronization scope. They do not claim implemented code
 ## Plugin storage decision, 28 September 2026
 
 The user accepted Atlas-managed storage for Plugin-private operational work. [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md) selects one working directory per Plugin for private files or SQLite. Restart preserves it without automatic reruns; Reset clears it while retaining separate setup and installed reference data. The [testing strategy](testing-strategy.md) requires real cleanup-failure and recovery evidence, including preservation of new work when retrying an established Reset. This records the contract without claiming implementation or executed tests.
+
+## Documentation grilling round one, 28 September 2026
+
+After reviewing the four scenario-based recommendations, the user said, "I agree with all your recommendations." This authorizes the following decisions, recorded in their authoritative homes.
+
+| Decision | Accepted behavior | Authority |
+| --- | --- | --- |
+| Stale descriptive edits | Reject stale edits to operator-managed data for caller review. Asset reports keep their ordering contract, so an unrelated alias edit does not reject a valid position report | [Concurrent descriptive edits](architecture/system-design.md#concurrent-descriptive-edits) |
+| Track publishers | Each Track has one publisher for observed fields. Different publishers create separate Tracks; a Plugin may deliberately combine observations into its own Track. Operator descriptive edits remain separate | [ADR-0022](adr/0022-one-publisher-per-track.md) |
+| Required Entity references | Block deletion of a Track or Geofeature while an unfinished Task requires it and identify the blockers. Do not fabricate cancellation or outcomes; unavailable Assets may leave protection in place until Reset | [ADR-0023](adr/0023-protect-required-entity-references-during-tasks.md) |
+| Plugin uninstall | Stop the Plugin, clear its private operational work and start any reinstall with an empty working directory. Published resources and recorded Operation outcomes retain their own lifetimes; disabling preserves private work | [Uninstall and reinstall](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall) |
+
+At the end of this round, publisher continuity/reassignment, observation correction/freshness, changes to referenced Geofeatures and uninstall treatment of retained setup remained open. The [second round](#documentation-grilling-round-two-28-september-2026) resolves several of them. The documentation and required scenarios record intended behavior; no implementation, runtime validation or new issue is claimed.
+
+## Documentation grilling round two, 28 September 2026
+
+The user agreed with Q5 and Q7, and with Q8's silent-Track recommendation. For Q6 the user rejected frozen geometry and said, "We should. Adjust to the new geometry." The earlier frozen-geometry recommendation was a proposal only and was never accepted.
+
+| Decision | Accepted behavior | Authority |
+| --- | --- | --- |
+| Publisher continuity | The same authenticated publisher may supply fresh observations to its existing Tracks after reinstall within the same Dataset. Different publishers cannot automatically take over | [Publisher continuity](adr/0022-one-publisher-per-track.md#publisher-continuity) |
+| Geofeature edits | Existing Tasks adjust to new geometry through the same immutable reference. An edit does not create a new Task or reopen a terminal outcome | [ADR-0024](adr/0024-use-live-geofeature-geometry-in-tasks.md) |
+| Plugin setup on uninstall | Remove Plugin-owned configuration, usable credentials, downloaded reference data and installation artifacts along with private work. Published resources and recorded outcomes remain; disabling preserves the installation | [Uninstall and reinstall](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall) |
+| Silent Tracks | Retain last-known observations and expose their age. Silence alone does not delete a Track or make its coordinates current; explicit deletion remains guarded | [Observation age](adr/0022-one-publisher-per-track.md#observation-age) |
+
+At the end of this round, geometry adoption during disconnection, its completion boundary and consumer freshness remained open. The [third round](#documentation-grilling-round-three-28-september-2026) resolves those choices. Observation correction and publisher reassignment were left for the [fourth round](#documentation-grilling-round-four-28-september-2026). Authentication proof, revision fields and wire encodings remain engineering work. These decisions add documentation and required evidence, not implementation or executed tests.
+
+## Documentation grilling round three, 28 September 2026
+
+The user said, "I agree with your recommendations," in response to Q9 through Q12. This authorizes the following refinements to the accepted live-reference and observation-age decisions.
+
+| Decision | Accepted behavior | Authority |
+| --- | --- | --- |
+| Offline geometry | Continue with last received geometry within existing Command limits, then adopt the latest on reconnect. Contact loss alone does not stop otherwise valid work | [Disconnection and adoption](adr/0024-use-live-geofeature-geometry-in-tasks.md#disconnection-and-adoption) |
+| Adoption evidence | Distinguish an edit saved in Core from the assigned Asset reporting it applied the geometry. Core and gateway receipt are insufficient, and confirmation is not another Core permission step before execution | [Disconnection and adoption](adr/0024-use-live-geofeature-geometry-in-tasks.md#disconnection-and-adoption) |
+| Collection boundary | Core's acceptance of valid collection-finished evidence closes geometry changes for that scan. Earlier edits must be accounted for; later edits require another scan. Required uploads still gate Completed | [Geometry and collection-finished reports](adr/0008-complete-scan-tasks-when-required-results-are-available.md#geometry-and-collection-finished-reports) |
+| Track freshness for execution | Each Command defines whether current observations are required, acceptable age and stale-data behavior. Last-known-position Commands may continue. Core exposes age and the Asset applies the rule, with no universal cutoff | [Track data used by Commands](adr/0022-one-publisher-per-track.md#track-data-used-by-commands) |
+
+Observation correction and publisher reassignment remained open at the end of this round and are resolved in the [fourth round](#documentation-grilling-round-four-28-september-2026). Report correlation, revision fields, exact Command freshness limits and wire encodings remain engineering work. The required scenarios cover both geometry/report commit orders and Object arrival orders without changing pause, cancellation, terminal immutability or result retention. No runtime implementation or executed tests are claimed.
+
+## Documentation grilling round four, 28 September 2026
+
+The user said, "I agree with recommendations," in response to Q13 and Q14.
+
+| Decision | Accepted behavior | Authority |
+| --- | --- | --- |
+| Correcting observations | The same publisher may correct the current value through ordinary updates while preserving actual observation time and recorded history. Corrections cannot make old data fresh or overwrite newer observations. Historical sample editing stays deferred | [Correcting current observations](adr/0022-one-publisher-per-track.md#correcting-current-observations) |
+| Publisher transfers | Defer transfers in the initial scope, including operator-directed transfers. A different publisher creates a separate Track, and existing Tasks retain their references without automatic retargeting. Same-publisher continuity after reinstall remains supported | [Publisher transfers](adr/0022-one-publisher-per-track.md#publisher-transfers) |
+
+All fourteen product questions in these four rounds have accepted answers. This closes that decision tree without claiming the whole implementation plan is complete. Identity proof, report ordering/correlation, schemas, Command thresholds and measured capacity remain engineering work. The documentation and required scenarios record the agreed behavior; no runtime implementation or executed tests are claimed.
