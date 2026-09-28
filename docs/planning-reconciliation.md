@@ -92,7 +92,6 @@ The hybrid coverage decision and subset-retention choices in this section were s
 | Topic | Accepted direction | Authoritative detail |
 | --- | --- | --- |
 | Asset report acceptance | Entities owns shared acceptance; Tasks collaborates in the same transaction and retains Task validation; Identity and access verifies the principal | [Shared acceptance](architecture/system-design.md#shared-asset-report-acceptance) |
-| Asset hybrid coverage | Synchronization owns shared membership and continuation across initial queries, feed and replay; Tasks supplies dependency meaning and the SDK consumes Core coverage | [Coverage ownership](architecture/system-design.md#asset-hybrid-coverage-ownership) |
 
 The user also selected explicit Protocol-defined Command dependency references, validated by Tasks, and retention of each Asset's terminal Task records in its hybrid subset until Reset. The former hybrid contract recorded these choices and their transfer/memory tradeoff. The user subsequently chose to end subscriptions needed only by terminal Tasks, while retaining shared dependencies needed by other nonterminal Tasks and always retaining the Asset's own Entity. These historical subset rules did not change Core retention or historical references; [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) now defers the subset itself.
 
