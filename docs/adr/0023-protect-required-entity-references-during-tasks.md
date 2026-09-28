@@ -14,7 +14,7 @@ The guard applies while the Task is nonterminal, including while it is pending, 
 
 Required Entity-reference protection is separate from required-result Object protection. A terminal Task may release its Track or Geofeature reference for deletion while its required Object holds remain until Reset under [ADR-0009](0009-expose-objects-only-when-ready.md). Entity deletion cannot release those Object holds.
 
-This deletion guard does not freeze editable geometry. [ADR-0024](0024-use-live-geofeature-geometry-in-tasks.md) requires a Task to adapt to changes in its referenced Geofeature while preserving its Task identity and reference. For scans, accepted collection-finished evidence closes geometry changes before uploads necessarily finish. Required-reference deletion protection still lasts until a terminal Task outcome.
+This deletion guard does not freeze editable geometry. [ADR-0024](0024-use-live-geofeature-geometry-in-tasks.md) requires a Task to adapt to changes in its referenced Geofeature while preserving its Task identity and reference. For scans, accepted collection-finished evidence closes geometry changes before uploads necessarily finish. Before the Task's geometry cutoff, a geometry edit that would make its Command input invalid is rejected under the same ADR. Required-reference deletion protection still lasts until a terminal Task outcome.
 
 Entities coordinates deletion and Task admission/reference validation through the existing ownership and write-commit boundaries. If a Task requiring an Entity commits first, deletion is rejected; if deletion commits first, a new Task requiring that Entity is rejected. This is a deletion and admission guard, not a general dependency-publication or Asset-hybrid synchronization scope.
 

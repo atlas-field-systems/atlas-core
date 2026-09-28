@@ -10,7 +10,7 @@ Atlas uses one root [CONTEXT.md](../../CONTEXT.md) and shared [ADRs](../adr/). R
 | Users, workload and field assumptions | [Operating model](../architecture/operating-model.md) | Evaluating product scope or a proposed workflow |
 | Repository boundaries and responsibility assignments | [System outline](../architecture/system-outline.md) | Assigning ownership or planning a module; candidate subsystems remain proposals |
 | Collaboration and interface ownership | [System design](../architecture/system-design.md) | Changing module interfaces, SDK responsibilities, access boundaries, storage ownership or generation |
-| Accepted architectural tradeoffs | [ADRs](../adr/) | Changing behavior governed by a decision; retain the decision, rationale and necessary consequences |
+| Accepted architectural tradeoffs | [ADRs](../adr/README.md) | Changing behavior governed by a decision; retain the decision, rationale and necessary consequences |
 | Differences from Modernization | [Comparison register](../architecture/modernization-differences.md) | Accepting a source-system behavior change; preserve evidence and stable row IDs |
 | Historical evidence and alternatives | [Research index](../research/atlas-reassessment/README.md) | Evaluating a technology or revisiting a tradeoff |
 | Implementation specifications and assigned work | [GitHub Issues](issue-tracker.md) | An experiment or implementation slice is requested |

@@ -1,8 +1,8 @@
 # SDK data access
 
-The general SDK has two agreed read modes: HTTP and full synchronization, under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). They share the same application-facing operations; the selected mode determines their data source. This is a design document, not an implemented SDK interface. Exact method names and the detailed policies marked as proposals remain open.
+The general SDK has two agreed read modes, HTTP mode and Full synchronization mode, under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). They share the same application-facing operations; the selected mode determines their data source. This is a design document, not an implemented SDK interface. Exact method names and the detailed policies marked as proposals remain open.
 
-The SDK serves IP applications, command interfaces, Plugins and gateways. A gateway may be remote from Core; the initial design assumes adequate IP bandwidth between them. The constrained link is between the gateway and its Assets. Radio Asset firmware and the Asset OS are not required to run the general SDK. Their transport and integration remain future work.
+The SDK serves participants on IP links without bandwidth limits: applications, Command Interfaces, Plugins, IP-connected Assets and gateways. A gateway may be remote from Core; the initial design assumes adequate IP bandwidth between them. The constrained link is between the gateway and its bandwidth-limited Assets, which do not run the general SDK. Their radio transport remains future work.
 
 ## Agreed modes
 
@@ -13,11 +13,11 @@ The SDK serves IP applications, command interfaces, Plugins and gateways. A gate
 
 Both modes expose the same SDK resource-read, query, and feed-subscription methods, with shared arguments and resource/event shapes. HTTP operations use Core's API. Full-synchronization operations use only the local picture and its applied changes. Applications do not use a second set of cache-specific read methods. Both modes use the same Protocol resource definitions. Selecting synchronized-cache mode changes where operational reads are answered, not what an Entity or Task means. Command Catalog access remains local to the installed Protocol package in both modes and never needs a Core API request.
 
-The mode defines the read-source boundary. HTTP failures do not fall back to cached data. In full-synchronization mode, a missing record, stale picture, incomplete coverage, or unavailable query must not trigger an HTTP resource read. There is no per-call cache bypass within full-synchronization mode. Exact readiness/error responses remain to be designed.
+The mode defines the read-source boundary. HTTP failures do not fall back to cached data. In Full synchronization mode, a missing record, stale picture, incomplete coverage, or unavailable query must not trigger an HTTP resource read. There is no per-call cache bypass within Full synchronization mode. Exact readiness/error responses remain to be designed.
 
 Background synchronization is separate from application operations. The synchronizer privately uses Core's `/queries/full`, `/queries/changed-since`, and `/feed` to maintain the picture. Application-facing query and feed methods are available in both modes; full-synchronization queries/feed operate locally instead of exposing those remote connections. HTTP mode does not maintain or read an operational picture.
 
-The benefit is shared state within an SDK instance. Multiple components reading the same Entity through that instance use the same maintained picture instead of making repeated HTTP requests. Separate processes or browser tabs do not automatically share memory or a feed connection. A shared service is outside the current design. The agreed full-synchronization mode keeps the full picture in memory without disk persistence or selective subscriptions.
+The benefit is shared state within an SDK instance. Multiple components reading the same Entity through that instance use the same maintained picture instead of making repeated HTTP requests. Separate processes or browser tabs do not automatically share memory or a feed connection. A shared service is outside the current design. The agreed Full synchronization mode keeps the full picture in memory without disk persistence or selective subscriptions.
 
 Recommend direct mode as the simple default and an explicit choice to start synchronization. The SDK should own subscription, recovery, and cache reconciliation so application code does not have to implement them.
 
@@ -34,7 +34,7 @@ Resource reads, queries and feed subscriptions are part of the SDK's read-operat
 
 For full synchronization, a feed event becomes visible to application subscribers after the corresponding change is applied locally. The SDK does not forward raw remote feed messages before reconciliation. Application subscriptions do not open their own Core feed connections. In HTTP mode, the feed operation is a remote API subscription; it does not construct or observe a local picture.
 
-Local changed-since queries require locally retained change history, including deletions. A current-state cache alone cannot answer them. Retain a bounded local change history with configurable limits. When history no longer covers a cursor, return an explicit cursor-expired result; the application can request a fresh local snapshot. Local cursors belong to one SDK instance and picture generation, become invalid when that picture is rebuilt, and cannot be exchanged with Core cursors or another SDK instance. Exact limits, pagination, subscription start boundaries, and initial-load/rebuild notification formats are engineering details still to specify. Expired local cursors and missing local history report that limitation; they never trigger a direct query pass-through. The remote recovery cursor used by the background synchronizer must not be assumed interchangeable with an application query cursor.
+Local changed-since queries require locally retained change history, including deletions. A current-state cache alone cannot answer them. Retain a bounded local change history with configurable limits. When history no longer covers a cursor, return an explicit cursor-expired result; the application can request a fresh local snapshot. Local cursors belong to one SDK instance and picture rebuild, become invalid when that picture is rebuilt, and cannot be exchanged with Core cursors or another SDK instance. Exact limits, pagination, subscription start boundaries, and initial-load/rebuild notification formats are engineering details still to specify. Expired local cursors and missing local history report that limitation; they never trigger a direct query pass-through. The remote recovery cursor used by the background synchronizer must not be assumed interchangeable with an application query cursor.
 
 ## What is cached
 
@@ -46,9 +46,9 @@ Start with the synchronized resources already identified in the API map:
 
 Only ready Object metadata enters the picture; upload staging and progress remain separate. Object file content is downloaded separately. Plugin discovery/status and Operations, operator profiles, API keys and Core settings are outside this operational picture and use their supported API methods. Plugin management itself is local-only and has no SDK methods; uninstall/reinstall follows [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
 
-In full-synchronization mode, operational ID lookups and list/filter reads use only the local picture. If the local picture cannot answer, the SDK reports that limitation rather than querying HTTP. The exact supported query operations must be documented so callers know which reads can be answered locally. An incomplete or filtered picture must never be mistaken for the full dataset.
+In Full synchronization mode, operational ID lookups and list/filter reads use only the local picture. If the local picture cannot answer, the SDK reports that limitation rather than querying HTTP. The exact supported query operations must be documented so callers know which reads can be answered locally. An incomplete or filtered picture must never be mistaken for the full dataset.
 
-Full-synchronization mode maintains the full operational dataset in memory and rebuilds it on SDK restart. Disk persistence and arbitrary selective subscriptions remain outside this agreed full-synchronization mode. Use explicit resource limits and report when the full picture cannot be maintained; never silently discard resources and claim complete coverage. Bounded change-history retention is separate from retaining the current resource picture.
+Full synchronization mode maintains the full operational dataset in memory and rebuilds it on SDK restart. Disk persistence and arbitrary selective subscriptions remain outside this agreed Full synchronization mode. Use explicit resource limits and report when the full picture cannot be maintained; never silently discard resources and claim complete coverage. Bounded change-history retention is separate from retaining the current resource picture.
 
 ## Historical reads
 
@@ -60,7 +60,7 @@ History results never populate the live picture, emit its local feed events, or 
 
 Superseded on 28 September 2026 by [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). The earlier mode maintained an Asset's Tasks and dependencies locally while reading unrelated data through HTTP. The general SDK no longer includes this mode. Core's corresponding Asset-scoped snapshots, feed, replay, dependency membership and scope-continuation contract are deferred too.
 
-Gateways use HTTP or full synchronization over their IP connection to Core. Radio delivery, including updates needed by a Command whose dependencies change during execution, remains future gateway/Asset integration work. This does not change Core's Task retention, required-result protection, Asset report authority, retries or reconnect reconciliation. A gateway must preserve the authenticated originating Asset; ordinary Plugin identity does not grant Asset report authority.
+Gateways use HTTP mode or Full synchronization mode over their IP connection to Core. Radio delivery, including updates needed by a Command whose dependencies change during execution, remains future gateway work. This does not change Core's Task retention, required-result protection, Asset report authority, retries or reconnect reconciliation. A gateway must preserve the authenticated originating Asset; a Plugin identity does not grant Asset report authority, and a gateway identity relays only for its bound Assets.
 
 ## Keeping the picture current
 
@@ -80,7 +80,7 @@ Proposed lifecycle, carrying forward the older feed contract:
 4. Apply pushed changes to local state. Repeated application reads use that state without triggering HTTP reads.
 5. On a connection interruption or version gap, report degraded synchronization and recover from the last fully applied cursor. If the cursor has expired, rebuild from a full load and catch up again.
 
-Full-synchronization mode loads the full operational resource set. Application query filters do not narrow its background scope. If resource limits prevent a complete picture, expose the failure rather than presenting a partial load as ready.
+Full synchronization mode loads the full operational resource set. Application query filters do not narrow its background scope. If resource limits prevent a complete picture, expose the failure rather than presenting a partial load as ready.
 
 ## Core and SDK contract
 
@@ -97,7 +97,7 @@ Protocol describes event and resource shapes. Core owns committed state and the 
 
 ### Local operational picture ownership
 
-Within the SDK, one local operational picture module owns the state that must agree: resource versions and deletions, coverage, applied recovery position, local history/cursors, picture generation, and readiness. Initial loading, feed delivery and replay recovery cooperate through that owner. Reads, queries and local subscriptions observe its reconciled state; individual SDK resource methods do not separately advance cursors or emit picture changes.
+Within the SDK, one local operational picture module owns the state that must agree: resource versions and deletions, coverage, applied recovery position, local history/cursors, picture rebuild, and readiness. Initial loading, feed delivery and replay recovery cooperate through that owner. Reads, queries and local subscriptions observe its reconciled state; individual SDK resource methods do not separately advance cursors or emit picture changes.
 
 HTTP mode does not construct a picture. HTTP reads and local picture reads are the two concrete adapters at the agreed read-source seam; this does not require a general cache-provider interface. Keep loading, buffering and history helpers private where useful. Depth comes from hiding their coordination, not from putting the entire implementation in one file.
 
@@ -116,7 +116,7 @@ The read-source, startup, and interruption behavior below is agreed. Exact error
 - Before the initial picture is ready, report that it is not ready instead of treating an empty cache as an empty server dataset.
 - During an interruption, retain the last known picture and expose its degraded status. Synchronized reads remain local; they do not request fresh data directly.
 - A missing ID is a local not-found result only when the cache has the required coverage. Otherwise report that it cannot answer the lookup.
-- No automatic fallback or per-read HTTP bypass is allowed in full-synchronization mode. Full-synchronization clients use HTTP mode for operational resource API reads.
+- No automatic fallback or per-read HTTP bypass is allowed in Full synchronization mode. Full synchronization mode clients use HTTP mode for operational resource API reads.
 
 The SDK feed-subscription method lets synchronized-mode consumers observe applied picture changes without polling or opening a direct remote subscription. HTTP mode exposes the remote feed through that same method. Exact subscription signatures, start boundaries, and synchronization status exposure remain to be specified.
 
@@ -128,11 +128,11 @@ The [SDK operations catalog](sdk-operations.md) describes Asset self-registratio
 
 Track observations follow the [one-publisher Track rule](adr/0022-one-publisher-per-track.md#publisher-continuity): one publisher is responsible for a Track's observed fields. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; another publisher uses a separate Track, and Core does not merge or transfer ownership automatically. A silent Track retains its last-known observed values and exposes observation age; silence does not delete the Track or refresh its coordinates. There is no universal Track expiry for execution: a Command requiring current observations defines acceptable age and stale handling, while a last-known Command may continue and the Asset applies that policy. Deliberate Plugin fusion creates a separate Track. The same publisher may correct current observations while preserving their actual age and recorded history, without replacing newer observations. Publisher transfers are deferred and existing Tasks retain their Track references under [ADR-0022](adr/0022-one-publisher-per-track.md#publisher-transfers). Descriptive edits remain separate from observations. If a nonterminal Task has a required Command reference to a Track or Geofeature, the Entity cannot be deleted; Core identifies the blocking Task references without forcing a Task outcome ([required Entity references during Tasks](adr/0023-protect-required-entity-references-during-tasks.md)).
 
-Unfinished Tasks with Geofeature references follow their immutable ID and current geometry until the applicable completion boundary. For scans, Core's accepted collection-finished report closes geometry changes; [ADR-0024](adr/0024-use-live-geofeature-geometry-in-tasks.md) covers disconnected continuation, reconnect adoption, and saved-versus-applied reporting, while [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) retains required-result gating and either arrival order.
+Unfinished Tasks with Geofeature references follow their immutable ID and current geometry until its Command's declared cutoff, by default the terminal report. For scans, Core's accepted collection-finished report closes geometry changes; [ADR-0024](adr/0024-use-live-geofeature-geometry-in-tasks.md) covers disconnected continuation, reconnect adoption, and saved-versus-applied reporting, while [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) retains required-result gating and either arrival order.
 
 Both modes return Core's authoritative write result once Core confirms the commit and the SDK validates the response and Dataset, following [ADR-0018](adr/0018-confirm-writes-when-core-commits.md). Do not wait for the local picture to catch up. For example, a Task creation can return its accepted Task while a synchronized Task-list read still shows the older picture. Acceptance does not establish Asset receipt or execution. Report synchronization state separately; ordinary write success is not a local read-after-write guarantee.
 
-The returned result is separate from local picture state. In full-synchronization mode, apply committed operational-picture changes only through snapshot loading, feed delivery and replay recovery, under their ordering rules. A write response never changes picture reads, emits local feed notifications, appends local history or contributes a reconciliation input, even if it includes a newer resource. The caller may use the returned result separately from picture reads. Exact response envelopes remain Protocol work.
+The returned result is separate from local picture state. In Full synchronization mode, apply committed operational-picture changes only through snapshot loading, feed delivery and replay recovery, under their ordering rules. A write response never changes picture reads, emits local feed notifications, appends local history or contributes a reconciliation input, even if it includes a newer resource. The caller may use the returned result separately from picture reads. Exact response envelopes remain Protocol work.
 
 For example, if the picture has applied N and a successful write response for N+2 arrives before N+1, return the write result without waiting for N+1. The picture waits for synchronization to supply the relevant changes, applies N+1 before N+2 and emits each local change once. A single-resource response cannot stand in for other resources changed by the same commit. Version checks on synchronization inputs prevent stale overwrites and resurrection; a late write response cannot change the picture at all.
 
@@ -144,7 +144,7 @@ Picture reconciliation and notification deduplication follow the agreed rule abo
 
 ## Dataset Reset boundary
 
-Both modes follow [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary). A Dataset identity is created on first initialization, survives Restart, and changes on Reset. It is separate from an SDK picture generation or Asset process identity.
+Both modes follow [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary). A Dataset identity is created on first initialization, survives Restart, and changes on Reset. It is separate from an SDK picture rebuild or Asset process identity.
 
 Before accepting responses or retrying submissions, the SDK checks Dataset identity. After detecting Reset, discard the old picture, local history/cursors, pending submissions and obsolete upload identities and recovery handles. Reject late responses/events from the prior Dataset and never relabel an old write as a new submission. Full synchronization returns to not-ready and loads the full picture afresh; HTTP mode rediscovers the Dataset without constructing a local picture. This is background recovery, not an application-read fallback.
 

@@ -22,7 +22,7 @@ The [uninstall contract](0021-manage-plugin-operational-storage-through-reset.md
 
 Accepted on 28 September 2026 in response to Q8. When a Track stops receiving observations, Core retains its last-known data and exposes the observation time or age. Silence alone does not delete it. Descriptive edits, Plugin restart or reinstall, and client resynchronization do not make old observations appear current. An authorized explicit deletion still obeys [required-reference protection](0023-protect-required-entity-references-during-tasks.md).
 
-Unknown observation time stays explicitly unknown; Core receipt time can be exposed separately but cannot be presented as the time of observation. Exact timestamp fields and clock handling remain contract work. This decision selects no automatic Track expiry or universal stale-after interval.
+Unknown observation time stays explicitly unknown; Core receipt time can be exposed separately but cannot be presented as the time of observation. Age is judged in [Core time](0025-use-core-time-as-the-installation-reference-clock.md). Exact timestamp fields remain contract work. This decision selects no automatic Track expiry or universal stale-after interval.
 
 ## Track data used by Commands
 

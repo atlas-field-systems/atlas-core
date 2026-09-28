@@ -16,6 +16,8 @@ The [third round](#documentation-grilling-round-three-28-september-2026) settles
 
 The [fourth round](#documentation-grilling-round-four-28-september-2026) settles current-observation corrections and defers publisher transfers, closing the product choices raised in these rounds.
 
+The [documentation weak-spot review](#documentation-weak-spot-review-28-september-2026) settles identity lifetime, Open enrollment, gateway identity, IP-connected Assets, cancellation declined, control validity, Core time, geometry cutoffs, Object storage limits and glossary terms.
+
 ## Accepted resolutions
 
 | Topic | Resolution | Authoritative detail |
@@ -220,3 +222,27 @@ The user said, "I agree with recommendations," in response to Q13 and Q14.
 | Publisher transfers | Defer transfers in the initial scope, including operator-directed transfers. A different publisher creates a separate Track, and existing Tasks retain their references without automatic retargeting. Same-publisher continuity after reinstall remains supported | [Publisher transfers](adr/0022-one-publisher-per-track.md#publisher-transfers) |
 
 All fourteen product questions in these four rounds have accepted answers. This closes that decision tree without claiming the whole implementation plan is complete. Identity proof, report ordering/correlation, schemas, Command thresholds and measured capacity remain engineering work. The documentation and required scenarios record the agreed behavior; no runtime implementation or executed tests are claimed.
+
+## Documentation weak-spot review, 28 September 2026
+
+An audit of the documentation for contradictions, undefined terms, behavioral gaps and structure produced four question rounds. The user accepted every recommendation except the first attribution proposal, which was replaced by the simpler wording below, and clarified the SDK boundary in their own words: Assets on IP links without bandwidth limits use the SDK like any other consumer.
+
+| Decision | Accepted behavior | Authority |
+| --- | --- | --- |
+| Revoked identities | Deletion or retirement revokes an Asset identity until Hard Reset. A replacement uses a new Asset ID | [Retained identity](adr/0015-separate-start-stop-restart-and-reset.md#retained-asset-identity-after-reset) |
+| Re-registration after Reset | Automatic with the surviving credential; enrollment authorization is needed only for first Enrollment | [Retained identity](adr/0015-separate-start-stop-restart-and-reset.md#retained-asset-identity-after-reset) |
+| Lost credentials | A local action re-provisions a credential for the same identity, separately from revocation, and the CLI/TUI lists retained and revoked IDs | [Retained identity](adr/0015-separate-start-stop-restart-and-reset.md#retained-asset-identity-after-reset) |
+| Open enrollment | A local test setting, off by default, enrolls any connecting Asset with its own identity. It survives Reset, is reported by health and the Command Interface, is recorded in activity history, applies to Assets only and never overrides revocation. Assets it enrolled stay enrolled and marked when it is switched off | [Identity and access](architecture/system-design.md#identity-and-access) |
+| Gateway identity | Each gateway has its own identity that reads and relays only for its bound Assets, with no administrative rights. Making gateways Assets is a future proposal, not accepted | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md#deployment-and-responsibilities) |
+| IP-connected Assets | Assets without bandwidth limits use the general SDK and its Asset client directly. The SDK stays TypeScript only for now | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md#deployment-and-responsibilities) |
+| Cancellation | Every request is recorded regardless of declared support. An Asset that cannot withdraw the Task declines, returning it to the execution status its reports establish | [Task transitions](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) |
+| Control validity | Pause never expires. Resume carries a declared expiry; an expired Resume fails and the Asset stays paused | [Control ordering and expiry](adr/0007-reconcile-asset-tasks-after-disconnection.md#control-ordering-and-expiry) |
+| Reference clock | Core time judges observation age, freshness, deadlines and expiry | [ADR-0025](adr/0025-use-core-time-as-the-installation-reference-clock.md) |
+| Registration and Command support | Registration carries only Descriptive data and Command support. Command support is Asset-reported; dropped support leaves outstanding Tasks for the Asset to fail as unsupported | [Queued and immediate scheduling](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling) |
+| Geometry | Each Geofeature-referencing Command declares its cutoff, by default the terminal report, and Core records the applied revision. Before the cutoff, edits that would invalidate a Task's input are rejected | [Geometry cutoff](adr/0024-use-live-geofeature-geometry-in-tasks.md#geometry-cutoff-and-applied-revision) |
+| Object storage | A quota keeps headroom for operational writes; a missing Object file is a per-Object integrity fault and Core still opens | [Storage limits](adr/0009-expose-objects-only-when-ready.md#storage-limits-and-integrity-faults) |
+| Activity attribution | Activity history records which authenticated caller acted, not a person | [Glossary](../CONTEXT.md) |
+| Vocabulary | Installation, Installation setup, Operational status, Communication state, Contact, Enrollment, Asset registration, Operation, Plugin capability, Interrupted Operation, field authorship terms, SDK mode names, Required result and the other entries added to the glossary | [Glossary](../CONTEXT.md) |
+| Documentation structure | Apply these content decisions first, then reorganize into one owning page per topic, one topic per change, with this log as history rather than authority and `docs/research/` left unchanged | This log |
+
+These records are history. The linked documents own the current rules.
