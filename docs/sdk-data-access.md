@@ -116,7 +116,7 @@ The read-source, startup, and interruption behavior below is agreed. Exact error
 - Before the initial picture is ready, report that it is not ready instead of treating an empty cache as an empty server dataset.
 - During an interruption, retain the last known picture and expose its degraded status. Synchronized reads remain local; they do not request fresh data directly.
 - A missing ID is a local not-found result only when the cache has the required coverage. Otherwise report that it cannot answer the lookup.
-- No automatic fallback or per-read HTTP bypass is allowed in full-synchronization mode. Full-synchronization clients use HTTP mode for API reads.
+- No automatic fallback or per-read HTTP bypass is allowed in full-synchronization mode. Full-synchronization clients use HTTP mode for operational resource API reads.
 
 The SDK feed-subscription method lets synchronized-mode consumers observe applied picture changes without polling or opening a direct remote subscription. HTTP mode exposes the remote feed through that same method. Exact subscription signatures, start boundaries, and synchronization status exposure remain to be specified.
 

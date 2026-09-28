@@ -59,7 +59,7 @@ Completed Tasks cannot be deleted; ordinary interfaces may hide past Tasks witho
 
 ## Architecture review decisions, 23 September 2026
 
-The user chooses observable behavior; engineering selects internal mechanisms that preserve it. Review suggestions are not accepted merely because they reduce endpoints or code. The following decisions resolve the discussed recommendations, without claiming implementation:
+The [decision authority rules](agents/domain.md#decision-authority) govern acceptance of review suggestions. The following decisions resolve the discussed recommendations, without claiming implementation:
 
 | Topic | Disposition | Authoritative detail |
 | --- | --- | --- |
@@ -94,7 +94,6 @@ The hybrid coverage decision and subset-retention choices in this section were s
 | Topic | Accepted direction | Authoritative detail |
 | --- | --- | --- |
 | Asset report acceptance | Entities owns shared acceptance; Tasks collaborates in the same transaction and retains Task validation; Identity and access verifies the principal | [Shared acceptance](architecture/system-design.md#shared-asset-report-acceptance) |
-| Asset hybrid coverage | Synchronization owns shared membership and continuation across initial queries, feed and replay; Tasks supplies dependency meaning and the SDK consumes Core coverage | [Coverage ownership](architecture/system-design.md#asset-hybrid-coverage-ownership) |
 
 The user also selected explicit Protocol-defined Command dependency references, validated by Tasks, and retention of each Asset's terminal Task records in its hybrid subset until Reset. The former hybrid contract recorded these choices and their transfer/memory tradeoff. The user subsequently chose to end subscriptions needed only by terminal Tasks, while retaining shared dependencies needed by other nonterminal Tasks and always retaining the Asset's own Entity. These historical subset rules did not change Core retention or historical references; [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) now defers the subset itself.
 
@@ -144,6 +143,8 @@ The user accepted the revised review direction: optimize the knowledge and coord
 The earlier review's storage-format compatibility change, alternative terminal-Task replication, observation/source ownership model and route-as-one-Task proposal remain hypotheses, not accepted redesigns. This correction changes none of their existing contracts and adds no new planning tickets. Existing workload measurement and real-Asset validation requirements remain required; the correction does not claim that those tests ran.
 
 Retirement is the deliberate new behavior, not a relabeling of existing deletion. Its exact wire binding and SDK method remain to be designed within the agreed single-operation boundary. Other simplifications require their own evidence and an explicit scope decision before changing supported behavior.
+
+The subsequent full-document review assigns publication-triggered Task completion to [Objects' publication workflow](architecture/system-design.md#object-publication-and-recovery-ownership), with Tasks retaining transition decisions. This supersedes the second review's upload-handler coordination and one-way dependency restriction. Both arrival orders, required-result holds and atomic completion remain required; callers use one domain operation.
 
 ## SDK and gateway decisions, 28 September 2026
 

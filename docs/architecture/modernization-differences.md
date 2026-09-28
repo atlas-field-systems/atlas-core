@@ -122,3 +122,5 @@ The 27 September [deep-module correction](../planning-reconciliation.md#deep-mod
 The [28 September SDK decision](../planning-reconciliation.md#sdk-and-gateway-decisions-28-september-2026) reaffirms early reporting, Protocol code generation and real-failure evidence. The SDK rows above identify the limits of the baseline evidence. Neither these accepted contracts nor updated test requirements claim implementation or completed validation.
 
 The [28 September Plugin storage decision](../planning-reconciliation.md#plugin-storage-decision-28-september-2026) closes the private-work Reset gap under ADR-0021. Its row above identifies the limits of the baseline evidence; the required cleanup and recovery tests have not been implemented or run.
+
+The full-document review clarifies [Objects' ownership of publication-triggered Task completion](system-design.md#object-publication-and-recovery-ownership). This refines successor coordination while preserving the existing result and publication guarantees; the pinned baseline evidence does not establish the corresponding internal ownership, so no new Modernization difference is claimed.
