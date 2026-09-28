@@ -55,7 +55,7 @@ Completed Tasks cannot be deleted; ordinary interfaces may hide past Tasks witho
 
 ## Architecture review decisions, 23 September 2026
 
-The user chooses observable behavior; engineering selects internal mechanisms that preserve it. Review suggestions are not accepted merely because they reduce endpoints or code. The following decisions resolve the discussed recommendations, without claiming implementation:
+The [decision authority rules](agents/domain.md#decision-authority) govern acceptance of review suggestions. The following decisions resolve the discussed recommendations, without claiming implementation:
 
 | Topic | Disposition | Authoritative detail |
 | --- | --- | --- |
