@@ -17,8 +17,12 @@ The shared specification of Atlas resources, operations, messages and externally
 _Avoid_: database schema, SDK implementation
 
 **Atlas SDK**:
-The supported client library that external applications, Assets and Plugins are expected to use to interact with Atlas Core.
-_Avoid_: Protocol definition, Core implementation
+The supported general client library that IP-connected applications, Plugins and radio gateways use to interact with Atlas Core.
+_Avoid_: Protocol definition, Core implementation, Asset OS, radio protocol
+
+**Radio gateway**:
+An integration connecting Atlas Core with Assets over a radio transport while preserving Asset identity and the meaning of their Tasks and reports.
+_Avoid_: Asset OS, Source Gateway, Core module
 
 **Core release**:
 A published edition of Core with its corresponding SDK and Protocol editions.

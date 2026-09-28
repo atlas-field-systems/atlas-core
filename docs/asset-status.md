@@ -61,6 +61,8 @@ Degraded or offline takes precedence over high bandwidth when communication dete
 
 Core derives communication state from the Asset or transport integration's reported connection type, capacity class, and link-quality observations, using configured expectations for that link. A single timeout must not assume every link has Wi-Fi timing. Initial state before the first report is `offline`.
 
+Under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md), a gateway connects to Core through the general SDK over an adequate IP link; constrained radio communication is between the gateway and Assets. The gateway may run anywhere that link is available. A live gateway connection does not by itself establish contact with an Asset behind it. Device runtimes and transport remain separate from the general SDK, which firmware is not required to run.
+
 **TODO:** Define capacity/quality criteria, transitions, link expectations, and how observations are represented. The four states above replace the earlier table's connected/disconnected/unknown vocabulary.
 
 ### Heartbeat and freshness
@@ -89,7 +91,7 @@ The status-specific endpoints apply to `asset` Entities. They share validation a
 
 Proposed reporting metadata includes when Core received the status and when it last changed. Any accepted fresh Asset-originated update refreshes contact, but a telemetry-only update does not refresh the operational status report time. Contact freshness and the freshness of each reported component remain distinct. Exact fields and timestamps remain to be designed.
 
-The SDK registers an Asset through `POST /entities`, then sends check-in through the existing endpoint. Registration carries initial descriptive data, components, and advertised capabilities. Assets retain a stable ID across restarts; registration retries reuse both the Asset ID and request identity. Reconnection resumes existing state without reapplying startup defaults. Subsequent updates can contain only changed component fields. See the [SDK operations catalog](sdk-operations.md); no registration or per-component update endpoint is added.
+The Core-facing SDK Asset client registers an Asset through `POST /entities`, then sends check-in through the existing endpoint. A gateway or a simulated Asset can use this helper; it preserves Asset-originated identity and execution evidence. Registration carries initial descriptive data, components, and advertised capabilities. Assets retain a stable ID across restarts; registration retries reuse both the Asset ID and request identity. Reconnection resumes existing state without reapplying startup defaults. Subsequent updates can contain only changed component fields. See the [SDK operations catalog](sdk-operations.md); no registration or per-component update endpoint is added.
 
 Assets advertise supported Protocol Commands on their Entity record. Reporting and updating that declaration uses the Entity/check-in contract rather than a separate readiness session. It remains distinct from operational status: a status value does not contain the Command Catalog.
 
@@ -105,7 +107,7 @@ Core accepts and retains valid Tasks even when the Asset is offline. Tasks keep 
 
 Planned shutdowns and restarts are expected only after unfinished work has been resolved. If an exceptional interruption occurs, reconcile with the Asset before deciding the outcome of unfinished Tasks. Do not automatically fail them merely because connectivity was lost or the Asset restarted.
 
-Assigned work is discovered through `GET /entities/{entity_id}/tasks`, using an outstanding-work filter, and through Task change events. The Asset tracks and executes its queue and reports transitions through the Task status endpoint. The Asset reports `acknowledged` when accepting a Task into its local queue and `in_progress` when execution begins. Exact filtering remains to be specified.
+Core-facing clients discover assigned work through `GET /entities/{entity_id}/tasks`, using an outstanding-work filter, or through the full synchronized picture and its Task changes. Per-Asset snapshot/feed/replay synchronization is deferred under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). The Asset tracks and executes its queue; its Core-facing client reports those transitions through the Task status endpoint. The Asset reports `acknowledged` when accepting a Task into its local queue and `in_progress` when execution begins. Exact filtering remains to be specified.
 
 Eligible, unstarted queued Tasks, including acknowledged Tasks, can be reordered. Submission sequence stays immutable. Requested queue order is distinct from the order confirmed by the Asset; disconnected Assets can continue their last received order. Started, paused, cancellation-requested and terminal Tasks cannot be moved.
 

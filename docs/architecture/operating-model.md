@@ -23,6 +23,12 @@ Design Core with its related SDK and Protocol. Breaking changes from Modernizati
 
 Command Interface interaction design, production Plugin algorithms, device-side runtimes, radio transports and Asset operating systems are outside scope. The small example Plugin below exercises the Core integration. Core defines shared guarantees; integrations choose how to use them. The [system outline](system-outline.md) assigns responsibilities and the [system design](system-design.md) defines their boundaries.
 
+## SDK consumers and radio links
+
+Accepted on 28 September 2026: the general SDK targets IP-connected applications, Command Interfaces, Plugins and radio gateways with sufficient bandwidth to obtain the full operational picture. A gateway usually runs separately from Core, may run on the Core machine, and need not share its local network. The constrained link is between the gateway and Assets. This is a deployment assumption, not a measured capacity guarantee; IP access does not require internet access when Core is locally reachable.
+
+Keep HTTP pass-through and full synchronization in the general SDK. [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md) removes Asset hybrid from the current SDK scope and defers its matching Core synchronization machinery. Gateways choose what crosses the radio link. Asset firmware and Asset operating systems use their own integration software rather than being required to run the general SDK. If a future IP deployment itself needs constrained-link behavior, a dedicated SDK or integration can address it without adding that requirement to the current general SDK.
+
 ## Initial MVP
 
 Status: accepted initial scope, not yet implemented. Build Core, Protocol and SDK around three independent examples:
