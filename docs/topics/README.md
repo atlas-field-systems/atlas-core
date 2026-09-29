@@ -8,3 +8,4 @@ Each page owns the current rules for one area of Atlas behavior. The [documentat
 | Operational status, Communication state, Contact, check-in, partial updates and report acceptance | [Asset reporting](asset-reporting.md) |
 | Commands, Task lifecycle and cancellation, scheduling, queues, Pause and Resume, reconnect reconciliation and scan completion | [Tasks](tasks.md) |
 | Object visibility, uploads and retries, publication and recovery, deletion, Required-result protection, storage quota and download | [Objects](objects.md) |
+| Entity types, identity, Aliases, Components, deletion and required Entity references, Track publishers and observation age, and Geofeature geometry | [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md) |

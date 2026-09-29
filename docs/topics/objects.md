@@ -93,7 +93,7 @@ Protection derives from the authoritative, assigned-Asset-declared required-resu
 
 `DELETE /objects/{object_id}` rejects deletion with an explicit conflict when protection applies. There is no force-delete override or Task-deletion workaround. Reset clears the references and Objects together.
 
-Required-result references survive Restart until Reset, including declarations whose uploads have not arrived. Objects enforces protection from its own holds, which Tasks places when it accepts each declaration; see [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership). This protection is separate from [required Entity references](tasks.md#required-entity-references), which a terminal Task releases.
+Required-result references survive Restart until Reset, including declarations whose uploads have not arrived. Objects enforces protection from its own holds, which Tasks places when it accepts each declaration; see [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership). This protection is separate from [required Entity references](tracks-and-geofeatures.md#required-entity-references), which a terminal Task releases.
 
 ### Declaration, publication and deletion order
 

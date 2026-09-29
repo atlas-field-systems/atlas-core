@@ -2,7 +2,7 @@
 
 This page owns Commands and Tasks: the Command Catalog and Asset Command support, Task creation, the Task lifecycle and cancellation, queued and immediate scheduling, queue revisions, Pause and Resume, Command validity, reconnect reconciliation, recovery after an Asset-process restart, scan completion and the Task side of required Entity references and live geometry.
 
-Asset reports, Contact and report acceptance follow [Asset reporting](asset-reporting.md), and caller authority follows [Identity and access](identity-and-access.md). Object readiness, publication and Required-result protection follow [Objects](objects.md). Geofeature geometry editing follows [ADR-0024](../adr/0024-use-live-geofeature-geometry-in-tasks.md), and Track data freshness for Commands follows [ADR-0022](../adr/0022-one-publisher-per-track.md#track-data-used-by-commands). Plugin Operations have their own [lifecycle](../adr/0002-core-manages-installed-plugins.md#operation-transitions).
+Asset reports, Contact and report acceptance follow [Asset reporting](asset-reporting.md), and caller authority follows [Identity and access](identity-and-access.md). Object readiness, publication and Required-result protection follow [Objects](objects.md). Entity deletion, Geofeature geometry editing and Track data freshness for Commands follow [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md). Plugin Operations have their own [lifecycle](../adr/0002-core-manages-installed-plugins.md#operation-transitions).
 
 ## Commands and the Command Catalog
 
@@ -195,17 +195,15 @@ Required Objects may be ready before or after report acceptance. Once collection
 
 ## Required Entity references
 
-Commands identify typed Entity references, and Tasks determines which references are required for an accepted Task. Under [ADR-0023](../adr/0023-protect-required-entity-references-during-tasks.md), an unfinished Task, including one that is pending, paused or waiting on cancellation or Required results, protects its required Track and Geofeature references from deletion, and the deletion conflict identifies the blocking Tasks. The protection remains while the assigned Asset is disconnected or retired; neither condition supplies a Task outcome, so the guard can last until a terminal outcome or Reset. A terminal Task releases its guard, but another unfinished Task requiring the same Entity keeps it protected. Required-result Object holds are separate and remain until Reset.
-
-Deletion and Task admission are serialized through the existing write-commit boundaries: if a Task requiring an Entity commits first, deletion is rejected; if deletion commits first, a new Task requiring that Entity is rejected. An Asset with nonterminal Tasks cannot be deleted under [Asset deletion and access](identity-and-access.md#asset-deletion-and-access). Neither guard forces a Task outcome.
+Commands identify typed Entity references, and Tasks determines which references are required for an accepted Task. While the Task is unfinished, its required Tracks and Geofeatures cannot be deleted, and a new Task cannot require a deleted Entity, under the [required Entity-reference guard](tracks-and-geofeatures.md#required-entity-references). An Asset with nonterminal Tasks cannot be deleted under [Asset deletion and access](identity-and-access.md#asset-deletion-and-access). Neither guard forces a Task outcome.
 
 ## Live Geofeature geometry
 
-A Task's immutable input preserves the identity of a referenced Geofeature, not a frozen copy of its geometry. An unfinished Task follows edits to that geometry until its Command's geometry cutoff. Every Command that references a Geofeature declares that cutoff; the default is the Task's terminal report, and a scan's cutoff is its accepted [collection-finished report](#collection-finished-and-geometry). Geometry edits do not create or reissue Tasks, implicitly Resume paused work, clear cancellation intent or reopen terminal outcomes. Before the cutoff, an edit that would make the Task's Command input invalid is rejected with the blocking Tasks named.
+A Task's immutable input preserves the identity of a referenced Geofeature, not a frozen copy of its geometry. An unfinished Task follows edits to that geometry until its Command's geometry cutoff. Every Command that references a Geofeature declares that cutoff; the default is the Task's terminal report, and a scan's cutoff is its accepted [collection-finished report](#collection-finished-and-geometry). Geometry edits do not create or reissue Tasks, implicitly Resume paused work, clear cancellation intent or reopen terminal outcomes. Before the cutoff, the Geofeature [edit guard](tracks-and-geofeatures.md#edit-guard) protects the Task's input.
 
-A disconnected Asset may continue with its last received geometry within the Command's limits and adopts the latest during reconciliation. Asset adoption reports establish what was applied without adding a Core permission step. [ADR-0024](../adr/0024-use-live-geofeature-geometry-in-tasks.md) owns geometry delivery and adoption.
+Geometry delivery, offline execution and adoption follow [Geofeatures](tracks-and-geofeatures.md#live-geometry-for-existing-tasks).
 
-Core accepts a valid terminal report as what happened, even if it was made against geometry an operator has since edited, and records the geometry revision the Asset reports having used. A Task completed against superseded geometry is therefore visible in its record rather than rejected or held. Exact revision fields remain open.
+Core accepts a valid terminal report as what happened, even if it was made against geometry an operator has since edited, and records the geometry revision the Asset reports having used. A Task completed against superseded geometry is therefore visible in its record rather than rejected or held. A Command whose cutoff is an earlier report, such as a scan's collection-finished report, follows that report's own acceptance rules. Exact revision fields remain open.
 
 ## Routes and SDK operations
 

@@ -31,9 +31,7 @@ The initial operations and behaviors below are approved; the names describe beha
 
 Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset, required-result uploads and queue adoption reports are Asset-originated. SDK consumers submitting these reports use the [Asset client](#asset-client), which owns their coordination. Gateway and Plugin limits follow the [caller permissions](topics/identity-and-access.md#callers-and-permissions). Tasking clients still use the route-level Task status helpers, for example to request cancellation.
 
-Track observation updates use one publisher per Track. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; another publisher uses a separate Track, and Core does not merge or transfer ownership automatically. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. There is no universal Track expiry for execution: a Command requiring current observations defines acceptable age and stale handling, while a last-known Command may continue and the Asset applies that policy. A Plugin that intentionally fuses sources publishes a separate Track. Descriptive Track edits use the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits), and deletion obeys the [required Entity reference guard](topics/tasks.md#required-entity-references). See [ADR-0022](adr/0022-one-publisher-per-track.md#publisher-continuity).
-
-Tasks with Geofeature references follow [live geometry](topics/tasks.md#live-geofeature-geometry) until their Command's cutoff.
+Track observation updates, Geofeature geometry edits and Entity deletion use the ordinary Entity operations under [Entities, Tracks and Geofeatures](topics/tracks-and-geofeatures.md).
 
 The SDK exposes typed methods and documentation for these operations. No machine-readable SDK-operation discovery function is planned without a concrete consumer. Local lookup of the Protocol Command Catalog remains a separate agreed SDK function. Further SDK coverage can follow the approved endpoints without inventing additional API families.
 
@@ -89,7 +87,7 @@ Registration content, stable Asset IDs and retries follow [Asset registration](t
 
 Check-in, component updates and status reports follow [Asset reporting](topics/asset-reporting.md), including [partial component updates](topics/asset-reporting.md#partial-component-updates), [Contact and freshness](topics/asset-reporting.md#contact-and-freshness) and [report authority and relay](topics/asset-reporting.md#report-authority-and-relay).
 
-Track observations are authored by the Track's single publisher. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; different publishers use different Tracks, and deliberate Plugin fusion creates its own Track. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. Descriptive edits are separate and Core does not merge publishers automatically. [ADR-0022](adr/0022-one-publisher-per-track.md) also permits same-publisher corrections to current observations through ordinary updates, preserving actual age and history without replacing newer observations. Publisher transfers are deferred, and existing Tasks retain their original references.
+Track observations are authored only by the Track's publisher under [Tracks](topics/tracks-and-geofeatures.md#tracks).
 
 ## Remaining decisions
 

@@ -23,7 +23,7 @@ Use the earlier design to answer factual questions before asking the user. Curre
 
 ## Differences that need care
 
-The current successor has Tasks follow [live Geofeature geometry](topics/tasks.md#live-geofeature-geometry) until each Command's cutoff, under [ADR-0024](adr/0024-use-live-geofeature-geometry-in-tasks.md). Track continuity and silence are likewise current successor rules: the same authenticated publisher may continue within a Dataset, silent Tracks expose age without universal execution expiry, and Commands define current-versus-last-known handling; these are successor decisions, not claims about the pinned Atlas Modernization snapshot. The successor also permits same-publisher corrections to current observations while preserving actual age and recorded history, and defers publisher transfers. Explicit deletion remains subject to required-reference protection. See the [Track publisher decision](adr/0022-one-publisher-per-track.md).
+The successor's live Geofeature geometry, Track publisher continuity, silence, corrections and deferred transfers are successor rules in [Entities, Tracks and Geofeatures](topics/tracks-and-geofeatures.md), not claims about the pinned Atlas Modernization snapshot.
 
 The new [Asset reporting model](topics/asset-reporting.md) replaces the older execution-session API. The earlier operational-status/check-in design is a reference, while its process-identity registration, readiness, shutdown, and session-scoped Task delivery routes are superseded. Status definitions, Task admission, and restart/late-report behavior need explicit rules; the old automatic Task failures on process replacement are not silently carried forward.
 
