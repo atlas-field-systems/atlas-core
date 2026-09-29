@@ -42,6 +42,6 @@ Implementation specifications follow the issue-tracker convention. Research ques
 
 ## Documentation completion
 
-Before completing a decision or policy change, check affected glossary entries, architecture documents, API and SDK plans, testing requirements, agent instructions and references against the authoritative change. Update contradictions and broken references within the authorized scope. Identify unresolved conflicts explicitly; a change with unresolved contradictions is not complete. Verify that summaries and historical records point to current authority without turning proposals into accepted requirements.
+Before completing a decision or policy change, check affected glossary entries, topic pages, the endpoint map, architecture documents, testing requirements, agent instructions and references against the authoritative change. Update contradictions and broken references within the authorized scope. Identify unresolved conflicts explicitly; a change with unresolved contradictions is not complete. Verify that summaries and historical records point to current authority without turning proposals into accepted requirements.
 
 Report which consistency and reference checks were performed and any missing evidence. Documentation-only work must pass these checks; it does not require an unimplemented application test suite.

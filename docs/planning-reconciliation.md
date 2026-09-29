@@ -1,22 +1,16 @@
-# API planning reconciliation
+# Decision log
 
-Status: the API/architecture recommendations were accepted on 22 September 2026. The endpoint map, SDK plans, canonical glossary and affected ADRs now record those decisions. Manual Plugin configuration recovery closes the last reconciliation choice. No runtime implementation is introduced.
+This is a dated history of user decisions and authorizations. It is never the authority for a current rule: current rules live on the [topic pages](topics/README.md) and in the [ADRs](adr/README.md), under the [documentation guide](agents/domain.md). Later entries can supersede earlier ones; decisions not superseded remain in force.
 
-The planning session and architecture merged in PR #1 originally disagreed. This record explains the resolutions; [the documentation guide](agents/domain.md) still assigns authority to the glossary, architecture and ADRs. The separate planning glossary has been consolidated into [CONTEXT.md](../CONTEXT.md).
+The planning session and the architecture merged in PR #1 originally disagreed. The user accepted the reconciling recommendations on 22 September 2026, and [Plugin configuration recovery](#plugin-configuration-recovery) closed the last reconciliation choice. Later rounds:
 
-This is a dated decision history. The [28 September SDK decision](#sdk-and-gateway-decisions-28-september-2026) supersedes the Asset hybrid portions below. Other accepted behavior remains in force.
-
-The [28 September Plugin storage decision](#plugin-storage-decision-28-september-2026) extends Reset to Plugin-private operational storage.
-
-The [first documentation grilling round](#documentation-grilling-round-one-28-september-2026) additionally settles descriptive-edit conflicts, Track publishers, required Entity-reference deletion and private Plugin work on uninstall.
-
-The [second round](#documentation-grilling-round-two-28-september-2026) settles publisher continuity, live Geofeature geometry, full Plugin-owned uninstall cleanup and silent Track retention.
-
-The [third round](#documentation-grilling-round-three-28-september-2026) settles offline geometry, adoption evidence, the scan collection boundary and Command-specific Track freshness.
-
-The [fourth round](#documentation-grilling-round-four-28-september-2026) settles current-observation corrections and defers publisher transfers, closing the product choices raised in these rounds.
-
-The [documentation weak-spot review](#documentation-weak-spot-review-28-september-2026) settles identity lifetime, Open enrollment, gateway identity, IP-connected Assets, cancellation declined, control validity, Core time, geometry cutoffs, Object storage limits and glossary terms.
+- The [28 September SDK decision](#sdk-and-gateway-decisions-28-september-2026) supersedes the Asset hybrid portions below.
+- The [28 September Plugin storage decision](#plugin-storage-decision-28-september-2026) extends Reset to Plugin-private operational storage.
+- The [first documentation grilling round](#documentation-grilling-round-one-28-september-2026) additionally settles descriptive-edit conflicts, Track publishers, required Entity-reference deletion and private Plugin work on uninstall.
+- The [second round](#documentation-grilling-round-two-28-september-2026) settles publisher continuity, live Geofeature geometry, full Plugin-owned uninstall cleanup and silent Track retention.
+- The [third round](#documentation-grilling-round-three-28-september-2026) settles offline geometry, adoption evidence, the scan collection boundary and Command-specific Track freshness.
+- The [fourth round](#documentation-grilling-round-four-28-september-2026) settles current-observation corrections and defers publisher transfers, closing the product choices raised in these rounds.
+- The [documentation weak-spot review](#documentation-weak-spot-review-28-september-2026) settles identity lifetime, Open enrollment, gateway identity, IP-connected Assets, cancellation declined, control validity, Core time, geometry cutoffs, Object storage limits and glossary terms.
 
 ## Accepted resolutions
 
@@ -36,7 +30,7 @@ The [documentation weak-spot review](#documentation-weak-spot-review-28-septembe
 | Scan completion | Require the assigned Asset's completion report and all its declared required ready Objects, in either arrival order | [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) |
 | Hybrid scope, superseded 28 September | Originally selected transmission filtering with local in-scope reads and one-off HTTP outside scope. Now deferred with matching Core machinery | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
 
-## Scope review after PR feedback
+## Scope review after PR feedback, 22 September 2026
 
 On 22 September 2026 the user accepted the lower-complexity options after reviewing the older Atlas implementation:
 
@@ -50,7 +44,7 @@ These historical reads use explicit SDK API methods outside the synchronized pic
 
 Accepted: if applying saved Plugin settings prevents startup, leave the Plugin faulted and report the failed apply. The local operator explicitly restores the last working settings and restarts, or corrects the candidate and applies again. Preserve the failed candidate and last working revision; do not automatically restore, restart or rerun Operations. [Plugins](topics/plugins.md#configuration) states this policy and the save/apply and active-work rules; ADR-0006 records the decision.
 
-## Latest review decisions
+## Review decisions after five follow-up findings
 
 Accepted after the five follow-up review findings: cancellation intent is `cancellation_requested` in the Task status system, with assigned-Asset `cancelled` confirmation. One status-update endpoint replaces separate lifecycle endpoints. Queue edits submit the complete eligible unstarted list with expected revisions; Assets report adoption or conflict. Started Tasks cannot be reordered. [Task contract](adr/0007-reconcile-asset-tasks-after-disconnection.md).
 
@@ -61,7 +55,7 @@ Extensive real SDK–Core integration and behavioral parity tests are required, 
 Immediate Commands and paused Asset/Task states are now accepted under the [Task contract](topics/tasks.md#queued-and-immediate-scheduling). Pause is an immediate Task that interrupts current queued work, puts the Asset into its own idle/holding behavior, and preserves the queued path. Independent immediate actions can overlap movement without changing the path. An immediate Resume Command continues the interrupted Task before the remaining queue; unsafe-to-resume work reports failure. Newer Pause/Resume intent wins; failed resumption leaves the Asset paused until a new explicit Resume. Command-specific validity and optional deadlines are checked by the Asset. Unexpected process restarts require reconciliation and holding uncertain work before execution. Exact schemas, authentication/enrollment proof, Task/queue report envelopes, whole-file upload retry verification and SDK method signatures remain implementation design work.
 
 
-## Latest grilling decisions
+## Grilling decisions on Task control and enrollment
 
 The user accepted Command-specific immediate validity rules and optional deadlines, newer Pause/Resume intent winning over delayed older controls, holding the queue after unsafe resumption, limited reconciliation after unexpected Asset-process restart, and automatic SDK enrollment using deployment-provided authorization. The [Task contract](topics/tasks.md#control-ordering-and-expiry) and [identity contract](architecture/system-design.md#identity-and-access) define these boundaries.
 

@@ -6,7 +6,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | --- | --- |
 | Users, field workflow and expected workload | [Operating model](docs/architecture/operating-model.md) |
 | End-to-end testing policy, SDK–Core parity and required scenarios | [Testing strategy](docs/testing-strategy.md) |
-| Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/architecture/system-design.md#mvp-integration-checks) |
+| Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/testing-strategy.md#mvp-integration-checks) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
 | Collaboration between Core, SDK, Protocol and local tools | [System design](docs/architecture/system-design.md) |
 | Deep-module design and review criteria | [Structure and interfaces](docs/agents/code-conventions.md#structure-and-interfaces) |
@@ -27,20 +27,13 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 
 The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted; implementation has not started.
 
-## API and SDK plans
+## API and SDK behavior
 
-The plans below record the agreed API and SDK behavior. The [reconciliation record](docs/planning-reconciliation.md) explains the decisions that align them with the architecture. Detailed schemas and explicitly open implementation choices remain to be designed.
+Current API and SDK rules live on the topic pages. The [decision log](docs/planning-reconciliation.md) records the dated decisions behind them. Detailed schemas and explicitly open implementation choices remain to be designed.
 
 | Read for | Document |
 | --- | --- |
-| Endpoint families and resource responsibilities | [API plan](docs/api-plan.md) |
-| Public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
-| Rejection of stale edits to operator-managed data | [Concurrent descriptive edits](docs/architecture/system-design.md#concurrent-descriptive-edits) |
-| HTTP mode, Full synchronization mode, the Asset client and the SDK operations catalog | [SDK](docs/topics/sdk.md) |
-| Operational status, Communication state and Contact | [Asset reporting](docs/topics/asset-reporting.md) |
-| Task lifecycle, queues, Pause and Resume and reconnect reconciliation | [Tasks](docs/topics/tasks.md) |
-| Entity identity, Track publishers, observation age and live Geofeature geometry | [Entities, Tracks and Geofeatures](docs/topics/tracks-and-geofeatures.md) |
-| Administrative retirement without invented execution outcomes | [Asset retirement](docs/topics/identity-and-access.md#asset-retirement) and [decision](docs/adr/0019-retire-assets-without-inventing-task-outcomes.md) |
-| Movement and activity history scope | [Activity and movement history](docs/topics/history.md) |
+| Current rules, routes and SDK operations by area | [Topic pages](docs/topics/README.md) |
+| Route families, public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |

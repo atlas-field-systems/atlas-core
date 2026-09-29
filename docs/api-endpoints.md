@@ -1,6 +1,6 @@
 # API endpoint map
 
-Approved endpoint map as of 2026-09-22, based on [the API plan](api-plan.md) and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. Approval does not mean implementation; no endpoints are implemented in this repository yet.
+Approved endpoint map as of 2026-09-22, based on the API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. Approval does not mean implementation; no endpoints are implemented in this repository yet.
 
 [Asset retirement](topics/identity-and-access.md#asset-retirement) is an accepted operation whose HTTP binding is still to be selected, so it is recorded below separately from the route table.
 
@@ -8,7 +8,28 @@ Use [the glossary](../CONTEXT.md) for resource meanings. Protocol owns resource 
 
 See [the data component catalog](data-components.md) for the proposed component applicability and database inventory that will guide detailed schemas.
 
+## Route families
+
+These are the starting families; more can be added as requirements emerge. Behavior rules for each family live on the [topic pages](topics/README.md).
+
+| Family | Intended scope |
+| --- | --- |
+| `/entities` | Entity creation, queries, updates, and deletion |
+| `/tasks` | Operational instructions and their lifecycle |
+| `/objects` | File content, metadata, and references to related entities |
+| `/admin` | Core configuration, maintenance, and diagnostics |
+| `/admin/auth` | API key management, including creation, listing, and revocation |
+| `/admin/activity` | Read-only structured history of selected operational actions |
+| `/admin/operators` | Operator identity information and personal settings |
+| `/plugins` | Plugin discovery/status and durable Operation submission, outcomes and cancellation |
+| `/feed` | Live resource changes |
+| `/queries` | Initial state synchronization and recovery of missed changes |
+
+`/admin/auth`, `/admin/activity` and `/admin/operators` are subfamilies of `/admin`, documented separately because they have distinct responsibilities.
+
 ## Reading the tables
+
+Each route records its method and path, expected callers and purpose, inputs and results, state changes and emitted events, and its design status and open questions. Subscriptions and asynchronous completion are mapped alongside requests so clients can determine when an operation finishes and how to receive updates. Coverage across the families comes before detailing every schema.
 
 - **Retain**: method and path exist in the older router and are retained with the described behavior.
 - **Adapt**: an older capability has a new path or changed contract.
@@ -177,7 +198,9 @@ Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-
 | `GET /docs` | Developers browse interactive documentation | API key → documentation interface | None | New |
 | `GET /openapi.json` | SDK/tooling and docs read the HTTP contract | API key → OpenAPI document | None | New |
 
-Health remains available across a Dataset change under the [Dataset boundary](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary). Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is [reported on that Plugin](topics/plugins.md#plugin-capabilities-and-discovery) and does not make an otherwise functioning Core globally unready. Exact dependency probes and timeout thresholds remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
+Health remains available across a Dataset change under the [Dataset boundary](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary). Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is [reported on that Plugin](topics/plugins.md#plugin-capabilities-and-discovery) and does not make an otherwise functioning Core globally unready. `/health` reports process liveness separately from `/readiness`. Exact dependency probes, timeout thresholds and response format remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
+
+OpenAPI describes the API contract, and a documentation tool renders it at `/docs`. Swagger UI is a candidate; renderer selection remains open. These route names are project choices, not routes OpenAPI provides automatically. Capture contracts in OpenAPI as they are designed, and distinguish proposed operations from implemented ones in the documentation.
 
 ## Shared contract baseline
 

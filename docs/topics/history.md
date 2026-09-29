@@ -130,4 +130,4 @@ These rows of the [required scenario coverage](../testing-strategy.md#required-s
 - Asset retirement: one retirement action, with no activity added by already-retired or deletion-first rejections.
 - Hard Reset and retained setup: ordinary Reset clears activity while keeping Operator profiles.
 
-[Fault and bandwidth testing](../testing-strategy.md#fault-and-bandwidth-testing) adds Dataset opening: importing the local activity journal twice without duplicates, importing first-time setup actions into the first Dataset, and no import of pre-Reset entries after a crash once a Reset is established. The [MVP integration checks](../architecture/system-design.md#mvp-integration-checks) verify that Reset clears activity history.
+[Fault and bandwidth testing](../testing-strategy.md#fault-and-bandwidth-testing) adds Dataset opening: importing the local activity journal twice without duplicates, importing first-time setup actions into the first Dataset, and no import of pre-Reset entries after a crash once a Reset is established. The [MVP integration checks](../testing-strategy.md#mvp-integration-checks) verify that Reset clears activity history.

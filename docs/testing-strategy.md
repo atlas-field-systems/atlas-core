@@ -6,7 +6,7 @@ Accepted on 27 September 2026. Default to end-to-end tests of complete workflows
 
 For Atlas Core, end-to-end coverage includes SDK-to-Core workflows and local management workflows, with real storage and relevant Plugin containers. Simulated Assets provide controlled execution and fault inputs for the Core contract milestone. Browser automation and physical hardware are not prerequisites for that milestone; real Asset and radio claims require the later evidence described below.
 
-Start feature coverage with a complete workflow and its observable outcome, then extend it for relevant failures and retries. Operation-by-operation parity checks support that coverage but cannot alone prove that the composed workflow succeeds. The [MVP integration checks](architecture/system-design.md#mvp-integration-checks) give the initial workflow examples.
+Start feature coverage with a complete workflow and its observable outcome, then extend it for relevant failures and retries. Operation-by-operation parity checks support that coverage but cannot alone prove that the composed workflow succeeds. The [MVP integration checks](#mvp-integration-checks) give the initial workflow examples.
 
 ## SDK and Core integration requirements
 
@@ -29,6 +29,23 @@ Accepted on 23 September 2026: distinguish evidence about Core from evidence abo
 Before claiming field readiness for an Asset integration, exercise a real Command through its real Asset runtime and hardware, including lost contact, cancellation and process restart with uncertain work. Verify actual execution and outcome reporting together. This later milestone does not add an Asset OS to Core or block the simulated MVP. Physical radio claims additionally require the [radio evidence](#external-systems-and-future-radio-gateways) below.
 
 Separately prove extension independence with a Plugin built in its own repository using the supported SDK and container contract. Install and invoke it, stop and remove it while Core remains usable, inspect its retained Operation results, and archive the extension source without adding it to Core's normal build dependencies. A small Plugin may start in this repository for the MVP; that alone does not pass the independent-extension milestone.
+
+## MVP integration checks
+
+The [initial MVP](architecture/operating-model.md#initial-mvp) selects simple Move To, independent Elevation Lookup and a separate Object fixture. Exercise them through the SDK against real Core APIs and storage, with a simulated Asset and the example Plugin in its own container.
+
+| Scenario | Acceptance evidence |
+| --- | --- |
+| Move To | Create an Asset, issue a destination Task, deliver it to the assigned Asset and record its reported outcome without requiring an Object. Exercise cancellation and offline issuance/cancellation followed by Asset-client reconnect reconciliation, including assigned-work retrieval or synchronization, using the accepted Task transitions. |
+| Elevation Lookup | Discover the Plugin capability, invoke it for a known fixture position and retrieve the expected elevation. Verify that caller disconnection does not cancel accepted work and that retrying a lost acceptance response retrieves the same Operation. |
+| Object transfer | Interrupt an upload, verify that no partial Object is visible, retry from the beginning and compare the downloaded content. Lose the success response and verify that an identical retry returns the same Object with one publication. |
+| Plugin lifecycle | Use local management to stop/start the example Plugin while Core remains available. Exercise active-work protection with controlled test timing rather than a slow production algorithm. |
+| Stop/Start and Restart | Outside active Asset execution, stop managed Plugins with Core and retain records, ready Objects, setup and logs. Start compatible enabled Plugins with the installation; verify unfinished Core-owned work follows the linked lifecycle decision, without automatic rerun. Report incomplete shutdown rather than claiming success. |
+| Reset | Clear operational data, content, transfer state, private Plugin work, activity history and Atlas-managed logs; retain installation setup, installed reference data and Operator profiles/settings. Verify a new Dataset and rejection of obsolete submissions, with interrupted cleanup unable to restore old Plugin work or erase work from an established Reset. |
+
+These are acceptance scenarios, not completed tests. Add them alongside the relevant implementation. Keep the broader scan-result ordering tests in the [validation focus table](#validation-focus-by-promise) for the later scan workflow; do not force Move To and Elevation Lookup into a Task-to-Object-to-Plugin chain.
+
+This is the Core contract milestone. [Later field and extension validation](#core-contract-and-field-validation-milestones) separately checks a real Asset runtime and a Plugin built outside this repository; simulated execution does not prove physical Asset behavior.
 
 ## Required scenario coverage
 
@@ -59,6 +76,25 @@ Separately prove extension independence with a Plugin built in its own repositor
 | Resource limits | Defined overload responses, bounded memory/storage behavior, an Object storage quota refusing uploads while telemetry and Task reports continue, a missing Object file flagging that Object and its Task while Core still opens, slow links and consumers, concurrent Assets, meaningful latency/throughput and transferred-byte measurements. |
 
 Use sequence-driven tests with an independently specified state model for lifecycle and recovery combinations. Preserve failing seeds and packet schedules so randomized failures can be reproduced. Apply the [workflow-first policy](#end-to-end-workflows-first) when choosing focused tests; the transition-module case below supplements the required real integration coverage.
+
+## Validation focus by promise
+
+Each accepted promise needs evidence focused on the behavior below, in addition to the [required scenario coverage](#required-scenario-coverage).
+
+| Promise | Validation focus |
+| --- | --- |
+| [Task lifecycle](topics/tasks.md#task-status-and-transitions) and [scan completion](topics/tasks.md#scan-completion) | Allowed transitions, terminal outcomes and cancellation; completion report and ready Objects in both arrival orders |
+| [Asset retirement](topics/identity-and-access.md#asset-retirement) | Progress without Asset confirmation; retained evidence and protected results; assignment/provisioning/report races, retry, revocation and Dataset boundaries |
+| [Object availability and transfer](topics/objects.md) | Private staging with cleanup, whole-file retries, completed-request deduplication, ready-only publication and continued uploads without reopening Cancelled Tasks |
+| [Plugin Operations](topics/plugins.md#operations) and [stopping](topics/plugins.md#protecting-active-work) | Caller disconnection, lost acceptance responses, retained effects and protected local lifecycle changes |
+| [Runtime lifecycle](topics/dataset-lifecycle.md) | Retention and interrupted-work classification; Reset cleanup; writing-release mismatch refusal; rejection of old-dataset submissions with discovery still available |
+| [Client and setup compatibility](adr/0005-allow-compatible-client-versions.md) | Supported versions, unsupported-client rejection and retained configuration/Plugin checks |
+| [SDK modes](topics/sdk.md#modes) and [access boundaries](topics/identity-and-access.md#callers-and-permissions) | Full-picture reads for every authenticated client with optional synchronization; allowed Plugin Task issuance; assigned-Asset reports on every mutation path; no public Plugin management methods/endpoints |
+| [Movement history](topics/history.md#movement-history) | Sparse accepted-report capture, retry deduplication, independent historical reads and retention until Reset |
+| [Change publication](architecture/system-design.md#change-publication), [synchronization gaps](architecture/system-design.md#detectable-synchronization-gaps) and [activity history](topics/history.md#activity-history) | Consistent committed changes and attributed actions; slow consumers detect gaps and rebuild a current picture |
+| [Operational protections](architecture/system-design.md#basic-operational-protections) | Secret redaction, protected credential storage, local actor attribution and explicit resource-limit failures |
+| [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) and [Task transitions](architecture/system-design.md#task-transitions) | Accepted, duplicate and rejected dispositions and independent contact evidence through every reporting path; state-model sequences through the pure transition module |
+| [Write commits](architecture/system-design.md#write-commits), [retry identity](architecture/system-design.md#retry-identity) and [Dataset opening](architecture/system-design.md#opening-a-dataset) | Obsolete-Dataset rejection at the commit; first/replay/conflict claims for every retry kind and ended claims for registration, retirement, upload and API-key creation; crash-then-open recovery per module, interrupted Reset completion and activity journal re-import |
 
 ## Fault and bandwidth testing
 

@@ -191,4 +191,4 @@ These rows of the [required scenario coverage](../testing-strategy.md#required-s
 - Hard Reset and retained setup: Plugin setup kept by ordinary Reset and cleared by Hard Reset.
 - Track observation ownership: same-publisher continuity after uninstall.
 
-The [independent-extension milestone](../testing-strategy.md#core-contract-and-field-validation-milestones) requires a Plugin built in its own repository. The [MVP integration checks](../architecture/system-design.md#mvp-integration-checks) exercise Elevation Lookup, Plugin lifecycle, Stop/Start and Restart, and Reset.
+The [independent-extension milestone](../testing-strategy.md#core-contract-and-field-validation-milestones) requires a Plugin built in its own repository. The [MVP integration checks](../testing-strategy.md#mvp-integration-checks) exercise Elevation Lookup, Plugin lifecycle, Stop/Start and Restart, and Reset.

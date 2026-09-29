@@ -148,4 +148,4 @@ These rows of the [required scenario coverage](../testing-strategy.md#required-s
 - Hard Reset and retained setup: setup kept by ordinary Reset, Hard Reset while Core and Plugins run, and interrupted cleanup that blocks startup until resumed.
 - Plugin operational storage: Reset cleanup, cleanup failure and recovery.
 
-[Fault and bandwidth testing](../testing-strategy.md#fault-and-bandwidth-testing) adds Dataset opening: crash-then-open recovery per module and Reset interrupted at each step, completed by the next Start without leaving earlier content or clearing post-Reset data. The [MVP integration checks](../architecture/system-design.md#mvp-integration-checks) exercise Stop/Start and Restart, and Reset.
+[Fault and bandwidth testing](../testing-strategy.md#fault-and-bandwidth-testing) adds Dataset opening: crash-then-open recovery per module and Reset interrupted at each step, completed by the next Start without leaving earlier content or clearing post-Reset data. The [MVP integration checks](../testing-strategy.md#mvp-integration-checks) exercise Stop/Start and Restart, and Reset.

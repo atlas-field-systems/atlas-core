@@ -41,4 +41,4 @@ Decision history:
 - An IP-connected Asset's software either uses TypeScript or runs the SDK in a companion process; another SDK language would be a separate decision.
 - Adequate IP bandwidth is a deployment assumption, not a throughput guarantee or a requirement for internet access; the ordinary offline operating model still applies when consumers can reach Core. Full-picture capacity, bounded recovery and the [real integration evidence](../testing-strategy.md) still need measurement and implementation.
 - Concrete relay proof and transport messages remain engineering work.
-- Earlier hybrid decisions remain historical context in the [reconciliation record](../planning-reconciliation.md#sdk-and-gateway-decisions-28-september-2026).
+- Earlier hybrid decisions remain historical context in the [decision log](../planning-reconciliation.md#sdk-and-gateway-decisions-28-september-2026).

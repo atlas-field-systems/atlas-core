@@ -2,7 +2,7 @@
 
 Source snapshot: locally available `origin/main` at `8edee4e2743fbf0f85c16dfe638d9222141cf279` in Atlas Modernization. The remote was not refreshed during this review. Findings below describe the earlier design, not implemented behavior in this repository.
 
-Use the earlier design to answer factual questions before asking the user. Current decisions follow the [documentation authority guide](agents/domain.md); the [API plan](api-plan.md) and [endpoint map](api-endpoints.md) summarize the reconciled design. The table below records earlier design sources; any remaining proposals are identified in their current design documents.
+Use the earlier design to answer factual questions before asking the user. Established choices there are candidates for reuse; accepted decisions here take precedence, and conflicts or materially new choices require discussion. Current decisions follow the [documentation authority guide](agents/domain.md); the [topic pages](topics/README.md) and [endpoint map](api-endpoints.md) state the reconciled design. The table below records earlier design sources; any remaining proposals are identified in their current design documents.
 
 ## Earlier design sources
 
@@ -23,21 +23,16 @@ Use the earlier design to answer factual questions before asking the user. Curre
 
 ## Differences that need care
 
-The successor's live Geofeature geometry, Track publisher continuity, silence, corrections and deferred transfers are successor rules in [Entities, Tracks and Geofeatures](topics/tracks-and-geofeatures.md), not claims about the pinned Atlas Modernization snapshot.
+The [comparison register](architecture/modernization-differences.md) records each confirmed difference and its successor rule. This section keeps only source evidence the register does not.
 
-The new [Asset reporting model](topics/asset-reporting.md) replaces the older execution-session API. The earlier operational-status/check-in design is a reference, while its process-identity registration, readiness, shutdown, and session-scoped Task delivery routes are superseded. Status definitions, Task admission, and restart/late-report behavior need explicit rules; the old automatic Task failures on process replacement are not silently carried forward.
-
-The old browser login, password, and session design is not an answer to the new operator-profile requirement. Here, operator records hold names and settings. Broad operational reads coexist with enforced Asset report ownership and separate administration; see [identity and access](topics/identity-and-access.md). Enrollment, first-key provisioning and browser access mechanics remain to be designed.
-
-The approved endpoint map defines the selected routes. Source references here explain their origin and do not add unlisted endpoints.
-
-The older `/command-catalog` API is deliberately omitted. The SDK returns the catalog locally from its installed Protocol package for Core-facing IP consumers, including gateways. Device runtimes follow the shared Command semantics without being required to run the general SDK. This preserves Protocol ownership without a catalog network request. See the API plan and [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) for the accepted contract.
-
-The older guide also documents an intentionally empty production Command Catalog. It establishes a command model, not proof that scan area, move to, takeoff, land, or return to launch already have reusable production schemas.
-
-The older plugin design gives installation and container lifecycle to the host-side `atlas-core` CLI and Compose, explicitly withholding host and container-runtime authority from the Core server. The successor gives Core lifecycle policy and local CLI/TUI management through private Docker coordination. The public `/plugins` API exposes discovery and Operations, not installation, settings or process control. The remaining work is the private integration contract.
-
-The older package format supports query-only Plugins and has no general Plugin settings lifecycle. The successor supports durable Operations with recorded outcomes, while local configuration follows [Plugins](topics/plugins.md#configuration). Installed Plugins need no operator-managed API keys and are not taskable Assets. The older package format alone does not establish these new lifecycle guarantees.
+- Track publisher continuity, silence, corrections and deferred transfers, and live Geofeature geometry, are successor requirements, not claims about the pinned snapshot: D38, D41 and D42.
+- The earlier operational-status and check-in design is a reference for [Asset reporting](topics/asset-reporting.md). Its process-identity registration, readiness, shutdown and session-scoped Task delivery routes are superseded, and its automatic Task failures on process replacement are not carried forward: D29 and the Asset-process authority row.
+- The old browser login, password and session design does not answer the Operator profile requirement; profiles hold names and settings. Access follows the Access and source credentials and Full-picture read access rows.
+- The approved endpoint map defines the selected routes. Source references here explain their origin and do not add unlisted endpoints.
+- The older `/command-catalog` API is deliberately omitted: see the Command Catalog access row and [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). Device runtimes follow the shared Command semantics without being required to run the general SDK.
+- The older guide documents an intentionally empty production Command Catalog, as the Validation milestones row notes. It establishes a command model, not proof that scan area, move to, takeoff, land, or return to launch already have reusable production schemas.
+- The older Plugin design gives installation and container lifecycle to the host-side `atlas-core` CLI and Compose, explicitly withholding host and container-runtime authority from the Core server. The successor ownership is D24.
+- The older package format supports query-only Plugins and has no general Plugin settings lifecycle, so it does not establish the successor's durable Operations (D21 to D23), local configuration (Plugin configuration row) or non-taskable Plugins (D20).
 
 [object-references]: https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/design-decisions/2026-05-29-object-references-are-historical.md
 [objects]: https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/database-structure/objects.md

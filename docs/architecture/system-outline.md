@@ -69,4 +69,4 @@ Proposed mechanics: select a version once, derive artifact versions, validate th
 
 ## Suggested order of design work
 
-Define Core behavior, Protocol contracts and SDK access through concrete Atlas workflows. See [MVP integration checks](system-design.md#mvp-integration-checks) for the first examples and [generation and testing](system-design.md#generation-and-testing) for broader validation. Command Interface implementation and production Plugin algorithms remain outside this design. No implementation scaffolding is established by this outline.
+Define Core behavior, Protocol contracts and SDK access through concrete Atlas workflows. See [MVP integration checks](../testing-strategy.md#mvp-integration-checks) for the first examples and [validation focus by promise](../testing-strategy.md#validation-focus-by-promise) for broader validation. Command Interface implementation and production Plugin algorithms remain outside this design. No implementation scaffolding is established by this outline.
