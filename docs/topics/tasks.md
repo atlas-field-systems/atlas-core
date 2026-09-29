@@ -37,7 +37,7 @@ Core accepts and retains valid Tasks even when the Asset is offline, and keeps t
 
 Repeating an idempotency key with the same request returns the original Task; the same key with different tasking data conflicts. A retry does not create another queue entry or change the original Task's order. Task creation uses the shared [retry identity](../architecture/system-design.md#retry-identity) mechanism.
 
-Plugins may initiate Tasks for Assets using existing Protocol-defined Commands through the SDK, without an operator issuing each Task. Core must not prohibit tasking because the caller is a Plugin. Task issuance and cancellation are recorded in [activity history](../architecture/system-design.md#activity-history).
+Plugins may initiate Tasks for Assets using existing Protocol-defined Commands through the SDK, without an operator issuing each Task. Core must not prohibit tasking because the caller is a Plugin. Task issuance and cancellation are recorded in [activity history](history.md#activity-history).
 
 ### Submission sequence
 

@@ -2,7 +2,7 @@
 
 This page owns what an Asset reports and how Core treats it: Operational status, Communication state, Contact and freshness, check-in, partial component updates and Asset report acceptance.
 
-Identity, Enrollment and registration follow [Identity and access](identity-and-access.md). Task lifecycle, queues, Pause/Resume and reconnect reconciliation follow [Tasks](tasks.md). Movement samples follow [movement history](../architecture/system-design.md#movement-history), and Track observations follow [Tracks](tracks-and-geofeatures.md#tracks).
+Identity, Enrollment and registration follow [Identity and access](identity-and-access.md). Task lifecycle, queues, Pause/Resume and reconnect reconciliation follow [Tasks](tasks.md). Movement samples follow [movement history](history.md#movement-history), and Track observations follow [Tracks](tracks-and-geofeatures.md#tracks).
 
 ## Components and initial values
 

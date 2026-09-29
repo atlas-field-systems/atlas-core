@@ -80,7 +80,7 @@ Atlas owns starting and stopping installed Plugins rather than requiring the ope
 
 Installing, updating, removing, enabling or disabling a Plugin must leave Core and unrelated Plugins running, without restarting Core or interrupting its APIs and Asset connections. This is independent lifecycle management, not a requirement for in-process code replacement.
 
-Serialize management actions for each Plugin and retain their recorded outcome, including after uninstall. Plugin changes are recorded in [activity history](../architecture/system-design.md#activity-history).
+Serialize management actions for each Plugin and retain their recorded outcome, including after uninstall. Plugin changes are recorded in [activity history](history.md#activity-history).
 
 ### Protecting active work
 

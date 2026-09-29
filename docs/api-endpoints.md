@@ -45,7 +45,7 @@ Asset reports follow [Asset reporting](topics/asset-reporting.md): Assets author
 
 The SDK provides Asset registration through `POST /entities`, followed by check-in; no separate registration or telemetry endpoint is needed. Registration content, stable Asset IDs and retries follow [Asset registration](topics/identity-and-access.md#asset-registration), and values before the first report follow [initial values](topics/asset-reporting.md#components-and-initial-values). See the [SDK operations catalog](topics/sdk.md#operations-catalog).
 
-Movement samples are captured from explicitly supplied position, speed and altitude in accepted ordinary Entity reports, in the same transaction as the current-state write. Report retries do not duplicate samples, and unrelated updates do not manufacture measurements. History reads return bounded, stably ordered pages; they preserve the Dataset/Entity association and pagination boundary. The movement-history route resolves live and deleted Asset/Track IDs through retained identity records: deletion does not make retained samples inaccessible. Return a deleted-Entity indicator with the historical page; an empty interval is an empty page. An ID never present in the current Dataset returns not found, and an obsolete-Dataset request cannot read a replacement Dataset. Retain samples until Reset, separately from current telemetry and feed recovery. Backfill writes, sample editing, reduced-trail and historical-inspection routes are deferred. See [movement history](architecture/system-design.md#movement-history).
+Movement samples, their capture from accepted reports and the history read's deleted-Entity and not-found behavior follow [movement history](topics/history.md#movement-history).
 
 ### Asset status
 
@@ -110,7 +110,7 @@ The editable Core settings and their application rules must be defined before th
 | --- | --- | --- | --- | --- |
 | `GET /admin/activity` | Operator administrative clients inspect recorded actions | Actor/action/target/time filters, limit/cursor → activity page with known outcomes | None; read-only, outside the synchronized picture | New |
 
-Record Task issuance/cancellation and Plugin, credential and configuration changes, including local CLI/TUI actions, plus the administrative retirement action required by [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md). Core/private management supplies authenticated attribution; public callers cannot insert or alter log entries. A selected profile is not proof of a human actor behind a shared key. Keep safe summaries without secrets or full resource snapshots, deduplicate action retries, and retain until Reset. See the [activity-history contract](architecture/system-design.md#activity-history) for database transactions and process request/outcome recording.
+What is recorded, its attribution and retention follow [Activity history](topics/history.md#activity-history).
 
 ### API keys
 
@@ -132,7 +132,7 @@ These routes require an operator administrative credential. Key bootstrap, prepa
 | `PATCH /admin/operators/{operator_id}` | Interfaces edit a profile | Changed name/settings, required version precondition → Operator | Update profile | New |
 | `DELETE /admin/operators/{operator_id}` | Interfaces remove a profile | Operator ID → no body | Delete profile/settings; retain actor ID/type and historical display context in activity records until Reset; do not cascade-delete history | New |
 
-Use explicit Operator IDs rather than a `/me` route: an API key does not currently identify a person. Profile selection mechanics remain open; activity records identify the authenticated caller and do not treat a selected profile as proof of human identity. Deleting a profile does not imply deleting operational Entities, Tasks, or Objects. Profiles and personal settings survive ordinary Reset as installation setup; Hard Reset clears them.
+Use explicit Operator IDs rather than a `/me` route: an API key does not currently identify a person. Profile selection mechanics remain open; activity attribution follows [record contents and attribution](topics/history.md#record-contents-and-attribution). Deleting a profile does not imply deleting operational Entities, Tasks, or Objects. Profiles and personal settings survive ordinary Reset as installation setup; Hard Reset clears them.
 
 ## Plugins
 

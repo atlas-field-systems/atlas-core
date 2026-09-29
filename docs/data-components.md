@@ -59,7 +59,7 @@ These inventory the resource data units and detail the Task status component lis
 | Task `failure` | Task | Required for failed state | Failure code and message |
 | Task cancellation request | Task | Present when cancellation is requested | Request identity/details accompanying cancellation_requested status, and any decline; see [cancellation requests](topics/tasks.md#cancellation-requests) |
 | Task `cancellation` | Task | Required for cancelled state | Confirmed cancellation outcome and details |
-| Movement sample | Asset, Track | Created only for explicitly supplied movement in an accepted report | Entity association, report/sample identity, observation time when known, Core receipt time, and supplied position/speed/altitude; append-only until Reset; retries deduplicate |
+| Movement sample | Asset, Track | Created only for explicitly supplied movement in an accepted report | Entity association, report/sample identity, observation time when known, Core receipt time, and supplied position/speed/altitude; append-only under [movement history](topics/history.md#movement-history) |
 | Object identity/description | Object | Required ID; descriptive fields follow schema | SDK-allocated Object ID known before upload, type, and usage hints |
 | Object storage metadata | Object | Required for a published Object | Public content type and byte size derive from the completed upload; physical storage locations remain private; content is immutable; missing content sets a per-Object [integrity flag](topics/objects.md#storage-quota-and-integrity-faults) |
 | Object `referenced_by` | Object | Zero or more associations | Entity and Task references retained as historical context even when the related record is unavailable |
@@ -76,9 +76,7 @@ Queued Task reordering, requested and confirmed order and adoption reports follo
 
 ## Movement history
 
-Current telemetry remains the latest state; the separate sample table preserves reported movement until Reset. Capture only incoming measurements, never copied fields from a merged Entity. Position requires both latitude and longitude; independently supplied speed/altitude are valid. An unchanged position in a fresh report is a sample, but retrying the same report is not another sample. Capture commits with the accepted Entity write. No full Entity snapshots, separate backfill API, historical editing or automatic downsampling is selected.
-
-One paginated history endpoint reads samples for a live or deleted Asset/Track ID and time range, resolving retained identity/kind records and marking deleted Entities. IDs never present in the current Dataset return not found; empty intervals return empty pages. History is outside the live operational picture and its bounded recovery log. Query bounds and report rates need measurement before choosing numeric limits. The [movement-history contract](architecture/system-design.md#movement-history) owns retention, reporting and historical-read semantics.
+Movement samples are stored separately from current telemetry; capture, retention and the history read follow [movement history](topics/history.md#movement-history).
 
 ## Required-result protection
 
@@ -95,9 +93,9 @@ These are separate resource records, not Entity components or members of the ope
 | API key / credential | Credential ID, principal association, descriptive metadata, verifier where applicable, and revocation state. Provisioning and revocation follow [credentials](topics/identity-and-access.md#credentials). |
 | Plugin | Release identity, installation/enablement/availability, declared configuration schema, saved/active settings, startup-validation state, management result |
 | Core settings | Explicitly supported server configuration fields and application requirements |
-| Activity record | Stable action identity, retained authenticated actor ID/type and safe historical display context, action, target, time and known outcome; profile/credential deletion does not erase attribution; safe summaries only; retain until Reset |
+| Activity record | Stable action identity, authenticated actor ID/type and safe display context, action, target, time and known outcome, under [record contents and attribution](topics/history.md#record-contents-and-attribution) |
 
-Activity records cover Task issuance/cancellation, Asset retirement and Plugin, credential and configuration changes, including local CLI/TUI actions. Record database changes and their activity together; link process requests to later known outcomes. Do not infer human identity from a selected profile or include secrets. See [activity history](architecture/system-design.md#activity-history).
+What activity records cover and how they are recorded follow [Activity history](topics/history.md#activity-history).
 
 Their exact field inventory follows the approved endpoints and remains separate from this Entity-component schema. There are no role/permission records implied by these entries.
 
@@ -120,9 +118,9 @@ These Core-owned records support the public contracts; they are not new Entity c
 | Synchronization retention boundary | Earliest recoverable boundary and latest committed sequence for the Dataset, maintained consistently with pruning. Expired cursors fail explicitly; SDK recovery rebuilds the picture. Retention is bounded and distinct from movement/activity retention until Reset. |
 | Asset Task queue | Immutable submission sequence plus requested revision/order and Asset-confirmed revision/order. Preserve revision retry identity and report context; reject stale edits and never mark a newer revision confirmed by an older acknowledgement. |
 | Required-result hold | Objects-private hold binding a declared Object ID to the Task whose accepted declaration requires it, placed in the declaration's commit and retained until Reset. Placing a hold reports which held Objects are already published; deletion checks holds without calling Tasks; publication reports the Tasks whose holds it satisfies. The [collaboration](architecture/system-design.md#object-publication-and-recovery-ownership) owns this behavior. |
-| Local activity journal | Installation-mount file of local management actions taken while Core is stopped, keyed by action identity with the accepted request or known outcome. Imported idempotently when the retained Dataset or a new installation's first Dataset opens; deleted by the host during Reset before Core starts, and by Hard Reset. Not an SQLite table. |
+| Local activity journal | Installation-mount file of local management actions taken while Core is stopped, keyed by action identity. Not an SQLite table. Import and deletion follow [local actions](topics/history.md#local-actions). |
 
-The [Operation lifecycle](topics/plugins.md#operation-transitions), [change publication contract](architecture/system-design.md#change-publication), [queue contract](topics/tasks.md#queue-revisions), [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) and [activity history](architecture/system-design.md#activity-history) own these records' behavior. Registration, Asset retirement, Task creation, upload, Operation, queue-edit, cancellation-request and API-key creation identities share the [retry identity](architecture/system-design.md#retry-identity) mechanism while keeping their own facts and retention. Core's SQLite records live in one database grouped by Dataset or installation lifetime under [write commits](architecture/system-design.md#write-commits). Physical columns and indexes remain implementation work.
+The [Operation lifecycle](topics/plugins.md#operation-transitions), [change publication contract](architecture/system-design.md#change-publication), [queue contract](topics/tasks.md#queue-revisions), [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) and [Activity history](topics/history.md#activity-history) own these records' behavior. Registration, Asset retirement, Task creation, upload, Operation, queue-edit, cancellation-request and API-key creation identities share the [retry identity](architecture/system-design.md#retry-identity) mechanism while keeping their own facts and retention. Core's SQLite records live in one database grouped by Dataset or installation lifetime under [write commits](architecture/system-design.md#write-commits). Physical columns and indexes remain implementation work.
 
 ## Plugin private storage
 

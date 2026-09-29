@@ -49,7 +49,7 @@ Core, Assets and SDK clients may use different supported compatible versions. Co
 
 Objects hold immutable file content of arbitrary types with editable descriptive metadata and historical Entity and Task references. Ready-only visibility, whole-file uploads and their retries, deletion, Required-result protection and metadata edits are specified in [Objects](topics/objects.md), and the [endpoint map](api-endpoints.md#objects) maps them to public operations.
 
-Movement history uses a small Core sample store for explicitly reported position, speed and altitude, separate from current telemetry. Retain until Reset and expose one paginated historical read. Backfill, sample editing, reduced trails and historical-state reconstruction are deferred. A minimal activity log records Task issuance/cancellation, Asset retirement and Plugin, credential and configuration changes, including local actions, with authenticated attribution and no secrets. See [movement](architecture/system-design.md#movement-history) and [activity](architecture/system-design.md#activity-history).
+Movement history and Activity history, including what each records, retention and their paginated reads, are specified in [Activity and movement history](topics/history.md).
 
 Operator records contain information such as a name and personal settings. Exact fields remain open.
 

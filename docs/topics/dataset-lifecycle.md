@@ -28,7 +28,7 @@ Installation setup survives Start, Stop, Restart and ordinary Reset. It includes
 
 ## Diagnostic logs
 
-Start, Stop and Restart preserve Atlas-managed diagnostic logs. Reset clears them as well as operational activity history, including any logs managed through Docker; merely restarting a container is not Reset. Reset does not erase unrelated host logs or files. Hard Reset clears all Atlas-managed logs. Local actions taken while Core is stopped follow the [local activity journal](../architecture/system-design.md#activity-history).
+Start, Stop and Restart preserve Atlas-managed diagnostic logs. Reset clears them as well as operational activity history, including any logs managed through Docker; merely restarting a container is not Reset. Reset does not erase unrelated host logs or files. Hard Reset clears all Atlas-managed logs. Local actions taken while Core is stopped follow the [local activity journal](history.md#local-actions).
 
 ## Dataset identity and the Dataset boundary
 

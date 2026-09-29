@@ -34,7 +34,7 @@ Each Asset receives its own authenticated identity automatically during Enrollme
 
 ### Open enrollment
 
-Open enrollment is a local testing setting, off by default and switched only through the CLI/TUI. While it is on, any connecting Asset is enrolled without deployment authorization but still receives its own identity, so report authority and impersonation protection are unchanged. It applies to Assets only and never overrides revocation or retirement. The setting belongs to installation setup, surviving Restart and Reset until Hard Reset. Core health reports it, the Command Interface shows a persistent warning while it is on, and switching it is recorded in [activity history](../architecture/system-design.md#activity-history). Core records whether each Asset identity was enrolled under Open enrollment. Switching it off does not revoke Assets enrolled under it; the CLI/TUI marks them so an operator can revoke them deliberately.
+Open enrollment is a local testing setting, off by default and switched only through the CLI/TUI. While it is on, any connecting Asset is enrolled without deployment authorization but still receives its own identity, so report authority and impersonation protection are unchanged. It applies to Assets only and never overrides revocation or retirement. The setting belongs to installation setup, surviving Restart and Reset until Hard Reset. Core health reports it, the Command Interface shows a persistent warning while it is on, and switching it is recorded in [activity history](history.md#activity-history). Core records whether each Asset identity was enrolled under Open enrollment. Switching it off does not revoke Assets enrolled under it; the CLI/TUI marks them so an operator can revoke them deliberately.
 
 ## Asset registration
 
@@ -90,7 +90,7 @@ The [revocation cut-off](#credential-revocation) applies to those credentials' r
 
 Asset retirement is one operator-requested operation through the SDK and Core. It remains available when the Asset is disconnected or has nonterminal Tasks, needs no installation Reset, and leaves unrelated Assets operating. Existing operator authority permits it; Asset, Plugin and gateway identities cannot retire Assets. It requires an existing, nonretired Asset.
 
-Retirement atomically records the administrative condition, blocks new Task assignments and credential provisioning for that identity, revokes all bound credentials, records the attributed action in [activity history](../architecture/system-design.md#activity-history) and publishes the Entity change. The [revocation cut-off](#credential-revocation) applies to requests and live feeds.
+Retirement atomically records the administrative condition, blocks new Task assignments and credential provisioning for that identity, revokes all bound credentials, records the attributed action in [activity history](history.md#activity-history) and publishes the Entity change. The [revocation cut-off](#credential-revocation) applies to requests and live feeds.
 
 Retirement retains the Entity and its identity, Task assignments, execution facts, histories, Object associations and required-result protection. It is neither a Task nor an Asset-reported operational status, and it adds no Entity kind or Task lifecycle state. Core exposes the administrative condition with the Entity, separately from the last reported operational status and execution uncertainty. The condition is Core-owned: it is not writable through generic reported-component patches and gives an operator no way to impersonate Asset reporting.
 
@@ -142,7 +142,7 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 - [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md): IP-connected Assets and radio gateways use the general SDK; gateways have their own identities.
 - [ADR-0022](../adr/0022-one-publisher-per-track.md): Track publisher authorship, separate from broad operational access.
 - [ADR-0023](../adr/0023-protect-required-entity-references-during-tasks.md): required Entity references stay protected when the assigned Asset is retired.
-- [ADR-0003](../adr/0003-retain-durable-activity-history.md): attributed activity history for credential changes and retirement.
+- [Activity history](history.md#activity-history) records credential changes and retirement; ADR-0003 is superseded by ADR-0015.
 
 ## Test evidence
 

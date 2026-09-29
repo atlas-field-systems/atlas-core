@@ -181,7 +181,7 @@ A disconnection without a known Reset may retain a visibly stale picture; once R
 
 Movement and activity history are explicit, on-demand SDK operations outside the read-operational-data interface and its Entity, Task and Object picture. The same historical methods call `GET /entities/{entity_id}/movement-history` and, for operator administrative clients, `GET /admin/activity` in both modes. This is a declared separate API category, not a cache-miss fallback or per-read bypass on synchronized resource methods.
 
-History results never populate the live picture, emit its local feed events or advance its recovery cursor, and they do not start background synchronization of historical rows. History pagination uses Core cursors and Dataset identity, separate from local picture cursors. Reset invalidates old history requests and results. Local changed-since queries mean bounded local change history, not movement or activity history. No history cache or offline-history promise is introduced. What history Core records and returns follows [Movement history](../architecture/system-design.md#movement-history) and [Activity history](../architecture/system-design.md#activity-history).
+History results never populate the live picture, emit its local feed events or advance its recovery cursor, and they do not start background synchronization of historical rows. History pagination uses Core cursors and Dataset identity, separate from local picture cursors. Reset invalidates old history requests and results. Local changed-since queries mean bounded local change history, not movement or activity history. No history cache or offline-history promise is introduced. What history Core records and returns follows [Activity and movement history](history.md).
 
 ## Helpers
 

@@ -2,7 +2,7 @@
 
 This page owns the rules shared by all Entities that no other page owns, and Tracks and Geofeatures: Entity types and immutable identity, Aliases, Components, Entity ID reservation, Entity deletion and the required Entity-reference guard, field authorship, one publisher per Track, observation age and corrections, Track data used by Commands, and Geofeature geometry, its live use by existing Tasks and its edit guard.
 
-Asset registration, retained Asset identity and the access effects of Asset deletion follow [Identity and access](identity-and-access.md). Asset Reported data, Contact and partial component updates follow [Asset reporting](asset-reporting.md). Which references a Task requires, its geometry cutoff, collection finished and the applied geometry revision follow [Tasks](tasks.md). Stale descriptive edits follow [concurrent descriptive edits](../architecture/system-design.md#concurrent-descriptive-edits), and retained movement samples follow [movement history](../architecture/system-design.md#movement-history). The [component catalog](../data-components.md) inventories Entity components and their proposed storage.
+Asset registration, retained Asset identity and the access effects of Asset deletion follow [Identity and access](identity-and-access.md). Asset Reported data, Contact and partial component updates follow [Asset reporting](asset-reporting.md). Which references a Task requires, its geometry cutoff, collection finished and the applied geometry revision follow [Tasks](tasks.md). Stale descriptive edits follow [concurrent descriptive edits](../architecture/system-design.md#concurrent-descriptive-edits), and retained movement samples follow [movement history](history.md#movement-history). The [component catalog](../data-components.md) inventories Entity components and their proposed storage.
 
 ## Entity types and identity
 
@@ -77,7 +77,7 @@ An unknown observation time stays explicitly unknown. Core receipt time can be e
 
 The Track's authenticated publisher may correct its current observed value through ordinary updates. The correction preserves the actual observation time, including an explicitly unknown time. Its later submission or receipt does not make the observation fresh, and a correction to an older observation cannot overwrite a newer one.
 
-Previously recorded movement samples are retained. An accepted correction containing movement quantities adds a sample through ordinary [movement history](../architecture/system-design.md#movement-history) ingestion; it does not replace the original sample. Descriptive editors and other publishers cannot use a correction to bypass observed-field ownership. There is no separate correction endpoint or historical-edit workflow; history-only backfill and manual sample editing remain deferred.
+Previously recorded movement samples are retained. An accepted correction containing movement quantities adds a sample through ordinary [movement history](history.md#movement-history) ingestion; it does not replace the original sample. Descriptive editors and other publishers cannot use a correction to bypass observed-field ownership. There is no separate correction endpoint or historical-edit workflow; history-only backfill and manual sample editing remain deferred.
 
 ### Publisher transfers
 

@@ -41,6 +41,6 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | Task lifecycle, queues, Pause and Resume and reconnect reconciliation | [Tasks](docs/topics/tasks.md) |
 | Entity identity, Track publishers, observation age and live Geofeature geometry | [Entities, Tracks and Geofeatures](docs/topics/tracks-and-geofeatures.md) |
 | Administrative retirement without invented execution outcomes | [Asset retirement](docs/topics/identity-and-access.md#asset-retirement) and [decision](docs/adr/0019-retire-assets-without-inventing-task-outcomes.md) |
-| Movement and activity history scope | [Movement history](docs/architecture/system-design.md#movement-history) and [activity log](docs/architecture/system-design.md#activity-history) |
+| Movement and activity history scope | [Activity and movement history](docs/topics/history.md) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |
