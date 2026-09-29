@@ -49,7 +49,7 @@ Treat this as a Core contract milestone. [Later validation](../testing-strategy.
 
 ## Operator access
 
-Every authenticated operator has full control, with no operator roles or view-only accounts. Installed Plugins are trusted extensions built by the user. Authentication and caller attribution still matter; [identity and access](system-design.md#identity-and-access) defines the fixed operator, Asset and Plugin boundaries.
+Every authenticated operator has full control, with no operator roles or view-only accounts. Installed Plugins are trusted extensions built by the user. Authentication and caller attribution still matter; [identity and access](../topics/identity-and-access.md) defines the fixed operator, Asset and Plugin boundaries.
 
 ## Local operation and data retention
 

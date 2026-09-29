@@ -11,7 +11,7 @@ The initial operations and behaviors below are approved; the names describe beha
 | SDK operation | Behavior | Existing API mapping |
 | --- | --- | --- |
 | Register Asset | The Asset creates its Entity with identity, Descriptive data and supported Command declarations; other Reported data follows in the first check-in | `POST /entities` with type `asset` |
-| Retire Asset | An operator withdraws participation through one Core operation, retaining the Entity and unresolved work while blocking assignment/provisioning and revoking bound access | Accepted operation; HTTP binding and SDK signature pending under [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) |
+| Retire Asset | An operator withdraws participation through one Core operation, retaining the Entity and unresolved work while blocking assignment/provisioning and revoking bound access | Accepted operation; HTTP binding and SDK signature pending under [Asset retirement](topics/identity-and-access.md#asset-retirement) |
 | Check in | Report current component data and contact after registration, and subsequently as needed | `POST /entities/{entity_id}/checkin` |
 | Update Asset components | Submit only changed component fields; Core merges and validates the resulting Entity | `PATCH /entities/{entity_id}` |
 | Report Asset status | Convenience operation for an operational status report | `PATCH /entities/{entity_id}/status` |
@@ -29,7 +29,7 @@ The initial operations and behaviors below are approved; the names describe beha
 | Invoke Plugin Operation | Submit a declared capability with stable Dataset-scoped identity; retries retrieve the same Operation | `POST /plugins/{plugin_id}/operations` |
 | Inspect/cancel Plugin Operation | Query recorded progress/outcome or request cancellation; caller disconnect does not stop accepted work | Plugin Operation read/list/cancel endpoints; direct API access outside the operational picture |
 
-Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset, required-result uploads and queue adoption reports are Asset-originated. SDK consumers submitting these reports use the [Asset client](#asset-client), which owns their coordination. Gateway reporting must preserve the authenticated originating Asset and is limited to the gateway's bound Assets; a Plugin identity cannot impersonate an Asset. Tasking clients still use the route-level Task status helpers, for example to request cancellation.
+Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset, required-result uploads and queue adoption reports are Asset-originated. SDK consumers submitting these reports use the [Asset client](#asset-client), which owns their coordination. Gateway and Plugin limits follow the [caller permissions](topics/identity-and-access.md#callers-and-permissions). Tasking clients still use the route-level Task status helpers, for example to request cancellation.
 
 Track observation updates use one publisher per Track. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; another publisher uses a separate Track, and Core does not merge or transfer ownership automatically. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. There is no universal Track expiry for execution: a Command requiring current observations defines acceptable age and stale handling, while a last-known Command may continue and the Asset applies that policy. A Plugin that intentionally fuses sources publishes a separate Track. Descriptive Track edits use the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits), and deleting a Track or Geofeature with a required Command reference from a nonterminal Task returns the blocking Task references rather than forcing an outcome. See [ADR-0022](adr/0022-one-publisher-per-track.md#publisher-continuity) and [ADR-0023](adr/0023-protect-required-entity-references-during-tasks.md).
 
@@ -59,15 +59,11 @@ Upload retries resend the complete file after interruption. Producers retain the
 
 A retry after an allowed Object deletion returns an explicit deleted-result error. The SDK never allocates a replacement identity and silently uploads again; an intentional new upload requires new Object and request identities. [Upload identity contract](adr/0009-expose-objects-only-when-ready.md#retrying-an-upload-after-allowed-deletion).
 
-## Asset retirement
-
-Retirement is an operator administrative operation, unavailable to Asset, Plugin and gateway identities. The SDK submits one request to Core in every mode and returns its committed result; callers do not coordinate revocation, assignment blocking or record preservation. The response does not update a local picture or prove physical stopping. Entity changes arrive through ordinary synchronization. Use the shared [Dataset-scoped retirement retry contract](architecture/system-design.md#retry-identity); discard obsolete submissions on Reset. [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) owns the workflow and retained authority rules. The HTTP binding, SDK signature and record fields remain open.
-
 ## Asset client
 
 Accepted on 26 September 2026, with consumer scope revised by [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). The Asset client is the SDK module for Core-facing Asset reporting by IP-connected Assets, gateways and simulated-Asset test fixtures. Bandwidth-limited Assets do not run it; their gateway does. It registers an Asset, submits Asset-originated reports and reads assigned work, owning:
 
-- First registration under deployment-supplied enrollment authorization, or under Open enrollment in testing, with the stable Asset ID and [registration retry identity](#registration-retry-identity), before a normal Asset credential exists. The Asset client prepares the registration identity and hands it to the Asset OS or deployment layer to retain before submission, so a lost response followed by an Asset process restart can still retry with it. Recovery still requires the enrollment proof. After Reset, re-registration uses the surviving credential without new enrollment authorization.
+- First registration before a normal Asset credential exists, its retry identity and re-registration after Reset, under [Asset registration](topics/identity-and-access.md#asset-registration).
 - Required-result uploads: the Asset client preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the existing upload operation, retaining its request identity. No new route is added.
 - Report identity and ordering, and the Core-issued process generation, matching [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) in Core.
 - Pause/Resume report correlation and queue revision adoption under [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md).
@@ -99,17 +95,11 @@ Object deletion helpers return Core's conflict for a [protected required result]
 ## Asset startup
 
 1. The Core-facing Asset client invokes registration with information supplied by the Asset OS or gateway. The SDK uses ordinary Entity creation, not a dedicated registration endpoint.
-2. Enrollment automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset. Deployment tooling supplies enrollment authorization, or Open enrollment waives it in testing; the SDK completes enrollment without a per-Asset approval step or manually managed API key. The credential/proof encoding remains engineering work; choosing an Asset ID is not proof of identity. Before its first report, operational status defaults to `unknown`, communications is `offline`, and heartbeat has `last_seen: null`.
+2. [Enrollment](topics/identity-and-access.md#enrollment) automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset. Before its first report, operational status defaults to `unknown`, communications is `offline`, and heartbeat has `last_seen: null`.
 3. The Asset sends check-in with its Reported data, such as operational status and position. Core records contact and derives communication state from reported link observations and configured expectations.
 4. The Asset sends further reports as needed. It can send only changed fields instead of resending its full Entity. Every accepted fresh Asset-originated update refreshes contact, including telemetry and status updates.
 
-Registration supplies Descriptive data and Command support only; it is not a request to create empty component placeholders. Supplying optional initial data does not exempt the record from required-component validation. Each Asset has a stable ID that survives restarts. Registration retries reuse that Asset ID and the same registration request identity, so a lost response does not create another Asset. Reconnecting resumes the existing record without overwriting its state with startup defaults. The [registration retry contract](#registration-retry-identity) defines retention and matching behavior; exact wire fields remain to be defined. Registration is not a replacement upsert.
-
-## Registration retry identity
-
-Core commits the Dataset-scoped registration request identity, stable Asset ID, authenticated enrollment-principal binding, canonical initial request facts and resulting Entity/credential association atomically with Entity creation and identity provisioning. Store sufficient private facts to compare a retry to the original request, not to the Asset's later mutable state. First enrollment creates one Asset and one provisioned identity even under concurrent identical requests; conflicting request reuse or an unauthorized caller fails.
-
-A matching authorized retry returns the original registration association and the current Asset representation without reapplying startup defaults, rolling back later reports or provisioning a second credential. Recovering access to that same identity must require the enrollment proof; the request ID alone is not a secret or authorization. Exact credential delivery/proof fields remain schema work. Retain registration retry records across Restart until Reset, including after Entity deletion; a retry for a deleted Asset reports deletion without resurrection. Registration retries cannot reactivate revoked credentials or bypass revoked enrollment authorization. Reset invalidates the old Dataset and its registrations. After ordinary Reset, the Asset client re-registers automatically: a fresh registration for the same ID proves the surviving bound identity and reuses its principal, without new enrollment authorization, under the [installation binding rule](adr/0015-separate-start-stop-restart-and-reset.md#retained-asset-identity-after-reset). A revoked identity cannot re-register until Hard Reset, and a replacement must enroll under a new ID. This does not authorize replaying an old registration into a new Dataset.
+Registration content, stable Asset IDs and retries follow [Asset registration](topics/identity-and-access.md#asset-registration).
 
 ## Partial component updates
 
@@ -133,7 +123,7 @@ Operator-managed and other descriptive edits require the [concurrent-edit protec
 
 ## Reporting and derived data
 
-The Asset authors its reported Entity state. Interfaces submit Tasks rather than directly editing Asset state. A gateway can relay data originating from its bound Assets; exact origin and report-ordering fields remain open. Core verifies Asset identity on every reporting path, including generic Entity patches and Task lifecycle calls. A valid key or claimed Asset ID alone is insufficient. This introduces no operator roles. Managed Plugins receive a Plugin identity without manually managed keys and cannot impersonate Assets.
+The Asset authors its reported Entity state. Interfaces submit Tasks rather than directly editing Asset state. A gateway can relay data originating from its bound Assets; exact origin and report-ordering fields remain open. Core verifies Asset identity on every reporting path under the [Asset caller rules](topics/identity-and-access.md#assets).
 
 Track observations are authored by the Track's single publisher. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; different publishers use different Tracks, and deliberate Plugin fusion creates its own Track. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. Descriptive edits are separate and Core does not merge publishers automatically. [ADR-0022](adr/0022-one-publisher-per-track.md) also permits same-publisher corrections to current observations through ordinary updates, preserving actual age and history without replacing newer observations. Publisher transfers are deferred, and existing Tasks retain their original references.
 
@@ -146,7 +136,7 @@ Core distinguishes fresh reports from arrival of delayed data. Duplicate reports
 ## Remaining decisions
 
 - SDK method names, argument shapes, the Asset client's interface shape, and whether registration offers a convenience option to perform the first check-in.
-- Registration identity encoding and credential proof/delivery fields for the agreed stable-ID/retry model.
+- Registration and credential encodings, listed with the [identity open questions](topics/identity-and-access.md#open-questions).
 - Report identity/ordering fields, relay origin, freshness windows, and Core-time offset estimation that enforce the agreed fresh-contact and no-regression rules.
 - SDK mapping for accepted, duplicate, and rejected Asset reports and their conflict results.
 - Exact Task sequence/queue field encodings and report ordering; Pause/Resume correlation, deadline and expiry fields and validation for conflicting immediate actions beyond the accepted control-order policy.

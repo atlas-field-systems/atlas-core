@@ -10,9 +10,7 @@ The [approved API endpoint map](api-endpoints.md) records methods, paths, inputs
 
 ## Access
 
-Public consumers authenticate and have broad operational read access. There are no operator roles. Core enforces Asset ownership of reported state and assigned Task execution, including generic mutation paths; an arbitrary valid key cannot impersonate an Asset. Asset identity is provisioned automatically during Enrollment; after Reset an Asset re-registers with its surviving credential, and a revoked identity stays revoked until Hard Reset. A local Open enrollment setting waives enrollment authorization for testing. Each radio gateway has its own identity that can relay only for its bound Assets. Exact enrollment and relay-proof mechanisms remain open. Administrative credentials remain distinct from Asset reporting identity; see [identity and access](architecture/system-design.md#identity-and-access).
-
-Managed Plugins use a Core-provided Plugin identity without individual API-key provisioning or rotation by the operator. They can use SDK operational APIs, but cannot impersonate Assets or administer the installation. Health and documentation remain authenticated.
+Public consumers authenticate, have broad operational read access and have no operator roles; Asset, Plugin, gateway and administrative boundaries follow [Identity and access](topics/identity-and-access.md).
 
 Operator records represent people and associated data. They do not introduce an authorization model.
 
@@ -119,7 +117,7 @@ For each endpoint, record:
 - State changes and emitted events.
 - Design status and unresolved questions.
 
-Expected callers explain usage. Enforced report ownership and administrative boundaries follow [identity and access](architecture/system-design.md#identity-and-access).
+Expected callers explain usage. Enforced report ownership and administrative boundaries follow [caller permissions](topics/identity-and-access.md#callers-and-permissions).
 
 Map subscriptions and asynchronous completion alongside requests so clients can determine when an operation finishes and how to receive updates.
 

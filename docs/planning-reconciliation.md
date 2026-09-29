@@ -22,7 +22,7 @@ The [documentation weak-spot review](#documentation-weak-spot-review-28-septembe
 
 | Topic | Resolution | Authoritative detail |
 | --- | --- | --- |
-| Access | Broad operational reads and no operator roles; Core enforces Asset ownership of reported state and assigned Task execution. Automatically provision Asset identity during enrollment. Managed Plugins need no operator-managed keys and cannot impersonate Assets or administer Core | [Identity and access](architecture/system-design.md#identity-and-access) |
+| Access | Broad operational reads and no operator roles; Core enforces Asset ownership of reported state and assigned Task execution. Automatically provision Asset identity during enrollment. Managed Plugins need no operator-managed keys and cannot impersonate Assets or administer Core | [Identity and access](topics/identity-and-access.md) |
 | Plugin administration | Installation, configuration and process controls are local CLI/TUI actions. Public clients discover Plugins, submit Operations, query outcomes and request cancellation | [Local administration](architecture/system-design.md#local-administration), [endpoint map](api-endpoints.md#plugins) |
 | Plugin taskability | Plugins are not Assets; remove the inherited `custom_plugin` component. Plugins may create Tasks for real Assets through existing Commands | [ADR-0004](adr/0004-core-owns-commands-and-assets-execute-tasks.md), [component catalog](data-components.md) |
 | Plugin Operations | Durable attempts with progress, outputs and confirmed outcomes can continue after caller disconnection. Retries retrieve an attempt; deliberate reruns create another | [ADR-0002](adr/0002-core-manages-installed-plugins.md) |

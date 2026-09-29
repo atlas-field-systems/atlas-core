@@ -27,7 +27,7 @@ The current successor uses the immutable Geofeature ID for live geometry while a
 
 The new [Asset status model](asset-status.md) replaces the older execution-session API. The earlier operational-status/check-in design is a reference, while its process-identity registration, readiness, shutdown, and session-scoped Task delivery routes are superseded. Status definitions, Task admission, and restart/late-report behavior need explicit rules; the old automatic Task failures on process replacement are not silently carried forward.
 
-The old browser login, password, and session design is not an answer to the new operator-profile requirement. Here, operator records hold names and settings. Broad operational reads coexist with enforced Asset report ownership and separate administration; see [identity and access](architecture/system-design.md#identity-and-access). Enrollment, first-key provisioning and browser access mechanics remain to be designed.
+The old browser login, password, and session design is not an answer to the new operator-profile requirement. Here, operator records hold names and settings. Broad operational reads coexist with enforced Asset report ownership and separate administration; see [identity and access](topics/identity-and-access.md). Enrollment, first-key provisioning and browser access mechanics remain to be designed.
 
 The approved endpoint map defines the selected routes. Source references here explain their origin and do not add unlisted endpoints.
 

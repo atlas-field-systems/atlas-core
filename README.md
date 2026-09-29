@@ -18,6 +18,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Deletion of resources required by unfinished Tasks | [Required Entity references](docs/adr/0023-protect-required-entity-references-during-tasks.md) |
 | Live Geofeature geometry, offline adoption and geometry cutoffs | [Live geometry decision](docs/adr/0024-use-live-geofeature-geometry-in-tasks.md) |
 | Reference clock for age, freshness and deadlines | [Core time decision](docs/adr/0025-use-core-time-as-the-installation-reference-clock.md) |
+| Current rules by area | [Topic pages](docs/topics/README.md) |
 | Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
 | Accepted tradeoffs and their rationale | [ADR index](docs/adr/README.md) |
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
@@ -37,7 +38,7 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | HTTP mode and Full synchronization mode | [SDK data access](docs/sdk-data-access.md) |
 | Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
 | Operational status, Communication state and Contact | [Asset status](docs/asset-status.md) |
-| Administrative retirement without invented execution outcomes | [Retirement decision](docs/adr/0019-retire-assets-without-inventing-task-outcomes.md) |
+| Administrative retirement without invented execution outcomes | [Asset retirement](docs/topics/identity-and-access.md#asset-retirement) and [decision](docs/adr/0019-retire-assets-without-inventing-task-outcomes.md) |
 | Movement and activity history scope | [Movement history](docs/architecture/system-design.md#movement-history) and [activity log](docs/architecture/system-design.md#activity-history) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |
