@@ -30,7 +30,7 @@ Decision history:
 ## Consequences
 
 - Protocol must distinguish observed fields from operator-managed fields.
-- Removing a Plugin does not itself delete its published Tracks under the [uninstall contract](0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
+- Removing a Plugin does not itself delete its published Tracks under the [uninstall contract](../topics/plugins.md#uninstall-and-reinstall).
 - Exact thresholds and stale-data responses belong to each Protocol-defined Command, and the Asset applies them.
 - Any future transfer workflow requires a successor decision rather than an exception to this ownership rule.
 - Publisher identity encoding, authentication and binding, report ordering, timestamp fields and correction correlation remain contract work.

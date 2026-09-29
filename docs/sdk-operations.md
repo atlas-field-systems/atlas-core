@@ -39,7 +39,7 @@ The SDK exposes typed methods and documentation for these operations. No machine
 
 Callers use the same SDK resource-read, query, and feed-subscription methods in both modes. In HTTP mode, all these operations pass through to Core's API, including query endpoints and the remote feed. In Full synchronization mode, resource reads and queries use only the local picture and locally retained changes; feed subscriptions observe updates applied to that picture. None of these application operations passes through to Core in Full synchronization mode. Applications do not switch to a separate set of cache-specific methods.
 
-Create, update, delete, and Task lifecycle operations submit to Core in both modes. File bytes and permitted administrative resources outside the operational picture still use their API endpoints. Plugin installation, settings and process control are local CLI/TUI actions, not SDK operations; their uninstall/reinstall behavior follows [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall). Before the initial picture is ready, local reads return an explicit not-ready result. During interruption, reads use the last known picture with its disconnected/stale condition exposed. Exact error/status shapes remain to be specified; the same method signature does not imply identical freshness. A full-synchronization read never falls back to HTTP because of a local miss, stale data, or an unsupported local query. HTTP failures never fall back to the local picture. Source selection follows the configured mode. See [SDK data access](sdk-data-access.md).
+Create, update, delete, and Task lifecycle operations submit to Core in both modes. File bytes and permitted administrative resources outside the operational picture still use their API endpoints. Plugin installation, settings and process control are [local CLI/TUI actions](topics/plugins.md#local-administration), not SDK operations. Before the initial picture is ready, local reads return an explicit not-ready result. During interruption, reads use the last known picture with its disconnected/stale condition exposed. Exact error/status shapes remain to be specified; the same method signature does not imply identical freshness. A full-synchronization read never falls back to HTTP because of a local miss, stale data, or an unsupported local query. HTTP failures never fall back to the local picture. Source selection follows the configured mode. See [SDK data access](sdk-data-access.md).
 
 The background synchronizer privately uses remote `/queries` and `/feed` to maintain the picture. Application-facing query and feed operations remain available, but resolve locally in Full synchronization mode. Local feed subscribers observe changes after application to the cache, not raw remote messages. Missing local query history or coverage is reported without an API pass-through. Local change history is bounded with configurable limits. Local cursors are scoped to one SDK picture, expire when history is unavailable, and become invalid on rebuild; they are not interchangeable with Core cursors. On expiry, callers can request a fresh local snapshot. Detailed limits, encoding, and subscription-start behavior remain to be specified. HTTP mode does not maintain the synchronized picture.
 
@@ -73,6 +73,10 @@ Task lifecycle helpers, Pause and Resume, assigned-work reads, queue operations 
 ## Objects
 
 Upload retries, deleted-result retries and protected deletion helpers follow [Objects](topics/objects.md#routes-and-sdk-operations).
+
+## Plugins
+
+Operation submission identity, retries, outcome queries and cancellation follow [Plugins](topics/plugins.md#routes-and-sdk-operations).
 
 ## Asset startup
 

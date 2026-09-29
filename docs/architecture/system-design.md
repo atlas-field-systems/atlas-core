@@ -32,15 +32,15 @@ Accepted on 26 September 2026 and clarified on 28 September: one SDK Asset clien
 
 The CLI and TUI share a local management implementation for Core lifecycle, Reset, Hard Reset, updates and installed Plugin management. They use private internal coordination, not the public API or SDK. Local tooling can start Core when it is stopped. Core's Plugins module owns its lifecycle policy; local tools coordinate with it instead of duplicating the rules.
 
-Plugin installation, removal, updates, configuration, enable/disable, start/stop/restart and force stop have no public API endpoints or SDK methods and are outside public Protocol generation. Public consumers can discover Plugin capabilities/status, invoke Operations, query outcomes and request Operation cancellation. Cancelling an Operation is distinct from stopping its Plugin. This supersedes the earlier Command Interface Plugin restart action; that application can still display faults.
+Plugin management is local-only, with no public API endpoints, SDK methods or public Protocol generation, under [Plugins](../topics/plugins.md#local-administration).
 
 Local tools also switch [Open enrollment](../topics/identity-and-access.md#open-enrollment), [re-provision a lost Asset credential](../topics/identity-and-access.md#lost-asset-credentials) and list retained and revoked Asset IDs.
 
-Local administrative actions contribute to [activity history](#activity-history). [ADR-0002](../adr/0002-core-manages-installed-plugins.md) defines independent Plugin lifecycles, and [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) defines active-work protection.
+Local administrative actions contribute to [activity history](#activity-history).
 
 Use the host-side private Docker integration selected in [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md). Its coordination channel and installation/update workflows remain open; no separate management service is required.
 
-Managed Plugins run with Core and stop when it is spun down, under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md#core-and-plugin-runtime-lifetime). Local administration while Core is stopped is a management capability, not a way to run Plugin Operations without Core.
+Managed Plugins run only with Core under [Runtime lifetime with Core](../topics/plugins.md#runtime-lifetime-with-core); local administration while Core is stopped does not run Plugin Operations.
 
 [Hard Reset](../adr/0015-separate-start-stop-restart-and-reset.md#hard-reset) is a separate local CLI/TUI action available whether Atlas is running or stopped. Its coordinator stops Core and managed Plugins, wipes operational state and installation setup, and returns to first-time setup. Ordinary Reset preserves Operator profiles, personal settings and installation setup. Neither reset action adds a public endpoint or SDK lifecycle method.
 
@@ -142,17 +142,11 @@ Queue revisions remain a separate part of Tasks because requested and confirmed 
 
 ## Plugin Operations
 
-[ADR-0002](../adr/0002-core-manages-installed-plugins.md) owns accepted Operations, submission retry identity and retained effects. [ADR-0006](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) owns stopping and fault outcomes. Plugins implements these contracts separately from Tasks. Use Plugin packaging for an internal capability only when it needs the independently managed extension lifecycle.
+Plugins implements Operations separately from Tasks. [Plugins](../topics/plugins.md) states the Operation, stopping, fault, configuration and storage rules.
 
-SDK helpers manage submission identity and outcome queries; the server remains responsible for acceptance and recorded outcomes. Operations can run beyond an individual HTTP request. [Identity and access](../topics/identity-and-access.md#plugins) allows trusted Plugins to use operational data across sources and issue Asset Tasks, while reserving execution reporting for the assigned Asset and administration for its designated interfaces.
+SDK helpers manage submission identity and outcome queries; the server remains responsible for acceptance and recorded outcomes. A separate Core-owned Operation record stores submission identity, Plugin/release/capability, input, state, progress and known outcomes. Submission retries use the shared [retry identity](#retry-identity) mechanism. See the [storage catalog](../data-components.md#core-support-records).
 
-A separate Core-owned Operation record stores submission identity, Plugin/release/capability, input, state, progress and known outcomes. Commit acceptance before dispatch; preserve Operations across Plugin removal and Restart until Reset. Submission retry uniqueness prevents duplicate acceptance, not arbitrary duplicate external effects. See the [storage catalog](../data-components.md#core-support-records).
-
-[ADR-0021](../adr/0021-manage-plugin-operational-storage-through-reset.md) requires private Plugin operational data to live in Atlas-managed per-Plugin working storage. Plugins choose file formats, including a private SQLite file; host management clears the owned storage during Reset after stopping writers. Retained settings and installed reference data stay separate. Core does not parse Plugin-private storage or give Plugins access to its database. Preserving files through Restart never authorizes an automatic Operation rerun.
-
-Removing a Plugin withdraws its capability and any UI contribution. [Uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall) clears its private operational work, saved setup, credentials and owned artifacts after stopping writers; published resources and recorded outcomes follow their own lifecycles. Disabling preserves its installation, while reinstall starts with an empty working directory and may require configuration and reference-data downloads. Publisher continuity follows [continuity after reinstall](../topics/tracks-and-geofeatures.md#publisher-continuity-after-reinstall), independently of deleted installation secrets.
-
-[ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) selects a separate Docker container per installed Plugin. Invocation fields, Plugin manifest/distribution details and any UI contribution contract remain open. If supported, Core may expose contribution metadata or serve static assets; the external Command Interface owns rendering, navigation, map interaction and resource views. UI delivery is not a selected implementation.
+Host management owns each Plugin's [working storage](../topics/plugins.md#private-operational-storage) and clears it after stopping writers. Core does not parse Plugin-private storage or give Plugins access to its database. [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) selects a separate Docker container per installed Plugin.
 
 ## Write commits
 
@@ -241,7 +235,7 @@ Reaffirmed on 28 September 2026: prove the selected Protocol code-generation pat
 | [Task lifecycle](../topics/tasks.md#task-status-and-transitions) and [scan completion](../topics/tasks.md#scan-completion) | Allowed transitions, terminal outcomes and cancellation; completion report and ready Objects in both arrival orders |
 | [Asset retirement](../topics/identity-and-access.md#asset-retirement) | Progress without Asset confirmation; retained evidence and protected results; assignment/provisioning/report races, retry, revocation and Dataset boundaries |
 | [Object availability and transfer](../topics/objects.md) | Private staging with cleanup, whole-file retries, completed-request deduplication, ready-only publication and continued uploads without reopening Cancelled Tasks |
-| [Plugin Operations](../adr/0002-core-manages-installed-plugins.md) and [stopping](../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) | Caller disconnection, lost acceptance responses, retained effects and protected local lifecycle changes |
+| [Plugin Operations](../topics/plugins.md#operations) and [stopping](../topics/plugins.md#protecting-active-work) | Caller disconnection, lost acceptance responses, retained effects and protected local lifecycle changes |
 | [Runtime lifecycle](../adr/0015-separate-start-stop-restart-and-reset.md) | Retention and interrupted-work classification; Reset cleanup; writing-release mismatch refusal; rejection of old-dataset submissions with discovery still available |
 | [Client and setup compatibility](../adr/0005-allow-compatible-client-versions.md) | Supported versions, unsupported-client rejection and retained configuration/Plugin checks |
 | [SDK modes](#sdk-as-the-supported-entry-point) and [access boundaries](../topics/identity-and-access.md#callers-and-permissions) | Full-picture reads for every authenticated client with optional synchronization; allowed Plugin Task issuance; assigned-Asset reports on every mutation path; no public Plugin management methods/endpoints |

@@ -136,7 +136,7 @@ Use explicit Operator IDs rather than a `/me` route: an API key does not current
 
 ## Plugins
 
-Plugin installation, catalog selection, configuration, enable/disable, updates, removal and process control use the local CLI/TUI. They have no public endpoints or SDK methods. Uninstall stops the Plugin and clears its private operational work, saved configuration, usable credentials, downloaded reference data and owned installation artifacts; reinstall starts with empty work and fresh setup. Public resources and recorded Operations retain their own lifecycle, while disabling preserves the installation and private work, under [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall). The public API exposes discovery/status and durable Operations under [ADR-0002](adr/0002-core-manages-installed-plugins.md).
+The public API exposes Plugin discovery/status and durable Operations; Plugin management is local-only. Their rules are specified in [Plugins](topics/plugins.md).
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
@@ -147,11 +147,8 @@ Plugin installation, catalog selection, configuration, enable/disable, updates, 
 | `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one Operation | Core-owned Operation ID → status, progress, known outputs and outcome | None | New |
 | `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` | Consumers request cancellation | Operation ID → Operation | Record cancellation request; final outcome requires confirmation | New |
 
-Here `operation_id` identifies one accepted Operation, not a Plugin capability. Return `202 Accepted` on submission with the Operation identity and query URL. Retries with the same dataset-scoped submission identity recover the existing Operation; a deliberate rerun uses a new identity. Caller disconnection does not cancel work. Failed or Interrupted Operations retain known outputs/effects. Terminal outcomes cannot be overwritten; query retained Operations even if the Plugin is later removed, until Reset.
+Submission, retries, cancellation, the [Operation transitions](topics/plugins.md#operation-transitions) and retention are specified in [Plugins](topics/plugins.md#operations), including the `202 Accepted` submission response.
 
-Operations have their own [transition table](adr/0002-core-manages-installed-plugins.md#operation-transitions). Operation transitions remain separate from Task transitions even though both include cancellation-requested intent. Operation polling uses these endpoints in every SDK mode; Operations are outside the initial Entity/Task/Object picture. Live Operation notification details remain open.
-
-Plugins are not taskable Assets. They can create Tasks for Assets through the ordinary Task API, and publish resources through Core using their Plugin identity. Stopping a Plugin protects its active Operations under [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md); unrelated Asset Tasks do not block management. Local management results, saved/active configuration and startup validation belong to that private contract, not the public Plugin resource.
 
 ## Synchronization
 
@@ -180,7 +177,7 @@ Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-
 | `GET /docs` | Developers browse interactive documentation | API key → documentation interface | None | New |
 | `GET /openapi.json` | SDK/tooling and docs read the HTTP contract | API key → OpenAPI document | None | New |
 
-Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is reported on that Plugin and does not make an otherwise functioning Core globally unready. Exact dependency probes and timeout thresholds remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
+Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is [reported on that Plugin](topics/plugins.md#plugin-capabilities-and-discovery) and does not make an otherwise functioning Core globally unready. Exact dependency probes and timeout thresholds remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
 
 ## Shared contract baseline
 

@@ -32,7 +32,7 @@ Operational status is the Asset's reported operational condition, separate from 
 | `error` | A reported fault prevents normal operation; details explain the fault |
 | `stopped` | The Asset has deliberately stopped operational activity |
 
-Every Asset has an Operational status, even one that only reports observations. Being `ready` does not invent tasking capabilities the Asset has not advertised. Plugins are not Assets and do not report Operational status; their Operations and lifecycle follow [ADR-0002](../adr/0002-core-manages-installed-plugins.md).
+Every Asset has an Operational status, even one that only reports observations. Being `ready` does not invent tasking capabilities the Asset has not advertised. Plugins are not Assets and do not report Operational status; their Operations and lifecycle follow [Plugins](plugins.md).
 
 The status routes apply only to Asset Entities. A status report carries the status and an optional reason and details. Status supplied through the status routes, check-in or any permitted Entity patch shares one set of validation, transition and update rules. Detailed transition and report validation remains open.
 

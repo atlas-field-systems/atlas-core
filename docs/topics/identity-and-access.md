@@ -8,7 +8,7 @@ Every authenticated SDK client, including an Asset, Plugin or gateway, may read 
 
 Authentication resolves a stable principal kind (operator client, Asset, managed Plugin or gateway) and, for an Asset, its bound Asset ID. There are no operator roles, permission tiers or view-only accounts. All authenticated operators have full control within the execution-report, [Track-publisher](tracks-and-geofeatures.md#one-publisher-per-track) and local-administration boundaries below. Operator profiles are names and settings, not permission roles. The proposed additional caller-scoped Operation retry and upload-handle ownership rules are not adopted; submission identity keeps its existing Dataset scope.
 
-SDK method availability does not grant permission, and a route's expected caller does not either. Core enforces authorization at the API boundary. Plugin installation and configuration and Core and Plugin process lifecycle are [local CLI/TUI controls](../architecture/system-design.md#local-administration), absent from the public API and SDK.
+SDK method availability does not grant permission, and a route's expected caller does not either. Core enforces authorization at the API boundary. Plugin installation and configuration and Core and Plugin process lifecycle are [local CLI/TUI controls](plugins.md#local-administration), absent from the public API and SDK.
 
 ### Operator clients
 

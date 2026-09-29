@@ -2,7 +2,7 @@
 
 This page owns Commands and Tasks: the Command Catalog and Asset Command support, Task creation, the Task lifecycle and cancellation, queued and immediate scheduling, queue revisions, Pause and Resume, Command validity, reconnect reconciliation, recovery after an Asset-process restart, scan completion and the Task side of required Entity references and live geometry.
 
-Asset reports, Contact and report acceptance follow [Asset reporting](asset-reporting.md), and caller authority follows [Identity and access](identity-and-access.md). Object readiness, publication and Required-result protection follow [Objects](objects.md). Entity deletion, Geofeature geometry editing and Track data freshness for Commands follow [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md). Plugin Operations have their own [lifecycle](../adr/0002-core-manages-installed-plugins.md#operation-transitions).
+Asset reports, Contact and report acceptance follow [Asset reporting](asset-reporting.md), and caller authority follows [Identity and access](identity-and-access.md). Object readiness, publication and Required-result protection follow [Objects](objects.md). Entity deletion, Geofeature geometry editing and Track data freshness for Commands follow [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md). Plugin Operations have their own [lifecycle](plugins.md#operation-transitions).
 
 ## Commands and the Command Catalog
 
@@ -12,7 +12,7 @@ Protocol-defined Commands explicitly identify their typed Entity and Object refe
 
 The SDK returns the Command Catalog from the installed Protocol package through a local function, so catalog access requires no Core request or network connection. There is no public command-catalog endpoint. Core, Assets and SDK clients may use different compatible versions under [ADR-0005](../adr/0005-allow-compatible-client-versions.md); unsupported Asset Commands are rejected explicitly.
 
-Plugins cannot introduce Asset Commands or become Task targets. Their own processing and ingestion are Operations, not Tasks, and an area-search Operation or an ongoing aircraft-data source does not require a taskable Plugin Entity.
+Plugins cannot introduce Asset Commands or become Task targets. Their own processing and ingestion are [Plugin work](plugins.md), not Tasks, and an area-search Operation or an ongoing aircraft-data source does not require a taskable Plugin Entity.
 
 ### Command support
 

@@ -57,9 +57,7 @@ An installed system [works without internet](../adr/0010-operate-without-interne
 
 Start, Stop and Restart preserve data and logs. Reset is the usual development fresh start and preserves installation setup, including Operator profiles. Hard Reset is a separate local CLI/TUI action available whether Atlas is running or stopped that wipes all Atlas-managed state and returns to first-time setup. The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) owns the action table, retained setup, release-update Reset and client dataset boundary. Local CLI/TUI tools provide [administration](system-design.md#local-administration).
 
-Plugins keep private operational work in [Atlas-managed working storage](../adr/0021-manage-plugin-operational-storage-through-reset.md). It survives ordinary Restart subject to the existing reconciliation rules and is cleared by Reset. Retained setup and installed reference data remain separate, so a fresh Dataset does not restore an old work queue or require reinstalling the Plugin's reference data.
-
-[Uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall) clears that Plugin's private work, saved setup, credentials, reference data and owned artifacts after stopping it, while published Atlas resources and recorded Operation outcomes retain their own lifetimes. Disable the Plugin to preserve its installation without running it. Reinstallation starts with an empty working directory and may require configuration and downloads again. Within the same Dataset, the [same authenticated publisher](../topics/tracks-and-geofeatures.md#publisher-continuity-after-reinstall) can continue its existing Tracks using fresh observations.
+Plugins keep private operational work in [Atlas-managed working storage](../topics/plugins.md#private-operational-storage) that Restart keeps and Reset clears, separately from retained setup and reference data; [uninstall](../topics/plugins.md#uninstall-and-reinstall) also clears the Plugin's setup, while disabling preserves it.
 
 ## Tasks across a disconnection
 
@@ -81,9 +79,9 @@ This example does not require every Plugin to produce a separate Object or estab
 
 ## Details for module planning
 
-The 28 September grilling round settled [stale descriptive edits](system-design.md#concurrent-descriptive-edits), [one publisher per Track](../topics/tracks-and-geofeatures.md#one-publisher-per-track), [deletion protection for required Entity references](../topics/tracks-and-geofeatures.md#required-entity-references) and [Plugin-private work on uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
+The 28 September grilling round settled [stale descriptive edits](system-design.md#concurrent-descriptive-edits), [one publisher per Track](../topics/tracks-and-geofeatures.md#one-publisher-per-track), [deletion protection for required Entity references](../topics/tracks-and-geofeatures.md#required-entity-references) and [Plugin-private work on uninstall](../topics/plugins.md#uninstall-and-reinstall).
 
-The second round settles [same-publisher continuity and silent Tracks](../topics/tracks-and-geofeatures.md#publisher-continuity-after-reinstall), [live Geofeature geometry](../topics/tracks-and-geofeatures.md#live-geometry-for-existing-tasks) and [Plugin setup removal on uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
+The second round settles [same-publisher continuity and silent Tracks](../topics/tracks-and-geofeatures.md#publisher-continuity-after-reinstall), [live Geofeature geometry](../topics/tracks-and-geofeatures.md#live-geometry-for-existing-tasks) and [Plugin setup removal on uninstall](../topics/plugins.md#uninstall-and-reinstall).
 
 The third round settles [offline geometry and adoption evidence](../topics/tracks-and-geofeatures.md#disconnection-and-adoption), the [collection-finished boundary](../topics/tasks.md#collection-finished-and-geometry) and [Command-specific Track freshness](../topics/tracks-and-geofeatures.md#track-data-used-by-commands).
 

@@ -55,7 +55,7 @@ Each Track has one publisher responsible for its Observed data. Different publis
 
 Entities records the Track's publisher and enforces that boundary on every path that can write its observed fields. Descriptive edits, such as an operator changing an Alias, remain separate and cannot replace publisher-owned observations. Broad operational reads and Plugin Task issuance remain supported, but permission to read another publisher's Track does not grant authorship of its observations; a Plugin cannot overwrite another Track's observed fields merely because it has operational access. This is an ownership rule, not a component extension system or a separate observation service.
 
-Removing a Plugin does not itself delete its published Tracks under the [uninstall contract](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
+Removing a Plugin does not itself delete its published Tracks under the [uninstall contract](plugins.md#uninstall-and-reinstall).
 
 ### Plugin fusion
 

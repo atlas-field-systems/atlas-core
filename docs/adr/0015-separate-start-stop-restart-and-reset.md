@@ -22,7 +22,7 @@ Operational state includes Entities and Tracks, Tasks, Object metadata and conte
 
 This supersedes [ADR-0013](0013-start-each-core-run-with-empty-data.md). Retention is bounded by Reset rather than the Core process lifetime. If Core is already stopped, Reset still ensures managed Plugins are stopped before clearing state, then starts Core and compatible enabled Plugins. A new-release update includes Reset; distribution and update packaging remain to be designed.
 
-[ADR-0021](0021-manage-plugin-operational-storage-through-reset.md) includes each Plugin's Atlas-managed working directory in operational state. Ordinary Reset clears that private work while retaining separate Plugin setup, credentials and installed reference data. Start, Stop and Restart preserve it under the existing no-rerun rules.
+[ADR-0021](0021-manage-plugin-operational-storage-through-reset.md) includes each Plugin's Atlas-managed working directory in operational state; [Plugins](../topics/plugins.md#restart-and-reset) states its retention rules.
 
 Retained records do not authorize automatic resumption or rerun. A Plugin crash while Core remains running follows [ADR-0006](0006-protect-active-plugin-work-during-lifecycle-changes.md); Asset execution remains the Asset OS's responsibility.
 
@@ -30,11 +30,7 @@ Persistent storage uses the [selected stack](0016-use-go-sqlite-and-openapi-tool
 
 ## Core and Plugin runtime lifetime
 
-Clarified on 23 September 2026: managed Plugins operate only while Core is running. A completed Core Stop also leaves its managed Plugins stopped; Restart and Reset stop them before bringing the installation back up. Independent Plugin start/stop/update while Core remains running stays supported. Starting compatible enabled Plugins with Core does not resume or rerun interrupted Operations.
-
-Local management coordinates this lifetime and reports incomplete shutdown rather than claiming everything stopped. Unexpected Core loss must not leave Plugins intentionally operating as standalone services; detection and shutdown mechanisms remain engineering work, with no instantaneous stop or automatic mission-recovery guarantee. Preserve known outcomes and classify uncertain work under [unfinished work](#unfinished-work-after-stop-or-restart). Physical Assets have their own execution lifetime and are not stopped by this Plugin rule.
-
-Local administration may still run while Core is stopped to perform setup, lifecycle actions and their activity recording. That capability does not require running Plugins or permitting offline Plugin Operations.
+Clarified on 23 September 2026: managed Plugins operate only while Core is running, while independent Plugin start, stop and update with Core running stays supported. [Runtime lifetime with Core](../topics/plugins.md#runtime-lifetime-with-core) states the current rules.
 
 ## Reset execution
 
@@ -67,7 +63,7 @@ Retention preserves evidence; it does not claim that execution continued. Stop r
 | Retained work | Behavior after Start |
 | --- | --- |
 | Asset Tasks | Keep recorded statuses, reports and result references. Do not infer Asset success, failure or cancellation from the Core interruption, and do not automatically reissue Tasks |
-| Plugin Operations | Mark unfinished Operations Interrupted under the [Operation lifecycle](0002-core-manages-installed-plugins.md#operation-transitions). A submission retry retrieves that Operation; a rerun must be explicit |
+| Plugin Operations | Mark unfinished Operations Interrupted under the [Operation lifecycle](../topics/plugins.md#operation-transitions). A submission retry retrieves that Operation; a rerun must be explicit |
 | Partial Object uploads | Clean up abandoned private staging. Retried uploads start from the beginning; no partial-transfer resume or inspection store is required. Preserve already-published Objects and successful upload identity records |
 
 The 22 September upload simplification replaces the earlier retention of partial transfer bytes/progress until Reset; completed operational data remains retained.

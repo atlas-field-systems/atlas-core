@@ -2,7 +2,7 @@
 
 This page owns Objects: what an Object is, ready-only visibility, SDK-allocated Object IDs, uploads and their retries, publication and recovery, deletion and deleted-result retries, Required-result protection, uploads after Task cancellation, the Object storage quota and integrity faults, metadata edits and download.
 
-Scan completion and the Task side of Required results follow [Tasks](tasks.md#scan-completion), and caller authority and retirement races follow [Identity and access](identity-and-access.md). Module ownership of publication and recovery, Required-result holds and the collaboration with Tasks is in [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership). Object retention across Restart and Reset cleanup follow [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md). Plugin private storage follows [ADR-0021](../adr/0021-manage-plugin-operational-storage-through-reset.md).
+Scan completion and the Task side of Required results follow [Tasks](tasks.md#scan-completion), and caller authority and retirement races follow [Identity and access](identity-and-access.md). Module ownership of publication and recovery, Required-result holds and the collaboration with Tasks is in [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership). Object retention across Restart and Reset cleanup follow [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md). Plugin private storage follows [Plugins](plugins.md#private-operational-storage).
 
 ## What an Object is
 

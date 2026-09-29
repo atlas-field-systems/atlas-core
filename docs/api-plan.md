@@ -53,13 +53,7 @@ Movement history uses a small Core sample store for explicitly reported position
 
 Operator records contain information such as a name and personal settings. Exact fields remain open.
 
-Core owns Plugin lifecycle policy. Installation, configuration, enablement and process administration are local CLI/TUI actions through private management interfaces, with no public management routes or SDK methods. Docker deployment is selected; the private integration details remain open. See [local administration](architecture/system-design.md#local-administration).
-
-Plugins expose durable Operations, not Asset Tasks. Accepted Operations have stable identities and queryable progress/outcomes, survive caller disconnection, and can create Objects or other operational data. Retries retrieve the existing Operation; reruns are explicit and create new Operations. Plugins may issue Tasks to real Assets through existing Commands without becoming Assets themselves. See [ADR-0002](adr/0002-core-manages-installed-plugins.md).
-
-Uninstall stops the Plugin and clears its private operational work, saved configuration, usable credentials, downloaded reference data and owned installation artifacts; reinstall starts with empty work and fresh setup. Public resources and recorded Operations retain their own lifecycle. Disabling preserves the installation and private work. See [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
-
-Plugin configuration requires a declared schema with required fields and defaults. Core validates settings; saving desired settings is separate from applying them. Applying to a running Plugin follows the active-Operation stopping procedure before restart. Applying to a disabled Plugin prepares settings for its next start without enabling it or claiming startup validation. Unrelated Asset Tasks do not block Plugin management. The authoritative configuration and recovery policy lives in [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md).
+Plugins expose durable Operations, not Asset Tasks, and may issue Tasks to real Assets through existing Commands; installation, configuration and process administration are local CLI/TUI actions with no public management routes or SDK methods. [Plugins](topics/plugins.md) specifies Operations, lifecycle, configuration and storage.
 
 ### Definition sources
 
@@ -83,7 +77,7 @@ This design retains the one-Command, one-Asset Task rule and Protocol-owned Comm
 | `/docs` | Interactive API documentation |
 | `/openapi.json` | Machine-readable OpenAPI specification for documentation and developer tools |
 
-Core readiness depends on required infrastructure, including SQLite and the private Object file storage. Individual Plugin failures are reported on the affected Plugin and do not make an otherwise functioning Core globally unready. Exact dependency probes remain open.
+Core readiness depends on required infrastructure, including SQLite and the private Object file storage. Individual Plugin failures are [reported on the affected Plugin](topics/plugins.md#plugin-capabilities-and-discovery) and do not make an otherwise functioning Core globally unready. Exact dependency probes remain open.
 
 OpenAPI describes the API contract. A documentation tool renders it at `/docs`; Swagger UI is a candidate. These route names are project choices, not routes automatically provided by OpenAPI.
 
@@ -131,8 +125,7 @@ The following decisions remain open:
 - Local SDK Command Catalog function name/signature and SDK operation names, including the detailed registration deduplication contract for stable Asset and request identities.
 - Exact Object metadata schema and reference representation; historical associations are retained when a related Entity is removed.
 - Fields and lifecycle of operator records.
-- Plugin manifest/distribution and private Docker coordination details; Docker deployment and local administration are selected.
-- Plugin configuration schema format, startup success criteria, and detailed reporting of saved, active, failed and last working settings. Recovery after failed startup is explicitly manual under ADR-0006.
+- The [Plugin open questions](topics/plugins.md#open-questions), including manifest/distribution, private Docker coordination and configuration schema details.
 - API key transport details, local first-key provisioning commands, and how browser documentation authenticates.
 - Health check criteria and response format.
 - Shared wire conventions for errors, pagination, concurrent edits, retries, and subscriptions; concurrent descriptive-edit protection is accepted, while its revision and error encodings remain implementation work.

@@ -9,3 +9,4 @@ Each page owns the current rules for one area of Atlas behavior. The [documentat
 | Commands, Task lifecycle and cancellation, scheduling, queues, Pause and Resume, reconnect reconciliation and scan completion | [Tasks](tasks.md) |
 | Object visibility, uploads and retries, publication and recovery, deletion, Required-result protection, storage quota and download | [Objects](objects.md) |
 | Entity types, identity, Aliases, Components, deletion and required Entity references, Track publishers and observation age, and Geofeature geometry | [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md) |
+| Plugin capabilities, Operations and their transitions, independent lifecycle, local administration, configuration, runtime lifetime, private storage and uninstall, releases and UI contributions | [Plugins](plugins.md) |
