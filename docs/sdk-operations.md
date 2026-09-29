@@ -23,7 +23,7 @@ The initial operations and behaviors below are approved; the names describe beha
 | Cancel Task | Request withdrawal under [cancellation requests](topics/tasks.md#cancellation-requests) | `PATCH /tasks/{task_id}/status` |
 | Reorder assigned Tasks | Submit a [queue revision](topics/tasks.md#queue-revisions) | `PUT /entities/{entity_id}/task-order` |
 | Report queue adoption | Assigned Asset confirms a requested revision or reports an execution conflict | `POST /entities/{entity_id}/task-order/confirm` |
-| Upload Object content | Stream the whole file; restart an interrupted transfer from zero using the same request identity; a previously completed identical request returns its existing Object or an explicit deleted-result error | `POST /objects/upload`; no resume/offset API |
+| Upload Object content | Stream the whole file with a stable request identity under [uploads](topics/objects.md#uploads) | `POST /objects/upload`; no resume/offset API |
 | Read movement history | On-demand paginated samples for one Asset/Track and time range; does not populate the operational picture | `GET /entities/{entity_id}/movement-history` in every mode |
 | Read activity history | Operator administrative clients query the limited action log; outside the operational picture | `GET /admin/activity` in every mode |
 | Invoke Plugin Operation | Submit a declared capability with stable Dataset-scoped identity; retries retrieve the same Operation | `POST /plugins/{plugin_id}/operations` |
@@ -55,16 +55,12 @@ A scan completion report may leave its Task nonterminal under [scan completion](
 
 Historical reads are explicit API-backed operations in every SDK mode, separate from the read-operational-data methods. Their results and cursors never update the local operational picture. See [historical reads](sdk-data-access.md#historical-reads).
 
-Upload retries resend the complete file after interruption. Producers retain the source file until publication succeeds. The SDK allocates the Object ID before upload and retains it alongside a stable Dataset-scoped request identity, so reports can reference results before their files arrive and a lost success response does not create another Object; it does not keep persistent partial-transfer progress or add an offline write queue. Reset invalidates the old request identity. Detailed content-equivalence verification follows [ADR-0009](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries).
-
-A retry after an allowed Object deletion returns an explicit deleted-result error. The SDK never allocates a replacement identity and silently uploads again; an intentional new upload requires new Object and request identities. [Upload identity contract](adr/0009-expose-objects-only-when-ready.md#retrying-an-upload-after-allowed-deletion).
-
 ## Asset client
 
 Accepted on 26 September 2026, with consumer scope revised by [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). The Asset client is the SDK module for Core-facing Asset reporting by IP-connected Assets, gateways and simulated-Asset test fixtures. Bandwidth-limited Assets do not run it; their gateway does. It registers an Asset, submits Asset-originated reports and reads assigned work, owning:
 
 - First registration before a normal Asset credential exists, its retry identity and re-registration after Reset, under [Asset registration](topics/identity-and-access.md#asset-registration).
-- Required-result uploads: the Asset client preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the existing upload operation, retaining its request identity. No new route is added.
+- Required-result uploads: the Asset client preallocates the result Object ID under [Object IDs before upload](topics/objects.md#object-ids-before-upload), uses it in the completion report and delegates the whole-file upload to the existing upload operation, retaining its request identity. No new route is added.
 - Report identity and ordering, and the Core-issued process generation, matching [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) in Core.
 - Pause/Resume report correlation and queue revision adoption under [Tasks](topics/tasks.md#pause-and-resume).
 - Lost-response retries with stable identities, and discarding obsolete work and submissions when the Dataset changes before re-registering in the new Dataset.
@@ -76,9 +72,9 @@ After an Asset process restart, the Asset client follows [recovery](topics/tasks
 
 Task lifecycle helpers, Pause and Resume, assigned-work reads, queue operations and recovery follow [Tasks](topics/tasks.md#routes-and-sdk-operations). Exact helper names and wire envelopes remain schema work.
 
-## Protected Object deletion
+## Objects
 
-Object deletion helpers return Core's conflict for a [protected required result](adr/0009-expose-objects-only-when-ready.md#required-result-protection). A rejected deletion must not remove the Object from a synchronized picture.
+Upload retries, deleted-result retries and protected deletion helpers follow [Objects](topics/objects.md#routes-and-sdk-operations).
 
 ## Asset startup
 
@@ -101,5 +97,6 @@ Track observations are authored by the Track's single publisher. Within one Data
 - Registration and credential encodings, listed with the [identity open questions](topics/identity-and-access.md#open-questions).
 - Report identity, ordering, relay-origin and disposition-mapping questions listed with the [Asset reporting open questions](topics/asset-reporting.md#open-questions).
 - Task, queue, Pause/Resume and deadline fields listed with the [Tasks open questions](topics/tasks.md#open-questions).
+- Upload identity and content-verification details listed with the [Objects open questions](topics/objects.md#open-questions).
 
 These operations use the [approved endpoint map](api-endpoints.md), [component catalog](data-components.md), and [Asset reporting](topics/asset-reporting.md) rules.

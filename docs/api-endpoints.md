@@ -78,7 +78,7 @@ Request fields, sequence encoding, concurrency/report-ordering tokens, event env
 
 ## Objects
 
-Objects hold arbitrary file types and flexible JSON metadata. Entity references are zero-to-many. Objects also support Task references. References are historical associations, not ownership links that cascade-delete files.
+Objects hold file content of any type with flexible JSON metadata and historical Entity and Task references. Ready-only visibility, uploads and their retries, publication, deletion, Required-result protection, metadata edits and download are specified in [Objects](topics/objects.md); the earlier metadata-only `POST /objects` route is removed.
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
@@ -90,11 +90,7 @@ Objects hold arbitrary file types and flexible JSON metadata. Entity references 
 | `GET /objects/{object_id}/download` | Consumers retrieve file content | Object ID → attachment stream | None | Retain |
 | `GET /objects/{object_id}/view` | Interfaces preview supported content | Object ID → inline stream, attachment, or unsupported-type error | None | Retain; supported preview formats need review |
 
-Objects are visible through reads, queries and feed only after content and metadata are ready. Upload identity, staged metadata and progress are separate transfer state, not publicly listed Objects. Physical file paths remain private; measured byte size and content type come from the upload process. The earlier metadata-only `POST /objects` route is removed. Descriptive fields and associations may be staged with the upload and edited after publication, with the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits) rejecting stale edits for caller review. The accepted [upload contract](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries) restarts interrupted uploads from the beginning. Resumable transfer sessions, offset queries and chunk-continuation endpoints are deferred. Clean up failed or abandoned staging; it is not a retained operational record. Stable Dataset-scoped request identity recognizes a previously completed upload when its response was lost; concurrent retries cannot publish twice. Conflicting reuse fails. Exact content-equivalence verification remains schema work. After the first successful upload, file content is immutable. Changed content requires a new Object ID; descriptive metadata remains editable. A retry must recognize an already-successful upload without overwriting it. Exact retry identity/content verification, transfer limits, deletion completion, and preview formats remain open. Arbitrary upload types do not imply arbitrary inline rendering.
-
-The SDK allocates Object IDs before completion reporting/upload, so either arrival order is representable without publishing placeholders. Reusing an upload request with another Object ID or claiming an already-used Object ID with a different request conflicts. Allowed deletion keeps private identity tombstones until Reset; an identical old upload retry reports that its Object was deleted and cannot recreate it. [Identity and retry contract](adr/0009-expose-objects-only-when-ready.md#result-identity-before-upload).
-
-Required result Objects cannot be deleted from Core's acceptance of the assigned Asset's declaration until Reset, regardless of later Task status. Core checks authoritative Task result references, not only editable Object associations. Metadata edits, Entity deletion and a stale cleanup request cannot bypass protection. Declaration acceptance, publication and deletion must serialize their protection decisions; declarations for already-deleted IDs are rejected. Optional attachments and other unprotected Objects retain ordinary deletion behavior. See [required results](adr/0009-expose-objects-only-when-ready.md#required-result-protection).
+Request fields, retry identity and content verification, transfer limits, deletion completion and preview formats remain schema work under the [Objects open questions](topics/objects.md#open-questions).
 
 ## Administration
 

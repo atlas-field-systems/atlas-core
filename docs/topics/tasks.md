@@ -2,7 +2,7 @@
 
 This page owns Commands and Tasks: the Command Catalog and Asset Command support, Task creation, the Task lifecycle and cancellation, queued and immediate scheduling, queue revisions, Pause and Resume, Command validity, reconnect reconciliation, recovery after an Asset-process restart, scan completion and the Task side of required Entity references and live geometry.
 
-Asset reports, Contact and report acceptance follow [Asset reporting](asset-reporting.md), and caller authority follows [Identity and access](identity-and-access.md). Object readiness, publication and [Required-result protection](../adr/0009-expose-objects-only-when-ready.md#required-result-protection) follow ADR-0009. Geofeature geometry editing follows [ADR-0024](../adr/0024-use-live-geofeature-geometry-in-tasks.md), and Track data freshness for Commands follows [ADR-0022](../adr/0022-one-publisher-per-track.md#track-data-used-by-commands). Plugin Operations have their own [lifecycle](../adr/0002-core-manages-installed-plugins.md#operation-transitions).
+Asset reports, Contact and report acceptance follow [Asset reporting](asset-reporting.md), and caller authority follows [Identity and access](identity-and-access.md). Object readiness, publication and Required-result protection follow [Objects](objects.md). Geofeature geometry editing follows [ADR-0024](../adr/0024-use-live-geofeature-geometry-in-tasks.md), and Track data freshness for Commands follows [ADR-0022](../adr/0022-one-publisher-per-track.md#track-data-used-by-commands). Plugin Operations have their own [lifecycle](../adr/0002-core-manages-installed-plugins.md#operation-transitions).
 
 ## Commands and the Command Catalog
 
@@ -73,7 +73,7 @@ The status alone does not prove execution has stopped. Core retains the request 
 
 Cancelled requires the assigned Asset's confirmation, even when Core has no acknowledgement: missing acknowledgement does not prove non-delivery. An offline Task can remain `cancellation_requested` until contact resumes. A confirmation identifies the request; matching retries have no new effect and conflicting terminal outcomes fail. The Asset OS decides how to respond to cancellation, and Core validates and records its reported outcome. Core does not infer the Asset's knowledge of the request from wall-clock timestamps.
 
-Once a terminal outcome is confirmed, the cancellation attempt is retained as history and is not presented as still awaiting action. Cancelling a Task does not cancel its result uploads under [ADR-0009](../adr/0009-expose-objects-only-when-ready.md#task-cancellation-and-result-uploads).
+Once a terminal outcome is confirmed, the cancellation attempt is retained as history and is not presented as still awaiting action. Cancelling a Task does not cancel its result uploads under [Objects](objects.md#task-cancellation-and-result-uploads).
 
 ### Cancellation declined
 
@@ -83,7 +83,7 @@ An Asset that cannot withdraw the Task reports that it declines the identified r
 
 Completed, Cancelled and Failed are terminal. A repeated matching terminal report has no new effect, and a conflicting report cannot change the recorded terminal outcome. Data arriving later, including a late result upload, cannot reopen a terminal Task. Connection loss and Core Stop or Restart do not establish any Asset outcome.
 
-Completed and other terminal Tasks remain execution records until Dataset Reset. Operators cannot delete them or rewrite their outcome; there is no generic Task patch or delete endpoint. Interfaces may show only current work by default, but omitting past Tasks from a view does not erase them from Core. Required-result Objects stay protected until Reset under [ADR-0009](../adr/0009-expose-objects-only-when-ready.md#required-result-protection), regardless of Task status; optional attachments follow ordinary Object deletion rules.
+Completed and other terminal Tasks remain execution records until Dataset Reset. Operators cannot delete them or rewrite their outcome; there is no generic Task patch or delete endpoint. Interfaces may show only current work by default, but omitting past Tasks from a view does not erase them from Core. Required-result Objects stay protected until Reset under [Required-result protection](objects.md#required-result-protection), regardless of Task status; optional attachments follow ordinary Object deletion rules.
 
 ## Queued and immediate scheduling
 
@@ -179,9 +179,9 @@ This does not reinstate the public execution-session API, require transparent mi
 
 A scan Task reaches Completed only when the scan has finished and its Required results are available in Atlas; finishing physical acquisition alone is insufficient. Core requires both an authenticated completion report from the assigned Asset and the availability of every Required result that Asset declared. They may arrive in either order. Core retains the report or ready result until both conditions hold, and the final transition still obeys the confirmed-cancellation and terminal-state rules. Until then the Task keeps its applicable nonterminal state, including Paused on confirmed suspension or Cancellation requested while withdrawal is pending. Separate Asset-provided progress details can explain that scanning has finished and data is uploading.
 
-Only the assigned Asset may declare its Task's result references, under the execution-report authority rule. Uploading or modifying an Object is not an Asset completion report. Object readiness alone cannot complete a Task, and an Asset report alone cannot complete a scan whose required data is still unavailable. This adds no caller ownership restriction to Object uploads. The completion report identifies each result by the Object ID the SDK allocated before upload, and an unresolved result reference does not publish an Object or satisfy readiness; see [result identity before upload](../adr/0009-expose-objects-only-when-ready.md#result-identity-before-upload).
+Only the assigned Asset may declare its Task's result references, under the execution-report authority rule. Uploading or modifying an Object is not an Asset completion report. Object readiness alone cannot complete a Task, and an Asset report alone cannot complete a scan whose required data is still unavailable. This adds no caller ownership restriction to Object uploads. The completion report identifies each result by the Object ID the SDK allocated before upload, and an unresolved result reference does not publish an Object or satisfy readiness; see [Object IDs before upload](objects.md#object-ids-before-upload).
 
-A completion submission may return a nonterminal Task; callers receive Core's actual recorded status. A later Plugin Operation on the result has its own lifecycle and does not delay completion of the scan Task. Required results are protected from declaration acceptance until Reset under [ADR-0009](../adr/0009-expose-objects-only-when-ready.md#required-result-protection). [Object publication](../architecture/system-design.md#object-publication-and-recovery-ownership) describes how the last required publication completes a waiting Task in the same commit.
+A completion submission may return a nonterminal Task; callers receive Core's actual recorded status. A later Plugin Operation on the result has its own lifecycle and does not delay completion of the scan Task. Required results are protected from declaration acceptance until Reset under [Required-result protection](objects.md#required-result-protection). [Object publication](../architecture/system-design.md#object-publication-and-recovery-ownership) describes how the last required publication completes a waiting Task in the same commit.
 
 ### Collection finished and geometry
 

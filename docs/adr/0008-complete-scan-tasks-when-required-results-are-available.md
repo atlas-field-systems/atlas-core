@@ -18,9 +18,7 @@ Accepted on 28 September 2026 when the user approved Q11: for a scan referencing
 
 - A completion submission may return a nonterminal Task, and clients must read Core's recorded status rather than assume success. Asset-provided progress details can explain that scanning has finished and data is uploading; the progress-detail and failure-reason contracts remain to be designed.
 - Core must retain an early completion report or an early ready result until the other arrives. When publication satisfies the last required result, it identifies the waiting Task so the transition commits with that publication; see [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership).
-- The SDK allocates the eventual Object ID before upload and uses that same ID in the Task completion report and whole-file upload. See [result identity before upload](0009-expose-objects-only-when-ready.md#result-identity-before-upload).
-- Once Core accepts the assigned Asset's required-result declaration, those Object identities are protected until Reset, including while the Task is unfinished and before upload. Object association edits or later Task outcomes cannot remove that protection. Declaration acceptance, publication and deletion must obey the [required-result retention contract](0009-expose-objects-only-when-ready.md#required-result-protection).
-- Cancellation during acquisition or upload does not cancel [uploads](0009-expose-objects-only-when-ready.md#task-cancellation-and-result-uploads), and a later upload cannot reopen a terminal Task.
+- Result Object IDs allocated before upload, Required-result protection from declaration acceptance and uploads that continue after cancellation follow [Objects](../topics/objects.md); a later upload cannot reopen a terminal Task.
 - Once collection is accepted, later geometry edits require another Task to scan the changed zone, even while uploads keep the scan nonterminal.
 
 ## Upload-first evaluation

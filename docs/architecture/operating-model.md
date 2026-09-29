@@ -71,13 +71,13 @@ An operator can cancel a scan of one area and issue another while an Asset is ou
 
 This remains a broader system example, beyond the initial MVP's separate workflows.
 
-The operator tasks an Asset to scan an area. Its hardware determines the result: an Asset with a software-defined radio and antenna produces an Object containing scan data. While uploading the required result, it has not yet met the [scan completion promise](../topics/tasks.md#scan-completion). [Objects become visible when ready](../adr/0009-expose-objects-only-when-ready.md).
+The operator tasks an Asset to scan an area. Its hardware determines the result: an Asset with a software-defined radio and antenna produces an Object containing scan data. While uploading the required result, it has not yet met the [scan completion promise](../topics/tasks.md#scan-completion). [Objects become visible when ready](../topics/objects.md#ready-only-visibility).
 
 The operator separately invokes a Plugin Operation on that Object. The Plugin owns the algorithm and specialized result format. Processing does not hold the original scan Task open, and the accepted Operation continues if the operator closes or disconnects the Command Interface. A returning operator can obtain its result. Published detections enter the shared picture directly.
 
 [Tasks referencing a Geofeature follow changes to its geometry](../adr/0024-use-live-geofeature-geometry-in-tasks.md). Disconnected Assets may use their last received geometry within the Command's limits and adopt the latest on reconnect. Atlas distinguishes a saved edit from the Asset's confirmation that it applied the change. Once Core accepts that a scan has finished collecting data, later geometry edits require another scan; the existing Task still waits for its required uploads before Completed. Silent Tracks [retain last-known observations with their age](../adr/0022-one-publisher-per-track.md#observation-age). Each Command defines whether it needs current data or can use last-known observations.
 
-This example does not require every Plugin to produce a separate Object or establish general version history. Published Object content follows the [immutable-content rule](../adr/0009-expose-objects-only-when-ready.md); descriptive metadata can change. Plugins may also [initiate Asset Tasks](../adr/0004-core-owns-commands-and-assets-execute-tasks.md) through existing Commands. Area/building searches can be Operations; an aircraft-data integration can continuously publish Entities without becoming taskable.
+This example does not require every Plugin to produce a separate Object or establish general version history. Published Object content follows the [immutable-content rule](../topics/objects.md#what-an-object-is); descriptive metadata can change. Plugins may also [initiate Asset Tasks](../adr/0004-core-owns-commands-and-assets-execute-tasks.md) through existing Commands. Area/building searches can be Operations; an aircraft-data integration can continuously publish Entities without becoming taskable.
 
 ## Details for module planning
 

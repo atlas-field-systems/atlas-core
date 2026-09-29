@@ -44,7 +44,7 @@ Start with the synchronized resources already identified in the API map:
 - Tasks and their latest execution state.
 - Object metadata and associations.
 
-Only ready Object metadata enters the picture; upload staging and progress remain separate. Object file content is downloaded separately. Plugin discovery/status and Operations, operator profiles, API keys and Core settings are outside this operational picture and use their supported API methods. Plugin management itself is local-only and has no SDK methods; uninstall/reinstall follows [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
+Only ready Object metadata enters the picture under [ready-only visibility](topics/objects.md#ready-only-visibility); upload staging and progress remain separate. Object file content is downloaded separately. Plugin discovery/status and Operations, operator profiles, API keys and Core settings are outside this operational picture and use their supported API methods. Plugin management itself is local-only and has no SDK methods; uninstall/reinstall follows [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
 
 In Full synchronization mode, operational ID lookups and list/filter reads use only the local picture. If the local picture cannot answer, the SDK reports that limitation rather than querying HTTP. The exact supported query operations must be documented so callers know which reads can be answered locally. An incomplete or filtered picture must never be mistaken for the full dataset.
 

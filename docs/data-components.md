@@ -65,16 +65,16 @@ These inventory the resource data units and detail the Task status component lis
 | Task `cancellation` | Task | Required for cancelled state | Confirmed cancellation outcome and details |
 | Movement sample | Asset, Track | Created only for explicitly supplied movement in an accepted report | Entity association, report/sample identity, observation time when known, Core receipt time, and supplied position/speed/altitude; append-only until Reset; retries deduplicate |
 | Object identity/description | Object | Required ID; descriptive fields follow schema | SDK-allocated Object ID known before upload, type, and usage hints |
-| Object storage metadata | Object | Required for a published Object | Public content type and byte size derive from the completed upload; physical storage locations remain private; content is immutable; missing content sets a per-Object integrity flag under [ADR-0009](adr/0009-expose-objects-only-when-ready.md#storage-limits-and-integrity-faults) |
+| Object storage metadata | Object | Required for a published Object | Public content type and byte size derive from the completed upload; physical storage locations remain private; content is immutable; missing content sets a per-Object [integrity flag](topics/objects.md#storage-quota-and-integrity-faults) |
 | Object `referenced_by` | Object | Zero or more associations | Entity and Task references retained as historical context even when the related record is unavailable |
 | Object extension metadata | Object | Optional | Flexible file-specific JSON metadata; does not override storage-owned facts |
-| Successful upload identity | Core-private record | Retained for successful uploads until Reset | Dataset-scoped request identity, canonical upload facts including supplied Object ID and content equivalence, resulting publication and deletion marker; recognizes lost responses without another publication or resurrection after deletion |
+| Successful upload identity | Core-private record | Retained for successful uploads until Reset | Dataset-scoped request identity, canonical upload facts including supplied Object ID and content equivalence, resulting publication and deletion marker; behavior follows [retries after a lost response](topics/objects.md#retries-after-a-lost-response) |
 
 Task completion, including a completion report retained while required Objects upload, follows [scan completion](topics/tasks.md#scan-completion).
 
 The exact representation of Task progress and timestamps is inherited-schema material to validate during detailed schema authoring. Task status is included in the logical component catalog and remains the Task lifecycle field in its wire representation. Command input/output provides controlled variation without introducing a generic Task `components` bag.
 
-Ready Object metadata and associations synchronize through the feed. Upload staging and progress do not publish incomplete Objects. File bytes remain in object storage and are fetched through the approved content endpoints.
+Only ready Object metadata and associations synchronize through the feed; file bytes are fetched through the content endpoints under [Objects](topics/objects.md#ready-only-visibility).
 
 Queued Task reordering, requested and confirmed order and adoption reports follow [queue revisions](topics/tasks.md#queue-revisions). Concrete field encodings remain open.
 
@@ -84,9 +84,9 @@ Current telemetry remains the latest state; the separate sample table preserves 
 
 One paginated history endpoint reads samples for a live or deleted Asset/Track ID and time range, resolving retained identity/kind records and marking deleted Entities. IDs never present in the current Dataset return not found; empty intervals return empty pages. History is outside the live operational picture and its bounded recovery log. Query bounds and report rates need measurement before choosing numeric limits. The [movement-history contract](architecture/system-design.md#movement-history) owns retention, reporting and historical-read semantics.
 
-## Required result protection
+## Required-result protection
 
-Tasks retain accepted assigned-Asset declarations of required Object references, including before upload. Protection begins at declaration acceptance and lasts until Reset, regardless of later Task status. Accepted references and mutable Object association metadata cannot be edited to release protection. Check all Tasks that require an Object. Declaration acceptance, publication and deletion checks must serialize, including storage cleanup; reject declarations for already-deleted identities. Optional references do not imply protection. See the [retention contract](adr/0009-expose-objects-only-when-ready.md#required-result-protection).
+Tasks retain accepted assigned-Asset declarations of required Object references, including before upload; their protection follows [Required-result protection](topics/objects.md#required-result-protection).
 
 ## Administrative records
 
@@ -123,7 +123,7 @@ These Core-owned records support the public contracts; they are not new Entity c
 | Synchronization change | Dataset association, increasing committed sequence, resource type/ID, change kind, and replay data. Include deletion records and enough information for full-picture recovery. Commit with the resource mutation; feed delivery and changed-since consume the same committed records. Per-Asset synchronization coverage is deferred under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). |
 | Synchronization retention boundary | Earliest recoverable boundary and latest committed sequence for the Dataset, maintained consistently with pruning. Expired cursors fail explicitly; SDK recovery rebuilds the picture. Retention is bounded and distinct from movement/activity retention until Reset. |
 | Asset Task queue | Immutable submission sequence plus requested revision/order and Asset-confirmed revision/order. Preserve revision retry identity and report context; reject stale edits and never mark a newer revision confirmed by an older acknowledgement. |
-| Required-result hold | Objects-private hold binding a declared Object ID to the Task whose accepted declaration requires it, placed in the declaration's commit and retained until Reset. Placing a hold reports which held Objects are already published; deletion checks holds without calling Tasks; publication reports the Tasks whose holds it satisfies. |
+| Required-result hold | Objects-private hold binding a declared Object ID to the Task whose accepted declaration requires it, placed in the declaration's commit and retained until Reset. Placing a hold reports which held Objects are already published; deletion checks holds without calling Tasks; publication reports the Tasks whose holds it satisfies. The [collaboration](architecture/system-design.md#object-publication-and-recovery-ownership) owns this behavior. |
 | Local activity journal | Installation-mount file of local management actions taken while Core is stopped, keyed by action identity with the accepted request or known outcome. Imported idempotently when the retained Dataset or a new installation's first Dataset opens; deleted by the host during Reset before Core starts, and by Hard Reset. Not an SQLite table. |
 
 The [Operation lifecycle](adr/0002-core-manages-installed-plugins.md), [change publication contract](architecture/system-design.md#change-publication), [queue contract](topics/tasks.md#queue-revisions), [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) and [activity history](architecture/system-design.md#activity-history) own these records' behavior. Registration, Asset retirement, Task creation, upload, Operation, queue-edit, cancellation-request and API-key creation identities share the [retry identity](architecture/system-design.md#retry-identity) mechanism while keeping their own facts and retention. Core's SQLite records live in one database grouped by Dataset or installation lifetime under [write commits](architecture/system-design.md#write-commits). Physical columns and indexes remain implementation work.
@@ -167,7 +167,7 @@ Use typed storage for identity, status, timestamps, and relationships, with vali
 | Activity records | Separate typed SQLite table with safe bounded detail fields | Query a limited action log; preserve attribution without a full audit framework |
 | Successful upload identities | Private Dataset-scoped retry record with supplied Object ID, original canonical facts and retained deletion marker | A completed request retry returns the existing Object or explicit deleted-result outcome |
 | Object identity/storage facts | Typed columns | Core owns storage identity and measured facts |
-| Object references | Structured historical associations; Task-required references may precede Object publication and protect from declaration acceptance until Reset | Prevent deletion of required results until Reset, independent of mutable metadata; preserve history without cascading deletion |
+| Object references | Structured historical associations; Task-required references may precede Object publication | [Required-result protection](topics/objects.md#required-result-protection) independent of mutable metadata; preserve history without cascading deletion |
 | Object extension metadata | Validated JSON in SQLite within the Object metadata contract | Keeps variable data flexible without weakening core fields |
 
 The storage approach is agreed; exact tables, columns, and indexes remain proposals and are not implemented. Entity JSON shape does not dictate one SQL row, nor does each logical component require its own table. Historical Object references must not acquire foreign-key deletion behavior that contradicts their accepted semantics.
