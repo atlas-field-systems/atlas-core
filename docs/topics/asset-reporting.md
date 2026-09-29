@@ -2,7 +2,7 @@
 
 This page owns what an Asset reports and how Core treats it: Operational status, Communication state, Contact and freshness, check-in, partial component updates and Asset report acceptance.
 
-Identity, Enrollment and registration follow [Identity and access](identity-and-access.md). Task lifecycle, queues, Pause/Resume and reconnect reconciliation follow [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md) and the [Task integration notes](../asset-status.md#task-integration). Movement samples follow [movement history](../architecture/system-design.md#movement-history), and Track observations follow [ADR-0022](../adr/0022-one-publisher-per-track.md).
+Identity, Enrollment and registration follow [Identity and access](identity-and-access.md). Task lifecycle, queues, Pause/Resume and reconnect reconciliation follow [Tasks](tasks.md). Movement samples follow [movement history](../architecture/system-design.md#movement-history), and Track observations follow [ADR-0022](../adr/0022-one-publisher-per-track.md).
 
 ## Components and initial values
 
@@ -118,17 +118,17 @@ Continuous, near-real-time reporting is the expected model during operations suc
 
 ### Losing Contact
 
-A disconnected Asset may still be physically executing a Task. Loss of Contact must not silently turn a Task into failed, completed or cancelled; [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md) owns reconciliation.
+A disconnected Asset may still be physically executing a Task. Loss of Contact must not silently turn a Task into failed, completed or cancelled; [reconnect reconciliation](tasks.md#disconnection-and-reconnect-reconciliation) resolves it.
 
 ## Check-in
 
-Check-in is an Asset's report of its current Entity data: Reported data such as Operational status, position and Command support. It establishes Contact when fresh, and Core records its receipt time. It does not deliver or reconcile Tasks; [reconnect reconciliation](../sdk-operations.md#asset-client) combines it with Task catch-up and outcome reports.
+Check-in is an Asset's report of its current Entity data: Reported data such as Operational status, position and Command support. It establishes Contact when fresh, and Core records its receipt time. It does not deliver or reconcile Tasks; [reconnect reconciliation](tasks.md#disconnection-and-reconnect-reconciliation) combines it with Task catch-up and outcome reports.
 
 Registration is followed by the first check-in, and the Asset checks in again as needed, directly or through its gateway. Check-in and component updates share Protocol-defined [partial-update](#partial-component-updates) validation, report identity and freshness rules, so later reports can contain only changed component fields.
 
 ### Command support
 
-Assets advertise supported Protocol Commands on their Entity record. Command support is Reported data: only the Asset supplies it, at registration and check-in, rather than through a separate readiness session. It is distinct from Operational status. Dropping support for a Command does not remove outstanding Tasks that use it; [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling) defines how the Asset reports them.
+Assets advertise supported Protocol Commands on their Entity record. Command support is Reported data: only the Asset supplies it, at registration and check-in, rather than through a separate readiness session. It is distinct from Operational status. Dropping support for a Command does not remove outstanding Tasks that use it; [dropped Command support](tasks.md#dropped-command-support) defines how the Asset reports them.
 
 ## Partial component updates
 
@@ -178,7 +178,7 @@ Every Asset-originated report passes through one acceptance contract before anyt
 
 Separately, contact evidence says whether an accepted report proves the Asset is reachable now, under the [freshness rule](#fresh-duplicate-and-historical-reports). Only then does acceptance refresh Contact.
 
-Report deduplication, ordering of affected state and proof of fresh contact stay distinct. Later telemetry must not discard an unrecorded Task outcome solely because the outcome has an earlier sequence, and accepting historical work must not refresh Contact. An obsolete process is identified by the Core-issued process generation and authority transfer from [Asset recovery](../adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart). [Asset registration](identity-and-access.md#asset-registration) is not a report.
+Report deduplication, ordering of affected state and proof of fresh contact stay distinct. Later telemetry must not discard an unrecorded Task outcome solely because the outcome has an earlier sequence, and accepting historical work must not refresh Contact. An obsolete process is identified by the Core-issued process generation and authority transfer from [Asset recovery](tasks.md#recovery-after-an-unexpected-asset-restart). [Asset registration](identity-and-access.md#asset-registration) is not a report.
 
 Core persists accepted-report identities and ordering boundaries across same-release Restart, atomically with the affected component values, Contact and movement samples. Reset clears that state, and Core rejects reports for the old Dataset. Ordering may require per-component or report-stream boundaries. No complete packet log or specific wire encoding is selected. [System design](../architecture/system-design.md#shared-asset-report-acceptance) describes how Entities and Tasks collaborate to enforce this.
 

@@ -224,7 +224,7 @@ An immediate Command that releases an Asset's paused condition and continues its
 _Avoid_: recreating or automatically rerunning suspended work
 
 **Paused Task**:
-A Task whose execution the Asset has confirmed is suspended; it remains nonterminal and retains its progress.
+A Task whose execution the Asset has confirmed is suspended, also called a suspended Task; it remains nonterminal and retains its progress.
 _Avoid_: an unstarted Task, a cancelled Task, an interrupted Task
 
 **Task cancellation request**:

@@ -6,6 +6,8 @@ status: accepted
 
 Accepted on 28 September 2026. A Track or Geofeature required by an unfinished Task cannot be deleted. The protection preserves the meaning and recoverability of the accepted Task while its assigned Asset is disconnected or retired.
 
+Current Task-side rules: [Required Entity references](../topics/tasks.md#required-entity-references).
+
 ## Decision
 
 Protocol-defined Commands identify their typed Entity references. Tasks owns the meaning of those references and determines which references are required for an accepted Task. When an unfinished Task requires a Track or Geofeature, Entities rejects deletion of that Entity and explains which unfinished Task or Tasks block the operation. The existing Asset deletion guard remains in force for assigned Assets; this decision adds the same protection for required Track and Geofeature references.

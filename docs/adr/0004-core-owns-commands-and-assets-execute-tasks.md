@@ -6,6 +6,8 @@ status: accepted
 
 Atlas defines Command semantics centrally; Protocol owns the shared Command Catalog and schemas, and Core validates and implements their server guarantees. Assets execute supported Commands through Tasks. Plugins cannot introduce Asset Commands or receive Tasks as Tool Assets. The user selected this boundary on 20 September 2026 to keep Asset tasking separate from extension invocation and processing.
 
+Current rules: [Commands and the Command Catalog](../topics/tasks.md#commands-and-the-command-catalog) and [Task creation](../topics/tasks.md#task-creation).
+
 Plugins may process Objects produced by Asset Tasks, expose Operations whose accepted work continues independently of the caller connection, or gather external data and publish Entities or Objects. Their own processing and ingestion are Plugin work, not Atlas Tasks. Protocol packages the shared tasking contracts and Command Catalog. The SDK reads that catalog locally without a Core request; there is no public command-catalog endpoint. Assets advertise a supported subset rather than extending the catalog. Exact schemas and SDK method names remain open.
 
 An area-search Operation or an ongoing aircraft-data source does not require a taskable Plugin Entity. Plugin-specific inputs and result formats belong to the extension contract. This replaces the source system's Tool Asset model for the successor.

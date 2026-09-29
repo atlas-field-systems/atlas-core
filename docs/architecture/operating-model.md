@@ -65,13 +65,13 @@ Plugins keep private operational work in [Atlas-managed working storage](../adr/
 
 An operator can cancel a scan of one area and issue another while an Asset is out of contact. During reconnect reconciliation, the Asset checks in, reports completed work and learns the current cancellations and Tasks. It may instead receive a return Task. The Asset OS chooses how to schedule, interrupt and execute its onboard work.
 
-[Task reconciliation](../adr/0007-reconcile-asset-tasks-after-disconnection.md) defines pending cancellation and late outcomes. Losing contact or missing required scan data does not establish Failed; that requires the assigned Asset to report a definitive unsuccessful outcome. Atlas records actual outcomes without pretending a cancellation undid work already performed.
+[Tasks](../topics/tasks.md#disconnection-and-reconnect-reconciliation) defines pending cancellation and late outcomes. Losing contact or missing required scan data does not establish Failed; that requires the assigned Asset to report a definitive unsuccessful outcome. Atlas records actual outcomes without pretending a cancellation undid work already performed.
 
 ## Scan data and processing
 
 This remains a broader system example, beyond the initial MVP's separate workflows.
 
-The operator tasks an Asset to scan an area. Its hardware determines the result: an Asset with a software-defined radio and antenna produces an Object containing scan data. While uploading the required result, it has not yet met the [scan completion promise](../adr/0008-complete-scan-tasks-when-required-results-are-available.md). [Objects become visible when ready](../adr/0009-expose-objects-only-when-ready.md).
+The operator tasks an Asset to scan an area. Its hardware determines the result: an Asset with a software-defined radio and antenna produces an Object containing scan data. While uploading the required result, it has not yet met the [scan completion promise](../topics/tasks.md#scan-completion). [Objects become visible when ready](../adr/0009-expose-objects-only-when-ready.md).
 
 The operator separately invokes a Plugin Operation on that Object. The Plugin owns the algorithm and specialized result format. Processing does not hold the original scan Task open, and the accepted Operation continues if the operator closes or disconnects the Command Interface. A returning operator can obtain its result. Published detections enter the shared picture directly.
 
@@ -85,7 +85,7 @@ The 28 September grilling round settled [stale descriptive edits](system-design.
 
 The second round settles [same-publisher continuity and silent Tracks](../adr/0022-one-publisher-per-track.md#publisher-continuity), [live Geofeature geometry](../adr/0024-use-live-geofeature-geometry-in-tasks.md) and [Plugin setup removal on uninstall](../adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall).
 
-The third round settles [offline geometry and adoption evidence](../adr/0024-use-live-geofeature-geometry-in-tasks.md#disconnection-and-adoption), the [collection-finished boundary](../adr/0008-complete-scan-tasks-when-required-results-are-available.md#geometry-and-collection-finished-reports) and [Command-specific Track freshness](../adr/0022-one-publisher-per-track.md#track-data-used-by-commands).
+The third round settles [offline geometry and adoption evidence](../adr/0024-use-live-geofeature-geometry-in-tasks.md#disconnection-and-adoption), the [collection-finished boundary](../topics/tasks.md#collection-finished-and-geometry) and [Command-specific Track freshness](../adr/0022-one-publisher-per-track.md#track-data-used-by-commands).
 
 The fourth round permits [publisher corrections to current observations](../adr/0022-one-publisher-per-track.md#correcting-current-observations) while preserving observation age and recorded history, and [defers publisher transfers](../adr/0022-one-publisher-per-track.md#publisher-transfers). Replacement sources use separate Tracks, and existing Task references remain unchanged.
 

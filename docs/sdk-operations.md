@@ -17,11 +17,11 @@ The initial operations and behaviors below are approved; the names describe beha
 | Report Asset status | Convenience operation for an operational status report | `PATCH /entities/{entity_id}/status` |
 | Read operational data | Resource reads, queries, and feed subscriptions share the same SDK methods in both modes | HTTP mode: pass through to resource endpoints, `/queries`, and `/feed`. Full synchronization: local only |
 | Read Command Catalog | Return Command definitions from the installed Protocol package | Local operation; no HTTP request |
-| Create Task | Request one execution of one Command on one Asset; Core accepts and retains valid Tasks even when the Asset is offline. An unfinished Task with a Geofeature reference follows its immutable ID and current geometry until its Command's declared cutoff; geometry changes do not reissue the Task | `POST /tasks` |
+| Create Task | Request one execution of one Command on one Asset under [Task creation](topics/tasks.md#task-creation), including when the Asset is offline | `POST /tasks` |
 | Fetch assigned Tasks | Read outstanding Tasks with submission/current queue order and confirmation state, following pagination; use the same method in both modes | HTTP mode: `GET /entities/{entity_id}/tasks`. Full synchronization: local picture |
 | Report Task lifecycle | Acknowledge, start, report progress, complete, fail, or confirm or decline cancellation of assigned work; return Core's actual state | `PATCH /tasks/{task_id}/status`; authenticated assigned-Asset validation |
-| Cancel Task | Request nonterminal cancellation_requested, recorded whether or not the Asset declares cancellation support; the Asset subsequently confirms cancelled or declines through the same status system | `PATCH /tasks/{task_id}/status` |
-| Reorder assigned Tasks | Submit the complete eligible unstarted list with expected revision and stable request identity | `PUT /entities/{entity_id}/task-order` |
+| Cancel Task | Request withdrawal under [cancellation requests](topics/tasks.md#cancellation-requests) | `PATCH /tasks/{task_id}/status` |
+| Reorder assigned Tasks | Submit a [queue revision](topics/tasks.md#queue-revisions) | `PUT /entities/{entity_id}/task-order` |
 | Report queue adoption | Assigned Asset confirms a requested revision or reports an execution conflict | `POST /entities/{entity_id}/task-order/confirm` |
 | Upload Object content | Stream the whole file; restart an interrupted transfer from zero using the same request identity; a previously completed identical request returns its existing Object or an explicit deleted-result error | `POST /objects/upload`; no resume/offset API |
 | Read movement history | On-demand paginated samples for one Asset/Track and time range; does not populate the operational picture | `GET /entities/{entity_id}/movement-history` in every mode |
@@ -31,9 +31,9 @@ The initial operations and behaviors below are approved; the names describe beha
 
 Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset, required-result uploads and queue adoption reports are Asset-originated. SDK consumers submitting these reports use the [Asset client](#asset-client), which owns their coordination. Gateway and Plugin limits follow the [caller permissions](topics/identity-and-access.md#callers-and-permissions). Tasking clients still use the route-level Task status helpers, for example to request cancellation.
 
-Track observation updates use one publisher per Track. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; another publisher uses a separate Track, and Core does not merge or transfer ownership automatically. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. There is no universal Track expiry for execution: a Command requiring current observations defines acceptable age and stale handling, while a last-known Command may continue and the Asset applies that policy. A Plugin that intentionally fuses sources publishes a separate Track. Descriptive Track edits use the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits), and deleting a Track or Geofeature with a required Command reference from a nonterminal Task returns the blocking Task references rather than forcing an outcome. See [ADR-0022](adr/0022-one-publisher-per-track.md#publisher-continuity) and [ADR-0023](adr/0023-protect-required-entity-references-during-tasks.md).
+Track observation updates use one publisher per Track. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; another publisher uses a separate Track, and Core does not merge or transfer ownership automatically. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. There is no universal Track expiry for execution: a Command requiring current observations defines acceptable age and stale handling, while a last-known Command may continue and the Asset applies that policy. A Plugin that intentionally fuses sources publishes a separate Track. Descriptive Track edits use the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits), and deletion obeys the [required Entity reference guard](topics/tasks.md#required-entity-references). See [ADR-0022](adr/0022-one-publisher-per-track.md#publisher-continuity).
 
-Unfinished Tasks with Geofeature references follow their immutable ID and current geometry until their Command's declared cutoff, by default the terminal report. Before that cutoff, geometry edits that would invalidate the Task's input are rejected. For scans, Core's accepted collection-finished report closes geometry changes; [ADR-0024](adr/0024-use-live-geofeature-geometry-in-tasks.md) covers disconnected continuation, reconnect adoption, and saved-versus-applied reporting, while [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) retains required-result gating and either arrival order.
+Tasks with Geofeature references follow [live geometry](topics/tasks.md#live-geofeature-geometry) until their Command's cutoff.
 
 The SDK exposes typed methods and documentation for these operations. No machine-readable SDK-operation discovery function is planned without a concrete consumer. Local lookup of the Protocol Command Catalog remains a separate agreed SDK function. Further SDK coverage can follow the approved endpoints without inventing additional API families.
 
@@ -51,7 +51,7 @@ Core, Assets and SDK clients use declared supported compatibility ranges; unsupp
 
 The earlier [Asset hybrid mode](sdk-data-access.md#asset-hybrid-mode) and Core's matching Asset-scoped synchronization are deferred under ADR-0020. Core Task retention and the reporting workflows below remain required.
 
-Scan completion reports may remain pending until all required Objects are ready; the SDK must return Core's actual recorded Task status rather than assume a successful completion-report request made it terminal. See [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md).
+A scan completion report may leave its Task nonterminal under [scan completion](topics/tasks.md#scan-completion); the SDK returns Core's recorded status.
 
 Historical reads are explicit API-backed operations in every SDK mode, separate from the read-operational-data methods. Their results and cursors never update the local operational picture. See [historical reads](sdk-data-access.md#historical-reads).
 
@@ -66,29 +66,17 @@ Accepted on 26 September 2026, with consumer scope revised by [ADR-0020](adr/002
 - First registration before a normal Asset credential exists, its retry identity and re-registration after Reset, under [Asset registration](topics/identity-and-access.md#asset-registration).
 - Required-result uploads: the Asset client preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the existing upload operation, retaining its request identity. No new route is added.
 - Report identity and ordering, and the Core-issued process generation, matching [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance) in Core.
-- Pause/Resume report correlation and queue revision adoption under [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md).
+- Pause/Resume report correlation and queue revision adoption under [Tasks](topics/tasks.md#pause-and-resume).
 - Lost-response retries with stable identities, and discarding obsolete work and submissions when the Dataset changes before re-registering in the new Dataset.
-- Reconnect reconciliation: check in, catch up on current Tasks, cancellations and queue revisions, then report outcomes of work performed while away.
+- [Reconnect reconciliation](topics/tasks.md#disconnection-and-reconnect-reconciliation).
 
-After an Asset process restart, reconciliation uses the Asset OS's onboard execution evidence. The Asset client reports the outcomes that evidence establishes, obtains a new process generation through authenticated reconciliation and keeps uncertain work out of its assigned-work stream until explicit recovery. It never schedules, starts or reruns work; the Asset OS still owns execution. It keeps no disk persistence; the Asset OS or deployment layer retains any identity that must survive a process restart. HTTP is the Core-facing transport. Radio delivery, evidence transfer and authenticated relay delegation remain future work; a gateway identity can relay only for its bound Assets. Exact method names remain open.
+After an Asset process restart, the Asset client follows [recovery](topics/tasks.md#recovery-after-an-unexpected-asset-restart) using the Asset OS's onboard execution evidence, obtaining a new process generation and keeping uncertain work out of its assigned-work stream until explicit recovery. It never schedules, starts or reruns work; the Asset OS still owns execution. It keeps no disk persistence; the Asset OS or deployment layer retains any identity that must survive a process restart. HTTP is the Core-facing transport. Radio delivery, evidence transfer and authenticated relay delegation remain future work; a gateway identity can relay only for its bound Assets. Exact method names remain open.
 
-## Task status updates
+## Tasks
 
-Task lifecycle helpers share `PATCH /tasks/{task_id}/status`; there are no separate cancellation request/confirmation endpoints. They submit a requested status or progress-only update under the [Task transition rules](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions). Helpers return Core's recorded state, including pending Object readiness or cancellation intent, rather than echoing the requested status as success.
+Task lifecycle helpers, Pause and Resume, assigned-work reads, queue operations and recovery follow [Tasks](topics/tasks.md#routes-and-sdk-operations). Exact helper names and wire envelopes remain schema work.
 
-The [testing strategy](testing-strategy.md) requires these helpers and the queue operations to pass real SDK–Core parity, retry and race scenarios. Exact helper names and wire envelopes remain schema work.
-
-## Immediate Commands and Pause
-
-Pause and Resume use the ordinary Task-creation operation with immediate scheduling. The Asset client submits the Asset's reported condition and Task execution to Core and correlates them with the applied control action. The SDK must not optimistically set either state when creation succeeds. [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling) owns scheduling, Pause/Resume effects and control ordering.
-
-## Assigned Task queue
-
-Assigned-work reads use the selected SDK mode and follow pagination to obtain all outstanding Tasks. Reading or caching work does not acknowledge or start it; execution reports go through the Asset client. The reorder and adoption/conflict operations follow the [queue revision contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions).
-
-## Recovery and historical Tasks
-
-Reinitializing the SDK does not authorize rerunning work; the Asset client follows [ADR-0007's recovery contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart) using the Asset OS's execution evidence. Reads may filter to current work without changing [terminal-record retention](adr/0007-reconcile-asset-tasks-after-disconnection.md#completed-task-retention).
+## Protected Object deletion
 
 Object deletion helpers return Core's conflict for a [protected required result](adr/0009-expose-objects-only-when-ready.md#required-result-protection). A rejected deletion must not remove the Object from a synchronized picture.
 
@@ -112,6 +100,6 @@ Track observations are authored by the Track's single publisher. Within one Data
 - SDK method names, argument shapes, the Asset client's interface shape, and whether registration offers a convenience option to perform the first check-in.
 - Registration and credential encodings, listed with the [identity open questions](topics/identity-and-access.md#open-questions).
 - Report identity, ordering, relay-origin and disposition-mapping questions listed with the [Asset reporting open questions](topics/asset-reporting.md#open-questions).
-- Exact Task sequence/queue field encodings and report ordering; Pause/Resume correlation, deadline and expiry fields and validation for conflicting immediate actions beyond the accepted control-order policy.
+- Task, queue, Pause/Resume and deadline fields listed with the [Tasks open questions](topics/tasks.md#open-questions).
 
 These operations use the [approved endpoint map](api-endpoints.md), [component catalog](data-components.md), and [Asset reporting](topics/asset-reporting.md) rules.

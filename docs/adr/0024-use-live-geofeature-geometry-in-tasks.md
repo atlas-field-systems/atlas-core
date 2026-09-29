@@ -6,6 +6,8 @@ status: accepted
 
 Accepted on 28 September 2026 in response to Q6. The user rejected freezing a Geofeature's geometry when a Task is issued and chose to have existing Tasks adjust to its new geometry. A Task referencing a scan zone therefore follows edits to that zone until Core accepts its valid collection-finished report, as clarified in Q11 below. This keeps operator changes relevant to ongoing collection, at the cost of coordinating updated intent with execution over delayed or disconnected links.
 
+Current Task-side rules: [Live Geofeature geometry](../topics/tasks.md#live-geofeature-geometry).
+
 The Task's Command, assignment and input remain immutable. Its input identifies the Geofeature; the geometry reached through that stable reference changes. Updating the Geofeature does not create a replacement Task or resend the original invocation as new work. A terminal Task retains its recorded outcome and is not reopened by later geometry edits. Geometry updates do not implicitly Resume paused work or clear a cancellation request.
 
 Entities validates and commits the geometry edit under the [concurrent-edit contract](../architecture/system-design.md#concurrent-descriptive-edits). Committed updates reach the full operational picture through the existing synchronization contract. The Asset client or gateway must deliver updated geometry to affected execution, and the Asset OS owns how the running Command adapts its physical work. An edit accepted by Core is not proof that the Asset received or applied it. [ADR-0020](0020-limit-general-sdk-to-http-and-full-sync.md) retains gateway responsibility without introducing a general partial replica.
@@ -22,7 +24,7 @@ Atlas distinguishes Core's saved geometry from the geometry the assigned Asset r
 
 ## Collection finished and result upload
 
-Accepted on 28 September 2026 in response to Q11. Core's acceptance of a valid assigned-Asset collection-finished report closes a scan's geometry changes. An edit committed before that acceptance must be accounted for by the scan. An edit afterward does not demand further collection from the same Task, even while required results are still uploading; scanning the changed area requires another Task. [ADR-0008](0008-complete-scan-tasks-when-required-results-are-available.md#geometry-and-collection-finished-reports) owns the report/edit race and preserves the promise that Completed means all required results are ready.
+Accepted on 28 September 2026 in response to Q11. Core's acceptance of a valid assigned-Asset collection-finished report closes a scan's geometry changes. An edit committed before that acceptance must be accounted for by the scan. An edit afterward does not demand further collection from the same Task, even while required results are still uploading; scanning the changed area requires another Task. [ADR-0008](0008-complete-scan-tasks-when-required-results-are-available.md) decides the report/edit race, specified in [collection finished and geometry](../topics/tasks.md#collection-finished-and-geometry), and preserves the promise that Completed means all required results are ready.
 
 ## Geometry cutoff and applied revision
 
