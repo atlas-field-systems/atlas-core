@@ -119,9 +119,9 @@ Atlas distinguishes Core's saved geometry from the geometry the assigned Asset r
 
 - Read Entities: `GET /entities`, `GET /entities/{entity_id}` and `GET /entities/alias/{alias}` in the [Entities routes](../api-endpoints.md#entities), through the ordinary read operations in both SDK modes.
 - Create Tracks and Geofeatures: `POST /entities`. Asset registration uses the same route under [Identity and access](identity-and-access.md#asset-registration).
-- Update: `PATCH /entities/{entity_id}` carries publisher observations and corrections, and descriptive and geometry edits with their version precondition. The SDK submits them through the same [write methods](../sdk-data-access.md#writes) in both modes.
+- Update: `PATCH /entities/{entity_id}` carries publisher observations and corrections, and descriptive and geometry edits with their version precondition. The SDK submits them through the same [write methods](sdk.md#writes) in both modes.
 - Delete: `DELETE /entities/{entity_id}`, returning the blocking-Task conflict when a guard applies.
-- Movement history: `GET /entities/{entity_id}/movement-history`, through the SDK's Read movement history [operation](../sdk-operations.md#initial-operations).
+- Movement history: `GET /entities/{entity_id}/movement-history`, through the SDK's Read movement history [operation](sdk.md#operations-catalog).
 - There is no route for publisher transfer or observation correction.
 
 ## Open questions

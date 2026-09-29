@@ -124,8 +124,8 @@ Descriptive fields and associations may be staged with the upload and edited aft
 ## Routes and SDK operations
 
 - Read Objects: `GET /objects` and `GET /objects/{object_id}` in the [Objects routes](../api-endpoints.md#objects), `GET /entities/{entity_id}/objects` in the [Entities routes](../api-endpoints.md#entities) and `GET /tasks/{task_id}/objects` in the [Tasks routes](../api-endpoints.md#tasks), through the ordinary read operations in both SDK modes.
-- Upload: `POST /objects/upload`, through the SDK's Upload Object content [operation](../sdk-operations.md#initial-operations). It takes the complete file stream, the SDK-allocated Object ID, the Dataset-scoped request identity, metadata and associations, and returns the ready Object, the original success or the explicit deleted-result error. There is no resume or offset API.
-- Required-result uploads: the SDK's [Asset client](../sdk-operations.md#asset-client) preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the upload operation. No route is added.
+- Upload: `POST /objects/upload`, through the SDK's Upload Object content [operation](sdk.md#operations-catalog). It takes the complete file stream, the SDK-allocated Object ID, the Dataset-scoped request identity, metadata and associations, and returns the ready Object, the original success or the explicit deleted-result error. There is no resume or offset API.
+- Required-result uploads: the SDK's [Asset client](sdk.md#asset-client) preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the upload operation. No route is added.
 - Edit metadata: `PATCH /objects/{object_id}` with a version precondition.
 - Delete: `DELETE /objects/{object_id}`. SDK deletion helpers return Core's conflict for a protected Required result.
 - Download and preview: `GET /objects/{object_id}/download` and `GET /objects/{object_id}/view`. File content is outside the synchronized picture in every SDK mode.

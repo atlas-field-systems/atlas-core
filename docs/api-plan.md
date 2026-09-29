@@ -39,7 +39,7 @@ Entities have exactly three types, Asset, Track and Geofeature; their identity, 
 
 Every Asset requires status, communications and heartbeat components; [Asset reporting](topics/asset-reporting.md) specifies Operational status, Communication state, Contact, check-in, partial component updates and report acceptance, replacing the earlier execution-session API.
 
-The Core-facing SDK Asset client registers Assets using `POST /entities`, then submits their check-in reports. Registration carries only Descriptive data and Command support; other Reported data arrives with the first check-in. The [SDK operations catalog](sdk-operations.md) maps these workflows to existing routes; it is distinct from the Protocol Command Catalog. No separate registration or telemetry endpoint is added. Each Asset retains its ID across restarts. Registration retries reuse the same Asset and request identities; reconnecting resumes current state without reapplying defaults. The SDK operations catalog documents typed methods; machine-readable operation discovery is not planned without a concrete consumer.
+The SDK [Asset client](topics/sdk.md#asset-client) registers Assets through `POST /entities` and then checks in, with no separate registration or telemetry endpoint; the [SDK operations catalog](topics/sdk.md#operations-catalog), distinct from the Protocol Command Catalog, maps SDK workflows to routes and registration follows [Asset registration](topics/identity-and-access.md#asset-registration).
 
 Assets author their own reported Entity data, and only accepted fresh Asset-originated reports refresh [Contact](topics/asset-reporting.md#contact-and-freshness); these reporting rules do not replace the [one-publisher Track rule](topics/tracks-and-geofeatures.md#one-publisher-per-track).
 
@@ -99,18 +99,7 @@ Map subscriptions and asynchronous completion alongside requests so clients can 
 
 ## SDK read modes
 
-Under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md), the general SDK serves participants on IP links without bandwidth limits: applications, Command Interfaces, Plugins, IP-connected Assets and gateways. Gateways may be remote from Core, with adequate IP bandwidth assumed. Bandwidth-limited Assets do not run the general SDK; their radio transport remains future work. The SDK Asset client retains its authority, identity, retry and reconciliation responsibilities for IP-connected Assets, gateways and test fixtures.
-
-The SDK exposes the same resource-read, query, and feed-subscription methods in two agreed modes:
-
-- HTTP mode passes reads, queries, and feed subscriptions through to Core's API.
-- Full synchronization mode serves reads and queries only from the local picture and retained history; feed subscriptions emit applied local changes. It has no API fallback or per-call bypass.
-
-File bytes remain explicit downloads. Background synchronization maintains the full picture independently of application reads. All writes go to Core in both modes. HTTP failures and local misses do not trigger cross-source fallback.
-
-Pictures are held in memory without persistence and rebuilt on SDK restart. Full synchronization contains the entire operational dataset. Before local readiness, reads return not-ready. During an interruption, they retain the last known picture and expose its stale/disconnected state. Local change history is bounded and configurable, with explicit cursor expiry and cursors scoped to one instance and picture rebuild. Writes return Core's confirmed result after response and Dataset validation without waiting for the local picture, following [ADR-0018](adr/0018-confirm-writes-when-core-commits.md). Only snapshot loading, feed delivery and replay recovery update the picture; write responses do not. Picture application and local notifications remain ordered and deduplicated. Resource limits must never silently truncate a supposedly complete picture.
-
-Both modes enforce the [dataset Reset boundary](sdk-data-access.md#dataset-reset-boundary). See [SDK data access](sdk-data-access.md) for the agreed modes and remaining engineering details. The earlier Asset hybrid mode and Core's matching Asset-scoped snapshots, feed, replay and dependency membership are deferred under ADR-0020. Core's Task retention and required-result protection remain unchanged. Explicit movement/activity history methods use their APIs in both modes, outside the synchronized picture; see [historical reads](sdk-data-access.md#historical-reads).
+The general SDK reads through HTTP mode or Full synchronization mode behind one read interface, under [SDK](topics/sdk.md#modes).
 
 ## Further planning
 

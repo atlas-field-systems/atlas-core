@@ -36,8 +36,7 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | Endpoint families and resource responsibilities | [API plan](docs/api-plan.md) |
 | Public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
 | Rejection of stale edits to operator-managed data | [Concurrent descriptive edits](docs/architecture/system-design.md#concurrent-descriptive-edits) |
-| HTTP mode and Full synchronization mode | [SDK data access](docs/sdk-data-access.md) |
-| Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
+| HTTP mode, Full synchronization mode, the Asset client and the SDK operations catalog | [SDK](docs/topics/sdk.md) |
 | Operational status, Communication state and Contact | [Asset reporting](docs/topics/asset-reporting.md) |
 | Task lifecycle, queues, Pause and Resume and reconnect reconciliation | [Tasks](docs/topics/tasks.md) |
 | Entity identity, Track publishers, observation age and live Geofeature geometry | [Entities, Tracks and Geofeatures](docs/topics/tracks-and-geofeatures.md) |

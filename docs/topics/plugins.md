@@ -155,7 +155,7 @@ Open: any UI contribution contract. If supported, Core may expose contribution m
 ## Routes and SDK operations
 
 - Discover Plugins: `GET /plugins` and `GET /plugins/{plugin_id}` in the [Plugins routes](../api-endpoints.md#plugins), through direct API calls in every SDK mode.
-- Invoke: `POST /plugins/{plugin_id}/operations`, through the SDK's Invoke Plugin Operation [operation](../sdk-operations.md#initial-operations). It takes the capability identifier, input and Dataset-scoped submission identity and returns `202 Accepted` with the Operation identity and query URL.
+- Invoke: `POST /plugins/{plugin_id}/operations`, through the SDK's Invoke Plugin Operation [operation](sdk.md#operations-catalog). It takes the capability identifier, input and Dataset-scoped submission identity and returns `202 Accepted` with the Operation identity and query URL.
 - Inspect: `GET /plugins/{plugin_id}/operations` and `GET /plugins/{plugin_id}/operations/{operation_id}`, through Inspect/cancel Plugin Operation. Here `operation_id` identifies one accepted Operation, not a Plugin capability. Operation polling uses these endpoints in every SDK mode; Operations are outside the Entity, Task and Object picture.
 - Cancel: `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` records a cancellation request; the final outcome requires confirmation.
 - Local administration has no public route or SDK method.

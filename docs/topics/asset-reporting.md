@@ -190,11 +190,11 @@ Atlas uses that reporting approach as a reference. The four Communication states
 
 ## Routes and SDK operations
 
-- Check in: `POST /entities/{entity_id}/checkin` in the [Entities routes](../api-endpoints.md#entities), through the SDK's Check in [operation](../sdk-operations.md#initial-operations) and [Asset startup](../sdk-operations.md#asset-startup).
+- Check in: `POST /entities/{entity_id}/checkin` in the [Entities routes](../api-endpoints.md#entities), through the SDK's Check in [operation](sdk.md#operations-catalog) and [Asset startup](sdk.md#asset-startup).
 - Update Asset components: `PATCH /entities/{entity_id}` in the [Entities routes](../api-endpoints.md#entities), through Update Asset components.
 - Read and report Operational status: `GET` and `PATCH /entities/{entity_id}/status` in the [Asset status routes](../api-endpoints.md#asset-status), through Report Asset status.
 - Task lifecycle and queue adoption reports: `PATCH /tasks/{task_id}/status` in the [Tasks routes](../api-endpoints.md#tasks) and `POST /entities/{entity_id}/task-order/confirm` in the [Entities routes](../api-endpoints.md#entities). They refresh Contact under this page.
-- The SDK's [Asset client](../sdk-operations.md#asset-client) submits every Asset-originated report and owns its report identity, ordering and the Core-issued process generation.
+- The SDK's [Asset client](sdk.md#asset-client) submits every Asset-originated report and owns its report identity, ordering and the Core-issued process generation.
 
 ## Open questions
 

@@ -38,7 +38,7 @@ Core rejects old-Dataset mutations and work submissions, including resource writ
 
 Health, authentication and current-Dataset discovery remain available without an old-Dataset match, so a client can reconnect and read a fresh snapshot. Ordinary reads do not authorize replaying old writes.
 
-Dataset identity does not identify an Asset process, introduce a Session resource, or promise Reset during an active Mission. The SDK's detection of a changed Dataset and its discarding of old pictures and pending submissions follow the [SDK Dataset Reset boundary](../sdk-data-access.md#dataset-reset-boundary).
+Dataset identity does not identify an Asset process, introduce a Session resource, or promise Reset during an active Mission. The SDK's detection of a changed Dataset and its discarding of old pictures and pending submissions follow [SDK Dataset Reset handling](sdk.md#dataset-reset-handling).
 
 ## Reset execution
 
@@ -123,7 +123,7 @@ Backup and restore functionality and version-to-version operational-data migrati
 
 - Start, Stop, Restart, Reset and Hard Reset are local CLI/TUI actions through the shared management implementation under [Local administration](../architecture/system-design.md#local-administration). They have no public endpoint or SDK lifecycle method.
 - `GET /health` in [Health and documentation](../api-endpoints.md#health-and-documentation), authentication and current-Dataset discovery remain available across a Dataset change.
-- The SDK handles a Dataset change under the [SDK Dataset Reset boundary](../sdk-data-access.md#dataset-reset-boundary).
+- The SDK handles a Dataset change under [SDK Dataset Reset handling](sdk.md#dataset-reset-handling).
 
 ## Open questions
 

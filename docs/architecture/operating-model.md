@@ -25,9 +25,7 @@ Command Interface interaction design, production Plugin algorithms, device-side 
 
 ## SDK consumers and radio links
 
-Accepted on 28 September 2026: the general SDK targets participants with sufficient IP bandwidth to obtain the full operational picture: applications, Command Interfaces, Plugins, IP-connected Assets and radio gateways. A gateway usually runs separately from Core, may run on the Core machine, and need not share its local network. The constrained link is between the gateway and bandwidth-limited Assets. This is a deployment assumption, not a measured capacity guarantee; IP access does not require internet access when Core is locally reachable.
-
-Keep HTTP mode and Full synchronization mode in the general SDK. [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md) removes Asset hybrid from the current SDK scope and defers its matching Core synchronization machinery. Gateways choose what crosses the radio link. Bandwidth-limited Assets rely on their gateway rather than running the general SDK; IP-connected Assets use it directly. If a future IP deployment itself needs constrained-link behavior, a dedicated SDK or integration can address it without adding that requirement to the current general SDK.
+The general SDK targets participants with sufficient IP bandwidth to obtain the full operational picture, including IP-connected Assets and radio gateways, while the constrained link runs between a gateway and bandwidth-limited Assets; [SDK](../topics/sdk.md#who-uses-the-general-sdk) owns this boundary.
 
 ## Initial MVP
 

@@ -30,7 +30,7 @@ Each radio gateway has its own gateway identity, provisioned through Core. It ma
 
 ## Enrollment
 
-Each Asset receives its own authenticated identity automatically during Enrollment, without a manual per-Asset key-management workflow. Deployment tooling supplies enrollment authorization, and the SDK's [Asset client](../sdk-operations.md#asset-client) performs registration and identity provisioning automatically, without an approval click for each new Asset. The Asset URL or a claimed ID alone does not authorize Enrollment. Enrollment authorization is needed only for first Enrollment; after Reset an Asset [re-registers](#retained-asset-identity-after-reset) with its surviving credential. Keep Enrollment simple.
+Each Asset receives its own authenticated identity automatically during Enrollment, without a manual per-Asset key-management workflow. Deployment tooling supplies enrollment authorization, and the SDK's [Asset client](sdk.md#asset-client) performs registration and identity provisioning automatically, without an approval click for each new Asset. The Asset URL or a claimed ID alone does not authorize Enrollment. Enrollment authorization is needed only for first Enrollment; after Reset an Asset [re-registers](#retained-asset-identity-after-reset) with its surviving credential. Keep Enrollment simple.
 
 ### Open enrollment
 
@@ -120,9 +120,9 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 
 ## Routes and SDK operations
 
-- Register Asset: `POST /entities` in the [Entities routes](../api-endpoints.md#entities), through the [Asset client](../sdk-operations.md#asset-client) and [Asset startup](../sdk-operations.md#asset-startup).
+- Register Asset: `POST /entities` in the [Entities routes](../api-endpoints.md#entities), through the [Asset client](sdk.md#asset-client) and [Asset startup](sdk.md#asset-startup).
 - Delete Asset: `DELETE /entities/{entity_id}` in the [Entities routes](../api-endpoints.md#entities).
-- Retire Asset: accepted [SDK operation](../sdk-operations.md#initial-operations); its [HTTP route](../api-endpoints.md#remaining-contract-details) is not yet selected.
+- Retire Asset: accepted [SDK operation](sdk.md#operations-catalog); its [HTTP route](../api-endpoints.md#remaining-contract-details) is not yet selected.
 - API keys: list, create and revoke in the [API-key routes](../api-endpoints.md#api-keys).
 - Local CLI/TUI actions: switch Open enrollment, re-provision a lost Asset credential, revoke credentials where applicable and list retained and revoked Asset IDs, under [local administration](../architecture/system-design.md#local-administration).
 

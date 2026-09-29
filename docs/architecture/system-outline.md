@@ -55,7 +55,7 @@ These supporting responsibilities have proposed homes within the seven groups:
 
 Shared facilities do not need independent top-level modules merely because several modules use them.
 
-Objects keeps publication and recovery under [one implementation owner](system-design.md#object-publication-and-recovery-ownership). The sibling SDK keeps coupled picture state under [one local operational picture owner](../sdk-data-access.md#local-operational-picture-ownership) and Core-facing Asset reporting/reconciliation under [one Asset client](system-design.md#sdk-as-the-supported-entry-point) for IP-connected Assets, gateways and test fixtures. The general SDK supports HTTP mode and Full synchronization mode; bandwidth-limited Assets do not run it. These ownership choices do not prescribe package layout or add independently deployed modules.
+Objects keeps publication and recovery under [one implementation owner](system-design.md#object-publication-and-recovery-ownership). The sibling SDK keeps coupled picture state under [one Local operational picture owner](../topics/sdk.md#picture-ownership) and Core-facing Asset reporting/reconciliation under [one Asset client](../topics/sdk.md#asset-client) for IP-connected Assets, gateways and test fixtures. The general SDK supports HTTP mode and Full synchronization mode; bandwidth-limited Assets do not run it. These ownership choices do not prescribe package layout or add independently deployed modules.
 
 ## Define each module with the same short brief
 
