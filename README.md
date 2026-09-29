@@ -37,7 +37,7 @@ The plans below record the agreed API and SDK behavior. The [reconciliation reco
 | Rejection of stale edits to operator-managed data | [Concurrent descriptive edits](docs/architecture/system-design.md#concurrent-descriptive-edits) |
 | HTTP mode and Full synchronization mode | [SDK data access](docs/sdk-data-access.md) |
 | Registration, reporting and resource operations | [SDK operations catalog](docs/sdk-operations.md) |
-| Operational status, Communication state and Contact | [Asset status](docs/asset-status.md) |
+| Operational status, Communication state and Contact | [Asset reporting](docs/topics/asset-reporting.md) |
 | Administrative retirement without invented execution outcomes | [Asset retirement](docs/topics/identity-and-access.md#asset-retirement) and [decision](docs/adr/0019-retire-assets-without-inventing-task-outcomes.md) |
 | Movement and activity history scope | [Movement history](docs/architecture/system-design.md#movement-history) and [activity log](docs/architecture/system-design.md#activity-history) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |

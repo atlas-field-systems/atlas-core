@@ -38,7 +38,7 @@ Open enrollment is a local testing setting, off by default and switched only thr
 
 ## Asset registration
 
-Asset registration creates the Asset's Entity in the current Dataset under its enrolled identity. It uses ordinary Entity creation, not a dedicated registration endpoint. Registration is not a report and not a replacement upsert. It carries only Descriptive data and Command support; other Reported data, such as Operational status and position, arrives with the first check-in. Registration does not create empty component placeholders, and supplying optional initial data does not exempt the record from required-component validation. The [Asset status model](../asset-status.md) defines the values before the first report.
+Asset registration creates the Asset's Entity in the current Dataset under its enrolled identity. It uses ordinary Entity creation, not a dedicated registration endpoint. Registration is not a report and not a replacement upsert. It carries only Descriptive data and Command support; other Reported data, such as Operational status and position, arrives with the first check-in. Registration does not create empty component placeholders, and supplying optional initial data does not exempt the record from required-component validation. [Asset reporting](asset-reporting.md#components-and-initial-values) defines the values before the first report.
 
 Each Asset has a stable ID that survives restarts. Reconnecting resumes the existing record without overwriting its state with startup defaults.
 

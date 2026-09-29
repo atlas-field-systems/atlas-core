@@ -11,8 +11,8 @@ The catalog describes logical data units. A row does not necessarily mean a sepa
 | Component key | Asset | Track | Geofeature | Task | Object | Contents and purpose |
 | --- | --- | --- | --- | --- | --- | --- |
 | `status` | Required | No | No | Required | No | Asset operational condition or Task execution lifecycle, with distinct values and transition rules for each resource type |
-| `communications` | Required | No | No | No | No | Communication state: high_bandwidth, healthy, degraded, or offline; connection type is recorded separately |
-| `heartbeat` | Required | No | No | No | No | Core-recorded last contact; `last_seen: null` before the first report; every accepted fresh Asset-originated update refreshes contact |
+| `communications` | Required | No | No | No | No | Core-derived [Communication state](topics/asset-reporting.md#communication-state); connection type is recorded separately |
+| `heartbeat` | Required | No | No | No | No | Core-recorded [Contact](topics/asset-reporting.md#contact-and-freshness) as `last_seen` |
 | `telemetry` | Optional | Optional | No | No | No | Latitude, longitude, altitude, speed, heading, and observation/update time; stationary Tracks can have a position |
 | `health` | Optional | No | No | No | No | Reported system health; the older defined field is battery percentage, not an unlimited health dictionary |
 | `geometry` | No | Optional | Required | No | No | Point, line, or polygon geometry; required for zones/rally points on Geofeatures, optional for an observed subject's extent on Tracks |
@@ -22,10 +22,10 @@ The catalog describes logical data units. A row does not necessarily mean a sepa
 
 Nine of the ten named keys in the older `EntityComponents` schema are carried forward. The historical `custom_plugin` association is excluded because Plugins are not Assets; see [ADR-0004](adr/0004-core-owns-commands-and-assets-execute-tasks.md). Decisions and remaining proposals relative to its documented typical usage:
 
-- `status` is required on both Assets and Tasks. Asset status describes operational condition; Task status describes execution lifecycle, detailed below. They do not share one state table. A house Track does not need an Asset's ready/busy lifecycle.
-- `communications` and `heartbeat` are required on every Asset. The communication states are `high_bandwidth`, `healthy`, `degraded`, and `offline`. Connection type is separate; degraded/offline takes precedence over high bandwidth. Core derives state from Asset/transport observations and configured link expectations; exact criteria remain open in [Asset status](asset-status.md).
+- `status` is required on both Assets and Tasks. On an Asset it holds Operational status; Task status describes execution lifecycle, detailed below. They do not share one state table. A house Track does not need an Asset's ready/busy lifecycle.
+- `communications` and `heartbeat` are required on every Asset; their values and derivation follow [Asset reporting](topics/asset-reporting.md).
 - `geometry` is required when creating a Geofeature. A point uses one position; lines and polygons use lists of points. Unfinished drawings remain in the interface until valid. Track geometry is optional; Assets use telemetry for position.
-- All Asset status values and detailed field schemas follow [Asset status](asset-status.md); this catalog does not select new lifecycle values.
+- Operational status values follow [Asset reporting](topics/asset-reporting.md#operational-status); this catalog does not select new lifecycle values.
 
 ### Component definitions
 
@@ -35,15 +35,9 @@ Flexible Object metadata remains supported separately. Entities have no unrestri
 
 ## Component updates and Asset authorship
 
-Clients send partial component JSON through the existing Entity routes. There is no separate telemetry-update endpoint. Omitted fields remain unchanged, supplied scalar fields replace their previous values, nested fields merge, and arrays replace completely. Explicit null removes an optional component or clears a nullable field. Required components cannot be removed. Operator-managed and other descriptive edits require the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits); stale edits conflict for caller review. Asset-originated reports use their separate acceptance and ordering rules. Core validates the complete resulting resource and commits the update atomically.
-
-Assets are the source of edits to their own reported Entity data. Command interfaces send Tasks rather than directly editing Asset state. Transport integrations can relay Asset-originated updates; the exact origin and ordering fields remain open. Core verifies the reporting Asset's identity on every reporting path under the [Asset caller rules](topics/identity-and-access.md#assets). Core still maintains derived fields such as communications, heartbeat, versions, and timestamps.
+Component updates, Asset authorship, Contact and initial values follow [Asset reporting](topics/asset-reporting.md), including its [partial component update rules](topics/asset-reporting.md#partial-component-updates).
 
 Each Track has one publisher responsible for its observed fields. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; different publishers use different Tracks, and a Plugin that intentionally fuses sources publishes its own Track. A silent Track retains its last-known observed values and exposes observation age; silence does not delete the Track or refresh its coordinates. Descriptive edits are separate from observations, and Core does not merge publishers automatically. [ADR-0022](adr/0022-one-publisher-per-track.md) also permits publisher corrections to current observations through ordinary updates, preserving actual age and history without replacing newer observations. Publisher transfers are deferred, and existing Task references remain unchanged.
-
-Core records receipt time for every accepted fresh Asset-originated update, including partial telemetry updates, status reports, and check-ins. Clients cannot set Core's heartbeat timestamp. Core's own derived changes do not refresh contact. [Registration](topics/identity-and-access.md#asset-registration) creates the record; before the first check-in, defaults are operational status `unknown`, communications `offline`, and heartbeat `last_seen: null`. Detailed registration and reporting behavior is in the [SDK operations catalog](sdk-operations.md).
-
-Fresh reports establish contact; duplicates and historical backlog do not. Delayed reports never overwrite newer component values. An unchanged measurement in a newly generated report can still establish contact. Fresh Asset-originated Task lifecycle reports also refresh the assigned Asset's heartbeat; interface Task creation/cancellation does not. Continuous, near-real-time telemetry is expected; exact ordering fields and freshness windows remain open.
 
 ## Resource fields and payloads
 
@@ -193,7 +187,7 @@ Record storage mappings and relational constraints separately in private SQL sch
 
 Protocol owns public component schemas and applicability; generate API bindings and SDK types from OpenAPI. Private SQL schemas and queries own storage, with sqlc generating typed Go access. Do not generate database tables from public resource models. See [ADR-0016](adr/0016-use-go-sqlite-and-openapi-tooling.md). Core must validate both supplied component shapes and applicability to the resource type, including the final result of a patch. Database constraints should enforce the relational invariants independently. A generator should not automatically create a universal nullable-column table from every possible component property.
 
-Use SQL `NULL` for an optional scalar such as an absent alias. Omit an absent optional component or its row. If a present component can be disabled, represent that condition explicitly rather than erasing its configuration. A required component uses a meaningful defined initial state, not an empty placeholder. Before the first report, communications is `offline` and heartbeat has `last_seen: null`; operational status defaults to `unknown` when no report is available. Do not invent a contact timestamp.
+Use SQL `NULL` for an optional scalar such as an absent alias. Omit an absent optional component or its row. If a present component can be disabled, represent that condition explicitly rather than erasing its configuration. A required component uses a meaningful defined initial state, not an empty placeholder. Asset reporting components start with their [initial values](topics/asset-reporting.md#components-and-initial-values).
 
 ## Source coverage and remaining decisions
 

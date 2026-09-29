@@ -1,99 +1,6 @@
 # Asset status
 
-Every Asset requires status, communications, and heartbeat components. Asset status replaces the separate execution-session API previously proposed in the endpoint map. This is a planning document; no implementation exists in this repository.
-
-The replacement direction, separate operational and connection states, and reconciliation after exceptional interruption are agreed. Initial operational status `unknown`, initial communications `offline`, and initial heartbeat `last_seen: null` are agreed. Core accepts and retains valid Tasks even when the Asset is offline. The seven operational status values below are agreed. Assets own queued and immediate Task execution; Core does not use reported operational status or communication state to schedule their work. Detailed transition/report validation remains open. The status endpoints are part of the approved endpoint map.
-
-## Earlier design
-
-Atlas Modernization stored operational status in `components.status.value` and connection state in `components.communications.link_state`. Check-in refreshed the heartbeat and could report telemetry and operational status together. Its status guide defines connection states but accepts an operational status string rather than supplying the complete operational lifecycle table needed here.
-
-This design uses that status reporting approach as a reference. It does not retain the older execution-session registration, readiness, shutdown, or session-scoped Task polling API.
-
-## Operational status table
-
-These agreed values describe the Asset's reported operational condition, separately from Task lifecycle states. They communicate state; they are not Core scheduling gates.
-
-| Status | Meaning |
-| --- | --- |
-| `unknown` | No usable operational report is available yet |
-| `initializing` | The Asset is starting or preparing its capabilities |
-| `ready` | The Asset is prepared to perform its advertised capabilities |
-| `busy` | The Asset is executing work |
-| `paused` | The Asset has handled an immediate Pause Command, suspended current queued work if any, and is waiting in its own idle behavior; queued work does not advance |
-| `error` | A reported fault prevents normal operation; details explain the fault |
-| `stopped` | The Asset has deliberately stopped operational activity |
-
-Agreed initial value: `unknown` until the first check-in reports one. Registration does not carry operational status. Even an Asset that only reports observations has a status; being `ready` does not invent tasking capabilities that it has not advertised.
-
-### Proposed transition examples
-
-| Situation | Example transition | Meaning |
-| --- | --- | --- |
-| Asset begins startup | `unknown` or `stopped` → `initializing` | Preparation is in progress |
-| Preparation completes | `initializing` → `ready` | Advertised capabilities are available |
-| Work starts | `ready` → `busy` | At least one operation is executing |
-| Queue is drained | `busy` → `ready` | Asset reports that it is available again; finishing one Task need not imply an empty queue |
-| Immediate Pause is applied | `busy` or `ready` → `paused` | Asset confirms suspension and its idle condition; the queued path is retained |
-| Immediate Resume is applied | `paused` → `busy` or `ready` | Resume suspended work first; if none exists, release the waiting queue. Failed resumption follows the failure policy; report Task outcomes separately |
-| A fault occurs | Any operational state → `error` | Report a reason; do not invent a Task outcome |
-| Fault recovery | `error` → `initializing` or `ready` | Asset reports recovery |
-| Deliberate stop | An active state → `stopped` | Asset reports stopping |
-
-These are examples, not an exhaustive transition validator. A reconnect can reveal a transition Core never observed. The design must distinguish a current state report from an instruction to perform a transition; reporting `stopped` is not a stop Command, and reporting `busy` is not Task acceptance.
-
-## Communication state table
-
-Communications is required on every Asset and remains separate from operational status.
-
-The selected states are `high_bandwidth`, `healthy`, `degraded`, and `offline`. High bandwidth means sufficient capacity for unrestricted Atlas communication; it is not tied to a specific connection technology. Record connection type, such as Wi-Fi or Ethernet, separately.
-
-| Communication state | Meaning |
-| --- | --- |
-| `high_bandwidth` | Communication is working with sufficient capacity for unrestricted Atlas communication |
-| `healthy` | Communication is working as expected for a constrained link |
-| `degraded` | Communication is available but impaired, regardless of connection type or nominal capacity |
-| `offline` | Communication is unavailable |
-
-Healthy is relative to the link's expected performance. A constrained link is not degraded merely because it is slower than Wi-Fi.
-
-Degraded or offline takes precedence over high bandwidth when communication deteriorates. A Wi-Fi connection can therefore be degraded or offline.
-
-Core derives communication state from the Asset's or gateway's reported connection type, capacity class, and link-quality observations, using configured expectations for that link. A single timeout must not assume every link has Wi-Fi timing. Initial state before the first report is `offline`.
-
-Under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md), a gateway connects to Core through the general SDK over an adequate IP link; constrained radio communication is between the gateway and Assets. The gateway may run anywhere that link is available. A live gateway connection does not by itself establish contact with an Asset behind it. IP-connected Assets without bandwidth limits use the general SDK directly; bandwidth-limited Assets and their radio transport do not run it.
-
-**TODO:** Define capacity/quality criteria, transitions, link expectations, and how observations are represented. The four states above replace the earlier table's connected/disconnected/unknown vocabulary.
-
-### Heartbeat and freshness
-
-Entities owns [shared Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance), its private state and commit coordination across reporting paths, alongside contact and reported values.
-
-Heartbeat is required on every Asset and begins with `last_seen: null`. Registration creates the record and is followed by check-in. Every accepted fresh Asset-originated update refreshes Core-recorded contact, including telemetry patches, status updates, and check-ins. A separate heartbeat packet is not required while other reports are arriving.
-
-The Asset authors its reported Entity data; interfaces send Tasks rather than edit the Asset directly. Core verifies Asset identity across component, check-in, status and Task-reporting paths, following [report authority](topics/identity-and-access.md#assets). Core maintains derived fields, but its own changes never refresh heartbeat. Clients cannot supply Core's contact timestamp. Fresh Asset-originated Task acknowledgements, starts, progress, outcomes and queue adoption/conflict reports also refresh contact. Interface-originated Task creation or cancellation does not.
-
-Continuous, near-real-time reporting during operations is the expected model. Fresh reports establish contact; duplicates and historical backlog do not. Delayed updates never overwrite newer component values. Freshness is judged in [Core time](adr/0025-use-core-time-as-the-installation-reference-clock.md); freshness windows, report ordering, and relay-origin fields remain to be specified. These rules cover brief interruptions and retries rather than a planned long-disconnected store-and-forward workflow. Core persists the accepted-report identities and ordering boundaries needed to enforce them across same-release Restart, atomically with affected component values, contact and movement samples. Check-in, component/status updates, Task lifecycle reports and queue adoption/conflict reports share this acceptance contract, owned by [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance): each report is accepted, duplicate or rejected, and contact is refreshed only when an accepted report is fresh evidence from the current process, independently of its position in the report sequence. Reset clears that private state and rejects old-Dataset reports. Ordering may require per-component or report-stream boundaries; no complete packet log or specific wire encoding is selected.
-
-A disconnected Asset may still be physically executing a Task. Connectivity must not silently turn a Task into failed, completed, or cancelled. Keep the last reported operational status and its report time visible; an old `ready` report does not prove current availability. Core derives connection state; link-specific timeout thresholds and freshness indicators remain open. Core does not infer execution policy from the reported communication quality.
-
-## API and reporting
-
-Status belongs to the Asset's Entity record and is included in ordinary reads and the SDK's synchronized operational picture. The approved endpoints provide a status view and update:
-
-| Method and path | Purpose |
-| --- | --- |
-| `GET /entities/{entity_id}/status` | Read an Asset's status, report times, and associated reason/details |
-| `PATCH /entities/{entity_id}/status` | Report an operational status update and optional reason/details |
-| `POST /entities/{entity_id}/checkin` | Report current component data and establish contact; Core records receipt time |
-
-The status-specific endpoints apply to `asset` Entities. They share validation and update semantics with status supplied through check-in or any permitted Entity patch. Status updates produce versioned Entity changes through `/feed` and `/queries/changed-since`; no separate status stream is needed.
-
-Proposed reporting metadata includes when Core received the status and when it last changed. Any accepted fresh Asset-originated update refreshes contact, but a telemetry-only update does not refresh the operational status report time. Contact freshness and the freshness of each reported component remain distinct. Exact fields and timestamps remain to be designed.
-
-The Core-facing SDK Asset client registers an Asset through `POST /entities`, then sends check-in through the existing endpoint. An IP-connected Asset, a gateway or a simulated Asset can use this helper; it preserves Asset-originated identity and execution evidence. Registration content, stable Asset IDs and retries follow [Asset registration](topics/identity-and-access.md#asset-registration). Subsequent updates can contain only changed component fields. See the [SDK operations catalog](sdk-operations.md); no registration or per-component update endpoint is added.
-
-Assets advertise supported Protocol Commands on their Entity record. Command support is Reported data: only the Asset supplies it, at registration and check-in, rather than through a separate readiness session. If the Asset drops a Command that outstanding Tasks use, those Tasks remain and the Asset reports them `failed` with an unsupported reason; new Tasks validate against current support. It remains distinct from operational status: a status value does not contain the Command Catalog.
+Operational status, Communication state, Contact, check-in and report acceptance are specified in [Asset reporting](topics/asset-reporting.md). This file retains only the Task integration notes until a Tasks topic page replaces them. This is a planning document; no implementation exists in this repository.
 
 ## Task integration
 
@@ -120,16 +27,10 @@ The earlier model used a process identity to reject late reports from an older p
 Pending decisions:
 
 - The mechanics of reconciling unfinished Tasks after an exceptional interruption, without assuming an outcome from Asset status alone.
-- Freshness windows and ordering fields for late and duplicate reports. The outcome categories and process-generation authority are settled in [Asset report acceptance](architecture/system-design.md#shared-asset-report-acceptance).
 - Detailed sequence encoding and Asset behavior after cancellation or failure of a queued Task.
 - Exact Task/queue reporting and event fields under the accepted revision contract.
 - Report correlation and Command-specific deadline and expiry fields. Newer Pause/Resume intent wins; a failed resumption leaves the Asset paused until another explicit Resume.
 
-## Scope and source
+## Source
 
-This replaces the public Asset execution-session design across the current planning documents. It does not remove the host manager's responsibility for running Plugin containers. Plugins are not Assets and do not report Asset status; their Operations and lifecycle follow [ADR-0002](adr/0002-core-manages-installed-plugins.md).
-
-Source snapshot: Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, read locally:
-
-- [Asset status guide](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/ASSET_STATUS_SYSTEM.md).
-- [Earlier Task and execution-session design](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md), retained as historical context for the safeguards that need a replacement decision.
+Source snapshot: Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, read locally. The [earlier Task and execution-session design](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md) is retained as historical context for the safeguards that need a replacement decision.

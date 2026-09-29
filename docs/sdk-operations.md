@@ -95,50 +95,23 @@ Object deletion helpers return Core's conflict for a [protected required result]
 ## Asset startup
 
 1. The Core-facing Asset client invokes registration with information supplied by the Asset OS or gateway. The SDK uses ordinary Entity creation, not a dedicated registration endpoint.
-2. [Enrollment](topics/identity-and-access.md#enrollment) automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset. Before its first report, operational status defaults to `unknown`, communications is `offline`, and heartbeat has `last_seen: null`.
-3. The Asset sends check-in with its Reported data, such as operational status and position. Core records contact and derives communication state from reported link observations and configured expectations.
-4. The Asset sends further reports as needed. It can send only changed fields instead of resending its full Entity. Every accepted fresh Asset-originated update refreshes contact, including telemetry and status updates.
+2. [Enrollment](topics/identity-and-access.md#enrollment) automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset with its [initial reporting values](topics/asset-reporting.md#components-and-initial-values).
+3. The Asset sends [check-in](topics/asset-reporting.md#check-in) with its Reported data, such as Operational status and position.
+4. The Asset sends further reports as needed, containing only changed fields if it chooses. [Contact and freshness](topics/asset-reporting.md#contact-and-freshness) defines which reports refresh Contact.
 
 Registration content, stable Asset IDs and retries follow [Asset registration](topics/identity-and-access.md#asset-registration).
 
-## Partial component updates
-
-For example, an Asset can send only a changed heading through the Entity patch route. This illustrates the JSON structure, not a final SDK signature:
-
-```json
-{
-  "components": {
-    "telemetry": {
-      "heading": 90
-    }
-  }
-}
-```
-
-Existing position and other omitted fields remain unchanged. If telemetry is absent, the resulting new component must still satisfy its complete schema; a partial payload cannot create an invalid component.
-
-Supplied scalar fields replace previous values. Nested fields merge; arrays replace completely. Explicit null removes an optional component or clears a nullable field. Removing required components fails validation. Core commits the validated result atomically and emits the corresponding Entity change. The physical storage layout need not match the JSON envelope.
-
-Operator-managed and other descriptive edits require the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits); a stale edit conflicts for caller review. Asset-originated reports use the separate report-acceptance and ordering contract rather than this descriptive-edit precondition.
-
 ## Reporting and derived data
 
-The Asset authors its reported Entity state. Interfaces submit Tasks rather than directly editing Asset state. A gateway can relay data originating from its bound Assets; exact origin and report-ordering fields remain open. Core verifies Asset identity on every reporting path under the [Asset caller rules](topics/identity-and-access.md#assets).
+Check-in, component updates and status reports follow [Asset reporting](topics/asset-reporting.md), including [partial component updates](topics/asset-reporting.md#partial-component-updates), [Contact and freshness](topics/asset-reporting.md#contact-and-freshness) and [report authority and relay](topics/asset-reporting.md#report-authority-and-relay).
 
 Track observations are authored by the Track's single publisher. Within one Dataset, the same authenticated publisher may continue an existing Track after Plugin uninstall and reinstall with fresh observations; different publishers use different Tracks, and deliberate Plugin fusion creates its own Track. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. Descriptive edits are separate and Core does not merge publishers automatically. [ADR-0022](adr/0022-one-publisher-per-track.md) also permits same-publisher corrections to current observations through ordinary updates, preserving actual age and history without replacing newer observations. Publisher transfers are deferred, and existing Tasks retain their original references.
-
-Core owns receipt timestamps, resource versions, and derived communication state. Fresh Asset-originated updates refresh contact; Core-derived changes do not. A telemetry-only update refreshes contact without refreshing the operational status report time. Fresh Asset-originated Task acknowledgements, starts, progress, outcomes and queue adoption/conflict reports also refresh the assigned Asset's contact. Interface-originated Task creation or cancellation does not.
-
-Atlas expects continuous, near-real-time telemetry during operations such as flying to an area, taking photographs, and returning. Long disconnected missions with occasional telemetry uploads are not the operating model. No numeric reporting interval or latency guarantee is selected yet.
-
-Core distinguishes fresh reports from arrival of delayed data. Duplicate reports and historical backlog do not establish current contact, and delayed updates never overwrite newer component values. These rules handle brief transport interruptions, retries, and reordering. An unchanged measurement in a newly generated report can still establish contact. Freshness is judged in [Core time](adr/0025-use-core-time-as-the-installation-reference-clock.md). Exact ordering fields and freshness windows remain open; do not infer current reachability merely from a newly received old packet.
 
 ## Remaining decisions
 
 - SDK method names, argument shapes, the Asset client's interface shape, and whether registration offers a convenience option to perform the first check-in.
 - Registration and credential encodings, listed with the [identity open questions](topics/identity-and-access.md#open-questions).
-- Report identity/ordering fields, relay origin, freshness windows, and Core-time offset estimation that enforce the agreed fresh-contact and no-regression rules.
-- SDK mapping for accepted, duplicate, and rejected Asset reports and their conflict results.
+- Report identity, ordering, relay-origin and disposition-mapping questions listed with the [Asset reporting open questions](topics/asset-reporting.md#open-questions).
 - Exact Task sequence/queue field encodings and report ordering; Pause/Resume correlation, deadline and expiry fields and validation for conflicting immediate actions beyond the accepted control-order policy.
 
-These operations use the [approved endpoint map](api-endpoints.md), [component catalog](data-components.md), and [Asset status model](asset-status.md).
+These operations use the [approved endpoint map](api-endpoints.md), [component catalog](data-components.md), and [Asset reporting](topics/asset-reporting.md) rules.
