@@ -6,11 +6,11 @@ status: accepted
 
 Plugins buffer operational work of their own, such as pending ingestion, caches, intermediate results and private invocation records. Reset must cover that work as well as Core records, without requiring Core to understand each Plugin's files or database schema. Uninstalling a Plugin also leaves private work, setup and artifacts that need a defined lifetime.
 
-Current rules: [Plugins](../topics/plugins.md#private-operational-storage).
+Current rules: [Plugins](../topics/plugins.md#private-operational-storage), with Reset ordering and recovery under [Reset execution](../topics/dataset-lifecycle.md#reset-execution).
 
 ## Decision
 
-Give each installed Plugin an Atlas-managed working directory for its private operational state, as files or a private SQLite database. Preserve it across Stop, Start and Restart, and clear it on ordinary Reset. Retained configuration, credentials and installed reference data stay outside it as installation setup.
+Give each installed Plugin an Atlas-managed working directory for its private operational state, as files or a private SQLite database. Preserve it across Stop, Start and Restart, and clear it on ordinary Reset after stopping writers and before Core establishes the fresh Dataset, without clearing it again once that Reset is established. Retained configuration, credentials and installed reference data stay outside it as installation setup.
 
 The Plugin owns the meaning and format of its private state. Core's Plugins module retains lifecycle policy, Operation admission and recorded outcomes. The shared host-side management module owns the directory's placement, retention and cleanup, removing whole owned work directories after stopping writers without interpreting their contents.
 
@@ -29,16 +29,9 @@ Decision history:
 
 ## Consequences
 
+- The host uses Core's private coordination to decide whether a Reset is established, preserving Core's exclusive access to its SQLite database.
 - A Plugin must not keep operational state in its container's writable layer, arbitrary host paths or an unmanaged external database, and cannot preserve old work by putting it in retained setup.
 - Retaining private files across Restart does not authorize resuming or rerunning an Operation.
 - Reset and uninstall cleanup failures must be reported rather than claimed as success.
 - A reinstall starts with an empty working directory and may need fresh configuration, credentials and reference-data downloads.
 - Exact mount paths and how the Plugin receives them remain implementation choices.
-
-## Reset ordering and recovery
-
-Use the existing [Reset directive and identity](0015-separate-start-stop-restart-and-reset.md#reset-execution). After recording the directive and stopping Core and all managed Plugin writers, host management clears this installation's Plugin work directories before Core establishes the fresh Dataset.
-
-If cleanup fails or is interrupted, retain the directive and report incomplete Reset. Do not establish the fresh Dataset or start Plugin work until cleanup succeeds. The next Start resumes that cleanup while writers remain stopped. Make cleanup durable before allowing the fresh-opening transaction to record the Reset identity; filesystem removal and the SQLite commit are separate operations.
-
-Once Core records that Reset identity, the directive is established. A retry opens the Dataset retained and finishes Plugin startup without clearing its work directories again. This preserves work created by Plugins that already started in the new Dataset, even if management was interrupted before starting the remaining Plugins or removing the directive. Before establishment, repeated cleanup is safe because no Plugin has started new-Dataset work. The host uses Core's private coordination for the establishment decision, preserving Core's exclusive access to its SQLite database.

@@ -10,3 +10,4 @@ Each page owns the current rules for one area of Atlas behavior. The [documentat
 | Object visibility, uploads and retries, publication and recovery, deletion, Required-result protection, storage quota and download | [Objects](objects.md) |
 | Entity types, identity, Aliases, Components, deletion and required Entity references, Track publishers and observation age, and Geofeature geometry | [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md) |
 | Plugin capabilities, Operations and their transitions, independent lifecycle, local administration, configuration, runtime lifetime, private storage and uninstall, releases and UI contributions | [Plugins](plugins.md) |
+| Start, Stop, Restart, Reset and Hard Reset, retained operational state and Installation setup, diagnostic logs, Dataset identity, Reset execution, unfinished work, release updates and the Mission boundary | [Dataset lifecycle](dataset-lifecycle.md) |

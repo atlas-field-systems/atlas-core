@@ -2,7 +2,7 @@
 
 This page owns Objects: what an Object is, ready-only visibility, SDK-allocated Object IDs, uploads and their retries, publication and recovery, deletion and deleted-result retries, Required-result protection, uploads after Task cancellation, the Object storage quota and integrity faults, metadata edits and download.
 
-Scan completion and the Task side of Required results follow [Tasks](tasks.md#scan-completion), and caller authority and retirement races follow [Identity and access](identity-and-access.md). Module ownership of publication and recovery, Required-result holds and the collaboration with Tasks is in [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership). Object retention across Restart and Reset cleanup follow [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md). Plugin private storage follows [Plugins](plugins.md#private-operational-storage).
+Scan completion and the Task side of Required results follow [Tasks](tasks.md#scan-completion), and caller authority and retirement races follow [Identity and access](identity-and-access.md). Module ownership of publication and recovery, Required-result holds and the collaboration with Tasks is in [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership). Object retention across Restart and Reset cleanup follow [Dataset lifecycle](dataset-lifecycle.md). Plugin private storage follows [Plugins](plugins.md#private-operational-storage).
 
 ## What an Object is
 
@@ -105,7 +105,7 @@ Physical cleanup must never remove a protected file because it was scheduled aga
 
 Cancelling a Task does not cancel its uploads. An in-flight result upload may continue and publish a ready Object after the Task is confirmed Cancelled. Already-created Objects are kept. The Task remains Cancelled regardless of later upload completion; data availability does not reverse a terminal outcome.
 
-Uploads still follow ordinary validity and resource-limit checks. Cancellation adds no uploader-ownership rule and does not make a partial Object visible. Treatment of uploads across Core Stop and Restart follows [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md#unfinished-work-after-stop-or-restart).
+Uploads still follow ordinary validity and resource-limit checks. Cancellation adds no uploader-ownership rule and does not make a partial Object visible. Treatment of uploads across Core Stop and Restart follows [unfinished work after Stop or Restart](dataset-lifecycle.md#unfinished-work-after-stop-or-restart).
 
 ## Storage quota and integrity faults
 

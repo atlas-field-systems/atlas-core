@@ -2,7 +2,7 @@
 
 Atlas is primarily for one operator, with any additional operators equally trusted to observe Entities, task Assets and use Plugins to process data or gather external information. Plugin detections appear directly in the shared picture; a review-and-publish layer is excluded.
 
-This document owns product scope, workload and field assumptions. Examples illustrate the linked decisions; detailed lifecycle and interface rules live in ADRs and the [system design](system-design.md).
+This document owns product scope, workload and field assumptions. Examples illustrate the linked decisions; detailed rules live on the [topic pages](../topics/README.md), with rationale in the ADRs and cross-cutting mechanisms in the [system design](system-design.md).
 
 ## Field workflow
 
@@ -11,7 +11,7 @@ This document owns product scope, workload and field assumptions. Examples illus
 3. Connect the Assets.
 4. Run the mission with Core continuously available.
 
-An Asset temporarily losing radio contact does not end the mission. Closing the Command Interface does not stop Core. Restart, Reset and release updates occur outside missions; active mission continuity across Core restart is excluded by [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md). This is an operating assumption, not a claim that hardware or processes cannot fail.
+An Asset temporarily losing radio contact does not end the mission. Closing the Command Interface does not stop Core. Restart, Reset and release updates occur outside missions, and active mission continuity across Core restart is excluded under the [Mission boundary](../topics/dataset-lifecycle.md#missions), an operating assumption rather than a claim that hardware or processes cannot fail.
 
 ## Expected workload
 
@@ -55,7 +55,7 @@ Every authenticated operator has full control, with no operator roles or view-on
 
 An installed system [works without internet](../adr/0010-operate-without-internet-access.md) when operators and Assets can reach Core. An internet-source Plugin depends on its external service independently.
 
-Start, Stop and Restart preserve data and logs. Reset is the usual development fresh start and preserves installation setup, including Operator profiles. Hard Reset is a separate local CLI/TUI action available whether Atlas is running or stopped that wipes all Atlas-managed state and returns to first-time setup. The [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) owns the action table, retained setup, release-update Reset and client dataset boundary. Local CLI/TUI tools provide [administration](system-design.md#local-administration).
+Start, Stop and Restart preserve data and logs, Reset is the usual development fresh start and Hard Reset returns to first-time setup under [Dataset lifecycle](../topics/dataset-lifecycle.md). Local CLI/TUI tools provide [administration](system-design.md#local-administration).
 
 Plugins keep private operational work in [Atlas-managed working storage](../topics/plugins.md#private-operational-storage) that Restart keeps and Reset clears, separately from retained setup and reference data; [uninstall](../topics/plugins.md#uninstall-and-reinstall) also clears the Plugin's setup, while disabling preserves it.
 

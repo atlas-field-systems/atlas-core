@@ -2,7 +2,7 @@
 
 This page owns Plugins: what a Plugin is, Plugin capabilities and discovery, Operations and their lifecycle, independent Plugin lifecycle while Core runs, local-only Plugin administration, configuration, Plugin runtime lifetime with Core, private Plugin operational storage and uninstall, Plugin releases and compatibility, and Plugin UI contributions.
 
-The Plugin identity and its operational access follow [Identity and access](identity-and-access.md#plugins). Tasks that Plugins create follow [Tasks](tasks.md#task-creation), and Tracks they publish follow [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md#tracks). The Operation record and SDK submission helpers are in the [system design](../architecture/system-design.md#plugin-operations), and the shared host-side management module is in [local lifecycle coordination](../architecture/system-design.md#local-lifecycle-coordination). Docker deployment follows [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md), and Reset sequencing follows [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md#reset-execution) and [ADR-0021](../adr/0021-manage-plugin-operational-storage-through-reset.md#reset-ordering-and-recovery).
+The Plugin identity and its operational access follow [Identity and access](identity-and-access.md#plugins). Tasks that Plugins create follow [Tasks](tasks.md#task-creation), and Tracks they publish follow [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md#tracks). The Operation record and SDK submission helpers are in the [system design](../architecture/system-design.md#plugin-operations), and the shared host-side management module is in [local lifecycle coordination](../architecture/system-design.md#local-lifecycle-coordination). Docker deployment follows [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md), and Start, Stop, Restart, Reset and Hard Reset follow [Dataset lifecycle](dataset-lifecycle.md).
 
 ## What a Plugin is
 
@@ -28,7 +28,7 @@ An Operation is one submitted invocation of a Plugin capability, with its own id
 
 Accepted Operations have a Core-owned Operation identifier and queryable state and outcome. The SDK gives a submission a stable identity. Retrying after a lost acceptance response returns the original Operation and its current state, including Interrupted. A conflicting reuse of a submission identity fails. An explicit rerun uses a new identity and creates a new Operation.
 
-Submission identity is scoped to the current Dataset; Reset must not turn an old retry into a new invocation. Core rejects Operation submissions from an old Dataset under the [Dataset boundary](../adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary). Submission retry uniqueness prevents duplicate acceptance, not arbitrary duplicate external effects.
+Submission identity is scoped to the current Dataset; Reset must not turn an old retry into a new invocation. Core rejects Operation submissions from an old Dataset under the [Dataset boundary](dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary). Submission retry uniqueness prevents duplicate acceptance, not arbitrary duplicate external effects.
 
 ### Durable acceptance and caller disconnection
 
@@ -54,7 +54,7 @@ Operations use their own lifecycle, separate from the Task statuses even though 
 
 Completed, Cancelled, Failed and Interrupted are terminal for that Operation; matching repeated reports have no new effect and conflicting reports cannot rewrite the terminal state. An Interrupted Operation records uncertainty, not proof that all external effects stopped or that nothing happened. Preserve confirmed outcomes and known effects before classifying remaining work as Interrupted.
 
-At Start after Stop or Restart, Core marks unfinished Operations from the previous Core run Interrupted under [unfinished work](../adr/0015-separate-start-stop-restart-and-reset.md#unfinished-work-after-stop-or-restart).
+At Start after Stop or Restart, Core marks unfinished Operations from the previous Core run Interrupted under [unfinished work](dataset-lifecycle.md#unfinished-work-after-stop-or-restart).
 
 ### Retained effects and outputs
 
@@ -112,7 +112,7 @@ If applying settings prevents startup, Core records the failed apply and leaves 
 
 Managed Plugins operate only while Core is running. A completed Core Stop also leaves its managed Plugins stopped; Restart and Reset stop them before bringing the installation back up. Independent Plugin start, stop and update while Core remains running stays supported.
 
-Local management coordinates this lifetime and reports incomplete shutdown rather than claiming everything stopped. Unexpected Core loss must not leave Plugins intentionally operating as standalone services, and enforcement must not depend on an operator keeping a CLI command or TUI open. There is no instantaneous stop or automatic mission-recovery guarantee. Preserve known outcomes and classify uncertain work under [unfinished work](../adr/0015-separate-start-stop-restart-and-reset.md#unfinished-work-after-stop-or-restart). Physical Assets have their own execution lifetime and are not stopped by this rule.
+Local management coordinates this lifetime and reports incomplete shutdown rather than claiming everything stopped. Unexpected Core loss must not leave Plugins intentionally operating as standalone services, and enforcement must not depend on an operator keeping a CLI command or TUI open. There is no instantaneous stop or automatic mission-recovery guarantee. Preserve known outcomes and classify uncertain work under [unfinished work](dataset-lifecycle.md#unfinished-work-after-stop-or-restart). Physical Assets have their own execution lifetime and are not stopped by this rule.
 
 ## Private operational storage
 
@@ -126,11 +126,11 @@ The Plugin owns the meaning and format of its private state. Host management rem
 
 Stop, Start and Restart preserve the working directory. Retaining private files across Restart does not authorize resuming or rerunning an Operation.
 
-Ordinary Reset clears the working directories before Core establishes the fresh Dataset, including those of disabled or faulted Plugins and any retained work from earlier Datasets. Stopping a container alone does not clear its mounted storage. If cleanup fails or is interrupted, Reset is reported incomplete and no Plugin work starts until cleanup succeeds. Recovery of an already established Reset does not clear the directories again, so work Plugins created in the new Dataset survives.
+Ordinary Reset clears the working directories before Core establishes the fresh Dataset, including those of disabled or faulted Plugins and any retained work from earlier Datasets. Stopping a container alone does not clear its mounted storage. Cleanup failure and recovery follow [Interrupted Reset](dataset-lifecycle.md#interrupted-reset).
 
 Buffered outputs and pending work belong to their original Dataset. Starting a Plugin against a new Dataset cannot resubmit old private work under fresh request identities, relabel it or republish it into the replacement Dataset. A Plugin may obtain fresh observations after Reset through its normal integration.
 
-[Hard Reset](../adr/0015-separate-start-stop-restart-and-reset.md#hard-reset) clears the working directories and Atlas-managed retained Plugin setup, credentials and installed reference data. Neither Reset nor Hard Reset undoes effects on External sources, removes unrelated host data or recalls copies held by external clients.
+[Hard Reset](dataset-lifecycle.md#hard-reset) clears the working directories and Atlas-managed retained Plugin setup, credentials and installed reference data. Neither Reset nor Hard Reset undoes effects on External sources, removes unrelated host data or recalls copies held by external clients.
 
 ### Uninstall and reinstall
 

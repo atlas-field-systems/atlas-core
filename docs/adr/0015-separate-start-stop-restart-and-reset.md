@@ -4,72 +4,41 @@ status: accepted
 
 # Separate Start, Stop, Restart, Reset and Hard Reset
 
-The user revised the lifecycle on 21 September 2026. Start, Stop and Restart preserve operational data and logs. Reset clears them. Restart and Reset are primarily development actions. Reset is the usual way to begin fresh; Restart preserves data and diagnostic logs for further development and inspection.
+Restart and Reset are primarily development actions. Reset is the usual way to begin fresh; Restart preserves data and diagnostic logs for further development and inspection. Under the [field operating model](../architecture/operating-model.md#field-workflow), Core remains available throughout the Mission, and Restart, Reset and release updates happen outside it. [ADR-0013](0013-start-each-core-run-with-empty-data.md) previously confined data to one Core run.
 
-Under the [field operating model](../architecture/operating-model.md#field-workflow), Core remains available throughout the mission. Restart, Reset and release updates happen outside it, with Assets no longer participating; temporary radio disconnection does not end the mission.
+Current rules: [Dataset lifecycle](../topics/dataset-lifecycle.md).
 
-Active mission continuity across a whole-Core restart is excluded. Do not require reattachment of executing Assets, resumption of Plugin Operations or continuation of uploads after Core restarts. An unexpected Core failure is outside that continuity guarantee; this assumption does not require fault tolerance or automatic recovery. Independent Plugin lifecycle actions while Core stays running remain supported.
+## Decision
 
-| Action | Runtime effect | Operational data and logs | Installation setup |
-| --- | --- | --- | --- |
-| Start | Start Core using existing state, then start compatible enabled Plugins; initialize an empty store on first use | Preserve existing state | Preserve and reapply |
-| Stop | Stop Core and all managed Plugins | Preserve | Preserve |
-| Restart | Stop Core and all managed Plugins, then start Core and compatible enabled Plugins | Preserve | Preserve and reapply |
-| Reset | Stop Core and all managed Plugins, clear Atlas-owned operational state and Atlas-managed diagnostic logs, then start Core and compatible enabled Plugins | Wipe | Preserve and reapply |
-| Hard Reset | Stop Core and managed Plugins, clear all Atlas-managed state, then enter first-time setup | Wipe | Wipe profiles, credentials, settings and Plugin installations; retain Core software |
+Provide distinct Start, Stop, Restart, Reset and Hard Reset actions. Start, Stop and Restart preserve operational data and logs. Reset clears the Dataset and Atlas-managed diagnostic logs and starts Core with a new Dataset while retaining installation setup, including Operator profiles. Hard Reset is a separate local CLI/TUI action that removes all Atlas-managed state and returns the installation to first-time setup.
 
-Operational state includes Entities and Tracks, Tasks, Object metadata and content, movement and activity history, Plugin Operation records, synchronization records, Task creation identities, Asset registration retry records, Entity identity reservations/deletion markers, Asset report acceptance state, required-result declarations and successful upload identity records with any deletion markers. Private Dataset metadata retains the Dataset ID and writing Core release across same-release Restart and is re-established by Reset. Temporary upload files are disposable staging, cleaned after interruption or on startup under ADR-0009. Reset clears Atlas-managed diagnostic logs as well as operational activity history. It does not erase unrelated host logs or files. Operator profiles and personal settings, installed Plugin selections, credentials and their creation retry records, configuration, installed software and Plugin artifacts survive Start, Stop, Restart and ordinary Reset. Profiles belong to retained installation setup; Reset clears activity history but not those profiles. Hard Reset additionally clears installation setup as defined below.
+Each Dataset has an identifier that Restart retains and Reset changes. Core rejects old-Dataset writes and work submissions while health, authentication and current-Dataset discovery remain available. Reset is Start with a fresh Dataset, recorded by a host directive so an interrupted Reset completes without serving partially cleared state or clearing twice. Before serving retained state, Core classifies unfinished work from the previous Core run without inferring outcomes or rerunning it. Ordinary Start refuses a Dataset written by another Core release, and a new-release update includes Reset. Managed Plugins operate only while Core is running.
 
-This supersedes [ADR-0013](0013-start-each-core-run-with-empty-data.md). Retention is bounded by Reset rather than the Core process lifetime. If Core is already stopped, Reset still ensures managed Plugins are stopped before clearing state, then starts Core and compatible enabled Plugins. A new-release update includes Reset; distribution and update packaging remain to be designed.
+Active Mission continuity across a whole-Core restart is excluded. Backup and restore functionality and version-to-version operational-data migrations are excluded. [ADR-0021](0021-manage-plugin-operational-storage-through-reset.md) includes each Plugin's working directory in operational state.
 
-[ADR-0021](0021-manage-plugin-operational-storage-through-reset.md) includes each Plugin's Atlas-managed working directory in operational state; [Plugins](../topics/plugins.md#restart-and-reset) states its retention rules.
+Decision history:
 
-Retained records do not authorize automatic resumption or rerun. A Plugin crash while Core remains running follows [ADR-0006](0006-protect-active-plugin-work-during-lifecycle-changes.md); Asset execution remains the Asset OS's responsibility.
+- 21 September 2026: the user revised the lifecycle so that Start, Stop and Restart preserve operational data and logs and Reset clears them. The Dataset boundary was accepted the same day.
+- 22 September 2026: the upload simplification replaced the earlier retention of partial transfer bytes and progress until Reset; completed operational data remains retained.
+- 23 September 2026: the user accepted a distinct Hard Reset action; ordinary Reset continues to preserve installation setup and Operator profiles. The same day clarified that managed Plugins operate only while Core is running, while independent Plugin start, stop and update with Core running stays supported.
+- 26 September 2026: clarified that Reset is Start with a fresh Dataset under a host-recorded directive.
+- 28 September 2026: the [Plugin storage decision](0021-manage-plugin-operational-storage-through-reset.md) required completed Plugin work-directory cleanup before fresh opening. The user made re-registration after Reset automatic for an Asset holding a surviving credential, and made revocation by deletion or retirement permanent until Hard Reset.
 
-Persistent storage uses the [selected stack](0016-use-go-sqlite-and-openapi-tooling.md) and [Docker mount layout](0017-deploy-core-and-plugins-as-docker-containers.md). Backup and restore functionality and version-to-version operational-data migrations are excluded. New-release updates perform Reset; same-release restarts preserve state.
+## Rationale and alternatives
 
-## Core and Plugin runtime lifetime
+- Retention is bounded by Reset rather than the Core process lifetime, superseding ADR-0013's empty data for each Core run.
+- Restart keeps data and diagnostic logs for further development and inspection; Reset remains the usual fresh start.
+- An unexpected Core failure is outside the continuity guarantee; the availability assumption does not require fault tolerance or automatic recovery.
+- Recording the Reset identity with the fresh Dataset lets an interruption at any point complete the Reset without serving a partially cleared Dataset or clearing it twice.
+- Refusing a writing-release mismatch means Start never silently wipes, migrates or reinterprets retained data.
 
-Clarified on 23 September 2026: managed Plugins operate only while Core is running, while independent Plugin start, stop and update with Core running stays supported. [Runtime lifetime with Core](../topics/plugins.md#runtime-lifetime-with-core) states the current rules.
+## Consequences
 
-## Reset execution
+- Retained records preserve evidence and do not authorize automatic resumption or rerun; Asset execution remains the Asset OS's responsibility.
+- The SDK must detect a Dataset change and discard old state rather than replay old writes into the new Dataset.
+- Hard Reset does not stop physical Assets or recall copies held by external clients; field use still requires the operator to manage those Assets separately.
+- Distribution and update packaging, exact wire placement of the Dataset identity, exact CLI spelling, TUI layout and private coordination remain implementation work.
 
-Clarified on 26 September 2026: Reset is Start with a fresh Dataset. The host coordinator records a fresh-Dataset directive with a Reset identity on the installation mount before stopping anything, stops managed Plugins and Core, clears Atlas-managed diagnostic logs and the pending local activity journal, and starts Core. The 28 September [Plugin storage decision](0021-manage-plugin-operational-storage-through-reset.md#reset-ordering-and-recovery) also requires completed Plugin work-directory cleanup before fresh opening. Core opens every module fresh: one SQLite transaction clears all Dataset tables, establishes the new Dataset ID and records the Reset identity in Dataset metadata. Objects then removes, by ownership, content belonging to any Dataset other than the new one, so an interrupted and retried Reset cannot leave earlier content behind. Core serves operational requests after every module is ready; the host removes the directive only after compatible enabled Plugins have started. If the next Start finds a directive whose Reset identity is not recorded, the host completes pending cleanup before Core opens fresh. If it is recorded, Core opens retained so post-Reset data survives, and the host completes Plugin startup without clearing new-Dataset Plugin work. An interruption at any point therefore completes the Reset without serving a partially cleared Dataset or clearing it twice. The coordinator does not clear module tables itself. See [opening a Dataset](../architecture/system-design.md#opening-a-dataset).
+## Retained Asset identity after Reset
 
-## Hard Reset
-
-Accepted on 23 September 2026: provide a distinct Hard Reset action in the local CLI/TUI that can be invoked while Atlas is running, or while it is stopped. It removes all Atlas-managed state and returns the installation to first-time setup. It has no public HTTP endpoint or SDK operation. Ordinary Reset continues to preserve installation setup and Operator profiles.
-
-Hard Reset clears the Dataset and its protected Task results, Object content and staging, all histories and logs, all retry/identity records, Operator profiles and personal settings, administrative, Asset, Plugin and gateway credentials, enrollment authorization material, Core and Plugin configuration, installed Plugin selections, managed Plugin containers, private Plugin data and downloaded Plugin artifacts. Clear Atlas-managed Docker logs and storage too. Scope cleanup to this Atlas installation's owned resources; do not prune unrelated containers, shared images, host files or external services. Keep the Core executable/container image and local management tool so Atlas can run first-time setup again. Copies already downloaded to external clients are outside this local action.
-
-The CLI/TUI identifies the target installation and requires an explicit destructive-action confirmation. Once confirmed, a local coordinator stops accepting requests, closes live connections, disables automatic container restart and stops Core and managed Plugin writers before cleanup. Hard Reset deliberately discards their unfinished work rather than waiting for successful Task or Operation completion. It does not send a stop command to physical Assets or guarantee their behavior; field use still requires the operator to manage those Assets separately.
-
-The coordinator must remain able to finish cleanup after Core stops. Serialize it against other lifecycle/configuration actions. Record that cleanup is in progress outside the data being removed, and block ordinary startup until it finishes. On failure or coordinator interruption, leave serving disabled and report the incomplete cleanup; rerunning or resuming the local action completes the remaining cleanup. Do not claim success while any required target remains uncleared. The progress marker is removed after successful cleanup; no pre-reset activity/log archive is retained by Atlas.
-
-After cleanup, return to local first-time setup without automatically restoring old settings, Plugins or credentials. Provision fresh setup authorization and a new Dataset before enabling operational service. Old credentials, connections, Dataset submissions and retry records cannot authorize or repopulate the fresh installation. Operator profiles start empty. [ADR-0017](0017-deploy-core-and-plugins-as-docker-containers.md#ownership-and-lifecycle) places the shared coordinator on the host. Exact CLI spelling, TUI layout, private coordination and cleanup ordering remain implementation details.
-
-## Dataset boundary
-
-Each dataset has an identifier, created on first initialization, retained across Restart, and changed by Reset before new state is exposed, including release-update Reset. The SDK detects an identifier change, discards its old synchronized picture and pending submissions, then reads fresh state. Core rejects old-dataset mutations and work submissions, including resource writes, Task instructions/reports, Plugin Operation submissions and upload submissions/publication. It also rejects replay requests with obsolete dataset cursors and upload retries with obsolete Dataset identities. Health, authentication and current-dataset discovery remain available without an old-dataset match, so a client can reconnect and read a fresh snapshot. Ordinary reads do not authorize replaying old writes. The SDK checks dataset identity before accepting responses into its current picture or retrying a submission; the SDK must not silently relabel them as new submissions. This reset boundary was accepted on 21 September 2026. It does not identify an Asset process, introduce a Session resource, or promise Reset during an active mission. Exact wire placement remains implementation design.
-
-### Retained Asset identity after Reset
-
-Asset ID bindings, credentials and revocations belong to installation setup, so ordinary Reset retains them. On 28 September 2026 the user made re-registration after Reset automatic for an Asset holding a surviving credential, and made revocation by deletion or retirement permanent until Hard Reset. [Identity and access](../topics/identity-and-access.md#retained-asset-identity-after-reset) states the current rules.
-
-## Unfinished work after Stop or Restart
-
-Retention preserves evidence; it does not claim that execution continued. Stop records interrupted Core-owned work when possible. Before serving retained state on Start, Core classifies any remaining unfinished Tasks, Operations and uploads from the previous Core run through each module's [retained opening](../architecture/system-design.md#opening-a-dataset). Preserve confirmed terminal outcomes first.
-
-| Retained work | Behavior after Start |
-| --- | --- |
-| Asset Tasks | Keep recorded statuses, reports and result references. Do not infer Asset success, failure or cancellation from the Core interruption, and do not automatically reissue Tasks |
-| Plugin Operations | Mark unfinished Operations Interrupted under the [Operation lifecycle](../topics/plugins.md#operation-transitions). A submission retry retrieves that Operation; a rerun must be explicit |
-| Partial Object uploads | Clean up abandoned private staging. Retried uploads start from the beginning; no partial-transfer resume or inspection store is required. Preserve already-published Objects and successful upload identity records |
-
-The 22 September upload simplification replaces the earlier retention of partial transfer bytes/progress until Reset; completed operational data remains retained.
-
-This classification supports retained development records, not active mission recovery or a promise to drain all work before Stop. Whole-Core interruption does not add a Task status. Reset clears these records under the existing cleanup rule.
-
-## Release mismatch detection
-
-Store the writing Core release with the dataset. Ordinary Start checks it before serving operational data. A mismatch refuses startup with a clear instruction to use the explicit update/Reset flow; it never silently wipes, migrates or reinterprets retained data. First initialization and Reset establish a dataset for the running release. Same-release development restarts retain state. This is separate from [compatible client versions](0005-allow-compatible-client-versions.md).
+Asset ID bindings, credentials and revocations after Reset are specified in [Identity and access](../topics/identity-and-access.md#retained-asset-identity-after-reset).

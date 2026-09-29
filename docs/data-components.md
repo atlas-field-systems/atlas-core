@@ -107,7 +107,7 @@ These Core-owned records support the public contracts; they are not new Entity c
 
 | Record | Required contents and behavior |
 | --- | --- |
-| Dataset metadata | Current Dataset ID, writing Core release and the Reset identity that established it, initialized on first use or Reset and retained across same-release Restart. Start checks the writing release before serving data; a mismatch refuses startup and requires explicit update/Reset. |
+| Dataset metadata | Current Dataset ID, writing Core release and the Reset identity that established it, initialized on first use or Reset and retained across same-release Restart. Behavior follows [Dataset identity](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary) and [release mismatch](topics/dataset-lifecycle.md#release-mismatch-and-release-updates). |
 | Asset registration identity | Dataset-scoped request ID, stable Asset ID, authenticated enrollment-principal binding, canonical initial request facts and resulting Entity/credential association, retained across Restart until Reset. Behavior follows [registration retries](topics/identity-and-access.md#registration-retries). |
 | Asset retirement identity | Dataset-scoped request identity, target Asset ID, canonical original retirement parameters and recorded retired result, retained across Restart until Reset. Behavior follows [retirement retries](topics/identity-and-access.md#retirement-retries). |
 | API-key creation identity | Installation-scoped creation ID, authenticated administrative principal, canonical initial metadata, secret verifier and resulting key ID/revocation state, retained until Hard Reset. Never retain plaintext secrets in this record. Behavior follows [API keys](topics/identity-and-access.md#api-keys). |

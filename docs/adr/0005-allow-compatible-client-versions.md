@@ -10,4 +10,4 @@ Connected clients may use a different release version from Core when their contr
 
 Before starting operational service after an update, validate retained configuration and installed Plugin compatibility. Report invalid configuration without silently converting it. Keep incompatible Plugins installed but disabled and explain the incompatibility. Start compatible enabled Plugins normally. The user selected this behavior on 21 September 2026; it does not introduce automatic configuration conversion or operational-data migrations.
 
-Retained dataset compatibility is a separate check: [ordinary Start refuses a writing-release mismatch](0015-separate-start-stop-restart-and-reset.md#release-mismatch-detection). Allowing compatible client versions does not allow a new Core release to reuse operational data without the required Reset.
+Retained dataset compatibility is a separate check: [ordinary Start refuses a writing-release mismatch](../topics/dataset-lifecycle.md#release-mismatch-and-release-updates). Allowing compatible client versions does not allow a new Core release to reuse operational data without the required Reset.

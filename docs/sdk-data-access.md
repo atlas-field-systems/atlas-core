@@ -142,11 +142,11 @@ Picture reconciliation and notification deduplication follow the agreed rule abo
 
 ## Dataset Reset boundary
 
-Both modes follow [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#dataset-boundary). A Dataset identity is created on first initialization, survives Restart, and changes on Reset. It is separate from an SDK picture rebuild or Asset process identity.
+Both modes follow Core's [Dataset boundary](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary), under which Dataset identity survives Restart and changes on Reset. It is separate from an SDK picture rebuild or Asset process identity.
 
 Before accepting responses or retrying submissions, the SDK checks Dataset identity. After detecting Reset, discard the old picture, local history/cursors, pending submissions and obsolete upload identities and recovery handles. Reject late responses/events from the prior Dataset and never relabel an old write as a new submission. Full synchronization returns to not-ready and loads the full picture afresh; HTTP mode rediscovers the Dataset without constructing a local picture. This is background recovery, not an application-read fallback.
 
-Core rejects old-dataset writes, Task reports, Operation submissions and obsolete upload identities/replay handles. Health, authentication and current-Dataset discovery remain available so clients can recover. A disconnection without a known Reset may retain a visibly stale picture; once Reset is known, that picture cannot be served as the current Dataset. Restart alone does not invalidate Dataset identity or promise active-mission continuity. Wire fields and the discovery binding remain implementation details.
+A disconnection without a known Reset may retain a visibly stale picture; once Reset is known, that picture cannot be served as the current Dataset. Wire fields and the discovery binding remain implementation details.
 
 ## Integration and bandwidth requirements
 

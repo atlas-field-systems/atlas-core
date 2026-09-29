@@ -38,7 +38,7 @@ These conventions govern code quality. The [system design](../architecture/syste
 - Keep resource use bounded where work can accumulate: queues, retries, buffers and concurrent work. Make cancellation, shutdown and failure reporting part of the component's interface.
 - Distinguish a rejected operation, an unknown outcome and a confirmed result. Preserve that distinction through errors and retries.
 - Keep credentials and other secrets out of logs and test artifacts. Include enough nonsecret context to diagnose the failed operation.
-- Follow the [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) for retention and cleanup. Storage and recovery changes must preserve those guarantees.
+- Follow [Dataset lifecycle](../topics/dataset-lifecycle.md) for retention and cleanup. Storage and recovery changes must preserve those guarantees.
 
 ## Tests
 

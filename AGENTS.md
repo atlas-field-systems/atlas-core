@@ -13,7 +13,7 @@
 
 ## Architecture and lifecycle
 
-Before planning, implementing or reviewing changes to lifecycle, storage, logs or client synchronization, read `docs/adr/0015-separate-start-stop-restart-and-reset.md`. It defines Restart retention, Reset cleanup and the field-use boundary. Backup/restore and version-to-version operational-data migrations are excluded.
+Before planning, implementing or reviewing changes to lifecycle, storage, logs or client synchronization, read `docs/topics/dataset-lifecycle.md` and `docs/adr/0015-separate-start-stop-restart-and-reset.md`. They define Restart retention, Reset cleanup and the field-use boundary. Backup/restore and version-to-version operational-data migrations are excluded.
 
 Before planning, implementing or reviewing changes to Protocol, generators, module interfaces, storage ownership or shared infrastructure, read `docs/architecture/system-design.md` and its linked decisions.
 
