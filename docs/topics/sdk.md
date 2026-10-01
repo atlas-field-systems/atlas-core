@@ -102,7 +102,7 @@ Background synchronization is separate from application operations. The synchron
 
 Finish the initial paginated load, then recover changes since its baseline before treating the picture as current. The paginated read is not a frozen snapshot: keep its baseline stable across pages and separate from the versions on individual resources. Subscription acknowledgement and its continuation boundary close the handoff to live delivery. On feed reconnect or a version gap, recover through changed-since. If retained history no longer covers the requested version, Core returns an explicit cursor-expired response and the SDK makes a new initial load.
 
-Proposed lifecycle, carrying forward the older feed contract:
+Proposed synchronization lifecycle:
 
 1. Load every initial page, keeping the server's baseline version.
 2. Establish the feed subscription and wait for confirmation that it is active. Buffer live events during catch-up.
@@ -118,7 +118,7 @@ Full synchronization couples Core and the SDK through a documented synchronizati
 - Events carry full resource data for creates and updates, and versioned deletion records for deletes. Object content is not sent through the feed.
 - Applying an old response or duplicate event cannot overwrite a newer resource or resurrect a deleted one.
 - A global recovery cursor advances only after all relevant changes through that boundary are applied. The version on a single resource or mutation response is not proof that unrelated changes have been consumed.
-- Subscription acknowledgement closes the gap between fetching state and listening for future changes. The older protocol uses a subscription barrier with a version watermark.
+- Subscription acknowledgement closes the gap between fetching state and listening for future changes.
 - Recovery history has a defined retention limit and an explicit expired-cursor response. Overloaded clients reconnect and recover rather than silently dropping changes and claiming to be current.
 
 ### Readiness and freshness
@@ -231,7 +231,7 @@ Core, Assets and SDK clients may use different versions within declared supporte
 
 ## Deferred: Asset hybrid mode
 
-The earlier Asset hybrid mode maintained an Asset's Tasks and dependencies locally while reading unrelated data through HTTP. It is not part of the general SDK, and Core's matching Asset-scoped snapshots, feed, replay, dependency membership and scope-continuation contract are deferred under [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md). Removing it is a scope decision, not a public-interface split or permission to discard the remaining picture guarantees. It does not change Core's Task retention, Required-result protection, Asset report authority, retries or reconnect reconciliation.
+Asset hybrid mode and Core's matching Asset-scoped snapshots, feed, replay, dependency membership and scope-continuation contract are deferred under [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md). This deferral does not change Core's Task retention, Required-result protection, Asset report authority, retries, reconnect reconciliation or the remaining picture guarantees.
 
 ## Operations catalog
 
@@ -260,20 +260,9 @@ The catalog lists the approved SDK workflows and their API mappings. The names d
 
 Registration, check-in, component and status updates, Task lifecycle reports from the assigned Asset, required-result uploads and queue adoption reports are Asset-originated and go through the [Asset client](#asset-client). Gateway and Plugin limits follow the [caller permissions](identity-and-access.md#callers-and-permissions). Track observation updates, Geofeature geometry edits and Entity deletion use the ordinary Entity operations under [Entities, Tracks and Geofeatures](tracks-and-geofeatures.md).
 
-## Earlier design
+## Source reference
 
-The Atlas Modernization snapshot at `8edee4e2743fbf0f85c16dfe638d9222141cf279` already defines this synchronization approach. Its feed is the live path; changed-since is durable recovery. The successor reuses that contract where it fits rather than reproducing its private classes or inheriting every fallback default.
-
-The older `AtlasClient` combined typed HTTP access with an optional sync engine. `sync: "all"` selected the full resource subscription, and `client.sync.start()` started synchronization. Covered point reads used the cache only while sync was running and healthy; otherwise they called Core, and `{ fresh: true }` explicitly bypassed the cache. Neither automatic fallback nor the per-call bypass is carried forward. Local list and query behavior is specified separately rather than inferred from point reads.
-
-The old cache was held in memory per client instance, with no disk persistence. It exposed sync health, degradation, subscriptions and a global last-applied version rather than a per-record expiry time. A configurable changed-since poll defaulted to 120 seconds as a reconciliation backstop and could be disabled with `pollIntervalMs: 0`; that interval is historical behavior, not a selected freshness limit. The old SDK also had a separate bounded in-memory file-content cache, which does not imply that file bytes belong in the picture.
-
-- [Change-feed behavior](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-change-feed/README.md).
-- [Initial-load and recovery pagination](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/PAGINATION.md).
-- [SDK](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/README.md).
-- [Detailed SDK read and synchronization contract](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-sdk/README.md).
-- [Client options and defaults](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/src/client.ts).
-- [Sync engine and read fallback](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/src/sync-engine.ts).
+The [source reference](../atlas-modernization-reference.md#earlier-sdk-design) records the earlier design and its pinned sources.
 
 ## Routes
 

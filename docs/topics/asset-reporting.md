@@ -182,11 +182,9 @@ Report deduplication, ordering of affected state and proof of fresh contact stay
 
 Core persists accepted-report identities and ordering boundaries across same-release Restart, atomically with the affected component values, Contact and movement samples. Reset clears that state, and Core rejects reports for the old Dataset. Ordering may require per-component or report-stream boundaries. No complete packet log or specific wire encoding is selected. [System design](../architecture/system-design.md#shared-asset-report-acceptance) describes how Entities and Tasks collaborate to enforce this.
 
-## Earlier design
+## Source reference
 
-Atlas Modernization stored Operational status in `components.status.value` and connection state in `components.communications.link_state`. Its check-in refreshed the heartbeat and could report telemetry and Operational status together. Its [Asset status guide](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/ASSET_STATUS_SYSTEM.md) defines connection states but accepts an Operational status string rather than a complete operational lifecycle table.
-
-Atlas uses that reporting approach as a reference. The four Communication states replace its connected, disconnected and unknown vocabulary. Operational status reporting replaces the public execution-session API, including its registration, readiness, shutdown and session-scoped Task polling. Host management still runs Plugin containers.
+The [source reference](../atlas-modernization-reference.md#earlier-asset-reporting-design) records the earlier design and its pinned sources.
 
 ## Routes and SDK operations
 

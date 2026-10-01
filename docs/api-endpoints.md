@@ -179,7 +179,7 @@ HTTP-mode operations call these routes directly, and the SDK's background synchr
 | --- | --- | --- | --- | --- |
 | `GET /queries/full` | SDK clients load the full operational dataset | Per-resource pagination → Entities, Tasks, Objects, continuation cursors and a baseline version | None | Retain |
 | `GET /queries/changed-since` | SDK clients recover missed changes | Baseline version and cursor → ordered change events and next recovery boundary | None | Retain |
-| `GET /feed` | SDK clients subscribe to live operational changes | WebSocket upgrade, API-key authentication, subscription filters → hello, subscription acknowledgement and resource events | Maintain connection/subscriptions; no resource writes | Retain |
+| `GET /feed` | SDK clients subscribe to live operational changes | WebSocket upgrade, caller authentication, subscription filters → hello, subscription acknowledgement and resource events | Maintain connection/subscriptions; no resource writes | Retain |
 
 Asset-scoped synchronization is [deferred](topics/sdk.md#deferred-asset-hybrid-mode), and gateways use these routes like any other SDK client.
 
@@ -187,7 +187,7 @@ When retained history no longer covers the requested version, `GET /queries/chan
 
 All reads, mutations, upload handles and recovery cursors follow Core's [Dataset boundary](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary) and [SDK Dataset Reset handling](topics/sdk.md#dataset-reset-handling). Exact wire placement remains open.
 
-Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-key authentication when upgrade headers are unavailable; authenticate before delivering events. No browser-session authentication is assumed. All application requests remain authenticated; CORS preflight is transport negotiation and needs separate handling.
+Feed authentication follows [Callers and permissions](topics/identity-and-access.md#callers-and-permissions). Browser WebSockets cannot rely on custom upgrade headers. Use first-message authentication with the caller's credentials when upgrade headers are unavailable; authenticate before delivering events. Credential formats and authentication-message fields remain implementation choices. No browser-session authentication is assumed. All application requests remain authenticated; CORS preflight is transport negotiation and needs separate handling.
 
 ## Health and documentation
 
@@ -206,7 +206,7 @@ OpenAPI describes the API contract, and a documentation tool renders it at `/doc
 
 | Concern | Accepted starting rule | Still to settle |
 | --- | --- | --- |
-| API key transport | Carry forward `Authorization: Bearer` and `X-API-Key` for public HTTP calls | Choose whether both are needed; browser docs entry flow |
+| API key transport | Carry forward `Authorization: Bearer` and `X-API-Key` for operator administrative API keys | Choose whether both are needed; other caller-credential encodings and browser docs entry flow |
 | Lists | Bounded cursor pagination, following older list contracts | Filters, limits, and headers versus body pagination metadata |
 | Errors | Stable error code and human-readable message with appropriate HTTP status | One consistent error envelope for handlers and authentication |
 | Concurrent changes | Resource versions and ETags; operator-managed and other descriptive edits require a matching version precondition, and stale edits conflict for caller review. Asset reports use their separate acceptance and ordering rules | Exact revision and conflict encodings |

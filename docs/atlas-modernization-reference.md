@@ -21,6 +21,27 @@ Use the earlier design to answer factual questions before asking the user. Estab
 | Plugin structure | Versioned declarative release document, container image pinned by digest, and a private manifest/health/operation HTTP contract. Installation, enablement, and runtime availability are separate states. These are candidate defaults, not an adopted package format. The successor separately defines Plugin-scoped uninstall cleanup. | [Plugin design][plugins], [release format][plugin-release], [successor uninstall rules](topics/plugins.md#uninstall-and-reinstall) |
 | External service credentials | The private Source Gateway supplies credentials for external services, keeping them outside Plugins. This is a reference for future external integrations, not a requirement to provision API keys for installed Plugins. | [Source Gateway][source-gateway] |
 
+## Earlier Asset reporting design
+
+Atlas Modernization stored Operational status in `components.status.value` and connection state in `components.communications.link_state`. Its check-in refreshed the heartbeat and could report telemetry and Operational status together. Its [Asset status guide](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/ASSET_STATUS_SYSTEM.md) defines connection states but accepts an Operational status string rather than a complete operational lifecycle table.
+
+Atlas uses that reporting approach as a reference. The four Communication states replace its connected, disconnected and unknown vocabulary. Operational status reporting replaces the public execution-session API, including its registration, readiness, shutdown and session-scoped Task polling. Host management still runs Plugin containers.
+
+## Earlier SDK design
+
+The Atlas Modernization snapshot at `8edee4e2743fbf0f85c16dfe638d9222141cf279` already defines this synchronization approach. Its feed is the live path; changed-since is durable recovery. The older protocol uses a subscription barrier with a version watermark. The successor reuses that contract where it fits rather than reproducing its private classes or inheriting every fallback default.
+
+The older `AtlasClient` combined typed HTTP access with an optional sync engine. `sync: "all"` selected the full resource subscription, and `client.sync.start()` started synchronization. Covered point reads used the cache only while sync was running and healthy; otherwise they called Core, and `{ fresh: true }` explicitly bypassed the cache. Neither automatic fallback nor the per-call bypass is carried forward. Local list and query behavior is specified separately rather than inferred from point reads.
+
+The old cache was held in memory per client instance, with no disk persistence. It exposed sync health, degradation, subscriptions and a global last-applied version rather than a per-record expiry time. A configurable changed-since poll defaulted to 120 seconds as a reconciliation backstop and could be disabled with `pollIntervalMs: 0`; that interval is historical behavior, not a selected freshness limit. The old SDK also had a separate bounded in-memory file-content cache, which does not imply that file bytes belong in the picture.
+
+- [Change-feed behavior](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-change-feed/README.md).
+- [Initial-load and recovery pagination](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/PAGINATION.md).
+- [SDK](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/README.md).
+- [Detailed SDK read and synchronization contract](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-sdk/README.md).
+- [Client options and defaults](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/src/client.ts).
+- [Sync engine and read fallback](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/packages/sdk/src/sync-engine.ts).
+
 ## Differences that need care
 
 The [comparison register](architecture/modernization-differences.md) records each confirmed difference and its successor rule. This section keeps only source evidence the register does not.

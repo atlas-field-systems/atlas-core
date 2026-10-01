@@ -140,7 +140,7 @@ Descriptive fields and associations may be staged with the upload and edited aft
 - Supported preview formats.
 - Exact Object metadata schema and reference representation, and revision and error encodings for metadata edits.
 - Resumable uploads are deferred; [ADR-0009](../adr/0009-expose-objects-only-when-ready.md#rationale-and-alternatives) records when to reconsider them.
-- Upload-first scan completion is under [evaluation](../adr/0008-complete-scan-tasks-when-required-results-are-available.md#upload-first-evaluation); until a successor decision, both arrival orders and declaration-time protection remain required.
+- The upload-first scan-completion evaluation follows the [Tasks open questions](tasks.md#open-questions).
 
 ## Decisions
 
