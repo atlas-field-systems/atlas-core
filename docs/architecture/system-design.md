@@ -24,7 +24,9 @@ The CLI and TUI share a local management implementation for Core lifecycle, Rese
 
 Plugin management is local-only, with no public API endpoints, SDK methods or public Protocol generation, under [Plugins](../topics/plugins.md#local-administration).
 
-Local tools also switch [Open enrollment](../topics/identity-and-access.md#open-enrollment), [re-provision a lost Asset credential](../topics/identity-and-access.md#lost-asset-credentials) and list retained and revoked Asset IDs.
+Local tools also switch [Open enrollment](../topics/identity-and-access.md#open-enrollment), [clean up selected test identities](../topics/identity-and-access.md#cleanup-after-testing), [re-provision a lost Asset credential](../topics/identity-and-access.md#lost-asset-credentials) and list retained and revoked Asset IDs.
+
+Local management confirms the selected cleanup IDs and submits one Core-owned workflow through its private coordination while Core runs. Entities coordinates each target's commit and reuses ordinary retirement when an Asset Entity exists; Identity and access owns enrollment provenance, retained binding denial and credential revocation. Revalidate those facts inside the existing [write commit](#write-commits), so callers do not choose between retirement and retained-identity cleanup using an earlier list result. The credential owner also supplies the Open enrollment summary to health rather than exposing its private tables.
 
 Local administrative actions are recorded in [Activity history](../topics/history.md#local-actions).
 
@@ -52,7 +54,7 @@ Start, Restart and Reset share this one path, and each module keeps the locality
 
 ## Identity and access
 
-Callers, their permissions, Enrollment, Asset registration, credentials and the access effects of Asset deletion and retirement are specified in [Identity and access](../topics/identity-and-access.md).
+Callers, their permissions, Enrollment, Asset registration, credentials and the access effects of Asset deletion, retirement and Open enrollment cleanup are specified in [Identity and access](../topics/identity-and-access.md).
 
 Track publisher authorship, separate from descriptive edits and broad operational read access, follows [one publisher per Track](../topics/tracks-and-geofeatures.md#one-publisher-per-track).
 

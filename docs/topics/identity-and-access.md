@@ -34,7 +34,19 @@ Each Asset receives its own authenticated identity automatically during Enrollme
 
 ### Open enrollment
 
-Open enrollment is a local testing setting, off by default and switched only through the CLI/TUI. While it is on, any connecting Asset is enrolled without deployment authorization but still receives its own identity, so report authority and impersonation protection are unchanged. It applies to Assets only and never overrides revocation or retirement. The setting belongs to installation setup, surviving Restart and Reset until Hard Reset. Core health reports it, the Command Interface shows a persistent warning while it is on, and switching it is recorded in [activity history](history.md#activity-history). Core records whether each Asset identity was enrolled under Open enrollment. Switching it off does not revoke Assets enrolled under it; the CLI/TUI marks them so an operator can revoke them deliberately.
+Open enrollment is a local testing setting, off by default and switched only through the CLI/TUI. While it is on, any connecting Asset is enrolled without deployment authorization but still receives its own identity, so report authority and impersonation protection are unchanged. It applies to Assets only and never overrides revocation or retirement. The setting belongs to installation setup, surviving Restart and Reset until Hard Reset. Switching it is recorded in [activity history](history.md#activity-history).
+
+Core records immutable Open enrollment provenance with each identity's installation-scoped binding. That provenance survives Restart and ordinary Reset, including when no Asset Entity remains. Switching Open enrollment off does not revoke those identities. Core health reports both the setting and the count of unrevoked identities enrolled under it. The Command Interface shows a persistent warning while the setting is on or that count is nonzero, explaining that disabling enrollment leaves existing access in place.
+
+#### Cleanup after testing
+
+The CLI/TUI lists identities enrolled under Open enrollment, including retained IDs without a current Asset Entity, and provides an explicit local cleanup action. Core must be running with its Dataset open. The operator confirms the exact selected Asset IDs and is told that revocation lasts until Hard Reset. The confirmed selection carries the Asset IDs and their bound installation principals; it never expands to identities enrolled afterward. Cleanup is separate from switching Open enrollment off, and local management serializes its execution with lifecycle actions under [local lifecycle coordination](../architecture/system-design.md#local-lifecycle-coordination).
+
+For each selected target, Core revalidates the exact confirmed binding, its enrollment provenance and current Entity state and commits the outcome in a separate [write commit](../architecture/system-design.md#write-commits), serialized with registration, credential provisioning and replacement, deletion and retirement. A changed or removed binding, or a target not enrolled under Open enrollment, is rejected without effect; reusing an Asset ID after Hard Reset cannot make an old selection authorize revoking the new identity. If its Asset Entity exists, cleanup uses [Asset retirement](#asset-retirement), preserving unresolved Tasks and execution evidence. If no Entity exists, cleanup revokes all credentials and denies the retained installation binding without creating an Entity or a retirement claim. Both paths prevent automatic re-registration and credential re-provisioning for the revoked identity until Hard Reset. Cleanup never invents a Task outcome or claims that physical execution stopped.
+
+Cleanup reports a result for each selected ID. An already-revoked identity is reported without another mutation or activity entry. An interruption or failure leaves completed revocations in force and identifies unfinished targets for deliberate retry; it does not report the whole selection complete while any selected identity remains unrevoked. Each new revocation records the attributed action under [local activity history](history.md#local-actions); retirement uses its existing activity record.
+
+The health count is derived from unrevoked installation bindings with Open enrollment provenance, independently of current Entity presence. [Replacing a lost credential](#lost-asset-credentials) does not change provenance or revoke the identity, so that identity remains counted. Cleanup, deletion or retirement removes a revoked identity from the count; ordinary Reset does not. The warning clears only when Open enrollment is off and the count is zero. It is advisory and does not make Core unready.
 
 ## Asset registration
 
@@ -56,7 +68,7 @@ An Asset ID bound to a retained authenticated principal remains reserved to that
 
 After Reset, an Asset that still holds a usable credential for its bound identity re-registers automatically under the same Asset ID in the fresh Dataset, with a new registration request and without new enrollment authorization. Re-registration proves the surviving identity and reuses its principal without restoring old operational state. Reading the new Dataset ID is not proof of Asset identity and does not authorize re-registration or relabeling an old report. If the Asset has lost its credential, the CLI/TUI can [re-provision one](#lost-asset-credentials); otherwise use a new Asset ID through authorized Enrollment rather than reassigning the retained ID.
 
-Revocation is permanent until Hard Reset. When [deletion](#asset-deletion-and-access) or [retirement](#asset-retirement) revokes an Asset's identity, ordinary Reset does not reactivate it, and no proof, enrollment authorization or Open enrollment can bring that Asset ID back. A replacement device enrolls under a new Asset ID. Bindings are retained even for revoked identities, so credential revocation or ordinary Reset cannot free an ID for another principal. Hard Reset clears bindings and all credentials together.
+Revocation is permanent until Hard Reset. When [deletion](#asset-deletion-and-access), [retirement](#asset-retirement) or [Open enrollment cleanup](#cleanup-after-testing) revokes an Asset's identity, ordinary Reset does not reactivate it, and no proof, enrollment authorization or Open enrollment can bring that Asset ID back. A replacement device enrolls under a new Asset ID. Bindings are retained even for revoked identities, so credential revocation or ordinary Reset cannot free an ID for another principal. Hard Reset clears bindings and all credentials together.
 
 ## Credentials
 
@@ -124,7 +136,7 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 - Delete Asset: `DELETE /entities/{entity_id}` in the [Entities routes](../api-endpoints.md#entities).
 - Retire Asset: accepted [SDK operation](sdk.md#operations-catalog); its [HTTP route](../api-endpoints.md#remaining-contract-details) is not yet selected.
 - API keys: list, create and revoke in the [API-key routes](../api-endpoints.md#api-keys).
-- Local CLI/TUI actions: switch Open enrollment, re-provision a lost Asset credential, revoke credentials where applicable and list retained and revoked Asset IDs, under [local administration](../architecture/system-design.md#local-administration).
+- Local CLI/TUI actions: switch Open enrollment, [clean up selected test identities](#cleanup-after-testing), re-provision a lost Asset credential, revoke credentials where applicable and list retained and revoked Asset IDs, under [local administration](../architecture/system-design.md#local-administration). Test-identity cleanup has no public HTTP route or SDK method.
 
 ## Open questions
 
@@ -149,6 +161,7 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 These rows of the [required scenario coverage](../testing-strategy.md#required-scenario-coverage) apply:
 
 - Asset identity and contact: Enrollment, registration retries, cross-Asset rejection, revocation, gateway limits, Open enrollment and re-provisioning.
+- Open enrollment cleanup: retained warnings, confirmed selection, retirement or binding revocation, races, partial completion and retries.
 - Asset retirement: every retirement workflow, race and retry.
 - Asset deletion: credential revocation with deletion and its races.
 - API-key creation: prepared secrets, retries and revocation.

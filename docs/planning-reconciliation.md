@@ -241,4 +241,10 @@ An audit of the documentation for contradictions, undefined terms, behavioral ga
 | Vocabulary | Installation, Installation setup, Operational status, Communication state, Contact, Enrollment, Asset registration, Operation, Plugin capability, Interrupted Operation, field authorship terms, SDK mode names, Required result and the other entries added to the glossary | [Glossary](../CONTEXT.md) |
 | Documentation structure | Apply these content decisions first, then reorganize into one owning page per topic, one topic per change, with this log as history rather than authority and `docs/research/` left unchanged | This log |
 
+## Open enrollment cleanup, 1 October 2026
+
+After the PR #62 readiness review identified retained Open enrollment access as a deliberate security tradeoff, the user requested a follow-up PR and delegated the solution: "Do what you think is best. Open a PR with your changes. You have full autonomy on this task."
+
+The selected change adds persistent visibility of unrevoked test identities and confirmed local cleanup, including identities retained after Reset. It preserves the existing decision that disabling Open enrollment alone does not revoke access. [Identity and access](topics/identity-and-access.md#cleanup-after-testing) owns the current behavior, and the [testing strategy](testing-strategy.md#required-scenario-coverage) records the required evidence. This is a documentation change; implementation remains future work.
+
 These records are history. The linked documents own the current rules.
