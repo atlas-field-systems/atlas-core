@@ -90,6 +90,12 @@ HTTP mode does not construct a picture. Keep loading, buffering and history help
 
 Rejecting obsolete Dataset inputs, invalidating rebuilt pictures and deduplicating notifications have locality in this module, giving reads and subscriptions leverage from one implementation. Both modes still enforce [Dataset Reset handling](#dataset-reset-handling). Snapshot loading, feed delivery and replay recovery are the only picture data inputs; write responses do not participate under [Write results and the picture](#write-results-and-the-picture). Interface shapes, cursor encoding, coverage messages and limits remain design work.
 
+### Applied-change journal
+
+Keep one bounded in-memory journal of changes applied to the Local operational picture. Local changed-since queries and feed subscriptions consume this same journal, including deletions, instead of maintaining independent history and notification paths. The Local operational picture owner updates resource state and appends its accepted public changes before exposing them to local subscribers. Duplicate or obsolete synchronization input creates no second local change. Subscriber callbacks observe completed application rather than partially updated picture state.
+
+Keep local journal position separate from Core's recovery position. A Core cursor advances only after all relevant changes through its boundary have been applied; a newer resource version or an initial-load page cannot advance it by itself. Rebuilding the Local operational picture invalidates its previous journal and local cursors. If pruning overtakes a local cursor or a slow subscriber, report the gap explicitly rather than silently omitting changes. Write responses never enter the journal. Commit grouping, initial-load/rebuild notifications and exact subscription boundaries remain specification work in [tickets #65](https://github.com/atlas-field-systems/atlas-core/issues/65) and [#77](https://github.com/atlas-field-systems/atlas-core/issues/77).
+
 ### Background synchronization
 
 Background synchronization is separate from application operations. The synchronizer privately uses these endpoints to maintain the picture; application query and feed calls in Full synchronization mode resolve locally instead of exposing these remote connections.

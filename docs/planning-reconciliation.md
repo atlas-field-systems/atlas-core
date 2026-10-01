@@ -248,3 +248,16 @@ After the PR #62 readiness review identified retained Open enrollment access as 
 The selected change adds persistent visibility of unrevoked test identities and confirmed local cleanup, including identities retained after Reset. It preserves the existing decision that disabling Open enrollment alone does not revoke access. [Identity and access](topics/identity-and-access.md#cleanup-after-testing) owns the current behavior, and the [testing strategy](testing-strategy.md#required-scenario-coverage) records the required evidence. This is a documentation change; implementation remains future work.
 
 These records are history. The linked documents own the current rules.
+
+## Codebase-design follow-up, 1 October 2026
+
+The user requested autonomous follow-up to the codebase-design review and a ready-for-review PR. Under that authorization, this follow-up selects shared representations within the existing workflow ownership and behavior. These are engineering design choices for future implementation, not implemented modules or evidence of runtime correctness.
+
+| Topic | Selected direction | Authority and remaining work |
+| --- | --- | --- |
+| SDK applied changes | Local history and subscriptions consume one bounded applied-change journal owned by the Local operational picture | [Journal](topics/sdk.md#applied-change-journal); [#65](https://github.com/atlas-field-systems/atlas-core/issues/65) and [#77](https://github.com/atlas-field-systems/atlas-core/issues/77) retain commit, cursor and subscription specification work |
+| Asset reports | Reuse one Protocol-defined report context while retaining typed payloads, state-specific ordering and authenticated acceptance | [Context](architecture/system-design.md#shared-report-context); [#63](https://github.com/atlas-field-systems/atlas-core/issues/63) retains exact proof/ordering fields and [#69](https://github.com/atlas-field-systems/atlas-core/issues/69) verifies generation |
+| Local recovery | Share the management action-record representation and recovery mechanics, with action-specific phases and existing persistence/retention rules | [Action records](architecture/system-design.md#management-action-records); [#68](https://github.com/atlas-field-systems/atlas-core/issues/68) retains supervision and durable recovery specification work |
+| Physical storage | Apply the existing rule that logical components and retry kinds do not each require a table or repository interface | [Storage direction](data-components.md#agreed-storage-approach); choose mappings with each implementation slice's queries, constraints and lifetimes rather than adding a generic storage-design ticket |
+
+Keep HTTP mode and Full synchronization mode behind one interface, synchronization-only picture inputs, distinct report acceptance and Contact evidence, either-order scan results and existing lifecycle retention. Exact wire contracts, management supervision and the required real integration scenarios remain open. This follow-up does not close the referenced tickets or make runtime implementation ready-for-agent.
