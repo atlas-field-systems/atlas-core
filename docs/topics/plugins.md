@@ -94,7 +94,7 @@ After a Plugin crash while Core remains in the same run, reconcile recorded work
 
 ## Local administration
 
-Plugin installation, catalog selection, removal, updates, configuration, enable/disable, start/stop/restart and force stop are local CLI/TUI actions through private management interfaces. They have no public API endpoints or SDK methods and are outside public Protocol generation. Public API and SDK consumers can discover Plugin capabilities and status, invoke Operations, query outcomes and request Operation cancellation, but cannot manage Plugin processes. This supersedes the earlier Command Interface Plugin restart action.
+Plugin installation, catalog selection, removal, updates, configuration, enable/disable, start/stop/restart and force stop are local CLI/TUI actions through private management interfaces. They have no public API endpoints or SDK methods and are outside public Protocol generation. Public API and SDK consumers can discover Plugin capabilities and status, invoke Operations, query outcomes and request Operation cancellation, but cannot manage Plugin processes.
 
 While Core is stopped, local management may perform setup and lifecycle actions and record them as activity, but cannot accept Plugin Operations. This does not require running Plugins.
 

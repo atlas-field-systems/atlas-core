@@ -1,6 +1,6 @@
 # Decision log
 
-This is a dated history of user decisions and authorizations. It is never the authority for a current rule: current rules live on the [topic pages](topics/README.md) and in the [ADRs](adr/README.md), under the [documentation guide](agents/domain.md). Later entries can supersede earlier ones; decisions not superseded remain in force.
+This is a dated history of user decisions and authorizations. Current behavior rules live on the [topic pages](topics/README.md), accepted tradeoffs in the [ADRs](adr/README.md), and cross-cutting mechanisms and boundaries in the [architecture documents](architecture/system-design.md), under the [documentation guide](agents/domain.md). This log is history, never current-rule authority. Later entries can supersede earlier ones; decisions not superseded remain in force.
 
 The planning session and the architecture merged in PR #1 originally disagreed. The user accepted the reconciling recommendations on 22 September 2026, and [Plugin configuration recovery](#plugin-configuration-recovery) closed the last reconciliation choice. Later rounds:
 
@@ -41,6 +41,8 @@ On 22 September 2026 the user accepted the lower-complexity options after review
 These historical reads use explicit SDK API methods outside the synchronized picture. They do not change the source-selection rules for live reads, local queries or feed subscriptions. The component catalog and endpoint map now include both stores and their read routes.
 
 ## Plugin configuration recovery
+
+Plugin restart became a local CLI/TUI action, superseding the earlier Command Interface Plugin restart action; [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md) records that decision.
 
 Accepted: if applying saved Plugin settings prevents startup, leave the Plugin faulted and report the failed apply. The local operator explicitly restores the last working settings and restarts, or corrects the candidate and applies again. Preserve the failed candidate and last working revision; do not automatically restore, restart or rerun Operations. [Plugins](topics/plugins.md#configuration) states this policy and the save/apply and active-work rules; ADR-0006 records the decision.
 
