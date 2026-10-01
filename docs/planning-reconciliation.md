@@ -1,6 +1,6 @@
 # Decision log
 
-This is a dated history of user decisions and authorizations. It is never the authority for a current rule: current rules live on the [topic pages](topics/README.md) and in the [ADRs](adr/README.md), under the [documentation guide](agents/domain.md). Later entries can supersede earlier ones; decisions not superseded remain in force.
+This is a dated history of user decisions and authorizations. It is never the authority for a current rule: current rules live on the [topic pages](topics/README.md), and the [ADRs](adr/README.md) record the governing tradeoffs, under the [documentation guide](agents/domain.md). Later entries can supersede earlier ones; decisions not superseded remain in force.
 
 The planning session and the architecture merged in PR #1 originally disagreed. The user accepted the reconciling recommendations on 22 September 2026, and [Plugin configuration recovery](#plugin-configuration-recovery) closed the last reconciliation choice. Later rounds:
 
@@ -227,7 +227,7 @@ An audit of the documentation for contradictions, undefined terms, behavioral ga
 | Re-registration after Reset | Automatic with the surviving credential; enrollment authorization is needed only for first Enrollment | [Retained identity](adr/0015-separate-start-stop-restart-and-reset.md#retained-asset-identity-after-reset) |
 | Lost credentials | A local action re-provisions a credential for the same identity, separately from revocation, and the CLI/TUI lists retained and revoked IDs | [Retained identity](adr/0015-separate-start-stop-restart-and-reset.md#retained-asset-identity-after-reset) |
 | Open enrollment | A local test setting, off by default, enrolls any connecting Asset with its own identity. It survives Reset, is reported by health and the Command Interface, is recorded in activity history, applies to Assets only and never overrides revocation. Assets it enrolled stay enrolled and marked when it is switched off | [Identity and access](architecture/system-design.md#identity-and-access) |
-| Gateway identity | Each gateway has its own identity that reads and relays only for its bound Assets, with no administrative rights. Making gateways Assets is a future proposal, not accepted | [Radio gateways](topics/identity-and-access.md#radio-gateways) |
+| Gateway identity | Each gateway has its own identity that may read all operational data but may relay reports and assigned work only for its bound Assets, with no administrative rights. Making gateways Assets is a future proposal, not accepted | [Radio gateways](topics/identity-and-access.md#radio-gateways) |
 | IP-connected Assets | Assets without bandwidth limits use the general SDK and its Asset client directly. The SDK stays TypeScript only for now | [SDK consumers](topics/sdk.md#who-uses-the-general-sdk) |
 | Cancellation | Every request is recorded regardless of declared support. An Asset that cannot withdraw the Task declines, returning it to the execution status its reports establish | [Task transitions](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) |
 | Control validity | Pause never expires. Resume carries a declared expiry; an expired Resume fails and the Asset stays paused | [Control ordering and expiry](topics/tasks.md#control-ordering-and-expiry) |
