@@ -14,7 +14,7 @@ The general Atlas SDK serves participants on IP links without bandwidth limits: 
 
 Remove Asset hybrid from the current SDK scope and defer Core's matching Asset-scoped snapshot, feed and replay contract, including automatic per-Asset dependency membership and Task dependency publication used solely for that coverage.
 
-The boundary is bandwidth, not whether the participant is an Asset. Bandwidth-limited Assets do not run the general SDK; their execution and constrained transport belong to the Asset OS and a radio gateway. Gateways use the general SDK, can obtain the full picture and select what crosses their radio link. Each gateway authenticates with its own gateway identity, which may read and may relay only for the Assets bound to it.
+The boundary is bandwidth, not whether the participant is an Asset. Bandwidth-limited Assets do not run the general SDK; their execution and constrained transport belong to the Asset OS and a radio gateway. Gateways use the general SDK, can obtain the full picture and select what crosses their radio link. Each gateway authenticates with its own gateway identity, which may read all operational data but may relay reports and assigned work only for the Assets bound to it.
 
 This removes a synchronization mechanism, not Task meaning. Assigned-work reads, requested and confirmed queue state, cancellations, terminal-record retention, typed Command references and required-result protection remain.
 
