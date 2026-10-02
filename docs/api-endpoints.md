@@ -1,92 +1,103 @@
 # API endpoint map
 
-Approved endpoint map as of 2026-09-22, based on [the API plan](api-plan.md) and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. Approval does not mean implementation; no endpoints are implemented in this repository yet.
+Approved endpoint map as of 2026-09-22, based on the API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. Approval does not mean implementation; no endpoints are implemented in this repository yet.
 
-The 27 September [Asset retirement decision](adr/0019-retire-assets-without-inventing-task-outcomes.md) adds one accepted operation whose HTTP binding is still to be selected. It is recorded below separately from the existing route table; do not implement retirement by weakening `DELETE /entities/{entity_id}` or by composing public credential, Task and Entity mutations in callers.
+[Asset retirement](topics/identity-and-access.md#asset-retirement) is an accepted operation whose HTTP binding is still to be selected, so it is recorded below separately from the route table.
 
 Use [the glossary](../CONTEXT.md) for resource meanings. Protocol owns resource and Command schemas; the descriptions below identify inputs and results without freezing every field.
 
 See [the data component catalog](data-components.md) for the proposed component applicability and database inventory that will guide detailed schemas.
 
+## Route families
+
+These are the starting families; more can be added as requirements emerge. Behavior rules for each family live on the [topic pages](topics/README.md).
+
+| Family | Intended scope |
+| --- | --- |
+| `/entities` | Entity creation, queries, updates, and deletion |
+| `/tasks` | Operational instructions and their lifecycle |
+| `/objects` | File content, metadata, and references to related entities |
+| `/admin` | Core configuration, maintenance, and diagnostics |
+| `/admin/auth` | API key management, including creation, listing, and revocation |
+| `/admin/activity` | Read-only structured history of selected operational actions |
+| `/admin/operators` | Operator identity information and personal settings |
+| `/plugins` | Plugin discovery/status and durable Operation submission, outcomes and cancellation |
+| `/feed` | Live resource changes |
+| `/queries` | Initial state synchronization and recovery of missed changes |
+
+`/admin/auth`, `/admin/activity` and `/admin/operators` are subfamilies of `/admin`, documented separately because they have distinct responsibilities.
+
 ## Reading the tables
+
+Each route records its method and path, expected callers and purpose, inputs and results, state changes and emitted events, and its design status and open questions. Subscriptions and asynchronous completion are mapped alongside requests so clients can determine when an operation finishes and how to receive updates. Coverage across the families comes before detailing every schema.
 
 - **Retain**: method and path exist in the older router and are retained with the described behavior.
 - **Adapt**: an older capability has a new path or changed contract.
 - **New**: added to satisfy a requirement established in this planning session.
 
-These labels describe provenance; the routes below reflect the accepted reconciliation. Expected callers describe usage. Core enforces [Asset report ownership and administrative boundaries](architecture/system-design.md#identity-and-access). All authenticated consumers may read operational data; a valid key alone does not authorize impersonating an Asset or administering Core. Managed Plugins require no operator-managed API keys.
+These labels describe provenance; the routes below reflect the accepted reconciliation. Expected callers describe usage. Core enforces the [caller permissions](topics/identity-and-access.md#callers-and-permissions) regardless of the expected caller.
 
 In the effects column, `create`, `update`, and `delete` mean committed resource changes delivered through `/feed` and `/queries/changed-since`. Failed validation produces no resource change. The initial synchronized resource set is Entities, Tasks, and Objects, following the older design. Plugin discovery/status, operator profiles, settings and key metadata are read through the allowed public endpoints; their notification behavior remains open. Plugin management uses private local interfaces.
 
 ## Entities
 
-Only `asset`, `track`, and `geofeature` are valid Entity types. An Entity's ID and type are immutable. Houses are Tracks; zones and rally points are Geofeatures. Every Asset requires status, communications, and heartbeat components. A returned Asset includes these components and advertised Command support, which is distinct from the complete catalog available locally through the SDK.
+Entity types, identity, Aliases, Components, deletion, Track publishers and Geofeature geometry follow [Entities, Tracks and Geofeatures](topics/tracks-and-geofeatures.md). Every Asset requires status, communications, and heartbeat components. A returned Asset includes these components and advertised Command support, which is distinct from the complete catalog available locally through the SDK.
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /entities` | Interfaces and data consumers list Entities | Filters, limit, cursor → Entity page | None | Retain |
-| `POST /entities` | Asset integrations register Assets; interfaces and integrations create Tracks/Geofeatures | Identity, type, initial descriptive data/components and optional Asset Command support → Entity | `create` Entity | Adapt: restrict types |
+| `POST /entities` | Asset clients register Assets; interfaces and Plugins create Tracks/Geofeatures | Identity, type, Descriptive data and, for Assets, Command support → Entity | `create` Entity | Adapt: restrict types |
 | `GET /entities/{entity_id}` | Any consumer reads one Entity | ID → full Entity, including advertised support for an Asset | None | Retain |
 | `GET /entities/alias/{alias}` | Interfaces resolve a known alias | Case-insensitive alias → one Entity | None | Retain |
-| `PATCH /entities/{entity_id}` | Assets report their own changes; interfaces/integrations update other Entity types | ID, partial fields/components, authorship and applicable edit/report preconditions → Entity | `update` Entity; Asset reports refresh Core-recorded contact | Retain; detailed mutable-field schema remains open |
-| `DELETE /entities/{entity_id}` | Interfaces remove an Entity | ID → no body, or blocking-Task conflict | `delete` Entity when permitted; retain historical Object associations; Asset deletion also revokes its bound credentials and closes their feeds | Retain; protect required Task references |
-| `POST /entities/{entity_id}/checkin` | Assets and their transport integrations report current state | ID, partial component data, optional supported-Command declaration → updated Entity | `update` Entity and Core-recorded contact; use shared validation | Adapt: status-based reporting |
+| `PATCH /entities/{entity_id}` | Assets report their own changes; interfaces/integrations update other Entity types | ID, partial fields/components, authorship and applicable edit/report preconditions → Entity | `update` Entity; accepted fresh Asset reports refresh [Contact](topics/asset-reporting.md#contact-and-freshness) | Retain; detailed mutable-field schema remains open |
+| `DELETE /entities/{entity_id}` | Interfaces remove an Entity | ID → no body, or blocking-Task conflict | `delete` Entity when permitted; retain historical Object associations; Asset deletion also revokes its bound credentials and closes their feeds | Retain; protect [required Task references](topics/tracks-and-geofeatures.md#required-entity-references) |
+| `POST /entities/{entity_id}/checkin` | Assets, directly or through their gateway, report current state | ID, partial component data, optional supported-Command declaration → updated Entity | `update` Entity; accepted fresh reports refresh Contact under [check-in](topics/asset-reporting.md#check-in) | Adapt: status-based reporting |
 | `GET /entities/{entity_id}/tasks` | Assets and interfaces inspect assigned work | Asset ID, outstanding/status filter, pagination → Task page with submission/current queue order and confirmation state | None; listing does not accept or start work | Adapt: replace separate execution-session polling |
 | `PUT /entities/{entity_id}/task-order` | Tasking clients reorder an Asset's unstarted Tasks | Complete eligible queued Task ID list, expected queue revision, request identity → accepted requested revision/order | Reject stale/conflicting edits; publish requested order without implying Asset adoption | New |
 | `POST /entities/{entity_id}/task-order/confirm` | Assigned Asset reports adoption or conflict | Requested revision, report identity, adopted/conflict result and relevant execution facts → requested/confirmed queue state | Record adoption or conflict; accepted fresh reports refresh contact and publish the Entity heartbeat change atomically with queue changes; duplicates/history do not refresh contact or roll back confirmed order | New |
 | `GET /entities/{entity_id}/movement-history` | Consumers inspect retained movement for one Asset or Track | Entity association, from/to, limit/cursor → raw movement sample page with observation/receipt times | None; explicit history read outside the live picture | Adapt: narrow the older history API |
 | `GET /entities/{entity_id}/objects` | Interfaces find associated files | Entity ID, pagination → Object metadata page | None | Retain |
 
-Deletion rule retained from the older design: reject Asset deletion while it has nonterminal Tasks. Also reject Track or Geofeature deletion when any nonterminal Task has a required Command reference to that Entity; identify the blocking Task references in the conflict and do not force an outcome to permit deletion. An unavailable Asset may leave the reference blocked until Reset. See [required Entity references during Tasks](adr/0023-protect-required-entity-references-during-tasks.md). Retain completed Task records and historical Object references after an allowed deletion. For Assets, atomically delete the Entity, retain its ID reservation and revoke all bound credentials; terminate their live feeds under the [deletion/revocation contract](architecture/system-design.md#asset-deletion-and-access). Rejected deletion leaves credentials unchanged. Aliases are optional, editable, and unique across all Entity types ignoring case. Store an absent alias as null; relationships use immutable Entity IDs. Entity types never change. Core reserves each Entity ID within the Dataset, retains that reservation after deletion and across Restart, and rejects reuse until Reset. Registration retries cannot resurrect a deleted Asset; creating a replacement requires a new ID. Asset principal/ID bindings also survive ordinary Reset at installation scope: only the surviving bound identity may re-register under that ID, and other Entity types cannot claim it. See [Reset identity rules](adr/0015-separate-start-stop-restart-and-reset.md#retained-asset-identity-after-reset). Every Geofeature must have valid point, line, or polygon geometry at creation; unfinished drawings remain in the interface. Track geometry is optional, and Assets use telemetry for position. Exact Entity filters remain open.
+Deletion follows [Entity deletion](topics/tracks-and-geofeatures.md#entity-deletion), which retains the older design's rejection of Asset deletion while it has nonterminal Tasks.
 
-Administrative retirement remains possible even when that deletion guard blocks removal. [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md) defines a single operator SDK/Core operation which retains the Entity and unresolved work, blocks new assignments/provisioning, revokes access and publishes the retirement condition as an Entity change. It does not set Asset-reported status, manufacture Task outcomes or release required-result protection. The administrative condition is Core-owned, not writable through generic reported-component patches. Exact method/path, request/result fields and SDK signature remain to be recorded before implementation; no guessed route is added to the approved table.
+[Asset retirement](topics/identity-and-access.md#asset-retirement) remains possible even when that deletion guard blocks removal. Its method and path remain to be recorded before implementation; no guessed route is added to the approved table.
 
-Core validates components against Protocol-defined schemas and applicability. Entities have no unrestricted `extra` metadata map. Plugins will never define or register components. Required components cannot be removed through an update. Partial updates preserve omitted fields, replace supplied scalars, merge nested fields, and replace arrays completely. Explicit null removes an optional component or clears a nullable field. Validate the entire resulting resource and commit atomically.
+Asset reports follow [Asset reporting](topics/asset-reporting.md): Assets author their Reported data, Core owns Derived data, and only accepted fresh reports refresh Contact. Descriptive edits use the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits).
 
-Assets author their own reported Entity data; command interfaces send Tasks rather than editing Asset state. Core owns derived communications, heartbeat, timestamps, and versions. Every accepted fresh Asset-originated update refreshes Core-recorded contact, including telemetry patches and status reports. Core-derived changes do not refresh contact. Core verifies the Asset identity on every reporting path, including generic Entity patches; this introduces no operator roles. The precise enrollment, relay-proof and report-ordering fields remain open under the [shared acceptance contract](architecture/system-design.md#shared-asset-report-acceptance). Fresh reports establish contact; duplicates and historical backlog do not. Delayed updates cannot overwrite newer component values. Continuous, near-real-time telemetry is expected; exact freshness windows remain open. Track observation authorship follows the [one-publisher Track rule](adr/0022-one-publisher-per-track.md#publisher-continuity): the same authenticated publisher in one Dataset may continue an existing Track after Plugin uninstall and reinstall with fresh observations, while another publisher uses a separate Track. A silent Track retains its last-known values and exposes observation age; silence does not delete it or refresh its coordinates. There is no universal Track expiry for execution: a Command requiring current observations defines acceptable age and stale handling, while a last-known Command may continue and the Asset applies that policy. Descriptive edits use the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits). The same publisher may correct current observations through ordinary updates without refreshing their age, rewriting history or replacing newer observations. Publisher transfers are deferred under [ADR-0022](adr/0022-one-publisher-per-track.md#publisher-transfers).
+The SDK provides Asset registration through `POST /entities`, followed by check-in; no separate registration or telemetry endpoint is needed. Registration content, stable Asset IDs and retries follow [Asset registration](topics/identity-and-access.md#asset-registration), and values before the first report follow [initial values](topics/asset-reporting.md#components-and-initial-values). See the [SDK operations catalog](topics/sdk.md#operations-catalog).
 
-The SDK provides Asset registration through `POST /entities`, followed by check-in. Initial data can include descriptive fields, components, and Command support. Before the first report, defaults are operational status `unknown`, communications `offline`, and heartbeat `last_seen: null`. See the [SDK operations catalog](sdk-operations.md). No separate registration or telemetry endpoint is needed. Assets retain stable IDs across restarts. Registration retries use the same Asset ID and request identity; reconnects resume the existing record without overwriting it with startup defaults. Core persists original registration facts and the Entity/credential association across Restart until Reset; identical authorized retries recover the existing registration without overwriting later Asset state. See [registration retries](sdk-operations.md#registration-retry-identity). Exact wire and report-ordering fields remain open.
-
-Movement samples are captured from explicitly supplied position, speed and altitude in accepted ordinary Entity reports, in the same transaction as the current-state write. Report retries do not duplicate samples, and unrelated updates do not manufacture measurements. History reads return bounded, stably ordered pages; they preserve the Dataset/Entity association and pagination boundary. The movement-history route resolves live and deleted Asset/Track IDs through retained identity records: deletion does not make retained samples inaccessible. Return a deleted-Entity indicator with the historical page; an empty interval is an empty page. An ID never present in the current Dataset returns not found, and an obsolete-Dataset request cannot read a replacement Dataset. Retain samples until Reset, separately from current telemetry and feed recovery. Backfill writes, sample editing, reduced-trail and historical-inspection routes are deferred. See [movement history](architecture/system-design.md#movement-history).
+Movement samples, their capture from accepted reports and the history read's deleted-Entity and not-found behavior follow [movement history](topics/history.md#movement-history).
 
 ### Asset status
 
-The [Asset status model](asset-status.md) replaces the former execution-session API. Status is part of the Asset's Entity record and is synchronized through the ordinary Entity feed. Operational status and connectivity remain separate, and exceptional interruption requires Task reconciliation. Communication states are `high_bandwidth`, `healthy`, `degraded`, and `offline`, with connection type recorded separately. Degraded/offline takes precedence over high bandwidth. Core derives state from Asset/transport observations and link-specific expectations; initial communications is `offline`. Exact criteria remain open. The operational statuses are `unknown`, `initializing`, `ready`, `busy`, `paused`, `error`, and `stopped`. Assets own queued and immediate Task execution; these reports are not Core scheduling gates.
+These routes read and report [Operational status](topics/asset-reporting.md#operational-status), which replaces the former execution-session API; exceptional interruption still requires Task reconciliation.
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /entities/{entity_id}/status` | Interfaces and integrations inspect an Asset's condition | Asset ID → status, report times, and reason/details | None | New |
-| `PATCH /entities/{entity_id}/status` | Assets and relays report Asset-originated operational status | Asset ID, status/reason/details, Asset report identity/order → updated status | `update` Entity and contact; no Task outcome inferred | New |
+| `PATCH /entities/{entity_id}/status` | Assets and relays report Asset-originated operational status | Asset ID, status/reason/details, Asset report identity/order → updated status | `update` Entity; accepted fresh reports refresh Contact; no Task outcome inferred | New |
 
-Status-specific routes apply to Asset Entities. Status supplied through check-in or any permitted Entity patch uses the same validation and transition rules. Command support is reported on the Entity/check-in contract; it is not bound to a public execution-session registration. Plugins are not Assets and expose Operations separately. Mechanics for stale reports, restart reconciliation, and active Tasks remain open and must be settled before execution is implemented.
+Status-specific routes apply to Asset Entities and share validation with check-in and Entity patches. [Command support](topics/asset-reporting.md#command-support) is Reported data, not bound to a public execution-session registration. Plugins are not Assets and expose Operations separately. Mechanics for stale reports, restart reconciliation, and active Tasks remain open and must be settled before execution is implemented.
 
 ## Tasks
 
-Task creation assigns one Protocol-defined Command to one Asset. Assignment, Command, input and selected scheduling are immutable. The [Task transition table](adr/0007-reconcile-asset-tasks-after-disconnection.md#task-transitions) defines statuses, report authority and cancellation/terminal-state rules. There is no generic Task patch or delete endpoint; [terminal records remain until Reset](adr/0007-reconcile-asset-tasks-after-disconnection.md#completed-task-retention).
+Task creation assigns one Protocol-defined Command to one Asset. Validation, the status set and transitions, cancellation, scheduling, retention and the status route's rules are specified in [Tasks](topics/tasks.md); there is no generic Task patch or delete endpoint.
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /tasks` | Interfaces inspect work | Filters, pagination → Task page | None | Retain |
 | `POST /tasks` | Tasking client requests execution | Asset ID, Command, input, supported queued/immediate scheduling, idempotency key → created or previously created Task | `create` Task on first successful request | Retain |
 | `GET /tasks/{task_id}` | Interfaces and Assets inspect one execution | Task ID → Task | None | Retain |
-| `PATCH /tasks/{task_id}/status` | Tasking clients request cancellation; assigned Assets report lifecycle, progress and outcomes | Task ID, target status or progress-only report, request/report identity and transition-specific fields → authoritative Task | Validate actor/transition; set cancellation_requested on request, cancelled on confirmation; publish every accepted Task change; refresh contact only for accepted fresh Asset reports | Adapt: unified Task status updates |
+| `PATCH /tasks/{task_id}/status` | Tasking clients request cancellation; assigned Assets report lifecycle, progress and outcomes | Task ID, target status or progress-only report, request/report identity and transition-specific fields → authoritative Task | Validate actor/transition; set cancellation_requested on request, cancelled on confirmation, and the execution status established by accepted reports when the Asset declines; publish every accepted Task change; refresh contact only for accepted fresh Asset reports | Adapt: unified Task status updates |
 | `GET /tasks/{task_id}/objects` | Interfaces inspect associated files | Task ID, pagination → Object metadata page | None | Retain |
 
-Task creation validates the Protocol catalog, Command input and the Asset's advertised support, and rejects new assignments to a retired Asset under [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md). Repeating an idempotency key with the same request returns the same Task; different tasking data conflicts. Cancelling in-progress work depends on declared Asset support. [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md) owns offline acceptance and execution behavior.
-
-An unfinished Task that references a Geofeature follows its immutable ID and current geometry until the applicable completion boundary. For scans, Core's accepted valid assigned-Asset collection-finished report closes geometry changes; earlier edits are accounted for, later edits do not demand more collection, and another scan is a new Task. [ADR-0024](adr/0024-use-live-geofeature-geometry-in-tasks.md) covers disconnected continuation, reconnect adoption, and saved-versus-applied geometry reporting, with gateway receipt distinct from adoption and reporting as evidence rather than permission. [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) retains required-result gating and either arrival order; exact revisions and transport encodings remain engineering work.
-
-The status endpoint replaces the separate acknowledge/start/progress/complete/fail/cancel endpoints. It accepts lifecycle and progress-only reports under [ADR-0007's status update contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#status-update-api), and returns the actual recorded Task. Progress-only reports preserve current status. A completion submission may return a nonterminal Task under the [scan completion contract](adr/0008-complete-scan-tasks-when-required-results-are-available.md). Named SDK helpers use this same endpoint. Fresh Asset reports also publish the corresponding Entity contact change under [heartbeat and freshness](asset-status.md#heartbeat-and-freshness).
-
-Assigned-work reads and queue edits use the Entity routes above. Follow the [queue revision contract](adr/0007-reconcile-asset-tasks-after-disconnection.md#queue-revisions) for ordering, eligibility, pagination and adoption/conflict reports. Clients fetch all outstanding pages and deduplicate by Task ID.
-
-Pause and Resume use `POST /tasks` with their Protocol-defined Commands and immediate scheduling; neither adds a dedicated endpoint. [ADR-0007](adr/0007-reconcile-asset-tasks-after-disconnection.md#queued-and-immediate-scheduling) owns their execution, control ordering and expiry behavior, including [recovery after an unexpected Asset restart](adr/0007-reconcile-asset-tasks-after-disconnection.md#recovery-after-an-unexpected-asset-restart).
+Assigned-work reads and queue edits use the Entity routes above under [queue revisions](topics/tasks.md#queue-revisions). Pause and Resume use `POST /tasks` with their Protocol-defined Commands and immediate scheduling; neither adds a dedicated endpoint. Fresh Asset reports also publish the corresponding Entity contact change under [Contact and freshness](topics/asset-reporting.md#contact-and-freshness).
 
 Request fields, sequence encoding, concurrency/report-ordering tokens, event envelopes and error encodings remain schema work.
 
 ## Objects
 
-Objects hold arbitrary file types and flexible JSON metadata. Entity references are zero-to-many. Objects also support Task references. References are historical associations, not ownership links that cascade-delete files.
+Objects hold file content of any type with flexible JSON metadata and historical Entity and Task references. Ready-only visibility, uploads and their retries, publication, deletion, Required-result protection, metadata edits and download are specified in [Objects](topics/objects.md); the earlier metadata-only `POST /objects` route is removed.
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
@@ -98,15 +109,11 @@ Objects hold arbitrary file types and flexible JSON metadata. Entity references 
 | `GET /objects/{object_id}/download` | Consumers retrieve file content | Object ID → attachment stream | None | Retain |
 | `GET /objects/{object_id}/view` | Interfaces preview supported content | Object ID → inline stream, attachment, or unsupported-type error | None | Retain; supported preview formats need review |
 
-Objects are visible through reads, queries and feed only after content and metadata are ready. Upload identity, staged metadata and progress are separate transfer state, not publicly listed Objects. Physical file paths remain private; measured byte size and content type come from the upload process. The earlier metadata-only `POST /objects` route is removed. Descriptive fields and associations may be staged with the upload and edited after publication, with the [concurrent-edit protection](architecture/system-design.md#concurrent-descriptive-edits) rejecting stale edits for caller review. The accepted [upload contract](adr/0009-expose-objects-only-when-ready.md#upload-failures-and-retries) restarts interrupted uploads from the beginning. Resumable transfer sessions, offset queries and chunk-continuation endpoints are deferred. Clean up failed or abandoned staging; it is not a retained operational record. Stable Dataset-scoped request identity recognizes a previously completed upload when its response was lost; concurrent retries cannot publish twice. Conflicting reuse fails. Exact content-equivalence verification remains schema work. After the first successful upload, file content is immutable. Changed content requires a new Object ID; descriptive metadata remains editable. A retry must recognize an already-successful upload without overwriting it. Exact retry identity/content verification, transfer limits, deletion completion, and preview formats remain open. Arbitrary upload types do not imply arbitrary inline rendering.
-
-The SDK allocates Object IDs before completion reporting/upload, so either arrival order is representable without publishing placeholders. Reusing an upload request with another Object ID or claiming an already-used Object ID with a different request conflicts. Allowed deletion keeps private identity tombstones until Reset; an identical old upload retry reports that its Object was deleted and cannot recreate it. [Identity and retry contract](adr/0009-expose-objects-only-when-ready.md#result-identity-before-upload).
-
-Required result Objects cannot be deleted from Core's acceptance of the assigned Asset's declaration until Reset, regardless of later Task status. Core checks authoritative Task result references, not only editable Object associations. Metadata edits, Entity deletion and a stale cleanup request cannot bypass protection. Declaration acceptance, publication and deletion must serialize their protection decisions; declarations for already-deleted IDs are rejected. Optional attachments and other unprotected Objects retain ordinary deletion behavior. See [required results](adr/0009-expose-objects-only-when-ready.md#required-result-protection).
+Request fields, retry identity and content verification, transfer limits, deletion completion and preview formats remain schema work under the [Objects open questions](topics/objects.md#open-questions).
 
 ## Administration
 
-All routes are authenticated. Operator-facing administrative clients may manage the documented configuration and credentials; Asset and Plugin integration identities cannot. Operator profiles remain names/settings rather than permission roles. Plugin configuration and process administration are exclusively local. See [identity and access](architecture/system-design.md#identity-and-access).
+All routes are authenticated. Only [operator administrative clients](topics/identity-and-access.md#operator-clients) may manage the documented configuration and credentials. Plugin configuration and process administration are exclusively local.
 
 ### Core configuration and diagnostics
 
@@ -124,7 +131,7 @@ The editable Core settings and their application rules must be defined before th
 | --- | --- | --- | --- | --- |
 | `GET /admin/activity` | Operator administrative clients inspect recorded actions | Actor/action/target/time filters, limit/cursor → activity page with known outcomes | None; read-only, outside the synchronized picture | New |
 
-Record Task issuance/cancellation and Plugin, credential and configuration changes, including local CLI/TUI actions, plus the administrative retirement action required by [ADR-0019](adr/0019-retire-assets-without-inventing-task-outcomes.md). Core/private management supplies authenticated attribution; public callers cannot insert or alter log entries. A selected profile is not proof of a human actor behind a shared key. Keep safe summaries without secrets or full resource snapshots, deduplicate action retries, and retain until Reset. See the [activity-history contract](architecture/system-design.md#activity-history) for database transactions and process request/outcome recording.
+What is recorded, its attribution and retention follow [Activity history](topics/history.md#activity-history).
 
 ### API keys
 
@@ -134,11 +141,7 @@ Record Task issuance/cancellation and Plugin, credential and configuration chang
 | `POST /admin/auth/api-keys` | Administrative clients provision a key | Prepared creation/key identity, secret and name/description → key metadata | Idempotently create an operator administrative key; retain verifier only; not an Asset reporting identity | Adapt from `/admin/api-keys` |
 | `DELETE /admin/auth/api-keys/{key_id}` | Administrative clients revoke a key | Key ID → no body | Revoke the key | Adapt from `/admin/api-keys/{key_id}` |
 
-These routes require an operator administrative credential, not an Asset or Plugin integration identity; no browser-admin session is selected. Deployment tooling authorizes Asset enrollment; the SDK provisions the bound identity automatically with no per-Asset approval click or manual key-management workflow. The credential/proof mechanism remains to be designed. Bootstrap: local deployment setup provisions the first key outside HTTP and stores it for the operator; subsequent keys use these routes. Recovery after loss or revocation of every key is also a local setup responsibility. Exact setup commands remain open.
-
-Revoking a credential rejects further requests and stops further authorized feed delivery on every connection using it. Core terminates those live connections; reconnect/recovery with the revoked credential fails. Revocation and outbound authorization must be ordered so a queued event cannot be sent under revoked authority. Bytes already sent or previously cached cannot be recalled. The SDK exposes authentication failure instead of retrying forever with the rejected credential. See [credential revocation](architecture/system-design.md#credential-revocation).
-
-The SDK prepares and retains the key before submission; Core returns metadata rather than a one-time secret. Identical authorized creation retries recover the same key, conflicting reuse fails and revoked keys cannot be reactivated. See [key creation](architecture/system-design.md#api-key-creation-retries).
+These routes require an operator administrative credential. Key bootstrap, prepared secrets, creation retries and revocation follow [API keys](topics/identity-and-access.md#api-keys) and [credential revocation](topics/identity-and-access.md#credential-revocation).
 
 ### Operator records
 
@@ -150,44 +153,41 @@ The SDK prepares and retains the key before submission; Core returns metadata ra
 | `PATCH /admin/operators/{operator_id}` | Interfaces edit a profile | Changed name/settings, required version precondition → Operator | Update profile | New |
 | `DELETE /admin/operators/{operator_id}` | Interfaces remove a profile | Operator ID → no body | Delete profile/settings; retain actor ID/type and historical display context in activity records until Reset; do not cascade-delete history | New |
 
-Use explicit Operator IDs rather than a `/me` route: an API key does not currently identify a person. Profile selection mechanics remain open; activity records identify the authenticated caller and do not treat a selected profile as proof of human identity. Deleting a profile does not imply deleting operational Entities, Tasks, or Objects. Profiles and personal settings survive ordinary Reset as installation setup; Hard Reset clears them.
+Use explicit Operator IDs rather than a `/me` route: an API key does not currently identify a person. Profile selection mechanics remain open; activity attribution follows [record contents and attribution](topics/history.md#record-contents-and-attribution). Deleting a profile does not imply deleting operational Entities, Tasks, or Objects. Profiles and personal settings survive ordinary Reset as installation setup; Hard Reset clears them.
 
 ## Plugins
 
-Plugin installation, catalog selection, configuration, enable/disable, updates, removal and process control use the local CLI/TUI. They have no public endpoints or SDK methods. Uninstall stops the Plugin and clears its private operational work, saved configuration, usable credentials, downloaded reference data and owned installation artifacts; reinstall starts with empty work and fresh setup. Public resources and recorded Operation attempts retain their own lifecycle, while disabling preserves the installation and private work, under [ADR-0021](adr/0021-manage-plugin-operational-storage-through-reset.md#uninstall-and-reinstall). The public API exposes discovery/status and durable Operations under [ADR-0002](adr/0002-core-manages-installed-plugins.md).
+The public API exposes Plugin discovery/status and durable Operations; Plugin management is local-only. Their rules are specified in [Plugins](topics/plugins.md).
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /plugins` | Consumers discover installed Plugins and capabilities | Pagination → Plugin summary page | None | Adapt: discovery and availability only |
 | `GET /plugins/{plugin_id}` | Consumers inspect a Plugin | Plugin ID → release, capabilities, availability and fault status | None; no configuration secrets or management controls | New |
-| `POST /plugins/{plugin_id}/operations` | Consumers invoke a declared capability | Capability identifier, input, dataset-scoped submission identity → accepted attempt and outcome URL | Record durable Operation; declared processing may publish operational resources | Adapt: replace request-bound capability invocation |
-| `GET /plugins/{plugin_id}/operations` | Consumers list attempts | Filters, pagination → Operation page | None | New |
-| `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one attempt | Core-owned attempt ID → status, progress, known outputs and outcome | None | New |
-| `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` | Consumers request cancellation | Attempt ID → Operation | Record cancellation request; final outcome requires confirmation | New |
+| `POST /plugins/{plugin_id}/operations` | Consumers invoke a declared capability | Capability identifier, input, dataset-scoped submission identity → accepted Operation and outcome URL | Record durable Operation; declared processing may publish operational resources | Adapt: replace request-bound capability invocation |
+| `GET /plugins/{plugin_id}/operations` | Consumers list Operations | Filters, pagination → Operation page | None | New |
+| `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one Operation | Core-owned Operation ID → status, progress, known outputs and outcome | None | New |
+| `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` | Consumers request cancellation | Operation ID → Operation | Record cancellation request; final outcome requires confirmation | New |
 
-Here `operation_id` identifies one accepted attempt, not a capability definition. Return `202 Accepted` on submission with the attempt identity and query URL. Retries with the same dataset-scoped submission identity recover the existing attempt; a deliberate rerun uses a new identity. Caller disconnection does not cancel work. Failed or interrupted attempts retain known outputs/effects. Terminal outcomes cannot be overwritten; query retained attempts even if the Plugin is later removed, until Reset.
+Submission, retries, cancellation, the [Operation transitions](topics/plugins.md#operation-transitions) and retention are specified in [Plugins](topics/plugins.md#operations), including the `202 Accepted` submission response.
 
-Operations have their own [transition table](adr/0002-core-manages-installed-plugins.md#operation-transitions). Operation transitions remain separate from Task transitions even though both include cancellation-requested intent. Operation polling uses these endpoints in every SDK mode; Operations are outside the initial Entity/Task/Object picture. Live Operation notification details remain open.
-
-Plugins are not taskable Assets. They can create Tasks for Assets through the ordinary Task API, and publish resources through Core using managed integration identity. Stopping a Plugin protects its active Operations under [ADR-0006](adr/0006-protect-active-plugin-work-during-lifecycle-changes.md); unrelated Asset Tasks do not block management. Local management results, saved/active configuration and startup validation belong to that private contract, not the public Plugin resource.
 
 ## Synchronization
 
-The general SDK exposes resource reads, queries, and feed subscriptions through the same methods in HTTP and full-synchronization modes under [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md). HTTP mode passes all three operations through to Core's API. Full-synchronization mode uses local resource/query results and subscriptions to changes applied to the local picture, with no direct pass-through, fallback, or per-call bypass. The endpoints below are called by HTTP-mode operations or privately by the background synchronizer; full-synchronization application query/feed calls resolve locally. HTTP-mode failures do not fall back to cached data. See [SDK data access](sdk-data-access.md) for freshness, recovery, and open read-policy decisions.
+HTTP-mode operations call these routes directly, and the SDK's background synchronizer calls them privately in Full synchronization mode; read sources, freshness and recovery follow [SDK](topics/sdk.md#modes).
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
 | `GET /queries/full` | SDK clients load the full operational dataset | Per-resource pagination → Entities, Tasks, Objects, continuation cursors and a baseline version | None | Retain |
 | `GET /queries/changed-since` | SDK clients recover missed changes | Baseline version and cursor → ordered change events and next recovery boundary | None | Retain |
-| `GET /feed` | SDK clients subscribe to live operational changes | WebSocket upgrade, API-key authentication, subscription filters → hello, subscription acknowledgement and resource events | Maintain connection/subscriptions; no resource writes | Retain |
+| `GET /feed` | SDK clients subscribe to live operational changes | WebSocket upgrade, caller authentication, subscription filters → hello, subscription acknowledgement and resource events | Maintain connection/subscriptions; no resource writes | Retain |
 
-The earlier [Asset hybrid mode](sdk-data-access.md#asset-hybrid-mode) is deferred along with Core's matching Asset-scoped snapshots, feed, replay, dependency membership and continuation rules. Gateways use HTTP or full synchronization over an IP link to Core with adequate bandwidth; they need not share Core's host or network. The constrained gateway-to-Asset radio link has no selected transport or delivery contract yet. Removing the SDK mode does not change authenticated Asset report authority, retries, Task reconciliation or Core retention.
+Asset-scoped synchronization is [deferred](topics/sdk.md#deferred-asset-hybrid-mode), and gateways use these routes like any other SDK client.
 
-Recovery contract: finish initial dataset pagination, then recover changes since its baseline before treating the dataset as current. The paginated read is not a frozen database snapshot. Keep the baseline stable across its pages; do not substitute the largest version seen in individual resources. Subscription acknowledgement and its continuation boundary close the handoff to live delivery. On feed reconnect or a version gap, recover through changed-since. If retained history no longer covers the requested version, return an explicit cursor-expired response and require a new initial load. Retention duration, subscription filters and exact continuation fields remain implementation choices; Asset-scoped synchronization is deferred.
+When retained history no longer covers the requested version, `GET /queries/changed-since` returns an explicit cursor-expired response. The SDK's load and recovery procedure follows [background synchronization](topics/sdk.md#background-synchronization). Retention duration, subscription filters and exact continuation fields remain implementation choices.
 
-All reads, mutations, upload handles and recovery cursors follow the [dataset Reset boundary](sdk-data-access.md#dataset-reset-boundary). Core rejects obsolete-dataset submissions, reports and transfer/replay handles; the SDK discards obsolete state without relabeling old writes. Exact wire placement remains open.
+All reads, mutations, upload handles and recovery cursors follow Core's [Dataset boundary](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary) and [SDK Dataset Reset handling](topics/sdk.md#dataset-reset-handling). Exact wire placement remains open.
 
-Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-key authentication when upgrade headers are unavailable; authenticate before delivering events. No browser-session authentication is assumed. All application requests remain authenticated; CORS preflight is transport negotiation and needs separate handling.
+Feed authentication follows [Callers and permissions](topics/identity-and-access.md#callers-and-permissions). Browser WebSockets cannot rely on custom upgrade headers. Use first-message authentication with the caller's credentials when upgrade headers are unavailable; authenticate before delivering events. Credential formats and authentication-message fields remain implementation choices. No browser-session authentication is assumed. All application requests remain authenticated; CORS preflight is transport negotiation and needs separate handling.
 
 ## Health and documentation
 
@@ -198,13 +198,15 @@ Browser WebSockets cannot rely on custom upgrade headers. Use first-message API-
 | `GET /docs` | Developers browse interactive documentation | API key → documentation interface | None | New |
 | `GET /openapi.json` | SDK/tooling and docs read the HTTP contract | API key → OpenAPI document | None | New |
 
-Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is reported on that Plugin and does not make an otherwise functioning Core globally unready. Exact dependency probes and timeout thresholds remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
+Health remains available across a Dataset change under the [Dataset boundary](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary). Core readiness depends on required infrastructure, including SQLite and private Object file storage. An unavailable Plugin is [reported on that Plugin](topics/plugins.md#plugin-capabilities-and-discovery) and does not make an otherwise functioning Core globally unready. `/health` reports process liveness separately from `/readiness`. Exact dependency probes, timeout thresholds and response format remain to be specified. Browser access to protected documentation needs a concrete key-entry/bootstrap mechanism without making documentation anonymously accessible by accident.
+
+OpenAPI describes the API contract, and a documentation tool renders it at `/docs`. Swagger UI is a candidate; renderer selection remains open. These route names are project choices, not routes OpenAPI provides automatically. Capture contracts in OpenAPI as they are designed, and distinguish proposed operations from implemented ones in the documentation.
 
 ## Shared contract baseline
 
 | Concern | Accepted starting rule | Still to settle |
 | --- | --- | --- |
-| API key transport | Carry forward `Authorization: Bearer` and `X-API-Key` for public HTTP calls | Choose whether both are needed; browser docs entry flow |
+| API key transport | Carry forward `Authorization: Bearer` and `X-API-Key` for operator administrative API keys | Choose whether both are needed; other caller-credential encodings and browser docs entry flow |
 | Lists | Bounded cursor pagination, following older list contracts | Filters, limits, and headers versus body pagination metadata |
 | Errors | Stable error code and human-readable message with appropriate HTTP status | One consistent error envelope for handlers and authentication |
 | Concurrent changes | Resource versions and ETags; operator-managed and other descriptive edits require a matching version precondition, and stale edits conflict for caller review. Asset reports use their separate acceptance and ordering rules | Exact revision and conflict encodings |
@@ -218,7 +220,7 @@ Core readiness depends on required infrastructure, including SQLite and private 
 2. Resolve the specific open choices in the shared contract table, including exact concurrent-edit error/revision encodings and how supported compatibility ranges are advertised. The required protection for descriptive edits and the separate Asset-report acceptance rule are settled.
 3. Specify Task status and queue wire fields, report validation and reconciliation mechanics; specify Pause/Resume report correlation, Command-specific deadlines and recovery evidence under the accepted ordering/reconciliation policies before implementation. Do not reintroduce the removed execution-session API.
 4. Define private local management outcomes, Operation envelopes/notification behavior, and whole-file upload retry identity/content-verification details.
-5. Bind the accepted [retirement workflow](adr/0019-retire-assets-without-inventing-task-outcomes.md) to one HTTP operation and SDK method, including its Core-owned Entity condition and retained authorization state. Preserve its semantics without inventing a second caller-side workflow.
+5. Bind the accepted [retirement workflow](topics/identity-and-access.md#asset-retirement) to one HTTP operation and SDK method, including its Core-owned Entity condition and retained authorization state. Preserve its semantics without inventing a second caller-side workflow.
 
 ## Sources
 
@@ -226,7 +228,7 @@ Route existence was checked against the router, not inferred only from prose. Th
 
 - [Registered routes](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/cmd/atlas_core/main.go).
 - [API guide](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/API_GUIDE.md).
-- [Earlier Task contract](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md); its execution-session design is superseded here by [Asset status](asset-status.md).
+- [Earlier Task contract](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md); its execution-session design is superseded here by [Asset reporting](topics/asset-reporting.md).
 - [Object contracts](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/database-structure/objects.md).
 - [Historical Object references](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/design-decisions/2026-05-29-object-references-are-historical.md).
 - [Plugin design](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-plugins/README.md).

@@ -6,62 +6,41 @@ status: accepted
 
 An Object becomes visible through Atlas only when it is ready for use; an upload does not create an unavailable Object listing for operators or consumers. The user considered early visibility interesting but chose the simpler contract, avoiding partial-availability states. For a scan result, upload progress can be reported separately from the main Task status until the required Object is ready.
 
-On 22 September 2026 the API reconciliation retained ready-only visibility and removed metadata-only public Object creation. Use stable upload request identity and stage content and metadata internally; publication waits for content and metadata to be ready. After publication, content is immutable and changed content requires a new Object ID; descriptive metadata and historical Entity/Task associations remain editable. Physical storage paths remain private.
+Current rules: [Objects](../topics/objects.md).
 
-Internal upload staging is an implementation concern. The sections below additionally define retry identity, deletion and required-result retention.
+## Decision
 
-## Result identity before upload
+Publish an Object only when its content and metadata are ready, with no metadata-only public creation. Stage uploads privately under a stable, Dataset-scoped request identity. After publication, content is immutable and changed content requires a new Object ID; descriptive metadata and historical Entity/Task associations remain editable. Physical storage paths remain private.
 
-To support either arrival order of Task completion reports and file uploads, the SDK allocates a stable Object ID locally before either request. The producer supplies that ID with `POST /objects/upload`, along with the Dataset-scoped upload request identity, and uses the same ID in required-result references. IDs must follow Protocol validation and be collision-resistant; identity generation does not require a reservation endpoint or create a publicly visible Object.
+The SDK allocates the Object ID before upload, so Task completion reports and uploads can arrive in either order. Failed uploads restart from the beginning. A retry of a successful upload returns its Object, or an explicit deleted-result error after an allowed deletion, without another publication. Objects makes content durable before committing ready metadata in SQLite and reconciles interrupted publication itself.
 
-Core may retain a validated completion report containing not-yet-published Object references. Those references cannot satisfy readiness until matching complete Objects are published. Conversely, an upload may publish before the report arrives. Core validates the supplied Object ID and serializes publication so two different upload requests cannot claim the same ID. Binding an upload identity to an Object ID is immutable; conflicting reuse fails. A previously published or deleted ID cannot be repurposed within the Dataset. As with other uploads, no per-caller ownership policy is added.
+A declared Required result is protected from declaration acceptance until Reset. Cancelling a Task does not cancel its uploads. An Object storage quota refuses uploads before the disk fills, and missing content is a fault in that one Object.
 
-The Task module retains unresolved required-result references without requiring a placeholder Object row or exposing an incomplete Object. Reset invalidates the old Dataset's uploads and reports. Exact ID encoding and wire fields remain schema work.
+Decision history:
+
+- 22 September 2026: the API reconciliation retained ready-only visibility and removed metadata-only public Object creation. The user chose uploads that restart from the beginning after failure, superseding the earlier same-run resume requirement.
+- 23 September 2026: the user extended Required-result protection to begin when Core accepts the assigned Asset's declaration, rather than waiting for Task completion.
+- 26 September 2026: the user selected file-first publication. Clarified the same day: Tasks places a hold through Objects when it accepts each declaration, and Objects enforces deletion protection from its own holds.
+- 28 September 2026: the storage quota and per-Object integrity faults were accepted.
+
+## Rationale and alternatives
+
+- Ready-only visibility avoids partial-availability states; early visibility was considered and not chosen.
+- Restarting failed uploads from the beginning defers resumability to reduce complexity. Reconsider it only when a concrete large-file workflow over unreliable links justifies transfer-progress APIs and retained partial transfers.
+- Allocating the Object ID in the SDK supports either arrival order of completion reports and uploads without a reservation endpoint or a publicly visible placeholder.
+- File-first publication avoids committing readiness before the content is durable. It permits unreferenced files after interruption, which Objects must reconcile.
+- Continuing uploads after cancellation separates collected data from the instruction to stop Asset work.
+- The quota keeps the disk from filling far enough for telemetry, Task reports or other SQLite writes to fail.
+
+## Consequences
+
+- Producers retain source files until successful publication and resend the whole file after a failure; this is not an SDK offline mutation queue.
+- Deferring resume does not remove the obligations of safe file and metadata publication and cleanup.
+- Objects keeps successful upload identities and private deletion tombstones until Reset, and reconciles interrupted publication before serving Object state.
+- Declared Required results cannot be deleted before Reset, with no force-delete override.
+- A missing Object file flags that Object and any Task requiring it without stopping Core.
+- Exact ID encoding, request fields, content-equivalence verification and filesystem primitives remain schema and implementation work.
 
 ## Upload failures and retries
 
-On 22 September 2026 the user chose uploads that restart from the beginning after failure, deferring resumability to reduce complexity. This supersedes the earlier same-run resume requirement. Reconsider it only when a concrete large-file workflow over unreliable links justifies transfer-progress APIs and retained partial transfers.
-
-Stream the request into private temporary storage without buffering the entire file in memory. Validate complete content and metadata before publishing the Object. A failed or interrupted upload never exposes an incomplete Object; clean up its temporary content, including abandoned staging found after restart. No upload-session API, offset query, chunk continuation or persistent progress store is required. A producer retains its source file until successful publication and may retry the full upload when connectivity allows. This is producer file retention, not an SDK offline mutation queue.
-
-An interrupted transfer and a lost completion response are different cases. Keep a stable, Dataset-scoped request identity across retries. If the upload already succeeded and its Object still exists, return that Object for an identical retry without creating another Object, overwriting content or publishing a duplicate change. If it was deleted through an allowed deletion, return the recorded deleted-result outcome defined below. Conflicting reuse fails. If no successful publication exists, a retry sends the complete file again. Serialize attempts for the same identity so concurrent retries cannot publish twice. Exact request fields and content-equivalence verification remain schema work.
-
-Objects survive ordinary Restart unless explicitly deleted where allowed. Successful upload identity records, including their deletion markers, survive Restart until Reset. Incomplete staging is disposable and not retained for inspection until Reset. Reset invalidates old upload identities and prevents an old in-flight request from publishing into the new Dataset. These rules still require safe file/metadata publication and cleanup; deferring resume does not remove those correctness obligations.
-
-## Publication and recovery ordering
-
-On 26 September 2026 the user selected file-first publication. Objects makes complete content durable in its private immutable location before committing ready metadata in SQLite. A file in that location is not, by itself, a published Object. This ordering avoids committing readiness before the content is durable; it permits unreferenced files after interruption, which Objects must reconcile.
-
-1. Stream and validate complete content and metadata in private staging, then install the immutable content without overwriting another Object. Make both the content and its file location durable before the ready-state commit. Keep file transfer and durability work outside the SQLite write transaction. Exact filesystem primitives must be verified for the supported host storage.
-2. In a short SQLite transaction, recheck the current Dataset, publication authority and the Object/upload identities, including successful retries and deletion markers. Serialize publication authorization with credential revocation; [Asset retirement](0019-retire-assets-without-inventing-task-outcomes.md#concurrency-retries-and-retained-authority) defines both commit orders and rejected-attempt cleanup. Serialize required-result checks under the existing protection rule. Commit ready metadata, the successful upload identity and the public change record together. Return publication success only after that commit. A concurrent retry or Dataset change must not turn the same file into a second publication.
-3. On retained-state startup, Objects reconciles interrupted publication before serving Object state. Preserve files referenced by committed ready Objects and their successful identities. Remove abandoned staging and unreferenced publication files only after establishing that they belong to abandoned work; cleanup must not race an active upload or remove another identity's content. Never reconstruct ready metadata or complete a Task merely because a file exists.
-
-Give each physical upload attempt a distinct private content location, separate from the stable public Object ID, and retain private ownership facts binding that location to its Dataset, upload request and attempt. A failed pre-commit attempt must not occupy the only location available to an identical retry. Without requiring Restart, that retry sends the full file into a fresh attempt location and follows the same serialized identity checks; only the successful SQLite commit selects the Object's content location. An occupied file alone proves neither successful publication nor permission to reuse or remove it. Under the same identity coordination, cleanup must establish ownership and that no committed Object or active attempt uses the file. Leave files with unknown ownership untouched and report the cleanup problem; never overwrite another attempt's content. Conflicting upload/Object identity reuse still fails under the existing contract.
-
-A failure before the SQLite commit leaves no ready Object; an identical retry still follows the whole-file retry contract. A failure after the commit, including a lost response, preserves the successful identity for retry lookup. Retry lookup still requires current authorization: if retirement or other revocation intervenes, reject the revoked caller even when its earlier publication committed. Rejection cleanup may remove only abandoned, uncommitted attempt data; preserve the committed Object, its content and successful upload identity. An unaffected authorized principal can recover the recorded result under the ordinary matching-retry rules. Missing content behind committed metadata is an integrity failure to report, not permission to return a ready success, silently erase the record or manufacture another publication. Reset still stops writers before clearing state and rejects obsolete-Dataset publication. Objects owns this recovery logic behind its [ordinary interface](../architecture/system-design.md#object-publication-and-recovery-ownership); generic lifecycle code does not infer file validity from private rows.
-
-## Retrying an upload after allowed deletion
-
-An allowed Object deletion retains a private tombstone with its Object ID and successful upload identity until Reset. An identical upload retry returns an explicit deleted-result error with the original identity; it does not return a ready Object, recreate the file or emit another publication. Conflicting reuse still fails. Deliberately uploading the content again requires a new Object ID and a new upload request identity.
-
-Serialize successful retry lookup, publication and deletion against the same identity facts. If deletion commits first, the retry reports deletion. If the retry observes the live Object first, its success describes that observation; a subsequent deletion can still remove an unprotected Object. Keep the private tombstone out of ready-Object lists while publishing the ordinary deletion change for synchronization. A storage cleanup retry must not remove content belonging to a different identity.
-
-This rule only applies to deletions already permitted by the required-result protection below. It does not permit deletion of a Task's declared required result or introduce retained file contents after deletion.
-
-## Required result protection
-
-On 23 September 2026 the user extended required-result protection to begin when Core accepts the assigned Asset's declaration, rather than waiting for Task completion. Operators cannot delete a declared required result Object before Dataset Reset. The declaration may precede upload; it protects the Object as soon as publication occurs without exposing a placeholder Object.
-
-Derive protection from authoritative, assigned-Asset-declared required result references retained by Tasks. Clarified on 26 September 2026: Tasks places a hold through Objects when it accepts each declaration, and Objects enforces deletion protection from its own holds; see [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership). An Object required by any Task is protected. Optional attachments and unrelated Objects do not become protected merely by having a descriptive association. Once accepted, a required reference cannot be removed or replaced to release protection. Later Task completion, failure or cancellation does not release it. Deleting an Entity or editing Object metadata/associations cannot bypass it. Ordinary descriptive edits remain allowed; immutable content and Core-owned storage facts remain unchanged.
-
-`DELETE /objects/{object_id}` rejects deletion with an explicit conflict when this protection applies. There is no force-delete override or Task-deletion workaround. Reset clears the references and Objects together under the existing lifecycle contract.
-
-Serialize declaration acceptance, Object publication and deletion against the same Object identity. If the required declaration commits first, deletion fails. If an allowed deletion commits first, reject a later declaration referencing that deleted ID with an explicit deleted-result error; do not accept an unsatisfiable required reference or completion report. A rejected report changes neither the Task's result references nor its status. The Asset can upload under a new Object ID and submit a corrected report, or report failure when it cannot supply the result. An ID that has never been published or deleted can still be declared before upload. Physical cleanup must never remove a protected file because it was scheduled against stale metadata. Exact transaction mechanics follow storage implementation.
-
-Required-result references survive Restart until Reset, including declarations whose uploads have not arrived. Upload retries cannot replace immutable content or remove protection. Unprotected Objects retain the allowed deletion and explicit deleted-result retry behavior above.
-
-## Task cancellation and result uploads
-
-Canceling a Task does not cancel its uploads. An in-flight result upload may continue and publish a ready Object after the Task is confirmed Canceled. Keep already-created Objects. The Task remains Canceled regardless of later upload completion; data availability does not reverse a terminal outcome.
-
-This separates collected data from the instruction to stop Asset work. Uploads still follow ordinary validity and resource-limit checks. Their treatment across Core Stop/Restart follows [ADR-0015](0015-separate-start-stop-restart-and-reset.md#unfinished-work-after-stop-or-restart); cancellation itself does not add an uploader-ownership rule or make a partial Object visible.
+Whole-file uploads, lost-response retries and upload identity are specified in [Uploads](../topics/objects.md#uploads).

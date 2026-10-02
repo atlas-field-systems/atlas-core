@@ -2,7 +2,7 @@
 
 Implementers and reviewers assess every section against the affected behavior, including indirect effects outside the edited files. Check conventions separately from the requested behavior. For substantial changes, record a compact mapping from requirements to implementation and validation, with reasons for material exclusions. Cite the convention and concrete consequence when reporting a violation; distinguish defects from suggestions.
 
-These conventions govern code quality. The [system design](../architecture/system-design.md), [ADRs](../adr/) and accepted API and SDK plans govern behavior and ownership. Follow the [documentation guide](domain.md) when changing those decisions. This checkout is a design workspace; paths and reference implementations should be added only after the corresponding code exists.
+These conventions govern code quality. The [system design](../architecture/system-design.md), [ADRs](../adr/) and [topic pages](../topics/README.md) govern behavior and ownership. Follow the [documentation guide](domain.md) when changing those decisions. This checkout is a design workspace; paths and reference implementations should be added only after the corresponding code exists.
 
 ## Structure and interfaces
 
@@ -38,7 +38,7 @@ These conventions govern code quality. The [system design](../architecture/syste
 - Keep resource use bounded where work can accumulate: queues, retries, buffers and concurrent work. Make cancellation, shutdown and failure reporting part of the component's interface.
 - Distinguish a rejected operation, an unknown outcome and a confirmed result. Preserve that distinction through errors and retries.
 - Keep credentials and other secrets out of logs and test artifacts. Include enough nonsecret context to diagnose the failed operation.
-- Follow the [lifecycle decision](../adr/0015-separate-start-stop-restart-and-reset.md) for retention and cleanup. Storage and recovery changes must preserve those guarantees.
+- Follow [Dataset lifecycle](../topics/dataset-lifecycle.md) for retention and cleanup. Storage and recovery changes must preserve those guarantees.
 
 ## Tests
 

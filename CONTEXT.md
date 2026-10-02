@@ -17,20 +17,48 @@ The shared specification of Atlas resources, operations, messages and externally
 _Avoid_: database schema, SDK implementation
 
 **Atlas SDK**:
-The supported general client library that IP-connected applications, Plugins and radio gateways use to interact with Atlas Core.
+The supported general client library that participants on IP links without bandwidth limits, including applications, Plugins, IP-connected Assets and radio gateways, use to interact with Atlas Core.
 _Avoid_: Protocol definition, Core implementation, Asset OS, radio protocol
 
+**Asset client**:
+The part of the Atlas SDK that owns all traffic originating from an Asset: registration, reports, assigned work and reconnect reconciliation.
+_Avoid_: Asset OS, integration, gateway
+
+**HTTP mode**:
+The Atlas SDK mode that reads directly from Core on each request, without maintaining a Local operational picture.
+_Avoid_: HTTP pass-through, API mode
+
+**Full synchronization mode**:
+The Atlas SDK mode that maintains a Local operational picture of the whole Dataset and answers reads from it.
+_Avoid_: full sync, hybrid mode, replica mode
+
 **Radio gateway**:
-An integration connecting Atlas Core with Assets over a radio transport while preserving Asset identity and the meaning of their Tasks and reports.
+Software connecting Atlas Core with bandwidth-limited Assets over a radio transport while preserving Asset identity and the meaning of their Tasks and reports. It has its own identity and relays only for its bound Assets.
 _Avoid_: Asset OS, Source Gateway, Core module
 
 **Core release**:
 A published edition of Core with its corresponding SDK and Protocol editions.
 _Avoid_: Plugin release, deployment instance
 
+**Installation**:
+One Atlas deployment, the scope that Hard Reset clears. The installation of a single Plugin is a Plugin installation.
+_Avoid_: Plugin installation, Core release
+
+**Installation setup**:
+The installation-scoped state that ordinary Reset retains: Operator profiles, credentials, Asset identity bindings, configuration, installed Plugins with their settings, and reference data.
+_Avoid_: installation state, retained setup, startup setup
+
 **Dataset**:
 The operational state retained between Resets, independently of individual Core process runs.
 _Avoid_: Asset runtime, Session API resource, SDK cache
+
+**Dataset identity**:
+The identifier that distinguishes one Dataset from its predecessors. It changes on Reset, so clients can recognise and discard state from an old Dataset.
+_Avoid_: Core run, picture rebuild
+
+**Mission**:
+A field period, usually a few hours, during which Core stays continuously available. Restart, Reset and release updates happen outside Missions.
+_Avoid_: Core run, Dataset
 
 **Core run**:
 One Core process lifetime, from Start until Stop or process exit. A Dataset may span several Core runs.
@@ -45,11 +73,15 @@ Stopping Core, clearing its operational Dataset and Atlas-managed diagnostic log
 _Avoid_: Restart, Hard Reset, backup restore
 
 **Hard Reset**:
-A local CLI/TUI action that stops Core and its managed Plugins, removes all Atlas-managed operational and installation state, and returns Atlas to first-time setup. The Core software and unrelated host resources remain.
+A local CLI/TUI action that stops Core and its managed Plugins, removes all Atlas-managed operational state and installation setup, and returns Atlas to first-time setup. The Core software and unrelated host resources remain.
 _Avoid_: ordinary Reset, software uninstall
 
+**Core time**:
+The installation's reference clock. Observation age, freshness and execution deadlines are judged in Core time; other participants estimate their offset from it.
+_Avoid_: Asset clock, wall-clock time
+
 **Activity history**:
-The record of who issued or cancelled Atlas Tasks, retired Assets or changed Plugins, credentials or configuration, retained until Reset.
+The record of which authenticated caller (an operator client, local administrator, Asset, Plugin or gateway) issued or cancelled Atlas Tasks, retired Assets or changed Plugins, credentials or configuration, retained until Reset.
 _Avoid_: diagnostic logs, movement history, complete telemetry history
 
 ## Resources and tasking
@@ -58,11 +90,40 @@ _Avoid_: diagnostic logs, movement history, complete telemetry history
 A represented participant, observed subject, or spatial designation in Atlas. Every Entity is an Asset, Track, or Geofeature; its identity and type never change.
 _Avoid_: database row
 
-**Alias**:
-An optional, editable Entity name, unique across Entity types ignoring case. Relationships use permanent Entity identities.
+**Component**:
+A named part of an Entity's data, such as its position, Operational status or Command support.
+_Avoid_: database column, arbitrary JSON value
 
-**Asset status**:
-An Asset's reported operational condition. It does not establish a Task outcome or prove current contact.
+**Observed data**:
+Entity data describing an observed subject, authored only by its Track publisher.
+_Avoid_: Reported data, Descriptive data
+
+**Reported data**:
+Entity data an Asset authors about itself, including its Operational status and Command support.
+_Avoid_: Observed data, Descriptive data
+
+**Descriptive data**:
+Entity data that operators edit, such as an Alias, protected against conflicting concurrent edits.
+_Avoid_: Reported data, Observed data
+
+**Derived data**:
+Entity data Core computes, such as Contact and Communication state. No participant writes it directly.
+_Avoid_: Reported data
+
+**Alias**:
+An optional, editable Entity name, unique across Entity types. Relationships use permanent Entity identities.
+
+**Operational status**:
+An Asset's reported operational condition, from `unknown` through `stopped`. It does not establish a Task outcome or prove current Contact.
+_Avoid_: Asset status
+
+**Communication state**:
+Core's assessment of the quality of its link with an Asset, from `high_bandwidth` to `offline`. It is derived by Core, never reported by the Asset.
+_Avoid_: connectivity, connection state, communications, Asset status
+
+**Contact**:
+Core's record of the latest fresh accepted report from an Asset, shown as its last-seen time. Duplicates, historical backlog and Core's own changes never refresh it.
+_Avoid_: heartbeat packet, Communication state
 
 **Asset report acceptance**:
 Core's decision to record an authenticated Asset report and its valid effects, distinguishing report identity, ordering of reported facts and evidence of fresh contact. Accepting a historical outcome does not establish current contact.
@@ -73,8 +134,20 @@ An Entity representing a taskable or reporting system participating in Atlas.
 _Avoid_: Plugin, device record
 
 **Asset retirement**:
-The administrative withdrawal of an Asset from participation while retaining its Entity and execution evidence. A retired Asset cannot receive new Tasks or regain access through enrollment; retirement does not establish that physical execution stopped.
-_Avoid_: Entity deletion, Asset status, Task cancellation, physical stop
+The administrative withdrawal of an Asset from participation while retaining its Entity and execution evidence. A retired Asset receives no new Tasks; retirement does not establish that physical execution stopped.
+_Avoid_: Entity deletion, Operational status, Task cancellation, physical stop
+
+**Enrollment**:
+Giving an Asset an authenticated identity bound to its Asset ID. The binding belongs to the Installation and survives Reset.
+_Avoid_: Asset registration
+
+**Open enrollment**:
+A local testing setting in which any connecting Asset is enrolled without deployment authorization. Each Asset still receives its own identity, and revoked identities stay revoked.
+_Avoid_: disabled authentication, anonymous Assets
+
+**Asset registration**:
+Creating an Asset's Entity in the current Dataset under its enrolled identity. Registration is not a report; Reset clears it.
+_Avoid_: Enrollment, Check-in
 
 **Asset Host**:
 The computer hosting the Asset-side software for one Asset; it does not mean the Atlas Core server. Attached controllers, sensors, and radios are its peripherals.
@@ -85,7 +158,7 @@ The Asset-side software that owns scheduling, execution, interruption and connec
 _Avoid_: Atlas Core, server scheduler
 
 **Check-in**:
-An Asset's report of its current Entity data, establishing contact when fresh. It does not deliver or reconcile Tasks.
+An Asset's report of its current Entity data, establishing Contact when fresh. It does not deliver or reconcile Tasks.
 _Avoid_: reconnect reconciliation, heartbeat packet, registration
 
 **Reconnect reconciliation**:
@@ -97,7 +170,7 @@ An Entity representing an observed subject, whether stationary or moving. A dete
 _Avoid_: Asset, stream item
 
 **Track publisher**:
-The single source responsible for a Track's observed data, whose identity is distinct from an individual Plugin installation. It is distinct from an operator editing descriptive fields and from any External sources it consults.
+The single source responsible for a Track's Observed data, whose identity is distinct from an individual Plugin installation. It is distinct from an operator editing Descriptive data and from any External sources it consults.
 _Avoid_: descriptive editor, Task assignee
 
 **Geofeature**:
@@ -105,7 +178,7 @@ An Entity representing a defined spatial designation, such as a zone or rally po
 _Avoid_: Asset, Track
 
 **Command**:
-A Core-defined intent that a supporting Asset can execute, with defined inputs and observable behavior.
+A Protocol-defined intent that a supporting Asset can execute, with defined inputs and observable behavior.
 _Avoid_: arbitrary function, Task
 
 **Command Catalog**:
@@ -115,28 +188,52 @@ The Protocol-owned collection of Command definitions and schemas. Assets declare
 One request to execute a Command on one assigned Asset, with a recorded lifecycle and outcome.
 _Avoid_: Command definition, mutable assignment
 
+**Required result**:
+An Object the assigned Asset declares its Task needs before the Task can be Completed.
+_Avoid_: attachment, optional result
+
+**Required-result protection**:
+Keeping a Required result from being deleted from the acceptance of its declaration until Reset, even after the Task ends.
+_Avoid_: Object lock
+
 **Collection finished**:
-The end of a scan's data gathering, reported by its Asset. Its required results may still be uploading.
+The end of a scan's data gathering, reported by its Asset. Its Required results may still be uploading.
 _Avoid_: Completed Task, Task lifecycle status
 
 **Task scheduling**:
 The selection of queued execution or immediate handling for a Task, within the Command and Asset's supported behavior.
 
+**Queued Task**:
+A Task the Asset executes in order with its other queued Tasks.
+_Avoid_: pending Task
+
+**Immediate Task**:
+A Task the Asset handles promptly on receipt, outside its queue order. Pause and Resume are Immediate Tasks.
+_Avoid_: priority Task, guaranteed instant execution
+
+**Queue revision**:
+A requested change to the order of an Asset's unstarted Queued Tasks. Core records it separately from the order the Asset confirms adopting.
+_Avoid_: confirmed order, execution order
+
 **Pause Command**:
-An immediate Command that interrupts the Asset's current queued Task and leaves the Asset waiting in its own idle or holding behavior, preserving the remaining queue.
+An immediate Command that suspends the Asset's current Queued Task and leaves the Asset waiting in its own idle behavior, preserving the remaining queue.
 _Avoid_: cancellation, emergency stop, merely waiting for current work to finish
 
 **Resume Command**:
-An immediate Command that releases an Asset's paused condition and continues its suspended Task before the remaining queue. A Task that cannot safely resume reports failure.
-_Avoid_: recreating or automatically rerunning interrupted work
+An immediate Command that releases an Asset's paused condition and continues its suspended Task before the remaining queue. A Task that cannot safely resume reports failure, and the Asset stays paused.
+_Avoid_: recreating or automatically rerunning suspended work
 
 **Paused Task**:
-A Task whose execution the Asset has confirmed is suspended; it remains nonterminal and retains its progress.
-_Avoid_: an unstarted Task, a cancelled Task
+A Task whose execution the Asset has confirmed is suspended, also called a suspended Task; it remains nonterminal and retains its progress.
+_Avoid_: an unstarted Task, a cancelled Task, an interrupted Task
 
 **Task cancellation request**:
-A request to withdraw a Task, represented by its nonterminal Cancellation requested status. The request does not establish that execution stopped; Canceled requires Asset confirmation.
-_Avoid_: Canceled, proof that execution stopped
+A request to withdraw a Task, represented by its nonterminal Cancellation requested status. The request does not establish that execution stopped; Cancelled requires Asset confirmation.
+_Avoid_: Cancelled, proof that execution stopped
+
+**Cancellation declined**:
+An Asset's report that it cannot withdraw a Task, returning the Task to the execution status its reports establish. The refusal remains part of the Task's record.
+_Avoid_: Failed, Cancelled
 
 **Object**:
 Stored file content and associated descriptive metadata, published when ready for use. Content is immutable; metadata can change. An Object can reference related Entities and Tasks.
@@ -148,6 +245,7 @@ _Avoid_: complete Entity snapshot
 
 **Local operational picture**:
 The SDK's latest-known view of Entities, Tasks and Object metadata maintained from Core changes. It may lag while changes are in transit or synchronization is interrupted.
+_Avoid_: full picture, synchronized picture, shared picture, SDK picture
 
 **Operator**:
 A person using Atlas, represented by identity information such as a name and personal settings.
@@ -156,12 +254,20 @@ _Avoid_: permission role
 ## Extensions and external data
 
 **Plugin**:
-An Atlas-managed extension that exposes Operations, processes Atlas data, or gathers External source data. It is not itself taskable.
+An Atlas-managed extension that offers Plugin capabilities, processes Atlas data, or gathers External source data. It is not itself taskable.
 _Avoid_: Asset, External source
 
+**Plugin capability**:
+Something a Plugin offers for invocation through Atlas. Each invocation is a separate Operation.
+_Avoid_: Operation, arbitrary endpoint
+
 **Operation**:
-An invocation of a Plugin capability through Atlas that produces a result. Its processing can continue independently of the invoking operator’s connection.
-_Avoid_: Atlas Task, Asset Command, Datastream, arbitrary endpoint
+One submitted invocation of a Plugin capability, with its own identity, lifecycle and outcome. A deliberate rerun is a new Operation. Its processing can continue independently of the invoking operator’s connection.
+_Avoid_: Operation attempt, Plugin capability, Atlas Task, Asset Command, Datastream
+
+**Interrupted Operation**:
+An Operation whose outcome Core can no longer establish. It is terminal and records uncertainty, not proof that nothing happened.
+_Avoid_: Paused Task, suspended Task, Failed
 
 **External source**:
 A system outside Atlas from which a Plugin obtains data.
