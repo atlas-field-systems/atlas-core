@@ -133,7 +133,6 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 - API-key wire encoding, verifier scheme and the exact setup commands for the first key and for recovery.
 - Connection-close and error encoding for revocation, which is Protocol work.
 - The retirement HTTP binding, SDK signature, record fields, and retry and response encodings.
-- A reactivation policy for recovered retired devices.
 - Operator profile fields and lifecycle.
 
 ## Decisions
