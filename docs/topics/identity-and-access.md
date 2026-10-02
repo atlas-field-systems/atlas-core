@@ -40,6 +40,8 @@ Core records immutable Open enrollment provenance with each identity's installat
 
 #### Cleanup after testing
 
+This cleanup action is an accepted contract; implementation remains future work.
+
 The CLI/TUI lists identities enrolled under Open enrollment, including retained IDs without a current Asset Entity, and provides an explicit local cleanup action. Core must be running with its Dataset open. The operator confirms the exact selected Asset IDs and is told that revocation lasts until Hard Reset. The confirmed selection carries the Asset IDs and their bound installation principals; it never expands to identities enrolled afterward. Cleanup is separate from switching Open enrollment off, and local management serializes its execution with lifecycle actions under [local lifecycle coordination](../architecture/system-design.md#local-lifecycle-coordination).
 
 For each selected target, Core revalidates the exact confirmed binding, its enrollment provenance and current Entity state and commits the outcome in a separate [write commit](../architecture/system-design.md#write-commits), serialized with registration, credential provisioning and replacement, deletion and retirement. A changed or removed binding, or a target not enrolled under Open enrollment, is rejected without effect; reusing an Asset ID after Hard Reset cannot make an old selection authorize revoking the new identity. If its Asset Entity exists, cleanup uses [Asset retirement](#asset-retirement), preserving unresolved Tasks and execution evidence. If no Entity exists, cleanup revokes all credentials and denies the retained installation binding without creating an Entity or a retirement claim. Both paths prevent automatic re-registration and credential re-provisioning for the revoked identity until Hard Reset. Cleanup never invents a Task outcome or claims that physical execution stopped.
@@ -136,7 +138,7 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 - Delete Asset: `DELETE /entities/{entity_id}` in the [Entities routes](../api-endpoints.md#entities).
 - Retire Asset: accepted [SDK operation](sdk.md#operations-catalog); its [HTTP route](../api-endpoints.md#remaining-contract-details) is not yet selected.
 - API keys: list, create and revoke in the [API-key routes](../api-endpoints.md#api-keys).
-- Local CLI/TUI actions: switch Open enrollment, [clean up selected test identities](#cleanup-after-testing), re-provision a lost Asset credential, revoke credentials where applicable and list retained and revoked Asset IDs, under [local administration](../architecture/system-design.md#local-administration). Test-identity cleanup has no public HTTP route or SDK method.
+- Local CLI/TUI actions: switch Open enrollment, the planned [cleanup of selected test identities](#cleanup-after-testing), re-provision a lost Asset credential, revoke credentials where applicable and list retained and revoked Asset IDs, under [local administration](../architecture/system-design.md#local-administration). Test-identity cleanup has no public HTTP route or SDK method.
 
 ## Open questions
 
