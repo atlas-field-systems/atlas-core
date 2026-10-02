@@ -24,7 +24,9 @@ The CLI and TUI share a local management implementation for Core lifecycle, Rese
 
 Plugin management is local-only, with no public API endpoints, SDK methods or public Protocol generation, under [Plugins](../topics/plugins.md#local-administration).
 
-Local tools also switch [Open enrollment](../topics/identity-and-access.md#open-enrollment), [re-provision a lost Asset credential](../topics/identity-and-access.md#lost-asset-credentials) and list retained and revoked Asset IDs.
+Local tools also switch [Open enrollment](../topics/identity-and-access.md#open-enrollment), [clean up selected test identities](../topics/identity-and-access.md#cleanup-after-testing), [re-provision a lost Asset credential](../topics/identity-and-access.md#lost-asset-credentials) and list retained and revoked Asset IDs.
+
+Local management confirms the selected cleanup IDs and submits one Core-owned workflow through its private coordination while Core runs. Entities coordinates each target's commit and reuses ordinary retirement when an Asset Entity exists; Identity and access owns enrollment provenance, retained binding denial and credential revocation. Revalidate those facts inside the existing [write commit](#write-commits), so callers do not choose between retirement and retained-identity cleanup using an earlier list result. The credential owner also supplies the Open enrollment summary to health rather than exposing its private tables.
 
 Local administrative actions are recorded in [Activity history](../topics/history.md#local-actions).
 
@@ -52,7 +54,7 @@ Start, Restart and Reset share this one path, and each module keeps the locality
 
 ## Identity and access
 
-Callers, their permissions, Enrollment, Asset registration, credentials and the access effects of Asset deletion and retirement are specified in [Identity and access](../topics/identity-and-access.md).
+Callers, their permissions, Enrollment, Asset registration, credentials and the access effects of Asset deletion, retirement and Open enrollment cleanup are specified in [Identity and access](../topics/identity-and-access.md).
 
 Track publisher authorship, separate from descriptive edits and broad operational read access, follows [one publisher per Track](../topics/tracks-and-geofeatures.md#one-publisher-per-track).
 
@@ -143,14 +145,14 @@ Both acquire SQLite's write lock at the start of the transaction, which serializ
 
 ### Retry identity
 
-One retry identity module serves every lost-response retry: Task creation, Asset registration, Asset retirement, Object upload, Plugin Operation submission, queue edit, cancellation request and API-key creation. Inside the caller's commit, a claim supplies the kind, scope (Dataset or installation), identity and canonical original request facts. It returns one of:
+One retry identity module serves request-result replay for Task creation, Asset registration, Asset retirement, Object upload, Plugin Operation submission, queue edit, cancellation request and API-key creation. Inside the caller's commit, a claim supplies the kind, scope (Dataset or installation), identity and canonical original request facts. It returns one of:
 
 - First: no earlier claim; the caller performs the effect and records its result against the identity.
 - Replay: an identical earlier claim; return its recorded result without repeating the effect.
 - Conflict: the identity was used with different original facts; fail explicitly.
 - Ended: the recorded result was later deleted or revoked; return the explicit deleted-result or revoked outcome without resurrection.
 
-Comparison always uses the original facts, never editable current state. Dataset-scoped identities are cleared by Reset; installation-scoped identities survive until Hard Reset. Each kind keeps its own facts, authorization checks and retention rules in its owning contract; the module shares only the mechanism, not the single UUID/hash replacement that the [planning reconciliation](../planning-reconciliation.md) rejected. Asset report identities stay in report acceptance because they also carry ordering and freshness. Movement-sample and activity deduplication follow the identity of the action that produced them.
+Comparison always uses the original facts, never editable current state. Dataset-scoped identities are cleared by Reset; installation-scoped identities survive until Hard Reset. Each kind keeps its own facts, authorization checks and retention rules in its owning contract; the module shares only the mechanism, not the single UUID/hash replacement that the [planning reconciliation](../planning-reconciliation.md) rejected. Asset report identities stay in report acceptance because they also carry ordering and freshness. Movement-sample and activity deduplication follow the identity of the action that produced them. Local [Open enrollment cleanup](../topics/identity-and-access.md#cleanup-after-testing) uses confirmed binding denial for idempotence rather than a separate request-result replay claim.
 
 Asset retirement uses its own Dataset-scoped claim kind inside the Entities retirement commit. Its canonical original facts include the target Asset ID and any submitted retirement parameters; compare them with the original request, not current Entity or credential state. First records the retired result with the atomic effects and activity; an authorized Replay returns that result without repeating them. Reusing the identity for another Asset or changed parameters is Conflict. If ordinary deletion later removes the retired Entity, Ended returns a deleted-result outcome without recreating it. Revoking Asset credentials does not itself end the operator's retirement claim. Reset clears the claim and rejects obsolete-Dataset retries, while the installation-scoped retirement denial remains under [retired identity after Reset](../topics/identity-and-access.md#retired-identity-after-reset). Exact parameter fields and encoding remain schema work.
 
