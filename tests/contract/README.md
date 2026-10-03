@@ -1,6 +1,6 @@
 # Slice 0 contract checks
 
-This is the production foundation's isolated contract fixture for [#95](https://github.com/atlas-field-systems/atlas-core/issues/95), within [spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94). The [#69 proof](../../docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) remains unchanged as prior art. A passing fixture is not an implemented operational Core API.
+This is the production foundation's isolated contract fixture for [spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94). The [#69 proof](../../docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) remains unchanged as prior art. A passing fixture is not an implemented operational Core API.
 
 From a supported clean checkout:
 
@@ -10,7 +10,15 @@ python3 scripts/verify.py --bootstrap
 
 Prerequisites and exact locks are in [Protocol](../../Atlas%20Protocol/README.md). CI runs that same command for every pull request and branch push. It preserves `.artifacts/verification.log` and the passing `.artifacts/verification.json` report, including source revision, working-tree status, exact tool pins and regenerated file digests. A failed check removes any previous passing report. Required checks cannot be skipped by this entry point.
 
-The agreed behavioral boundary is generated TypeScript transport over actual loopback HTTP to generated Go strict interfaces, real temporary SQLite in WAL mode, and private temporary file locations. The independently authored direct-HTTP path starts from an equivalent separate fixture and checks the same literal expected outcome. Profile and runner checks supplement that workflow where the public boundary is schema consumption or process lifetime. Clean generation is a separate build check, never a behavioral oracle.
+The agreed behavioral boundary is generated TypeScript transport over actual loopback HTTP to generated Go strict interfaces, real temporary SQLite in WAL mode, and private temporary file locations. The independently authored direct-HTTP path starts from an equivalent separate fixture and checks the same literal expected outcome. Profile, non-HTTP message, local Catalog and runner checks supplement that workflow where the public boundary is schema consumption, package lookup or process lifetime. Clean generation is a separate build check, never a behavioral oracle.
+
+| Coverage | Requirement-to-implementation-to-check record |
+| --- | --- |
+| Foundation, generation, locks and fixture lifetime (#95) | Table below |
+| Patch fidelity, structural rejection and typed request errors (#96) | [Request and patch qualification](README-96.md) |
+| Untrusted responses and artificial-edition compatibility (#97) | [Response qualification](README-97.md) |
+| Shared report context, precision and canonical non-HTTP messages (#98) | [Report and message fidelity](README-98.md) |
+| Local Command Catalog and canonical input associations (#99) | [Representative Catalog](README-99.md) |
 
 | #95 requirement | Implementation | Executed check |
 | --- | --- | --- |
@@ -33,6 +41,6 @@ Add uniquely named fixture-only routes/components in a `*.contract.json` fragmen
 
 ## Current limits
 
-#95 establishes one valid value workflow, structural boundary participation, toolchain reconstruction and fixture lifetime. It also checks the baseline decimal syntax and inherited commit-cursor requirement. The other five tickets own richer patch/request negatives, corrupted responses and artificial-edition compatibility, shared report/message fixtures, local Command Catalog and binary-transfer qualification. Prior research qualification does not count as executed coverage of those new deliverables.
+#95 establishes the value workflow, structural boundary participation, toolchain reconstruction and fixture lifetime. The linked coverage records extend that same foundation with patch/request negatives, corrupted responses and artificial-edition compatibility, shared report/message fixtures and local Command Catalog checks. Binary-transfer qualification remains with #100. Prior research qualification does not count as executed coverage of a new deliverable.
 
-The representative `0.2.0` contract edition, Dataset ID and `fixture:commit:1` cursor are test facts. This ticket does not implement discovery, real edition negotiation, commit-time Reset protection, replay meaning, correlation-ID allocation or actual release compatibility. Public operational endpoint/resource schemas remain with their owning later slices. It implements no enrollment, Tasks, Object publication, Plugin execution, synchronization, TLS, host lifecycle, quota, capacity, crash durability or field-readiness guarantee. Operational SDK helpers retain the accepted unknown-outcome and safe-retry obligations; a response validation failure alone cannot establish that a mutation was rejected.
+The artificial `0.1.0`/`0.2.0` editions, fixed Dataset ID and representative commit cursors are test facts. Slice 0 does not implement discovery, real edition negotiation, commit-time Reset protection, cursor assignment/replay meaning or actual release compatibility. Request errors allocate diagnostic correlation IDs without establishing submission identity or a commit outcome. Public operational endpoint/resource schemas remain with their owning later slices. It implements no enrollment, Tasks, Object publication, Plugin execution, synchronization, TLS, host lifecycle, quota, capacity, crash durability or field-readiness guarantee. Operational SDK helpers retain the accepted unknown-outcome and safe-retry obligations; a response validation failure alone cannot establish that a mutation was rejected.
