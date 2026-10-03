@@ -34,6 +34,8 @@ def generate(env, go, sqlc):
             shutil.rmtree(directory)
         directory.mkdir(parents=True)
     assemble_contract()
+    # Package the identical canonical artifact for offline Catalog validation.
+    shutil.copyfile(ROOT / "Atlas Protocol/protocol.json", ROOT / "Atlas SDK/generated/protocol.json")
     generator_module = ROOT / "Atlas Protocol/tools/go.mod"
     for directory, spec, output in [(ROOT / "Atlas Protocol", "protocol.json", ROOT / "Atlas Core/generated/protocol/protocol.gen.go"),
                                     (ROOT / "tests/contract", "generated/protocol.json", ROOT / "Atlas Core/tests/contractfixture/generated/contract/contract.gen.go")]:

@@ -56,6 +56,82 @@
           "longitude"
         ]
       },
+      "MoveToPositionTarget": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["position"] },
+          "position": { "$ref": "#/components/schemas/Position" }
+        },
+        "required": ["kind", "position"]
+      },
+      "MoveToGeofeatureTarget": {
+        "description": "Structural identity only. Task admission must resolve a live point Geofeature.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["geofeature"] },
+          "geofeature_id": { "$ref": "#/components/schemas/Identifier" }
+        },
+        "required": ["kind", "geofeature_id"]
+      },
+      "MoveToTarget": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/MoveToPositionTarget" },
+          { "$ref": "#/components/schemas/MoveToGeofeatureTarget" }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "position": "#/components/schemas/MoveToPositionTarget",
+            "geofeature": "#/components/schemas/MoveToGeofeatureTarget"
+          }
+        }
+      },
+      "TargetAltitude": {
+        "description": "Optional target height in metres above the WGS84 ellipsoid. Omission imposes no vertical target.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value_m": { "type": "number", "format": "double" },
+          "vertical_reference": { "type": "string", "enum": ["wgs84_ellipsoid"] }
+        },
+        "required": ["value_m", "vertical_reference"]
+      },
+      "MoveTo": {
+        "description": "Representative input binding only. Task admission, validity, references and execution remain operational work.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "enum": ["move_to"] },
+          "target": { "$ref": "#/components/schemas/MoveToTarget" },
+          "target_altitude": { "$ref": "#/components/schemas/TargetAltitude" }
+        },
+        "required": ["command", "target"],
+        "x-atlas-command": {
+          "name": "move_to",
+          "scheduling": ["queued", "immediate"],
+          "default_scheduling": "queued",
+          "success": "arrival_reported_by_asset",
+          "binding": "representative"
+        }
+      },
+      "Pause": {
+        "description": "Representative tagged input binding only. Control ordering, validity and suspension remain operational work.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "enum": ["pause"] }
+        },
+        "required": ["command"],
+        "x-atlas-command": {
+          "name": "pause",
+          "scheduling": ["immediate"],
+          "default_scheduling": "immediate",
+          "success": "suspension_reported_by_asset",
+          "binding": "representative"
+        }
+      },
       "EvidenceOrigin": {
         "type": "object",
         "nullable": true,
