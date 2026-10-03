@@ -57,3 +57,11 @@ Position always supplies both latitude and longitude. Each coordinate explicitly
 Ajv keeps strict schema checking except `strictRequired`, a compilation diagnostic that treats a field required by one `allOf` member as undeclared when another member defines it. Runtime `required` validation remains enabled. An independent profile check confirms the composed mutation context rejects an absent commit cursor. This is a supported adapter configuration, not another declaration of that field.
 
 External references, recursive schemas, other composition profiles, nullable enum combinations, OpenAPI 3.1/3.2 features and custom endpoint templates remain unqualified. A new feature needs an independent fixture and executed check before adoption. Operational range, authority and cross-field decisions stay with their owning modules.
+
+### JSON request representation
+
+A JSON request contains one complete UTF-8 document. Object member names must be unique within each object after JSON escape decoding, including objects nested in arrays. Reject duplicate names before schema validation and typed decoding so both consumers see the same value.
+
+String values and member names must represent Unicode scalar values. Reject invalid UTF-8 and escaped unpaired surrogates such as `"\ud800"` or `"\udc00"` before decoding can replace them with `�`. Valid multibyte text, properly paired surrogate escapes and literal backslash text remain supported. The user selected rejection of unpaired surrogate escapes in the [3 October decision](../docs/planning-reconciliation.md#json-request-representation-3-october-2026).
+
+The Core adapter requires an explicit positive request-body bound and applies it before document or schema checks consume the stream. Fixture limits are qualification values, not production sizing. The [request checks](../tests/contract/README-96.md) verify rejection without persistence effects and valid Unicode round trips.
