@@ -78,19 +78,16 @@ function responseValidation(expectedVersion: string): Middleware {
 const child = spawn("./.proof-server", [], { stdio: ["ignore", "pipe", "inherit"] });
 const exited = once(child, "exit");
 let baseUrl = "";
-const ready = await new Promise<string>((resolve, reject) => {
+const ready = new Promise<string>((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error("proof server readiness timeout")), 10_000);
-  child.once("error", reject);
-  child.once("exit", () => reject(new Error("proof server exited before readiness")));
+  child.once("error", (error) => { clearTimeout(timer); reject(error); });
+  child.once("exit", () => { clearTimeout(timer); reject(new Error("proof server exited before readiness")); });
   child.stdout.setEncoding("utf8");
   child.stdout.on("data", (data: string) => {
     const match = /^ready (http:\/\/\S+) sqlite=(\S+)/u.exec(data);
     if (match?.[1]) { clearTimeout(timer); console.log(data.trim()); resolve(match[1]); }
   });
 });
-baseUrl = ready;
-const client = createClient<paths>({ baseUrl, headers });
-client.use(responseValidation(currentVersion));
 let checks = 0;
 function pass(name: string) { checks++; console.log(`PASS ${name}`); }
 async function reset() {
@@ -105,6 +102,9 @@ async function raw(path: string, method: string, body?: unknown, overrides?: Rec
   });
 }
 try {
+  baseUrl = await ready;
+  const client = createClient<paths>({ baseUrl, headers });
+  client.use(responseValidation(currentVersion));
   for (const candidate of fixtures.valid_entities) assert(validEntity(candidate));
   for (const candidate of fixtures.invalid_entities) assert(!validEntity(candidate));
   pass("Entity variant schemas accept valid and reject invalid fixtures");
@@ -126,6 +126,34 @@ try {
     assert.deepEqual(stored.data?.data, scenario.expected, `${scenario.name} persisted SQLite value`);
     pass(scenario.name);
   }
+  const sequence = fixtures.cleared_component_sequence;
+  for (const mode of ["direct", "generated"]) {
+    await reset();
+    async function patchEntity(body: components["schemas"]["EntityPatch"]) {
+      if (mode === "direct") {
+        const response = await raw("/entity", "PATCH", body);
+        const value: unknown = await response.json();
+        return { status: response.status, value };
+      }
+      const response = await client.PATCH("/entity", { params, body });
+      return { status: response.response.status, value: response.data ?? response.error };
+    }
+    const cleared = await patchEntity(sequence.clear);
+    assert.equal(cleared.status, 200); assert(validEntityResponse(cleared.value));
+    assert.deepEqual(cleared.value.data, sequence.expected_cleared);
+    for (const patch of sequence.incomplete) {
+      const rejected = await patchEntity(patch);
+      assert.equal(rejected.status, 400); assert(validError(rejected.value));
+      assert.equal(rejected.value.error.code, "invalid_request");
+      assert.deepEqual((await client.GET("/entity", { params })).data?.data, sequence.expected_cleared);
+    }
+    const recreated = await patchEntity(sequence.recreate);
+    assert.equal(recreated.status, 200); assert(validEntityResponse(recreated.value));
+    assert.deepEqual(recreated.value.data, sequence.expected_recreated);
+    assert.deepEqual((await client.GET("/entity", { params })).data?.data, sequence.expected_recreated);
+  }
+  await reset();
+  pass("cleared component rejects incomplete patches atomically and accepts complete recreation in both paths");
   for (const scenario of fixtures.invalid_requests) {
     const validate = scenario.path === "/entity" ? validPatch : scenario.path === "/command" ? validCommand : validReport;
     assert(!validate(scenario.body), `${scenario.name} SDK input validation`);
@@ -209,6 +237,36 @@ try {
     faultClient.use(responseValidation(currentVersion));
     await assert.rejects(() => faultClient.GET("/entity", { params }));
     pass(`malformed successful response ${fault} rejected by SDK boundary`);
+  }
+  const cursorFaultClient = createClient<paths>({ baseUrl, headers, fetch: (request) => {
+    const url = new URL(request.url); url.searchParams.set("fault", "cursor");
+    return fetch(new Request(url, request));
+  } });
+  cursorFaultClient.use(responseValidation(currentVersion));
+  const commandFixture = fixtures.valid_commands[0];
+  assert(commandFixture); assert(validCommand(commandFixture));
+  const reportFixture = contextFixture.body;
+  assert(validReport(reportFixture));
+  for (const mutation of [
+    { name: "Entity patch", send: () => cursorFaultClient.PATCH("/entity", { params, body: {} }) },
+    { name: "Command", send: () => cursorFaultClient.POST("/command", { params, body: commandFixture }) },
+    { name: "report", send: () => cursorFaultClient.POST("/report", { params, body: reportFixture }) },
+    { name: "Object upload", send: () => cursorFaultClient.PUT("/object", {
+      params, body: binaryString, bodySerializer: (body) => Uint8Array.from(body, (character) => character.charCodeAt(0)),
+      headers: { "Content-Type": "application/octet-stream" },
+    }) },
+  ]) {
+    await assert.rejects(mutation.send, /invalid response shape/u);
+    pass(`${mutation.name} response without required commit cursor rejected`);
+  }
+  for (const fault of ["error_dataset_header", "error_version_header"]) {
+    const faultClient = createClient<paths>({ baseUrl, headers, fetch: (request) => {
+      const url = new URL(request.url); url.searchParams.set("fault", fault);
+      return fetch(new Request(url, request));
+    } });
+    faultClient.use(responseValidation(currentVersion));
+    await assert.rejects(() => faultClient.GET("/entity", { params }), /invalid response (Dataset|Protocol)/u);
+    pass(`${fault} missing from JSON error rejected`);
   }
 
   assert(validEvent(fixtures.valid_event)); assert(!validEvent(fixtures.invalid_event));

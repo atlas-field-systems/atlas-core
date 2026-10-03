@@ -13,7 +13,10 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parent
 LOCK = json.loads((ROOT / "toolchain.json").read_text())
-PREFIX = Path(os.environ.get("ATLAS_PROOF_TOOLS", "/tmp/atlas-protocol-tools"))
+PREFIX = Path(os.environ.get(
+    "ATLAS_PROOF_TOOLS",
+    Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "atlas-protocol-tools",
+))
 
 
 def install_archive(tool, destination):
@@ -22,7 +25,9 @@ def install_archive(tool, destination):
         with urllib.request.urlopen(tool["linux_amd64_url"]) as source:
             shutil.copyfileobj(source, download)
         download.flush()
-        assert hashlib.sha256(Path(download.name).read_bytes()).hexdigest() == tool["sha256"]
+        digest = hashlib.sha256(Path(download.name).read_bytes()).hexdigest()
+        if digest != tool["sha256"]:
+            raise SystemExit(f"checksum mismatch for {tool['linux_amd64_url']}: {digest}")
         with tarfile.open(download.name) as archive:
             archive.extractall(destination, filter="data")
 
@@ -43,7 +48,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bootstrap", action="store_true", help="download checksum-pinned Go/sqlc when absent")
     args = parser.parse_args()
-    PREFIX.mkdir(parents=True, exist_ok=True)
+    PREFIX.mkdir(mode=0o700, parents=True, exist_ok=True)
     go = PREFIX / "go/bin/go"
     sqlc = PREFIX / "bin/sqlc"
     if args.bootstrap:
@@ -52,10 +57,15 @@ def main():
     if not go.exists() or not sqlc.exists():
         parser.error("Go/sqlc are absent; use --bootstrap or ATLAS_PROOF_TOOLS")
     env = {**os.environ, "PATH": str(go.parent) + os.pathsep + os.environ["PATH"], "GOFLAGS": "-mod=readonly"}
-    assert run([go, "version"], env, True).split()[2] == LOCK["go"]["version"]
-    assert run([sqlc, "version"], env, True) == LOCK["sqlc"]["version"]
-    assert run(["node", "--version"], env, True) == LOCK["node"]
-    assert run(["npm", "--version"], env, True) == LOCK["npm"]
+    go_version = run([go, "version"], env, True)
+    if go_version.split()[2] != LOCK["go"]["version"]:
+        raise SystemExit(f"unexpected Go version: {go_version}")
+    for command, expected in [([sqlc, "version"], LOCK["sqlc"]["version"]),
+                              (["node", "--version"], LOCK["node"]),
+                              (["npm", "--version"], LOCK["npm"])]:
+        actual = run(command, env, True)
+        if actual != expected:
+            raise SystemExit(f"unexpected version for {command[0]}: {actual}")
     run(["npm", "ci", "--ignore-scripts"], env)
     run([go, "mod", "verify"], env)
 
@@ -70,13 +80,16 @@ def main():
 
     generate()
     first = snapshot()
-    assert first, "no generated outputs"
+    if not first:
+        raise SystemExit("no generated outputs")
     generate()
-    assert snapshot() == first, "clean regeneration changed output"
+    if snapshot() != first:
+        raise SystemExit("clean regeneration changed output")
     print(f"PASS clean regeneration: {len(first)} files match byte-for-byte", flush=True)
     run(["npm", "run", "check"], env)
     formatted = run([go.parent / "gofmt", "-l", "server.go", "server_test.go"], env, True)
-    assert not formatted, f"Go formatting mismatch: {formatted}"
+    if formatted:
+        raise SystemExit(f"Go formatting mismatch: {formatted}")
     run([go, "test", "./..."], env)
     run([go, "vet", "./..."], env)
     run([go, "build", "-o", ".proof-server", "."], env)

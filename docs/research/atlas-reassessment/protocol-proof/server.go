@@ -78,7 +78,7 @@ func (s *proofServer) GetEntity(ctx context.Context, r contract.GetEntityRequest
 	if err != nil {
 		return nil, err
 	}
-	return contract.GetEntity200JSONResponse{Body: contract.EntityResponse{DatasetId: s.dataset.DatasetId, Data: entity}}, nil
+	return contract.GetEntity200JSONResponse{Body: contract.EntityResponse{DatasetId: s.dataset.DatasetId, Data: entity}, Headers: contract.GetEntity200ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
 }
 func (s *proofServer) PatchEntity(ctx context.Context, r contract.PatchEntityRequestObject) (contract.PatchEntityResponseObject, error) {
 	entity, err := s.entity(ctx)
@@ -109,7 +109,12 @@ func (s *proofServer) PatchEntity(ctx context.Context, r contract.PatchEntityReq
 			}
 			current, err := asset.FixtureComponent.Get()
 			if err != nil {
-				return nil, fmt.Errorf("patch cleared fixture component: %w", err)
+				if update.Left == nil || update.Right == nil {
+					return contract.PatchEntity400JSONResponse{Body: contract.Error{Error: contract.ErrorInfo{
+						Code: contract.InvalidRequest, Message: "Creating a cleared component requires both fields", RequestId: [16]byte{},
+					}}, Headers: contract.PatchEntity400ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
+				}
+				current = contract.FixtureComponent{}
 			}
 			if update.Left != nil {
 				current.Left = *update.Left
@@ -127,22 +132,22 @@ func (s *proofServer) PatchEntity(ctx context.Context, r contract.PatchEntityReq
 	if err != nil {
 		return nil, err
 	}
-	return contract.PatchEntity200JSONResponse{Body: contract.EntityResponse{DatasetId: s.dataset.DatasetId, Data: entity, CommitCursor: &s.cursor}}, nil
+	return contract.PatchEntity200JSONResponse{Body: contract.EntityMutationResponse{DatasetId: s.dataset.DatasetId, Data: entity, CommitCursor: s.cursor}, Headers: contract.PatchEntity200ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
 }
 func (s *proofServer) ExecuteCommand(ctx context.Context, r contract.ExecuteCommandRequestObject) (contract.ExecuteCommandResponseObject, error) {
 	if r.Body == nil {
 		return nil, errors.New("validated Command body missing")
 	}
-	return contract.ExecuteCommand200JSONResponse{Body: contract.CommandResponse{DatasetId: s.dataset.DatasetId, Data: *r.Body, CommitCursor: &s.cursor}}, nil
+	return contract.ExecuteCommand200JSONResponse{Body: contract.CommandResponse{DatasetId: s.dataset.DatasetId, Data: *r.Body, CommitCursor: s.cursor}, Headers: contract.ExecuteCommand200ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
 }
 func (s *proofServer) AcceptReport(ctx context.Context, r contract.AcceptReportRequestObject) (contract.AcceptReportResponseObject, error) {
 	if r.Body == nil {
 		return nil, errors.New("validated report body missing")
 	}
-	return contract.AcceptReport200JSONResponse{Body: contract.TaskReportResponse{DatasetId: s.dataset.DatasetId, Data: *r.Body, CommitCursor: &s.cursor}}, nil
+	return contract.AcceptReport200JSONResponse{Body: contract.TaskReportResponse{DatasetId: s.dataset.DatasetId, Data: *r.Body, CommitCursor: s.cursor}, Headers: contract.AcceptReport200ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
 }
 func (s *proofServer) GetObject(ctx context.Context, r contract.GetObjectRequestObject) (contract.GetObjectResponseObject, error) {
-	return contract.GetObject200JSONResponse{Body: contract.ObjectMetadataResponse{DatasetId: s.dataset.DatasetId, Data: s.object}}, nil
+	return contract.GetObject200JSONResponse{Body: contract.ObjectMetadataResponse{DatasetId: s.dataset.DatasetId, Data: s.object}, Headers: contract.GetObject200ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
 }
 func (s *proofServer) PutObject(ctx context.Context, r contract.PutObjectRequestObject) (contract.PutObjectResponseObject, error) {
 	file, err := os.Create(s.contentPath)
@@ -158,7 +163,7 @@ func (s *proofServer) PutObject(ctx context.Context, r contract.PutObjectRequest
 		return nil, fmt.Errorf("close proof content: %w", closeErr)
 	}
 	s.object.SizeBytes = strconv.FormatInt(n, 10)
-	return contract.PutObject200JSONResponse{Body: contract.ObjectMetadataResponse{DatasetId: s.dataset.DatasetId, Data: s.object, CommitCursor: &s.cursor}}, nil
+	return contract.PutObject200JSONResponse{Body: contract.ObjectMetadataMutationResponse{DatasetId: s.dataset.DatasetId, Data: s.object, CommitCursor: s.cursor}, Headers: contract.PutObject200ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
 }
 func (s *proofServer) GetContent(ctx context.Context, r contract.GetContentRequestObject) (contract.GetContentResponseObject, error) {
 	file, err := os.Open(s.contentPath)
@@ -170,7 +175,7 @@ func (s *proofServer) GetContent(ctx context.Context, r contract.GetContentReque
 		closeErr := file.Close()
 		return nil, errors.Join(fmt.Errorf("size proof download: %w", err), closeErr)
 	}
-	return contract.GetContent200ApplicationoctetStreamResponse{Body: file, ContentLength: stat.Size()}, nil
+	return contract.GetContent200ApplicationoctetStreamResponse{Body: file, ContentLength: stat.Size(), Headers: contract.GetContent200ResponseHeaders{AtlasDatasetID: s.dataset.DatasetId, AtlasProtocolVersion: r.Params.AtlasProtocolVersion}}, nil
 }
 func writeError(w http.ResponseWriter, status int, code contract.ErrorInfoCode) {
 	w.Header().Set("Content-Type", "application/json")
@@ -264,12 +269,51 @@ func run() (result error) {
 			writeError(w, http.StatusConflict, contract.DatasetMismatch)
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		if r.URL.Path == "/__fixture/reset" {
 			if err := s.reset(r.Context()); err != nil {
 				http.Error(w, "fixture reset failed", 500)
 				return
 			}
 			w.WriteHeader(204)
+			return
+		}
+		// These fault responses deliberately violate otherwise valid context.
+		switch r.URL.Query().Get("fault") {
+		case "error_dataset_header", "error_version_header":
+			if r.URL.Query().Get("fault") == "error_dataset_header" {
+				w.Header().Del("Atlas-Dataset-ID")
+			} else {
+				w.Header().Del("Atlas-Protocol-Version")
+			}
+			writeError(w, http.StatusBadRequest, contract.InvalidRequest)
+			return
+		case "cursor":
+			var data json.RawMessage
+			var err error
+			switch r.URL.Path {
+			case "/entity":
+				var entity contract.Entity
+				entity, err = s.entity(r.Context())
+				if err == nil {
+					data, err = json.Marshal(entity)
+				}
+			case "/object":
+				data, err = json.Marshal(s.object)
+			default:
+				err = json.NewDecoder(r.Body).Decode(&data)
+			}
+			if err != nil {
+				http.Error(w, "read mutation fault fixture failed", 500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(struct {
+				DatasetID string          `json:"dataset_id"`
+				Data      json.RawMessage `json:"data"`
+			}{DatasetID: datasetID, Data: data}); err != nil {
+				log.Printf("write mutation fault fixture: %v", err)
+			}
 			return
 		}
 		// Inject real malformed successful responses at the HTTP boundary.
@@ -348,7 +392,6 @@ func run() (result error) {
 			}
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		if r.Method == http.MethodPut && r.URL.Path == "/object" {
 			mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			content := spec.Paths.Find("/object").Put.RequestBody.Value.Content

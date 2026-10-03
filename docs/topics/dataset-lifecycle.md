@@ -104,7 +104,7 @@ Reset is Start with a fresh Dataset. An interruption at any point completes the 
 3. With Core and all managed Plugin writers stopped, host management clears Atlas-managed diagnostic logs, the pending local activity journal and this installation's Plugin work directories. Plugin cleanup is made durable before the fresh-opening transaction can record the Reset identity; filesystem removal and the SQLite commit are separate operations.
 4. Core opens every module fresh: one SQLite transaction clears all Dataset tables, establishes the new Dataset ID and records the Reset identity in Dataset metadata. Objects then removes, by ownership, content belonging to any Dataset other than the new one, so an interrupted and retried Reset cannot leave earlier content behind.
 5. Core serves operational requests after every module is ready.
-6. The host removes the directive only after compatible enabled Plugins have started.
+6. The host removes the directive after it accounts for every compatible enabled Plugin's startup outcome: confirmed ready or a durably recorded startup fault under [recovery states](#recovery-states). A fault does not leave the Reset pending or authorize automatic restart.
 
 The coordinator does not clear module tables itself. Each module's fresh opening follows [Opening a Dataset](../architecture/system-design.md#opening-a-dataset).
 
@@ -114,7 +114,7 @@ If Plugin work-directory cleanup fails or is interrupted, the directive is retai
 
 If the next Start finds a directive whose Reset identity is not recorded, the host completes pending cleanup before Core opens fresh. Before establishment, repeated cleanup is safe because no Plugin has started new-Dataset work.
 
-Once Core records the Reset identity, the directive is established. If the next Start finds a directive whose Reset identity is recorded, Core opens retained so post-Reset data survives, and the host completes Plugin startup without clearing the Plugin work directories again. This preserves work created by Plugins that already started in the new Dataset, even if management was interrupted before starting the remaining Plugins or removing the directive. The host uses Core's private coordination for the establishment decision, preserving Core's exclusive access to its SQLite database.
+Once Core records the Reset identity, the directive is established. If the next Start finds a directive whose Reset identity is recorded, Core opens retained so post-Reset data survives, and the host accounts for remaining Plugin startup without clearing the Plugin work directories again. Previously recorded startup faults remain faulted rather than triggering another start attempt. This preserves work created by Plugins that already started in the new Dataset, even if management was interrupted before processing the remaining Plugins or removing the directive. The host uses Core's private coordination for the establishment decision, preserving Core's exclusive access to its SQLite database.
 
 ## Unfinished work after Stop or Restart
 
@@ -170,7 +170,7 @@ This page owns the Core settings contract for [#80](https://github.com/atlas-fie
 | `request_body_limit_bytes` | Positive integer within the supported 64 KiB..4 MiB range; applies to ordinary JSON, not streaming file content | Live, new requests |
 | `max_concurrent_uploads` | Integer 1..32 | Live, new admission; current accepted transfers retain their slot |
 | `max_inflight_operations_per_plugin` | Integer 1..1,024 | Live, new acceptance; never cancels already accepted work |
-| `object_quota_bytes`, `object_free_space_reserve_bytes` | Positive byte counts; quota must fit capacity after reserve, and cannot be lower than published bytes plus accepted reservations | Live, new upload reservation; preserve existing Objects |
+| `object_quota_bytes`, `object_free_space_reserve_bytes` | Positive byte counts; quota must fit capacity after reserve, and cannot be lower than all [quota-accounted Object content](objects.md#durability-and-publication-fixtures) plus accepted upload reservations, including pending cleanup content and bytes retained by active download leases; count each allocation once | Live, new upload reservation; preserve existing Objects |
 | `contact_degraded_after_ms`, `contact_offline_after_ms` | Positive integer adequate-IP default durations, degraded less than offline | Live recomputation of Communication state; no fabricated fresh Contact |
 | `contact_link_expectations` | Overrides keyed by declared Protocol capacity class, each containing positive `freshness_ms`, `degraded_after_ms` and `offline_after_ms`, with degraded less than offline | Live, future contact proofs and state derivation for that link class |
 | `replay_max_bytes`, `replay_max_age_ms` | Positive bounds; minimum bytes at least one allowed maximum-size commit | Live, prune whole oldest commit batches and advance recoverable boundary |
@@ -213,7 +213,7 @@ The following are independent expected scenarios for [#67](https://github.com/at
 | Stop cannot verify Plugin exit | Stop incomplete; startup/cleanup blocked until confirmed; no fabricated completion |
 | Reset interrupted before/partway through cleanup or before fresh commit | Unestablished directive persists; no serving/new Plugin work; next Start resumes cleanup |
 | Reset interrupted after fresh commit and one Plugin creates new work | Establishment queried through Core; retained open preserves new work and settings; no second cleanup |
-| Compatible enabled Plugin fails ready handshake during Reset startup | Dataset stays established; Plugin fault visible; remaining startup accounted for; explicit recovery, no rerun |
+| Compatible enabled Plugin fails ready handshake during Reset startup, then coordinator retries | Dataset stays established; durable Plugin fault visible; all startup outcomes accounted for and directive removed; no repeated start or cleanup; later explicit recovery does not rerun an Operation |
 | Hard Reset interrupted after Core exits, unrelated containers/files present | External marker blocks ordinary Start; resume clears only owned targets; unrelated resources/Core software survive |
 | New release replaces incompatible Dataset schema with valid setup | Explicit preflight/update retains Operator IDs, Asset bindings, retired denials, revoked verifiers and API-key creation identities |
 | Unsupported retained format or invalid desired settings at update/start | Refusal before fresh establishment; actionable safe error; local versioned repair while stopped |
@@ -225,7 +225,7 @@ The following are independent expected scenarios for [#67](https://github.com/at
 | Hard Reset, fresh setup, old credential/feed reconnect | Old authority and Dataset rejected; fresh setup required |
 | Desired revision 5 patched twice from reviewed 5 | One revision 6 commits; other conflicts without partial update/activity |
 | Concurrent-upload limit reduced from 4 to 2 while 4 admitted uploads run | Patch accepted; the 4 finish; new uploads refused until active count is below 2; no cancellation |
-| Quota reduced below published bytes plus accepted reservations | Candidate rejects atomically; no revision, deletion or partial limit change |
+| Quota reduced below accounted content plus accepted reservations, including deleted content awaiting unlink or held by an open download | Candidate rejects atomically; no revision, deletion or partial limit change; deleted content stays accounted until reclaimable, with no duplicate charge for a download lease |
 | Deferred binding/path edit then startup fails | Saved revision remains pending/failed; serving disabled; explicit local restore/correction reopens, without automatic fallback |
 
 ## Runtime lifetime

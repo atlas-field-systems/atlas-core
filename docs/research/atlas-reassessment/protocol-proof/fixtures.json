@@ -647,5 +647,67 @@
       "latitude": "north",
       "longitude": 4
     }
+  },
+  "cleared_component_sequence": {
+    "clear": {
+      "fixture_component": null
+    },
+    "expected_cleared": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "type": "asset",
+      "alias": "before",
+      "labels": [
+        "a",
+        "b"
+      ],
+      "position": {
+        "latitude": 10,
+        "longitude": 20
+      },
+      "operational_status": "ready",
+      "battery_percent": 85,
+      "fixture_component": null
+    },
+    "incomplete": [
+      {
+        "alias": "must not commit",
+        "fixture_component": {
+          "left": 30
+        }
+      },
+      {
+        "fixture_component": {
+          "right": 40
+        }
+      },
+      {
+        "fixture_component": {}
+      }
+    ],
+    "recreate": {
+      "fixture_component": {
+        "left": 0,
+        "right": 40
+      }
+    },
+    "expected_recreated": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "type": "asset",
+      "alias": "before",
+      "labels": [
+        "a",
+        "b"
+      ],
+      "position": {
+        "latitude": 10,
+        "longitude": 20
+      },
+      "operational_status": "ready",
+      "battery_percent": 85,
+      "fixture_component": {
+        "left": 0,
+        "right": 40
+      }
+    }
   }
 }

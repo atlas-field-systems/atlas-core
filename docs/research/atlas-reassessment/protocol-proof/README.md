@@ -9,7 +9,7 @@ cd docs/research/atlas-reassessment/protocol-proof
 python3 verify.py --bootstrap
 ```
 
-Bootstrap downloads the checksum-pinned Go and sqlc archives into `/tmp/atlas-protocol-tools` when absent. Set `ATLAS_PROOF_TOOLS` to another task-owned directory if needed. The pinned generator's dependency graph is in `tools/go.mod` and `tools/go.sum`; runtime dependencies are in `go.mod`, `go.sum` and `package-lock.json`. No global package installation is needed.
+Bootstrap downloads the checksum-pinned Go and sqlc archives into `$XDG_CACHE_HOME/atlas-protocol-tools`, defaulting to `~/.cache/atlas-protocol-tools`, when absent. Set `ATLAS_PROOF_TOOLS` to another user-owned directory if needed. The pinned generator's dependency graph is in `tools/go.mod` and `tools/go.sum`; runtime dependencies are in `go.mod`, `go.sum` and `package-lock.json`. No global package installation is needed.
 
 The verifier installs locked npm dependencies, removes and regenerates its entire `generated/` directory twice, compares all six generated files byte for byte, checks TypeScript and Go formatting, runs Go tests/vet, builds the fixture server and runs the client proof. Generated files, dependencies and the compiled fixture server are ignored. Editing generated output is unnecessary.
 
