@@ -1,0 +1,10 @@
+package: contract
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+  embedded-spec: true
+output: generated/contract/contract.gen.go
+output-options:
+  nullable-type: true
+  skip-prune: true

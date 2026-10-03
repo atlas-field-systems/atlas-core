@@ -12,7 +12,7 @@ Current rules: [Objects](../topics/objects.md).
 
 Publish an Object only when its content and metadata are ready, with no metadata-only public creation. Stage uploads privately under a stable, Dataset-scoped request identity. After publication, content is immutable and changed content requires a new Object ID; descriptive metadata and historical Entity/Task associations remain editable. Physical storage paths remain private.
 
-The SDK allocates the Object ID before upload, so Task completion reports and uploads can arrive in either order. Failed uploads restart from the beginning. A retry of a successful upload returns its Object, or an explicit deleted-result error after an allowed deletion, without another publication. Objects makes content durable before committing ready metadata in SQLite and reconciles interrupted publication itself.
+The SDK allocates the Object ID before upload, so result declarations and uploads can arrive in either order. Failed uploads restart from the beginning. A retry of a successful upload returns its Object, or an explicit deleted-result error after an allowed deletion, without another publication. Objects makes content durable before committing ready metadata in SQLite and reconciles interrupted publication itself. Task completion is independent under [ADR-0026](0026-record-asset-completion-independently-of-result-availability.md).
 
 A declared Required result is protected from declaration acceptance until Reset. Cancelling a Task does not cancel its uploads. An Object storage quota refuses uploads before the disk fills, and missing content is a fault in that one Object.
 
@@ -22,12 +22,13 @@ Decision history:
 - 23 September 2026: the user extended Required-result protection to begin when Core accepts the assigned Asset's declaration, rather than waiting for Task completion.
 - 26 September 2026: the user selected file-first publication. Clarified the same day: Tasks places a hold through Objects when it accepts each declaration, and Objects enforces deletion protection from its own holds.
 - 28 September 2026: the storage quota and per-Object integrity faults were accepted.
+- 3 October 2026: the user selected acknowledged-data durability across power loss on healthy storage, and allowed already-started downloads to finish after permitted deletion. The [Object durability and deletion rules](../topics/objects.md#durability-and-publication-fixtures) specify their completion boundaries.
 
 ## Rationale and alternatives
 
 - Ready-only visibility avoids partial-availability states; early visibility was considered and not chosen.
 - Restarting failed uploads from the beginning defers resumability to reduce complexity. Reconsider it only when a concrete large-file workflow over unreliable links justifies transfer-progress APIs and retained partial transfers.
-- Allocating the Object ID in the SDK supports either arrival order of completion reports and uploads without a reservation endpoint or a publicly visible placeholder.
+- Allocating the Object ID in the SDK supports either arrival order of result declarations and uploads without a reservation endpoint or a publicly visible placeholder.
 - File-first publication avoids committing readiness before the content is durable. It permits unreferenced files after interruption, which Objects must reconcile.
 - Continuing uploads after cancellation separates collected data from the instruction to stop Asset work.
 - The quota keeps the disk from filling far enough for telemetry, Task reports or other SQLite writes to fail.

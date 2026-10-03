@@ -18,6 +18,8 @@ Operator administrative clients may manage the documented configuration and cred
 
 Each Asset has its own authenticated identity, bound to its Asset ID through [Enrollment](#enrollment). Asset credentials cannot act as another Asset or administer Core. Core checks that reported Entity state comes from that Asset and that an execution report comes from the Asset assigned to the Task. A valid key or a claimed Asset ID in a request is not sufficient. The check applies on every path that can record Asset state or execution, including check-in, component and status updates, Task lifecycle reports and any generic resource mutation path. [Shared Asset report acceptance](../architecture/system-design.md#shared-asset-report-acceptance) performs the binding check for reports.
 
+Only operator clients and managed Plugins may edit an existing Entity's Descriptive fields, including Alias, subtype, descriptive media associations and Geofeature geometry. Asset and gateway credentials cannot make those edits, even to their own or bound Asset, and receive `forbidden_field` without any edit, report or Contact effect. Initial Asset registration may still supply its permitted Descriptive fields; a matching registration retry returns the current Entity without changing them. Reported/Observed authorship and read access retain their separate rules.
+
 ### Plugins
 
 Core provides each managed Plugin with a Plugin identity; operators do not provision or rotate individual Plugin API keys. Plugins use ordinary SDK operational APIs across sources, including creating and cancelling Tasks with existing Commands. They cannot impersonate an Asset's execution reports. A Plugin identity cannot manage Atlas credentials, change Core configuration, control Core lifecycle, or install or manage Plugins. Credential administration remains separate from Plugin operational access.
@@ -28,9 +30,43 @@ Plugins are trusted code with broad operational access, not isolated tenants. Th
 
 Each radio gateway has its own gateway identity, provisioned through Core. It may read like any authenticated client and may relay reports and assigned work only for the Assets bound to it, preserving the authenticated originating Asset. It has no administrative rights, cannot act as an unbound Asset, and stops relaying for an Asset that is retired or deleted. A gateway connection or a short claimed Asset ID alone is not proof of the originating Asset. Making gateways Assets in their own right is a future proposal, not an accepted direction.
 
+## Publisher continuity
+
+Track publishers use an opaque `publisher_id` distinct from an authenticated `principal_id` and, for managed Plugins, installation `plugin_id` and immutable release identity. Core resolves publisher authority from the authenticated binding; a submitted publisher ID is not permission.
+
+For a caller already permitted to create Tracks that has no managed publisher binding, Core assigns and reserves one publisher ID to its retained principal atomically with its first Track creation. The request cannot nominate another publisher. Subsequent creations and observations use that binding. A replacement credential for the same retained principal preserves its publisher; a different principal receives a different publisher and creates separate Tracks. The reservation survives Restart and ordinary Reset until Hard Reset, without preserving Dataset observations or reviving revoked credentials. This adds no caller role and does not broaden Asset or gateway writes.
+
+For a managed Plugin, authenticated local management records a new publisher identity, its trusted package provenance and its current Plugin/principal association on first provisioning. Different logical publishers receive different IDs even when their package or display name matches. Managed Plugin reinstall uses the separate proof below because the replacement installation has a new principal.
+
+Core retains publisher identity reservations and their nonsecret management provenance as Core-owned installation facts until Hard Reset; live Track attribution and observation identities belong to the Dataset and end at Reset. Uninstall removes usable Plugin credentials and the active binding, retaining historical IDs and attribution without preserving Plugin-owned configuration or private work. A Plugin update keeps its installation and publisher identity. A reinstall allocates new installation and principal IDs and can bind them to the retained publisher only through the local procedure below. Ordinary Reset cannot revive the old principal or relabel an old observation; any new report targets the new Dataset.
+
+Local management submits `publisher_id`, the new `plugin_id`/`principal_id`, verified `package_id` and `expected_binding_revision` through Core's authenticated private management interface. Core checks the installation-owner authority supplied by that interface, the retained publisher/package provenance, the new installed Plugin's principal and the expected binding revision, then commits a fresh active binding. Matching display names or a public API credential alone are insufficient. A package/source asserting a different publisher cannot modify the retained provenance to claim continuity; it receives a new publisher and new Tracks. This is same-publisher provisioning, not a transfer endpoint. A new compatible release of the same verified package may continue the publisher; its image/version identity remains separately attributable.
+
+There is one active writer association for a managed publisher. A concurrent bind against an obsolete revision conflicts. Identical retries of the same private management action replay its result without another credential or binding. Uninstall/rebind serialize with observation acceptance and credential revocation: observation-first preserves its committed facts; uninstall-first prevents the old principal's writes and feeds. New credentials are generated for the new principal. Old revoked credentials and their retry claims remain revoked even after continuity succeeds. Reads of retained Plugin Operations use their original installation identity under [Plugin historical identity](plugins.md#installation-and-historical-identity), rather than this publisher binding.
+
+| Independent continuity fixture | Expected result |
+| --- | --- |
+| Permitted non-Plugin principal R creates its first Track | One publisher P reserved to R and committed with the Track; request cannot claim another publisher |
+| Replace R's credential while retaining principal R, then update its Track | P retained; fresh credential can publish; revoked old credential cannot |
+| Different principal Q uses R's display name or supplies P | New publisher for Q or authorization rejection; no takeover of R's Track |
+| Uninstall installation I1/principal R1 publishing as P | Private Plugin setup removed, R1 revoked, P/X attribution and Dataset history retained |
+| Reinstall verified same publisher as I2/R2, local proof and expected binding revision valid | Fresh binding R2 to P; existing Track X can receive newer observations; no work rerun |
+| Reinstall under same visible name without the local binding proof | Fresh publisher or explicit binding refusal; no authority over X |
+| Another package/publisher Q supplies P's ID | Binding/observation rejection; P and X unchanged |
+| R1 retries an old report after R2 is bound | Revoked-authority rejection; no current value, sample or Contact effect |
+| Reuse I1's name for I2, then read I1's retained Operation | Original Operation remains under I1; name reuse does not reassociate it |
+| Existing Task references X while a replacement publisher creates Y | Task still references X; no automatic retargeting or outcome |
+| Reset followed by delayed old-P observation | Old Dataset rejected; stable identity alone restores no observation |
+
 ## Enrollment
 
 Each Asset receives its own authenticated identity automatically during Enrollment, without a manual per-Asset key-management workflow. Deployment tooling supplies enrollment authorization, and the SDK's [Asset client](sdk.md#asset-client) performs registration and identity provisioning automatically, without an approval click for each new Asset. The Asset URL or a claimed ID alone does not authorize Enrollment. Enrollment authorization is needed only for first Enrollment; after Reset an Asset [re-registers](#retained-asset-identity-after-reset) with its surviving credential. Keep Enrollment simple.
+
+### Asset process authority
+
+Enrollment also binds an Ed25519 `recovery_public_key` supplied under deployment authorization to the retained Asset principal. The Asset OS/deployment authority prepares and retains its private key before the request; Core stores only the public key. This key authorizes [process replacement](asset-reporting.md#process-authority-establishment-and-replacement) and is distinct from ordinary Asset request credentials and per-process report-signing keys. It is not handed to a gateway or an obsolete reporting process. Registration identity alone does not prove its ownership or authorize replacement.
+
+Recovery authority is retained with the Asset binding across Restart and ordinary Reset, but current Dataset generations and process/report identities are cleared on Reset. A revoked Asset cannot obtain new authority claims. Authorized local re-provisioning can replace lost recovery authority for an otherwise active bound identity; it cannot reassign the Asset ID to another principal or reactivate retirement/deletion denials. Any existing process authority is invalidated when its recovery binding changes, and another claim uses the current binding. The Dataset's generation counter remains reserved, so re-provisioning cannot reuse an old generation or make its signatures current again. Hard Reset clears keys and bindings together.
 
 ### Open enrollment
 
@@ -56,6 +92,14 @@ Asset registration creates the Asset's Entity in the current Dataset under its e
 
 Each Asset has a stable ID that survives restarts. Reconnecting resumes the existing record without overwriting its state with startup defaults.
 
+### Initial data and temporal facts
+
+Registration accepts the stable ID/type, optional Alias/subtype and applicable Descriptive fields, plus the initial `command_manifest`. An absent Alias becomes null and absent Command support becomes an empty list; no Command is supported until advertised. Operational status, telemetry, health and other Reported components are rejected at registration, as are Derived Contact/Communication state, retirement, queue, receipt times and caller-supplied versions. Those values require the first report or their Core-owned workflows. Invalid initial data rejects creation and first-enrollment provisioning together, rather than leaving a usable identity without its accepted registration.
+
+Core sets the resource's `created_at` and initial `updated_at` to the successful registration commit's Core time, its edit revision to `"1"`, and its synchronized resource version to that commit's version. Status is `unknown`, Communication state `offline`, and Contact `last_seen: null` under [initial values](asset-reporting.md#components-and-initial-values). Status report/receipt/change times are null and the `reporting` metadata map is empty. Optional reported components are absent, not zero-filled. The registration receipt time is not an observation time or proof of Contact, including for initial Command support. Registration makes no Movement sample and establishes no execution generation by itself.
+
+The first check-in establishes process authority as needed and reports current Reported data under [shared acceptance](asset-reporting.md#shared-report-context). Its observation/generation times remain distinct from Core receipt time. Only a valid fresh-contact proof updates Contact. There is no implicit first check-in in the creation transaction; an SDK startup helper may perform the subsequent call explicitly and must expose any failure after successful registration.
+
 ### Registration retries
 
 Registration retries reuse the Asset ID and the same Dataset-scoped registration request identity, so a lost response does not create another Asset. The Asset client prepares the registration identity and hands it to the Asset OS or deployment layer to retain before submission, so a lost response followed by an Asset process restart can still retry with it. Registration uses the shared [retry identity](../architecture/system-design.md#retry-identity) mechanism.
@@ -63,6 +107,26 @@ Registration retries reuse the Asset ID and the same Dataset-scoped registration
 Core commits the registration request identity, stable Asset ID, authenticated enrollment-principal binding, canonical initial request facts and resulting Entity/credential association atomically with Entity creation and identity provisioning. It stores enough private facts to compare a retry with the original request, not with the Asset's later mutable state. First Enrollment creates one Asset and one provisioned identity even under concurrent identical requests; conflicting request reuse or an unauthorized caller fails.
 
 A matching authorized retry returns the original registration association and the current Asset representation without reapplying startup defaults, rolling back later reports or provisioning a second credential. Recovering access to that same identity requires the enrollment proof; the request ID alone is not a secret or authorization. Registration retry records are retained across Restart until Reset, including after Entity deletion. A retry for a deleted Asset reports deletion without resurrection; a replacement requires a new ID. Registration retries cannot reactivate revoked credentials or bypass revoked enrollment authorization. Reset invalidates the old Dataset and its registrations and does not authorize replaying an old registration into a new Dataset.
+
+### Registration equality and independent fixtures
+
+Compare retry identity against canonical original registration facts: Dataset, Asset ID/type, authenticated principal/enrollment association, Descriptive inputs, initial Command support and recovery-public-key binding. Apply the explicitly declared creation defaults (absent Alias to null and absent Command support to an empty list) before this comparison. Preserve omission/null distinctions in any other field whose schema distinguishes them. Authentication secrets are not returned or compared through the public Entity representation. Later Alias, Command support, telemetry, Contact and status changes are not retry facts. A successful retry returns the original association and current Entity, not an old snapshot, and does not change any timestamp or version.
+
+These fixtures are specification evidence for [#82](https://github.com/atlas-field-systems/atlas-core/issues/82), not executed tests. Start without Asset A in Dataset D; Core times below are fixed independent inputs. Valid first-report cases include the authority claim and matching contact challenge described by [Asset reporting](asset-reporting.md#process-authority-establishment-and-replacement).
+
+| Workflow | Expected Entity and identity | Expected time, Contact and movement |
+| --- | --- | --- |
+| Register A/Alias Alpha at Core time 100 with omitted optional components/support | One bound identity/Entity; support empty; status unknown; communications offline; no telemetry | created/updated 100; report times null; last_seen null; no samples |
+| Supply initial position or status during first registration | Atomic validation rejection; no Entity, successful retry claim or usable first-enrollment identity | No timestamps, Contact or samples |
+| Supply Derived heartbeat/communication state or initial receipt time | Atomic forbidden-field rejection | No Contact or samples |
+| Lose successful registration response and retry matching facts at 101 | Original association and current Entity; no extra credential or Entity | All original times unchanged; last_seen null; no samples |
+| First fresh check-in generated 195, receipt 200, status ready and position P1 with `observation_times.position.observed_at: 195` and bounded uncertainty | Same A, generation 1; current status/position applied | reported_at 195; received/changed 200 where applicable; last_seen 200; one P1 sample at observation 195/receipt 200 |
+| Repeat registration after that check-in | Return current ready/P1 Entity; do not reapply initial unknown/empty values | Contact remains 200; no extra sample or timestamp/version change |
+| Same registration ID with changed initial Alias/support/key | Identity conflict against original facts, not current state | No effects |
+| Registration committed, then first check-in fails | Registration remains successful and inspectable; first-report error is separate | Unknown/offline/null Contact retained; no sample |
+| Reset to D2, then A re-registers at 300 using surviving credential/new request ID | Same principal/A binding; fresh Entity without old report state or enrollment approval | created/updated 300; unknown/offline/null report and Contact times; no old sample |
+| Retry D's registration/report against D2 | Obsolete-Dataset rejection without relabeling | D2 unchanged |
+| A deleted/retired or its identity revoked, then retry/register after Reset | Deleted-result or revoked/retired rejection under the applicable workflow; no resurrection | No new Contact or samples |
 
 ## Retained Asset identity after Reset
 
@@ -108,7 +172,7 @@ Retirement atomically records the administrative condition, blocks new Task assi
 
 Retirement retains the Entity and its identity, Task assignments, execution facts, histories, Object associations and required-result protection. It is neither a Task nor an Asset-reported operational status, and it adds no Entity kind or Task lifecycle state. Core exposes the administrative condition with the Entity, separately from the last reported operational status and execution uncertainty. The condition is Core-owned: it is not writable through generic reported-component patches and gives an operator no way to impersonate Asset reporting.
 
-Retirement never marks a Task completed, failed or cancelled, confirms a pending cancellation, resumes a queue or claims that physical execution stopped. Terminal outcomes and unresolved execution facts stay under [Tasks](tasks.md#task-status-and-transitions). An already-accepted completion report may still resolve under [scan completion](tasks.md#scan-completion) when its required Objects arrive through an authorized upload; that is the existing evidence-based completion rule, not an outcome inferred from retirement. Retirement does not release Object holds or [required Entity-reference protection](tracks-and-geofeatures.md#required-entity-references): an unresolved Task can keep a required Track or Geofeature protected after its assigned Asset is retired, and only a terminal Task outcome releases that guard. Required Object holds remain until Reset under [Required-result protection](objects.md#required-result-protection), independently of that terminal release.
+Retirement never marks a Task completed, failed or cancelled, confirms a pending cancellation, resumes a queue or claims that physical execution stopped. Terminal outcomes and unresolved execution facts stay under [Tasks](tasks.md#task-status-and-transitions). An accepted completion report has already established the terminal outcome independently of file readiness; an authorized later upload preserves its result without changing that outcome. Retirement does not release Object holds or [required Entity-reference protection](tracks-and-geofeatures.md#required-entity-references): an unresolved Task can keep a required Track or Geofeature protected after its assigned Asset is retired, and only a terminal Task outcome releases that guard. Required Object holds remain until Reset under [Required-result protection](objects.md#required-result-protection), independently of that terminal release.
 
 Ordinary Entity deletion and its nonterminal-Task guard are unchanged. Do not implement retirement by weakening `DELETE /entities/{entity_id}`, by forcing deletion or terminal outcomes, or by composing public credential, Task and Entity mutations in callers. The SDK submits one request to Core in every mode and returns its committed result; callers do not coordinate revocation, assignment blocking or record preservation. Success confirms Core's commit under [ADR-0018](../adr/0018-confirm-writes-when-core-commits.md), not physical stopping. The response does not update a local picture; the Entity change arrives through ordinary synchronization.
 
@@ -120,7 +184,7 @@ Serialize retirement with assignment, provisioning, registration, deletion, repo
 - Reports: an authorized report committed first remains evidence. Retirement-first prevents a later request under the revoked Asset authority from changing recorded state.
 - Provisioning and Enrollment: a competing request cannot leave a usable credential after retirement commits.
 - Deletion: ordinary deletion and retirement serialize in the same commit boundary. Retirement-first leaves its installation-scoped denial intact even if an allowed deletion then removes the Entity. Deletion-first makes a fresh retirement request return not found without creating a denial, successful claim or activity; a retained identity reservation is not an existing Asset.
-- Uploads: an Asset-authenticated upload rechecks its authority inside the short Object publication transaction. Publication-first preserves the ready Object and any evidence-based completion it permits. Retirement-first rejects publication under the revoked credential, creates no ready Object or successful upload identity, and cleans up the abandoned attempt under [publication and recovery](objects.md#publication-and-recovery). File streaming or durable private content alone does not establish publication. An unaffected authorized principal may retry the whole upload under the existing upload identity and content rules; this does not restore Asset authority or invent execution evidence.
+- Uploads: an Asset-authenticated upload rechecks its authority inside the short Object publication transaction. Publication-first preserves the ready Object without establishing or changing a Task outcome. Retirement-first rejects publication under the revoked credential, creates no ready Object or successful upload identity, and cleans up the abandoned attempt under [publication and recovery](objects.md#publication-and-recovery). File streaming or durable private content alone does not establish publication. An unaffected authorized principal may retry the whole upload under the existing upload identity and content rules; this does not restore Asset authority or invent execution evidence.
 
 ### Retirement retries
 
@@ -136,7 +200,7 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 
 - Register Asset: `POST /entities` in the [Entities routes](../api-endpoints.md#entities), through the [Asset client](sdk.md#asset-client) and [Asset startup](sdk.md#asset-startup).
 - Delete Asset: `DELETE /entities/{entity_id}` in the [Entities routes](../api-endpoints.md#entities).
-- Retire Asset: accepted [SDK operation](sdk.md#operations-catalog); its [HTTP route](../api-endpoints.md#remaining-contract-details) is not yet selected.
+- Retire Asset: `POST /entities/{entity_id}/retire` in the [Entities routes](../api-endpoints.md#entities), through the [SDK operation](sdk.md#operations-catalog).
 - API keys: list, create and revoke in the [API-key routes](../api-endpoints.md#api-keys).
 - Local CLI/TUI actions: switch Open enrollment, the planned [cleanup of selected test identities](#cleanup-after-testing), re-provision a lost Asset credential, revoke credentials where applicable and list retained and revoked Asset IDs, under [local administration](../architecture/system-design.md#local-administration). Test-identity cleanup has no public HTTP route or SDK method.
 
@@ -146,7 +210,7 @@ The retirement condition survives same-release Restart. Core keeps the decommiss
 - Registration identity encoding and credential proof and delivery fields.
 - API-key wire encoding, verifier scheme and the exact setup commands for the first key and for recovery.
 - Connection-close and error encoding for revocation, which is Protocol work.
-- The retirement HTTP binding, SDK signature, record fields, and retry and response encodings.
+- Retirement record fields and retry/response encodings beyond its selected HTTP binding.
 - Operator profile fields and lifecycle.
 
 ## Decisions

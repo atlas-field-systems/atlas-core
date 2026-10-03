@@ -14,7 +14,7 @@ For current planning, read the [operating model](../../architecture/operating-mo
 | Docker deployment and Plugin containers | [ADR-0017](../../adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
 | Runtime retention, Reset, updates and mission continuity | [ADR-0015](../../adr/0015-separate-start-stop-restart-and-reset.md) |
 | Plugin ownership and Operations | [ADR-0002](../../adr/0002-core-manages-installed-plugins.md), [stopping and faults](../../adr/0006-protect-active-plugin-work-during-lifecycle-changes.md), [local administration](../../architecture/system-design.md#local-administration) |
-| Commands, tasking and results | [ADR-0004](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md), [reconciliation](../../adr/0007-reconcile-asset-tasks-after-disconnection.md), [scan completion](../../adr/0008-complete-scan-tasks-when-required-results-are-available.md), [Object visibility](../../adr/0009-expose-objects-only-when-ready.md) |
+| Commands, tasking and results | [ADR-0004](../../adr/0004-core-owns-commands-and-assets-execute-tasks.md), [reconciliation](../../adr/0007-reconcile-asset-tasks-after-disconnection.md), [Asset-reported completion](../../adr/0026-record-asset-completion-independently-of-result-availability.md), [Object visibility](../../adr/0009-expose-objects-only-when-ready.md) |
 | Releases and client compatibility | [ADR-0001](../../adr/0001-release-core-sdk-and-protocol-together.md), [ADR-0005](../../adr/0005-allow-compatible-client-versions.md) |
 | Generation and architecture | [ADR-0011](../../adr/0011-generate-shared-contracts-with-minimal-customization.md), [ADR-0014](../../adr/0014-build-dedicated-atlas-systems.md) |
 | SDK, access, storage privacy and publication ownership | [System design](../../architecture/system-design.md) |
@@ -28,6 +28,7 @@ Accepted successor decisions govern over research alternatives. Keep source obse
 - [Decision and experiment backlog](09-decision-backlog.md): research proposals to reassess against accepted decisions before scheduling work.
 - [Mission extensions](11-mission-extensions.md): the original removable-extension motivation and design proposals, followed by the accepted Plugin decisions above.
 - [Adversarial generation review](12-protocol-generation-adversarial-review.md): arguments, counterarguments and an unexecuted comparison for Protocol generation.
+- [Pinned toolchain proof](13-protocol-toolchain-proof.md): later executed representative generation, runtime-validation and binary-transfer evidence, with exact locks and independent fixtures.
 
 | Area | Report | Main question |
 | --- | --- | --- |

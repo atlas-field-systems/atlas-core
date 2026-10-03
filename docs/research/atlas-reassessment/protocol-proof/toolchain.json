@@ -1,0 +1,16 @@
+{
+  "go": {
+    "version": "go1.27.1",
+    "linux_amd64_url": "https://go.dev/dl/go1.27.1.linux-amd64.tar.gz",
+    "sha256": "63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445"
+  },
+  "sqlc": {
+    "version": "v1.31.1",
+    "linux_amd64_url": "https://github.com/sqlc-dev/sqlc/releases/download/v1.31.1/sqlc_1.31.1_linux_amd64.tar.gz",
+    "sha256": "497ae4fcdfa64c5b0c311ffe4c2bd991e43991e82e5367792ed78bc2dca27354"
+  },
+  "oapi_codegen": "v2.8.0",
+  "node": "v24.21.0",
+  "npm": "11.19.0",
+  "openapi": "3.0.3"
+}
