@@ -1,0 +1,121 @@
+{
+  "bytes": [
+    0,
+    255,
+    65,
+    0,
+    13,
+    10,
+    128
+  ],
+  "byte_length": "7",
+  "sha256": "a44fcac77b411ed8447cf90172d7921a45758033e504400b2a2ac4699746559b",
+  "limit": 1024,
+  "failures": [
+    {
+      "name": "undeclared media",
+      "status": 415,
+      "code": "unsupported_media_type",
+      "dataset": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "version": "0.2.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "text/plain",
+      "length": 7
+    },
+    {
+      "name": "malformed media",
+      "status": 415,
+      "code": "unsupported_media_type",
+      "dataset": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "version": "0.2.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "not a media type",
+      "length": 7
+    },
+    {
+      "name": "missing media",
+      "status": 415,
+      "code": "unsupported_media_type",
+      "dataset": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "version": "0.2.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": null,
+      "length": 7
+    },
+    {
+      "name": "body limit plus one",
+      "status": 413,
+      "code": "content_too_large",
+      "dataset": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "version": "0.2.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "application/octet-stream",
+      "length": 1025
+    },
+    {
+      "name": "malformed path UUID",
+      "status": 400,
+      "code": "invalid_request",
+      "dataset": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "version": "0.2.0",
+      "path": "sensitive-fixture-credential",
+      "media": "application/octet-stream",
+      "length": 7
+    },
+    {
+      "name": "missing Dataset",
+      "status": 400,
+      "code": "dataset_required",
+      "dataset": null,
+      "version": "0.2.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "application/octet-stream",
+      "length": 7
+    },
+    {
+      "name": "malformed Dataset UUID",
+      "status": 400,
+      "code": "invalid_request",
+      "dataset": "sensitive-fixture-credential",
+      "version": "0.2.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "application/octet-stream",
+      "length": 7
+    },
+    {
+      "name": "wrong Dataset",
+      "status": 409,
+      "code": "dataset_mismatch",
+      "dataset": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "version": "0.2.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "application/octet-stream",
+      "length": 7
+    },
+    {
+      "name": "missing Protocol edition",
+      "status": 400,
+      "code": "invalid_request",
+      "dataset": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "version": null,
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "application/octet-stream",
+      "length": 7
+    },
+    {
+      "name": "unsupported artificial edition",
+      "status": 426,
+      "code": "unsupported_protocol",
+      "dataset": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "version": "9.0.0",
+      "path": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "media": "application/octet-stream",
+      "length": 7
+    }
+  ],
+  "boundary": {
+    "octet": 165,
+    "byte_length": "1024",
+    "sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a"
+  }
+}

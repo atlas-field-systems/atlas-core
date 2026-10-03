@@ -32,6 +32,7 @@ type fixtureServer struct {
 	queries     *storage.Queries
 	dataset     contract.Identifier
 	patchSchema *openapi3.SchemaRef
+	contentDir  string
 }
 
 func (s *fixtureServer) save(ctx context.Context, value contract.FixtureValue) error {
@@ -127,7 +128,7 @@ func run() (result error) {
 	if err := dataset.UnmarshalText([]byte(datasetID)); err != nil {
 		return fmt.Errorf("decode fixture Dataset: %w", err)
 	}
-	fixture := &fixtureServer{queries: storage.New(db), dataset: dataset}
+	fixture := &fixtureServer{queries: storage.New(db), dataset: dataset, contentDir: filepath.Join(*dataDir, "content")}
 	if err := fixture.save(ctx, seed.Initial); err != nil {
 		return err
 	}
@@ -152,7 +153,10 @@ func run() (result error) {
 			httpcontract.WriteError(w, http.StatusInternalServerError, "internal_error", "Fixture request failed")
 		},
 	}), contract.StdHTTPServerOptions{ErrorHandlerFunc: httpcontract.RequestError})
-	validated := httpcontract.ValidateRequests(spec, binding)
+	validated, err := httpcontract.ValidateBinaryRequests(spec, binding, "PutFixtureContent", fixtureContentLimit)
+	if err != nil {
+		return fmt.Errorf("configure fixture binary validation: %w", err)
+	}
 	if *mode == "request_hooks" {
 		validated = binding
 	}
