@@ -67,6 +67,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       const error: unknown = JSON.parse(text);
       assert(validateError(error), `${name}: shared typed error schema`);
       assert.equal(error.error.code, code, name);
+      assert.equal(error.dataset_id, dataset, `${name}: owner-supplied Dataset context`);
       assert.match(error.error.message, /PATCH/, `${name}: safe method diagnostic`);
       assert.notEqual(error.error.request_id, "00000000-0000-0000-0000-000000000000", `${name}: diagnostic correlation is allocated`);
       assert(!requestIds.has(error.error.request_id), `${name}: separate rejections have separate diagnostics`);

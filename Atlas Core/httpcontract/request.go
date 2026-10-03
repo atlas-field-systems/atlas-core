@@ -66,9 +66,18 @@ func WriteError(w http.ResponseWriter, status int, code, message string) {
 	}
 	diagnosticID[6] = (diagnosticID[6] & 0x0f) | 0x40
 	diagnosticID[8] = (diagnosticID[8] & 0x3f) | 0x80
+	var dataset *protocol.Identifier
+	if header := w.Header().Get("Atlas-Dataset-ID"); header != "" {
+		var identifier protocol.Identifier
+		if err := identifier.UnmarshalText([]byte(header)); err != nil {
+			log.Print("HTTP error response has invalid Dataset context")
+		} else {
+			dataset = &identifier
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(protocol.Error{Error: protocol.ErrorInfo{
+	if err := json.NewEncoder(w).Encode(protocol.Error{DatasetId: dataset, Error: protocol.ErrorInfo{
 		Code: code, Message: message, RequestId: diagnosticID,
 	}}); err != nil {
 		log.Printf("write HTTP error response: %v", err)
