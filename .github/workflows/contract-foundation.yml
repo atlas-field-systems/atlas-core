@@ -18,6 +18,7 @@ jobs:
       - name: Prepare evidence directory
         run: mkdir -p .artifacts
       - name: Clean foundation verification
+        shell: bash
         run: python3 scripts/verify.py --bootstrap 2>&1 | tee .artifacts/verification.log
       - name: Preserve nonsecret verification evidence
         if: always()
@@ -26,3 +27,4 @@ jobs:
           name: contract-foundation-evidence
           path: .artifacts/verification*
           if-no-files-found: error
+          include-hidden-files: true
