@@ -41,12 +41,15 @@ def verify(bootstrap):
     for arguments in [[go, "build", "./..."], [go, "test", "./..."], [go, "vet", "./..."]]:
         run(arguments, env, cwd=ROOT / "Atlas Core")
     run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=ROOT / "Atlas Core")
+    run(["npm", "run", "lint"], env, cwd=ROOT / "Atlas SDK")
     run(["npm", "run", "check"], env, cwd=ROOT / "Atlas SDK")
     if (ROOT / "Atlas SDK/dist").exists():
         shutil.rmtree(ROOT / "Atlas SDK/dist")
     run(["npm", "run", "build"], env, cwd=ROOT / "Atlas SDK")
+    # Consumer exports resolve only built JS/declarations, absent before this build.
+    run(["npm", "run", "check:consumer"], env, cwd=ROOT / "Atlas SDK")
     package = json.loads(run(["npm", "pack", "--dry-run", "--json", "--ignore-scripts"], env, cwd=ROOT / "Atlas SDK", capture=True))
-    allowed = ("src/", "generated/", "dist/")
+    allowed = ("dist/",)
     for file in package[0]["files"]:
         name = file["path"]
         if name not in {"README.md", "package.json"} and not name.startswith(allowed):
@@ -58,7 +61,8 @@ def verify(bootstrap):
     report.write_text(json.dumps({"source_revision": revision, "working_tree_changed": dirty,
         "toolchain": LOCK, "generated_sha256": {name: hashlib.sha256(value).hexdigest() for name, value in first.items()},
         "checks": ["bootstrap checksum/version refusal", "locked dependencies and tool versions", "two clean generations",
-                   "Go format/build/test/vet", "strict TypeScript and SDK build", "SDK consumer artifact isolation", "generated transport/direct Protocol workflows", "fixture cleanup"]}, indent=2) + "\n")
+                   "Go format/build/test/vet", "TypeScript structural lint and independent rule probes", "strict TypeScript and SDK build",
+                   "ordinary Node package exports and consumer declarations", "SDK consumer artifact isolation", "generated transport/direct Protocol workflows", "fixture cleanup"]}, indent=2) + "\n")
     print(f"PASS Slice 0 foundation at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 

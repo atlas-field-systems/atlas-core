@@ -8,7 +8,9 @@ The consumer entry point exports the supported `openapi-fetch` transport, genera
 
 `lookupCommand(name)` reads representative Move To/Pause metadata from the installed canonical Protocol artifact and returns its schema association and input validator, or `undefined` for an unknown name. It performs no network request. The [Catalog evidence](../tests/contract/README-99.md) records the incomplete binding and operational exclusions.
 
-Consumer exports and the SDK build include `src` and public `generated` types. Test-only routes, schemas, fixture SQL and response switches stay outside those exports. Public `paths` is intentionally empty until an operational slice authors its endpoints. No publication or release-version range is established by this package.
+Consumer exports select compiled JavaScript and TypeScript declarations in `dist`, including the canonical Protocol artifact used by the Catalog. The `/protocol` export exposes the public generated declarations. The verifier rebuilds from absent `dist`, then loads the package by name with ordinary Node and checks consumer imports through both exports. Test-only routes, schemas, fixture SQL and response switches stay outside the consumer package. Public `paths` is intentionally empty until an operational slice authors its endpoints. No publication or release-version range is established by this package.
+
+The required TypeScript lint command uses the pinned compiler API for handwritten SDK and contract code. It rejects explicit `any`, suppression directives, nested type assertions and functions that only assert a parameter's type. Const assertions and `satisfies` remain supported. Only `*.type-test.ts` files under SDK checks or contract tests may use `@ts-expect-error`; their required compiler checks fail when the intended error disappears. Other assertion invariants still require review under the [code conventions](../docs/agents/code-conventions.md#types-and-language-conventions).
 
 Run all required checks from the repository root:
 
