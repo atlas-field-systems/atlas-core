@@ -1,0 +1,86 @@
+{
+  "components": {
+    "schemas": {
+      "FixtureMessageAsset": {
+        "description": "Test-only minimal Asset projection; not a complete operational Entity contract.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "type": { "type": "string", "enum": ["asset"] },
+          "version": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "position": { "$ref": "#/components/schemas/Position" }
+        },
+        "required": ["id", "type", "version", "position"]
+      },
+      "FixtureMessageTrack": {
+        "description": "Test-only minimal Track projection; not a complete operational Entity contract.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "type": { "type": "string", "enum": ["track"] },
+          "version": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "position": { "$ref": "#/components/schemas/Position" }
+        },
+        "required": ["id", "type", "version", "position"]
+      },
+      "FixtureMessageGeofeature": {
+        "description": "Test-only minimal point projection. This does not define operational Geofeature geometry or a complete Entity contract.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "type": { "type": "string", "enum": ["geofeature"] },
+          "version": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "position": { "$ref": "#/components/schemas/Position" }
+        },
+        "required": ["id", "type", "version", "position"]
+      },
+      "FixtureMessageEntity": {
+        "description": "Test-only representative tagged Entity variants, shared by the message fixtures.",
+        "oneOf": [
+          { "$ref": "#/components/schemas/FixtureMessageAsset" },
+          { "$ref": "#/components/schemas/FixtureMessageTrack" },
+          { "$ref": "#/components/schemas/FixtureMessageGeofeature" }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "asset": "#/components/schemas/FixtureMessageAsset",
+            "track": "#/components/schemas/FixtureMessageTrack",
+            "geofeature": "#/components/schemas/FixtureMessageGeofeature"
+          }
+        }
+      },
+      "FixtureChangeMessage": {
+        "description": "Test-only upsert projection. It does not establish commit framing, replay, deletions or a complete synchronization contract.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": { "$ref": "#/components/schemas/Identifier" },
+          "commit_id": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "change_index": { "type": "integer", "minimum": 0 },
+          "change_count": { "type": "integer", "minimum": 1 },
+          "resource_kind": { "type": "string", "enum": ["entities"] },
+          "resource_id": { "$ref": "#/components/schemas/Identifier" },
+          "resource_version": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "action": { "type": "string", "enum": ["upsert"] },
+          "resource": { "$ref": "#/components/schemas/FixtureMessageEntity" }
+        },
+        "required": ["dataset_id", "commit_id", "change_index", "change_count", "resource_kind", "resource_id", "resource_version", "action", "resource"]
+      },
+      "FixturePluginDispatch": {
+        "description": "Test-only private-message projection. It does not establish Plugin dispatch correlation, acknowledgement, execution or reconciliation.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": { "$ref": "#/components/schemas/Identifier" },
+          "operation_id": { "$ref": "#/components/schemas/Identifier" },
+          "input": { "$ref": "#/components/schemas/Position" }
+        },
+        "required": ["dataset_id", "operation_id", "input"]
+      }
+    }
+  }
+}

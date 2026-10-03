@@ -1,0 +1,33 @@
+# Report and message fidelity
+
+This is the bounded representation evidence for [ticket #98](https://github.com/atlas-field-systems/atlas-core/issues/98) under [Slice 0 #94](https://github.com/atlas-field-systems/atlas-core/issues/94). The agreed seams are generated TypeScript transport and independent direct HTTP against the real Go/SQLite fixture, plus focused Go and TypeScript non-HTTP schema consumers. The latter cannot be exercised through an HTTP operation.
+
+Run the shared required check from the repository root:
+
+```sh
+python3 scripts/verify.py --bootstrap
+```
+
+The verifier records the final source revision, working-tree status, exact locks, regenerated digests and required-check results in `.artifacts/verification.json`. CI runs the same command. `reports.contract.json` and `messages.contract.json` enter the existing deterministic test-contract assembly; the runner discovers the new `*.test.ts` files, and `go test ./...` discovers the Go consumer checks. No generated output is edited or committed.
+
+| Requirement | Implementation | Observable check |
+| --- | --- | --- |
+| One shared report context and Position | Fixture position-report route references canonical `ReportContext` and `Position` | `report.test.ts` sends six hand-authored payloads through each isolated generated/direct path and compares separately authored expected envelopes and supported GET read-back |
+| Current and historical identity fidelity | Required nullable fields remain generated values; report handler stores generated JSON with existing private keyed SQLite queries | Current, original-ordering and retained-UUID cases preserve positive decimal sequences `9007199254740993`/`9007199254740994` and original `9007199254740992` without numeric conversion |
+| Unknown, absent and known-zero times | Canonical optional observation map and nullable timing/evidence fields | Omitted map, empty map, explicit unknown position timing, known observation time with zero uncertainty and unknown report time survive persistence distinctly; no send/receipt time is inserted |
+| Complete named double coordinates | Canonical double Position is reused without a route-local coordinate schema | Positive/negative precision-sensitive coordinates, zero and inclusive coordinate boundaries round-trip in axis order; malformed/incomplete/out-of-range/nonfinite coordinate encodings fail |
+| Structural rejection before effects | Shared Core request/error adapter, generated strict decoder and private report handler | `report-rejection.test.ts` sends 64 malformed cases per generated/direct path, checks the canonical JSON error and reads the unchanged prior payload after every rejection |
+| Historical/timing structure | Canonical origin, nullable UUID and observation-time schemas | Missing origin fields, malformed UUIDs, missing required nullable fields, invalid times, negative uncertainty, unknown fields and noncanonical/numeric positive counters fail over real HTTP |
+| One message definition per fixture fact | Change references one fixture-only tagged Entity union; dispatch references canonical Position | Both language consumers validate the same 44 independently authored cases in `message-fixtures.json`, including malformed UUIDs and wrong Entity/Command/resource variants |
+| Generated message serialization | Otherwise unreferenced fixture definitions are emitted by supported generation; Go uses concrete generated union conversion/JSON methods, TypeScript serializes validated generated contract types | Six valid messages retain exact decimal strings and double coordinates through serialization and canonical revalidation; 38 invalid cases are refused in each consumer |
+| Disposable and isolated additions | Definitions live only in test fragments; production shared fields remain in Protocol | The shared verifier reconstructs both public and test output twice from absent directories and checks byte equality, consumer-package isolation, Go formatting/build/test/vet, strict TypeScript, SDK build and all fixture workflows |
+
+The report handler writes a single keyed fixture value and reads it through the same generated private queries. Tests observe persistence through GET, without inspecting private tables. Each generated/direct scenario starts in a separate process with real temporary SQLite WAL and runner-owned cleanup. Invalid generated inputs are injected as wire bytes at the transport's external fetch boundary because generated types correctly exclude them; the request still reaches the actual structural validator and generated decoder.
+
+Go's non-HTTP consumer imports the shared Core adapter to register its supported schema formats. The independent malformed-UUID cases exposed kin-openapi's opt-in UUID validation. The format rule belongs to that common adapter, rather than another UUID declaration in a message consumer.
+
+The exact qualified tools are Go 1.27.1, Node 24.21.0, npm 11.19.0, sqlc 1.31.1, oapi-codegen 2.8.0, openapi-typescript 7.13.0, openapi-fetch 0.17.0, TypeScript 5.9.3 and tsx 4.23.15. OpenAPI is 3.0.3. Runtime kin-openapi is 0.149.0; the generator parser remains 0.142.0. Ajv is 8.20.0 with ajv-formats 3.0.1; modernc.org/sqlite is 1.60.1 with SQLite 3.53.4. [Protocol's lock record](../../Atlas%20Protocol/README.md#exact-qualified-pins) also records nullable/runtime/middleware pins and archive checksums. The verifier checks installed tools and both locked dependency graphs.
+
+Red traces are retained outside the repository in `/tmp/atlas-spec94/ticket-98-red-http.log` and `ticket-98-red-{messages,change}-{go,ts}.log`: the HTTP tracer initially returned 400 for the absent route, and both message consumers initially refused the absent definitions. The final verification log/report carries the passing evidence and exact final revision; a failed or dirty verification is not final completion evidence.
+
+This fixture establishes structural representation fidelity only. `process_proof: "AA"` and the contact challenge are opaque data. The fixed Dataset, artificial `0.2.0` edition and `fixture:report:1` cursor do not establish discovery, edition negotiation or committed-cursor semantics. Entity projections, upsert messages and private dispatch projections remain test-only. They establish no complete Entity/feed/Plugin contract, uint64-range enforcement, signing/canonicalization, process authority, principal binding, issued-generation checks, evidence deduplication, cross-field report admission, Contact/clock decisions, Task outcomes, synchronization framing/replay, live Plugin dispatch, crash durability, capacity or field readiness. Those accepted guarantees remain with their owning operational slices.
