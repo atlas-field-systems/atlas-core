@@ -153,17 +153,21 @@ func run() (result error) {
 			httpcontract.WriteError(w, http.StatusInternalServerError, "internal_error", "Fixture request failed")
 		},
 	}), contract.StdHTTPServerOptions{ErrorHandlerFunc: httpcontract.RequestError})
-	validated, err := httpcontract.ValidateBinaryRequests(spec, binding, "PutFixtureContent", fixtureContentLimit)
+	validated, err := httpcontract.ValidateBinaryRequests(spec, binding, "PutFixtureContent", fixtureContentLimit, 4096)
 	if err != nil {
 		return fmt.Errorf("configure fixture binary validation: %w", err)
 	}
 	if *mode == "request_hooks" {
-		validated = binding
+		// This diagnostic mode deliberately bypasses schema/document checks to
+		// reach generated error hooks, while retaining its finite body bound.
+		validated = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Body != nil && r.Body != http.NoBody {
+				r.Body = http.MaxBytesReader(w, r.Body, 4096)
+			}
+			binding.ServeHTTP(w, r)
+		})
 	}
-	handler := fixtureContext(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 4096)
-		validated.ServeHTTP(w, r)
-	}))
+	handler := fixtureContext(validated)
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return fmt.Errorf("listen for fixture HTTP: %w", err)

@@ -71,6 +71,24 @@ rejected.push({
   json: JSON.stringify({ ...baseline.body, report_context: { ...context, sequence: "invalid-number" } }).replace('"invalid-number"', "9007199254740993"),
 });
 rejected.push({ name: "malformed JSON", json: '{"report_context":' });
+// Literal duplicate names survive transport; object serialization would erase
+// the disagreement between generic schema decoding and typed struct merging.
+for (const duplicateName of ['"report_context"', '"report_\\u0063ontext"']) {
+  rejected.push({
+    name: `duplicate context member ${duplicateName}`,
+    json: '{"report_context":{"observation_times":{"movement":{"observed_at":null,"clock_uncertainty_ms":-1}}},' +
+      `${duplicateName}:${JSON.stringify(context)},"position":{"latitude":10,"longitude":20}}`,
+  });
+}
+rejected.push({ name: "nested duplicate member", json: JSON.stringify(baseline.body).replace('"latitude":', '"latitude":91,"latitude":') });
+for (const key of ['\\ud800', '\\udfff']) {
+  rejected.push({
+    name: `unpaired surrogate observation name ${key}`,
+    json: JSON.stringify({ ...baseline.body, report_context: { ...context, observation_times: {
+      "unicode-key": { observed_at: null, clock_uncertainty_ms: null },
+    } } }).replace('"unicode-key"', `"${key}"`),
+  });
+}
 
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
@@ -128,6 +146,18 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.deepEqual(await read.json(), baseline.expected, `${scenario.name} preserves stored report`);
       }
     }
+    const pairedName = JSON.stringify({ ...baseline.body, report_context: { ...context, observation_times: {
+      "unicode-key": { observed_at: null, clock_uncertainty_ms: null },
+    } } }).replace('"unicode-key"', '"\\ud83c\\udf0d"');
+    injectedJSON = pairedName;
+    const positive = await client.PUT("/__fixture/report", { params: { header: headers }, body: validBody });
+    injectedJSON = undefined;
+    assert.equal(positive.response.status, 200, "paired surrogate dictionary name is supported");
+    const expected = { ...baseline.expected, data: { ...baseline.body, report_context: { ...context,
+      observation_times: { "🌍": { observed_at: null, clock_uncertainty_ms: null } },
+    } } };
+    const positiveRead = await client.GET("/__fixture/report", { params: { header: headers } });
+    assert.deepEqual(positiveRead.data, expected, "valid dictionary name survives storage");
   });
   console.log(`PASS ${mode}: ${rejected.length} report rejections preserve prior stored payload`);
 }

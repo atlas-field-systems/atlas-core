@@ -15,7 +15,7 @@ import (
 // explicit binary operation while leaving its bounded body as a stream. Other
 // operations keep the ordinary request validator. The handler must translate
 // MaxBytesError into its declared JSON rejection and clean failed attempts.
-func ValidateBinaryRequests(spec *openapi3.T, next http.Handler, operationID string, maxBytes int64) (http.Handler, error) {
+func ValidateBinaryRequests(spec *openapi3.T, next http.Handler, operationID string, maxBytes, maxJSONBytes int64) (http.Handler, error) {
 	if operationID == "" || maxBytes <= 0 {
 		return nil, errors.New("binary validation requires an operation and positive body bound")
 	}
@@ -43,7 +43,10 @@ func ValidateBinaryRequests(spec *openapi3.T, next http.Handler, operationID str
 	if err != nil {
 		return nil, fmt.Errorf("create binary validation router: %w", err)
 	}
-	ordinary := ValidateRequests(spec, next)
+	ordinary, err := ValidateRequests(spec, next, maxJSONBytes)
+	if err != nil {
+		return nil, err
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, parameters, err := router.FindRoute(r)
 		if err != nil || route.Operation.OperationID != operationID {
@@ -63,7 +66,10 @@ func ValidateBinaryRequests(spec *openapi3.T, next http.Handler, operationID str
 			WriteError(w, http.StatusUnsupportedMediaType, "unsupported_media_type", "Binary request media type is undeclared for "+r.Method+" "+route.Path)
 			return
 		}
-		if route.Operation.RequestBody.Value.Required && (r.Body == nil || r.Body == http.NoBody) {
+		// An outer reader wrapper can hide http.NoBody. Server framing still
+		// distinguishes an absent fixed-length body from an empty chunked stream.
+		absent := r.Body == nil || r.Body == http.NoBody || r.ContentLength == 0 && len(r.TransferEncoding) == 0
+		if route.Operation.RequestBody.Value.Required && absent {
 			RequestError(w, r, &openapi3filter.RequestError{Input: input, Reason: "binary body is required"})
 			return
 		}

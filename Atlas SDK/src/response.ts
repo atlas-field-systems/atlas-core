@@ -23,18 +23,33 @@ interface HeaderDefinition {
   required?: boolean;
   schema?: unknown;
 }
+const methods = ["get", "put", "post", "delete", "options", "head", "patch", "trace"] as const;
+type HTTPMethod = typeof methods[number];
+interface OperationDefinition {
+  responses: Record<string, ResponseDefinition>;
+}
+type PathItem = Partial<Record<HTTPMethod, OperationDefinition>> & {
+  $ref?: string;
+  summary?: string;
+  description?: string;
+  parameters?: unknown;
+  servers?: unknown;
+};
 interface ResponseContract extends ContractDocument {
   components: ContractDocument["components"] & { headers?: Record<string, HeaderDefinition> };
-  paths: Record<string, Record<string, { responses: Record<string, ResponseDefinition> }>>;
+  paths: Record<string, PathItem>;
 }
 
 export function responseValidation(document: ResponseContract, context: { datasetId: string; protocolVersion: string }): Middleware {
   const ajv = contractValidator(document);
   const responses = new Map<string, { media: Set<string>; validate?: ValidateFunction; headers: { name: string; required: boolean; validate: ValidateFunction }[] }>();
   for (const [path, item] of Object.entries(document.paths)) {
-    for (const [method, operation] of Object.entries(item)) {
+    for (const method of methods) {
+      const operation = item[method];
+      if (!operation) continue;
       for (const [status, response] of Object.entries(operation.responses)) {
-        const media = new Set(Object.keys(response.content ?? {}));
+        const mediaKeys = Object.keys(response.content ?? {});
+        const media = new Set(mediaKeys.map(mediaType));
         const key = `${method.toUpperCase()} ${path} ${status}`;
         const location = `#/paths/${pointer(path)}/${method}/responses/${status}`;
         const headers = Object.entries(response.headers ?? {}).map(([name, authored]) => {
@@ -52,8 +67,9 @@ export function responseValidation(document: ResponseContract, context: { datase
           if (!definition.schema) throw new Error("Response header requires an authored schema");
           return { name, required: definition.required === true, validate: ajv.compile({ $ref: `atlas${ref}/schema` }) };
         });
-        if (media.has("application/json")) {
-          const ref = `atlas#/paths/${pointer(path)}/${method}/responses/${status}/content/application~1json/schema`;
+        const jsonMedia = mediaKeys.find((key) => mediaType(key) === "application/json");
+        if (jsonMedia !== undefined) {
+          const ref = `atlas#/paths/${pointer(path)}/${method}/responses/${status}/content/${pointer(jsonMedia)}/schema`;
           responses.set(key, { media, headers, validate: ajv.compile({ $ref: ref }) });
         } else {
           responses.set(key, { media, headers });
@@ -75,20 +91,32 @@ export function responseValidation(document: ResponseContract, context: { datase
           continue;
         }
         if (!header.validate(value)) invalid(isContext ? "context" : "header");
-        if (header.name.toLowerCase() === "atlas-dataset-id" && value !== context.datasetId ||
+        if (header.name.toLowerCase() === "atlas-dataset-id" && !sameDataset(value, context.datasetId) ||
             header.name.toLowerCase() === "atlas-protocol-version" && value !== context.protocolVersion) invalid("context");
       }
-      const media = response.headers.get("Content-Type")?.split(";")[0]?.trim() ?? "";
+      const media = mediaType(response.headers.get("Content-Type") ?? "");
       if (declared.media.size === 0 ? media !== "" : !declared.media.has(media)) invalid("media_type");
       if (declared.validate) {
         let body: unknown;
         try { body = await response.clone().json(); } catch { return invalid("json"); }
         if (!declared.validate(body)) invalid("schema");
-        if (typeof body === "object" && body !== null && "dataset_id" in body && body.dataset_id !== context.datasetId) {
+        if (typeof body === "object" && body !== null && "dataset_id" in body &&
+            (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))) {
           invalid("context");
         }
       }
       return response;
     },
   };
+}
+
+// The authored UUID schemas validate wire values first. Compare their identity
+// without changing the caller's selected context or the returned representation.
+function sameDataset(left: string, right: string) {
+  const identity = (value: string) => value.toLowerCase().replace(/^urn:uuid:/u, "");
+  return identity(left) === identity(right);
+}
+
+function mediaType(value: string) {
+  return value.split(";", 1)[0]?.trim().toLowerCase() ?? "";
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { request as httpRequest } from "node:http";
 import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -97,6 +98,27 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       assert.equal(retrieved.headers.get("Atlas-Dataset-ID"), dataset);
       assert.equal(retrieved.headers.get("Atlas-Protocol-Version"), version);
     }
+
+    // A missing body must not publish empty content over a prior selection.
+    let missingError: unknown;
+    if (mode === "generated transport") {
+      const bodyless = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(
+        new Request(request.url, { method: request.method, headers: request.headers }), { signal: AbortSignal.timeout(5000) }) });
+      bodyless.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+      const response = await bodyless.PUT(path, { params: { header: headers, path: { content_id: contentId } },
+        headers: { "Content-Type": "application/octet-stream" }, body });
+      assert.equal(response.response.status, 400, "required binary body is absent");
+      missingError = response.error;
+    } else {
+      const response = await fetch(`${baseUrl}/__fixture/content/${contentId}`, { method: "PUT",
+        headers: { ...headers, "Content-Type": "application/octet-stream" }, signal: AbortSignal.timeout(5000) });
+      assert.equal(response.status, 400, "required binary body is absent");
+      missingError = await response.json();
+    }
+    assert(validateError(missingError));
+    assert.equal(missingError.error.code, "invalid_request");
+    const afterMissing = await fetch(`${baseUrl}/__fixture/content/${contentId}`, { headers, signal: AbortSignal.timeout(5000) });
+    assert.deepEqual(Array.from(new Uint8Array(await afterMissing.arrayBuffer())), fixtures.bytes, "missing body preserves selected content");
     const selectedFiles = await readdir(join(dataDir, "content"));
     assert.equal(selectedFiles.length, 1, "one complete fixture file and no abandoned attempt");
     for (const failure of fixtures.failures) {
@@ -152,6 +174,28 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       }
       assert.deepEqual(await readdir(join(dataDir, "content")), selectedFiles, `${failure.name}: failed attempt cleanup preserves only prior content`);
     }
+
+    // Empty content is legal when a body stream is explicitly supplied. Go can
+    // distinguish empty chunked content from a bodyless Content-Length: 0 PUT.
+    const empty = await new Promise<{ status: number | undefined; body: string }>((resolve, reject) => {
+      const request = httpRequest(`${baseUrl}/__fixture/content/${contentId}`, { method: "PUT",
+        headers: { ...headers, "Content-Type": "application/octet-stream", "Transfer-Encoding": "chunked" } }, (response) => {
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk: string) => { body += chunk; });
+        response.once("end", () => resolve({ status: response.statusCode, body }));
+        response.once("error", reject);
+      });
+      request.setTimeout(5000, () => request.destroy(new Error("empty binary upload timed out")));
+      request.once("error", reject);
+      request.end();
+    });
+    assert.equal(empty.status, 200, "intentionally empty chunked content is accepted");
+    assert.deepEqual(JSON.parse(empty.body), { dataset_id: dataset, data: { byte_length: "0",
+      sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, commit_cursor: "fixture:content:1" });
+    const emptyRead = await fetch(`${baseUrl}/__fixture/content/${contentId}`, { headers, signal: AbortSignal.timeout(5000) });
+    assert.equal(emptyRead.status, 200);
+    assert.equal((await emptyRead.arrayBuffer()).byteLength, 0);
   });
   await assert.rejects(stat(ownedDirectory), { code: "ENOENT" });
   console.log(`PASS ${mode}: exact binary bytes, metadata, typed validation failures, failed-attempt and runner cleanup`);
