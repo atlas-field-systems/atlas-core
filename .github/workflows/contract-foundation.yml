@@ -1,0 +1,28 @@
+name: Contract foundation
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: Atlas SDK/package-lock.json
+      - name: Prepare evidence directory
+        run: mkdir -p .artifacts
+      - name: Clean foundation verification
+        run: python3 scripts/verify.py --bootstrap 2>&1 | tee .artifacts/verification.log
+      - name: Preserve nonsecret verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-foundation-evidence
+          path: .artifacts/verification*
+          if-no-files-found: error

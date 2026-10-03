@@ -2,7 +2,7 @@
 
 Implementers and reviewers assess every section against the affected behavior, including indirect effects outside the edited files. Check conventions separately from the requested behavior. For substantial changes, record a compact mapping from requirements to implementation and validation, with reasons for material exclusions. Cite the convention and concrete consequence when reporting a violation; distinguish defects from suggestions.
 
-These conventions govern code quality. The [system design](../architecture/system-design.md), [ADRs](../adr/) and [topic pages](../topics/README.md) govern behavior and ownership. Follow the [documentation guide](domain.md) when changing those decisions. This checkout is a design workspace; paths and reference implementations should be added only after the corresponding code exists.
+These conventions govern code quality. The [system design](../architecture/system-design.md), [ADRs](../adr/) and [topic pages](../topics/README.md) govern behavior and ownership. Follow the [documentation guide](domain.md) when changing those decisions. This checkout includes design and a bounded [Slice 0 foundation](../../tests/contract/README.md); paths and reference implementations should be added only after the corresponding code exists.
 
 ## Structure and interfaces
 

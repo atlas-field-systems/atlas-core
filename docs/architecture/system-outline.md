@@ -6,7 +6,7 @@ Read the [operating model](operating-model.md) for users and workflows, the [sys
 
 ## What is decided
 
-The Atlas Core system will live in an `Atlas Core/` folder with sibling SDK and Protocol deliverables. Exact sibling names are unselected. The Command Interface is outside the Core system and folder; its eventual repository placement is undecided. Host installation tools and publishing workflows may live elsewhere in this repository without becoming server modules.
+The Atlas Core system lives in an `Atlas Core/` folder with sibling `Atlas SDK/` and `Atlas Protocol/` deliverables. The [Slice 0 foundation](../../tests/contract/README.md) establishes those folders; operational responsibility implementations remain later work. The Command Interface is outside the Core system and folder; its eventual repository placement is undecided. Host installation tools and publishing workflows may live elsewhere in this repository without becoming server modules.
 
 [ADR-0001](../adr/0001-release-core-sdk-and-protocol-together.md) defines the coordinated Core/SDK/Protocol release. [ADR-0005](../adr/0005-allow-compatible-client-versions.md) defines client compatibility and retained-setup validation. Shared numbering does not settle publication mechanics. [ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md) selects the stack; [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) places Core modules together in one container with sibling Plugin containers.
 
@@ -69,4 +69,4 @@ Proposed mechanics: select a version once, derive artifact versions, validate th
 
 ## Suggested order of design work
 
-Define Core behavior, Protocol contracts and SDK access through concrete Atlas workflows. See [MVP integration checks](../testing-strategy.md#mvp-integration-checks) for the first examples and [validation focus by promise](../testing-strategy.md#validation-focus-by-promise) for broader validation. Command Interface implementation and production Plugin algorithms remain outside this design. No implementation scaffolding is established by this outline.
+Define Core behavior, Protocol contracts and SDK access through concrete Atlas workflows. See [MVP integration checks](../testing-strategy.md#mvp-integration-checks) for the first examples and [validation focus by promise](../testing-strategy.md#validation-focus-by-promise) for broader validation. Command Interface implementation and production Plugin algorithms remain outside this design. The [Slice 0 foundation](../../tests/contract/README.md) implements shared tooling and an isolated contract fixture within these boundaries. It does not establish the operational modules or complete MVP.
