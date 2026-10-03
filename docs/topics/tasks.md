@@ -41,7 +41,7 @@ Plugins may initiate Tasks for Assets using existing Protocol-defined Commands t
 
 ### Submission sequence
 
-When Core accepts a Task, it assigns a permanent increasing submission sequence within the assigned Asset's queue. The sequence defines the default relative order of Queued Tasks independently of client clocks, and assigned-work reads return that order. Retries leave it unchanged. Immediate Tasks keep their submission identity and sequence without occupying the queued path. Exact encoding remains open.
+When Core accepts a Task, it assigns a permanent increasing submission sequence within the assigned Asset's queue. The sequence defines the default relative order of Queued Tasks independently of client clocks, and assigned-work reads return that order. Retries leave it unchanged. Immediate Tasks keep their submission identity and sequence without occupying the queued path. Encode submission sequence as a positive unsigned decimal string under [public wire conventions](../architecture/system-design.md#public-wire-conventions).
 
 ## Task status and transitions
 
@@ -54,14 +54,14 @@ Core records transitions from validated instructions and reports. Task statuses 
 | In progress | Pending, Acknowledged, Paused | Assigned Asset reports execution has started, or confirms explicit [Resume](#resume) of the suspended Task |
 | Paused | Pending, Acknowledged, In progress | Assigned Asset confirms suspension of already-started work after executing immediate [Pause](#pause); report includes execution facts if Core missed the start |
 | Cancellation requested | Pending, Acknowledged, In progress, Paused | Tasking client requests withdrawal; Core records intent and notifies the Asset |
-| Completed | Pending, Acknowledged, In progress, Paused, Cancellation requested | Assigned Asset reports completion and the Command's required results are ready |
+| Completed | Pending, Acknowledged, In progress, Paused, Cancellation requested | Assigned Asset reports successful completion |
 | Cancelled | Cancellation requested | Assigned Asset confirms the identified cancellation request |
 | Execution status established by accepted reports | Cancellation requested | Assigned Asset [declines](#cancellation-declined) the identified cancellation request |
 | Failed | Pending, Acknowledged, In progress, Paused, Cancellation requested | Assigned Asset reports a definitive unsuccessful outcome |
 
 Reports may skip intermediate execution states when messages arrive late or are missed, but cannot move execution backward. A progress-only report preserves the current status. Reading or caching an assigned Task does not acknowledge or start it; the Asset reports those transitions explicitly.
 
-Completion must meet the Command's result requirements. A completion report awaiting required data preserves the applicable nonterminal state, including `paused` or `cancellation_requested`, until the [scan completion](#scan-completion) conditions hold or another terminal outcome is confirmed.
+The Asset decides when its Command execution is complete, including whether uploads belong to that execution. Core validates report authority, ordering and the lifecycle transition, then records the outcome. It does not test physical arrival or wait for result files. Result declaration and availability follow [scan completion](#scan-completion) independently.
 
 Automatic lost-Asset failure and an operator-forced terminal override are not part of this table.
 
@@ -95,6 +95,8 @@ Core accepts, stores and publishes Tasks through the ordinary API; the Asset OS 
 
 The Asset fetches its full outstanding Task list, following pagination as needed, and queues Tasks locally. Queued Tasks execute one at a time in the Asset's confirmed queue order: oldest submission first by default, following confirmed [reordering](#queue-revisions). Several Move To Tasks can therefore define a path. A disconnected Asset may continue its last confirmed order.
 
+The Asset's `operate` code decides when to advance that local queue. It need not wait for Core to receive or acknowledge the preceding completion report. The Asset may include uploads in execution or run them separately while executing the next Task; Core does not impose either policy. Delayed reports may therefore leave several queued Tasks recorded as nonterminal even though only one is physically executing.
+
 ### Immediate Tasks
 
 Immediate Tasks do not wait for a Queued Task to finish and are not inserted into or reordered within that queue. Independent immediate actions may execute alongside current work: turning lights on during Move To leaves that movement and the remaining queued path unchanged. Immediate does not imply interrupting all work; the Command defines its effect and the Asset implementation coordinates its hardware resources. Conflicting simultaneous immediate Commands require declared behavior; their arbitration is Command-specific, not a generic Core priority scheduler. Pause and Resume follow [control ordering](#control-ordering-and-expiry).
@@ -121,7 +123,7 @@ Accepted fresh adoption and conflict reports refresh the Asset's Contact atomica
 
 ### Reading the queue
 
-The Task-list response carries the requested and confirmed revisions and an edit revision with the relevant ordered list. Pagination must detect an invalidated view before a full-list edit is accepted; clients fetch all outstanding pages and deduplicate by Task ID. Queue updates and confirmations reach synchronized clients through the Task and assigned-queue contract, atomically enough to avoid presenting mixed revisions as a confirmed order. Concrete event envelopes and paging fields remain open. No Core readiness gate or execution scheduler is introduced.
+Assigned-work responses carry the Tasks-owned aggregate and pin its revision under [queue representation and coherent reads](#queue-representation-and-coherent-reads). Clients fetch all outstanding pages and deduplicate by Task ID before editing the complete eligible order. Queue updates reach synchronized clients in whole commits under [synchronization wire](sdk.md#synchronization-wire-and-application-boundary). No Core readiness gate or execution scheduler is introduced.
 
 ## Pause and Resume
 
@@ -135,7 +137,7 @@ The Pause Task and the suspended Task are distinct. The Pause Task records execu
 
 Operational status, suspended-Task status and Pause-Task outcome use their own authenticated reporting paths, and Core cannot infer one from another. Reports can arrive separately, and reads must not falsely claim all confirmations arrived together. A failed Pause attempt must not manufacture a paused Asset or suspended Task. A duplicate delivery of the same accepted Pause Task must not reapply the control effect after it has completed; an intentional later Pause is a new Task.
 
-A pending cancellation remains `cancellation_requested` even if the Asset physically suspends the work; suspension is recorded as an execution fact without clearing cancellation intent. Valid completion or failure may still win a race before suspension is confirmed. A late pre-pause start or progress report must not resume a paused Task, and a late pause report cannot reopen a terminal Task. If a completion report was already accepted and its required Objects later become ready, normal completion conditions may resolve the Task without unpausing the Asset or releasing its queue.
+A pending cancellation remains `cancellation_requested` even if the Asset physically suspends the work; suspension is recorded as an execution fact without clearing cancellation intent. Valid completion or failure may still win a race before suspension is confirmed. A late pre-pause start or progress report must not resume a paused Task, and a late pause report cannot reopen a terminal Task. File publication does not change Task status, unpause the Asset or release its queue.
 
 ### Resume
 
@@ -177,21 +179,25 @@ This does not reinstate the public execution-session API, require transparent mi
 
 ## Scan completion
 
-A scan Task reaches Completed only when the scan has finished and its Required results are available in Atlas; finishing physical acquisition alone is insufficient. Core requires both an authenticated completion report from the assigned Asset and the availability of every Required result that Asset declared. They may arrive in either order. Core retains the report or ready result until both conditions hold, and the final transition still obeys the confirmed-cancellation and terminal-state rules. Until then the Task keeps its applicable nonterminal state, including Paused on confirmed suspension or Cancellation requested while withdrawal is pending. Separate Asset-provided progress details can explain that scanning has finished and data is uploading.
+A scan Task reaches Completed when Core accepts its assigned Asset's valid successful-completion report. The Asset decides whether its Task includes uploading or ends when collection finishes. Core records that choice through the Asset's report; it does not gate completion or queue advancement on Object readiness. Collection-finished, active execution, suspended work and upload progress are distinct facts.
 
-Only the assigned Asset may declare its Task's result references, under the execution-report authority rule. Uploading or modifying an Object is not an Asset completion report. Object readiness alone cannot complete a Task, and an Asset report alone cannot complete a scan whose required data is still unavailable. This adds no caller ownership restriction to Object uploads. The completion report identifies each result by the Object ID the SDK allocated before upload, and an unresolved result reference does not publish an Object or satisfy readiness; see [Object IDs before upload](objects.md#object-ids-before-upload).
+Only the assigned Asset may declare its Task's result references, under the execution-report authority rule. Uploading or modifying an Object is not a completion report. Result declarations are append-only and independent of outcome reporting, and may arrive before or after a terminal outcome. They identify SDK-allocated Object IDs without publishing placeholder Objects; see [Object IDs before upload](objects.md#object-ids-before-upload). No final result-set cardinality or closure is required for completion. This adds no caller ownership restriction to Object uploads.
 
-A completion submission may return a nonterminal Task; callers receive Core's actual recorded status. A later Plugin Operation on the result has its own lifecycle and does not delay completion of the scan Task. Required results are protected from declaration acceptance until Reset under [Required-result protection](objects.md#required-result-protection). [Object publication](../architecture/system-design.md#object-publication-and-recovery-ownership) describes how the last required publication completes a waiting Task in the same commit.
+A valid completion submission returns the recorded terminal Task. A failed, refused, missing or later-published upload does not change that outcome. Result availability and integrity are exposed separately through result references and ready Objects. A later Plugin Operation has its own lifecycle. Required results remain protected from declaration acceptance until Reset under [Required-result protection](objects.md#required-result-protection).
 
 ### Collection finished and geometry
 
-For a scan referencing a Geofeature, Core's acceptance of the assigned Asset's valid collection-finished report closes further geometry changes for that scan. This is the collection evidence in the completion contract, not a new Task status or another Core permission step. The report must account for the geometry current at acceptance.
+For a scan referencing a Geofeature, the assigned Asset reports collection finished with the geometry revision it actually used. Core accepts valid evidence even if the saved zone changed while the report was in transit, and records the saved/applied difference. The report closes collection for that Task; it is not a Core permission step or a new lifecycle status. A terminal report also closes collection if no earlier collection-finished report exists.
 
-Acceptance is serialized against geometry edits. If an edit commits first, a report for the earlier geometry cannot close collection: Core preserves valid execution evidence, and the Asset must account for the changed zone before collection can be accepted as finished. Core does not infer failure or issue replacement work. Geometry correlation must distinguish a changed target from unrelated descriptive edits.
+Geometry edits and report acceptance serialize so readers see the recorded revision and saved/applied difference coherently. Neither commit order rejects an actual completion because a newer zone exists. During collection the Asset follows received geometry updates within Command limits; once collection is finished, scanning the newer zone requires another Task. Core never infers that an edit was received or applied.
 
-If the collection-finished report is accepted first, later edits do not reopen collection, even while required results are still uploading. The Asset finishes uploading the declared results for the accepted work, and scanning the changed zone requires another Task. Core keeps the accepted geometry association with the collection evidence, so later edits and delayed reports cannot reinterpret what was finished. Retrying an already accepted report preserves its recorded acceptance even if the geometry has since changed; it does not reopen collection or establish a new finish boundary.
+Lifecycle reports carry `applied_geometry`, an array of `{ geofeature_id, geometry_revision }` for the Command's referenced geometry, when reporting adoption or a geometry-dependent outcome. A scan report additionally uses `collection_finished: true` to close collection before its terminal outcome if uploading remains part of execution. Explicit collection finish and successful geometry-dependent completion require the actual applied revision for each required geometry reference. Failure or cancellation can close work that never adopted geometry; absent evidence stays unknown rather than blocking that valid outcome. The accepted Task exposes its finish entries as immutable `collection_geometry`, independently of current saved geometry and later result declarations. A repeated matching finish report is a no-op; conflicting replacement of accepted collection evidence is rejected without changing the recorded outcome.
 
-Required Objects may be ready before or after report acceptance. Once collection is accepted, later Object publication evaluates that accepted evidence and the lifecycle conditions without requiring the scan to adopt subsequent geometry edits. Collection-finished evidence alone is insufficient for Completed; all Required results must also be ready. Confirmed cancellation and other terminal outcomes still prevent a later upload from changing the outcome.
+Tasks verifies each supplied ID against its immutable Command references and asks Entities to validate the [issued geometry revision](tracks-and-geofeatures.md#geometry), under the same write boundary as an edit. It never requires equality with the latest saved revision or claims to verify physical collection. An unknown, zero, future or unrelated revision is invalid evidence. Identical report retry compares original facts before consulting later saved values.
+
+Core keeps accepted collection evidence and every result's declared geometry association. Later declarations may describe outputs from earlier applied revisions without releasing their existing holds or rewriting completion; they use the same reference/issued-revision check, including after Geofeature deletion. A matching report retry preserves the original evidence even after an edit. If the producer can never supply a declared result, expose the unavailable reference; preserve both its hold and the Asset's reported outcome. The Asset may report failure before a terminal outcome if that reflects its own execution policy.
+
+Required Objects may be ready before or after declaration or completion-report acceptance. Collection-finished evidence alone is not a terminal outcome unless the Asset also reports completion. Object publication never evaluates or changes execution status. Confirmed cancellation and every other terminal outcome remain immutable.
 
 ## Required Entity references
 
@@ -203,13 +209,70 @@ A Task's immutable input preserves the identity of a referenced Geofeature, not 
 
 Geometry delivery, offline execution and adoption follow [Geofeatures](tracks-and-geofeatures.md#live-geometry-for-existing-tasks).
 
-Core accepts a valid terminal report as what happened, even if it was made against geometry an operator has since edited, and records the geometry revision the Asset reports having used. A Task completed against superseded geometry is therefore visible in its record rather than rejected or held. A Command whose cutoff is an earlier report, such as a scan's collection-finished report, follows that report's own acceptance rules. Exact revision fields remain open.
+Core accepts a valid terminal report as what happened, even if it was made against geometry an operator has since edited, and records the geometry revision the Asset reports having used. A Task completed against superseded geometry is therefore visible in its record rather than rejected or held. A Command whose cutoff is an earlier report, such as a scan's collection-finished report, follows the [collection evidence fields and acceptance rules](#collection-finished-and-geometry).
+
+## Queue representation and coherent reads
+
+Tasks owns the `task_queue` aggregate included in every Asset Entity, even when empty. It is Derived data, not a client-editable component. Entity snapshots and changes carry its complete value; Task changes and their affected queue value share one [commit frame](sdk.md#synchronization-wire-and-application-boundary). This uses existing full synchronization, not another resource service or SDK mode. An order edit changes this one aggregate, not a second cached position in every Task resource; consumers derive Task positions from the aggregate.
+
+| Field | Meaning |
+| --- | --- |
+| `revision` | Decimal-string aggregate revision, increased on membership, eligibility, requested-order, confirmation or execution-fact changes; the precondition for an edit |
+| `requested_revision`, `requested_task_ids` | Revision at which the complete eligible, unstarted requested order was last changed, and that order |
+| `confirmed_revision`, `confirmed_task_ids` | Nullable revision and exact order the Asset last confirmed adopting; preserved evidence, not an automatically normalized claim of adoption |
+| `adoption` | `none`, `adopted` or `conflict`, with the reported revision and a reason on conflict |
+| `active_queued_task_id`, `suspended_task_id` | Nullable last-known execution facts explicitly reported by the Asset, with their accepted ordering token; null alone does not establish current Contact |
+
+New Tasks append to requested order. Starting, cancellation-requested and terminal Tasks leave its eligible list. These changes advance `revision` and `requested_revision`; they never imply the Asset adopted the newer order. Confirmed IDs can therefore include now-ineligible work. Reads expose the eligible projection separately from the exact confirmed evidence. Only accepted, newer Asset execution facts change the active/suspended association. A late outcome for A cannot clear an explicitly reported active B, and Task status alone is not a global execution scheduler.
+
+An order-edit request uses `expected_queue_revision`, `request_id` and the complete `task_ids` array. An empty array is valid only when the eligible set is empty. Core checks the precondition, exact membership and order atomically. Confirmation names `requested_revision`, `adopted` and, for a conflict, the actual execution facts and reason, using shared [Asset report context](asset-reporting.md#shared-report-context). Core retains the immutable requested snapshot for outstanding confirmations until Reset. An older confirmation may describe an older adopted snapshot but cannot roll back a newer confirmation or acknowledge a different request. A conflict records reality without adopting the requested order.
+
+Assigned-work pages carry one `queue_revision`, the queue aggregate and an opaque continuation bound to the Asset, Dataset, filter and that revision. A changed aggregate before continuation returns `page_changed` with no mixed page. The caller restarts that read; this creates no acknowledgement, execution or reorder. In Full synchronization mode, assigned-work reads use one applied picture boundary and the same revision rule. Snapshot/replay never expose half of a multi-Task edit.
+
+| Independent fixture | Expected result |
+| --- | --- |
+| Register an Asset with no Tasks | Revision `0`, requested IDs empty, confirmed revision null, no claimed execution |
+| Create A then B; edit their order using the current revision | Submission sequences unchanged; one aggregate changes requested order to B,A; confirmed evidence remains unchanged |
+| C is created while the caller prepares that edit | Stale edit conflicts with no partial reordering; new current order includes C |
+| A starts before a B,A request reaches the Asset | A becomes ineligible; Asset reports the conflict and actual active A; Core does not infer adoption or failure |
+| Confirmation of revision 7 follows confirmation of revision 9 | Preserve confirmation 9; retain historical evidence without rolling it backward |
+| Queue becomes empty between assigned-work pages | Continuation fails `page_changed`; restart returns a coherent empty aggregate |
+| A,B reorder crosses the replay page boundary | One complete aggregate carries both positions; pagination cannot split its array. If a related Task/Entity commit is split into resource frames, expose neither part until that commit is complete |
+
+## Result declarations and execution fixtures
+
+`POST /tasks/{task_id}/results` takes shared Asset report context and a bounded `declarations` array. Each entry has an `object_id`, `required` boolean and, for geometry-derived output, the referenced `geofeature_id` and actual `geometry_revision`. Only the assigned Asset declares results. Existing Task outcome reports never bundle declarations, so declaration validation cannot reject otherwise valid completion evidence.
+
+Declarations add immutable references; they never replace earlier references or release a hold. An exact duplicate has no new effect. Reusing an entry with different original facts conflicts; an optional association cannot downgrade an already-required reference. A whole declaration batch validates atomically, including known Object identity tombstones and geometry provenance. Unknown, not-yet-published Object IDs are allowed, while already-deleted IDs fail explicitly. Accepted required entries place Object holds in the same transaction as report acceptance and the Task's appended references. Task outcome and Command inputs remain unchanged. Required references have no completion-time finalization or cardinality requirement, and appending after Completed, Failed or Cancelled does not reopen that outcome.
+
+Task reads contain declared references, including unpublished IDs. `GET /tasks/{task_id}/objects` continues to list only ready Objects. Consumers resolve declared IDs against Object state to show unavailable, ready or integrity-faulted results; publication does not change Task execution status. This avoids a second cached readiness truth inside Tasks. The full picture already carries both resource sets.
+
+| Independent packet sequence | Expected Task, queue and Object facts |
+| --- | --- |
+| A finishes collection, reports Completed, B starts, A's upload stalls | A Completed, reported active work B, A's declared result unavailable; Core has released no execution permission |
+| Asset keeps A In progress until its upload completes | Core records that reported policy; B starts when the Asset decides to advance |
+| Pause arrives while A's separate upload continues and B moves | Pause suspends B and completes its own control Task on confirmation; A's upload continues; no status for A changes |
+| Resume cannot safely continue B | B Failed, Asset stays paused, remaining queue retained until a new explicit Resume |
+| Cancellation requested for A before its delayed success report | Valid Asset completion may resolve A Completed; later publication changes no outcome |
+| A is already Completed before a cancellation request | Reject the terminal transition; preserve A and its uploads |
+| Asset reports Completed before declaring two result IDs | Record completion first; later declarations append both references and protected holds, without reopening A |
+| One ready result and one unpublished result are declared together | Both references accepted and protected; their different availability has no effect on the Task outcome |
+| A result batch names an already-deleted ID | Reject the entire declaration batch; an independent valid completion report is still accepted |
+| Geometry 4 is saved before a delayed finish against geometry 3 | Record the actual finish against 3 and expose saved/applied difference; scanning 4 requires another Task |
+| Finish against 3 is accepted before geometry 4 is saved | Preserve the accepted finish and associations; edit does not reopen collection |
+| Earlier-geometry outputs were declared before an edit | Preserve every declaration and hold; later output can name its actual newer applied revision |
+| Saved revision 4, finish or result names issued revision 3 | Accept actual revision 3; neither an equality check nor edit-first order blocks it |
+| Finish/result names revision 0, future revision 5 or another Geofeature | Reject that invalid report atomically; no inferred Task outcome or new hold |
+| Geofeature is deleted after terminal outcome, then a result names its issued revision | Accept the valid original reference using retained identity/revision evidence; no Entity resurrection |
+| Result never arrives, or its upload repeatedly exceeds quota | Keep the declared unavailable result and any accepted terminal outcome; retrying file delivery does not repeat execution |
+| Lost finish/declaration response, then edit and identical retry | Replay original accepted facts with no extra hold, no new finish boundary and no duplicate outcome |
 
 ## Routes and SDK operations
 
 - Create Task: `POST /tasks` in the [Tasks routes](../api-endpoints.md#tasks), through the SDK's Create Task [operation](sdk.md#operations-catalog). Pause and Resume use this route with their Commands and immediate scheduling; neither adds a dedicated endpoint.
 - Read Tasks: `GET /tasks`, `GET /tasks/{task_id}` and `GET /tasks/{task_id}/objects` in the [Tasks routes](../api-endpoints.md#tasks), through the ordinary read operations in both SDK modes.
-- Report lifecycle, progress, cancellation requests, confirmation and decline: `PATCH /tasks/{task_id}/status`, through Report Task lifecycle and Cancel Task. This route replaces the separate acknowledge, start, progress, complete, fail and cancel endpoints. Core validates the authenticated actor and transition-specific payload: tasking clients request cancellation, and the assigned Asset supplies execution reports, confirmation and decline. It is not a generic field-edit endpoint. It returns the actual recorded Task, including when required Objects or a cancellation outcome are still pending, and SDK helpers return that state rather than echoing the requested status or optimistically setting Pause or Resume state.
+- Report lifecycle, progress, cancellation requests, confirmation and decline: `PATCH /tasks/{task_id}/status`, through Report Task lifecycle and Cancel Task. This route replaces the separate acknowledge, start, progress, complete, fail and cancel endpoints. Core validates the authenticated actor and transition-specific payload: tasking clients request cancellation, and the assigned Asset supplies execution reports, confirmation and decline. It is not a generic field-edit endpoint. It returns the actual recorded Task, including a terminal Task with unavailable result files, and SDK helpers return that state rather than echoing the requested status or optimistically setting Pause or Resume state.
+- Append result declarations: `POST /tasks/{task_id}/results`, through Declare Task results. This independent Asset report records the [declarations and protection holds](#result-declarations-and-execution-fixtures), including after a terminal outcome.
 - Fetch assigned Tasks: `GET /entities/{entity_id}/tasks` in the [Entities routes](../api-endpoints.md#entities) in HTTP mode, or the local picture in Full synchronization mode, through Fetch assigned Tasks.
 - Reorder assigned Tasks: `PUT /entities/{entity_id}/task-order`. Report queue adoption: `POST /entities/{entity_id}/task-order/confirm`. Both are in the [Entities routes](../api-endpoints.md#entities).
 - Read Command Catalog: a local SDK function; no HTTP request.
@@ -217,22 +280,18 @@ Core accepts a valid terminal report as what happened, even if it was made again
 
 ## Open questions
 
-- Task and queue wire fields, submission sequence encoding, concurrency and report-ordering tokens, event envelopes, paging fields, assigned-work filtering and error encodings.
-- Default scheduling selection and exact Command capability fields.
-- Command-specific deadline and expiry fields, clock-uncertainty handling, and validation for conflicting immediate actions beyond the Pause and Resume ordering.
-- Pause and Resume report correlation fields and stale-report validation.
-- Mechanics of reconciling unfinished Tasks after an exceptional interruption, and Asset behavior after cancellation or failure of a Queued Task.
-- Authority-transfer proof, stream and sequence fields, freshness checks and recovery messages for Asset-process recovery.
-- Progress-detail and failure-reason contracts, geometry correlation and applied-revision fields.
-- Grouping Tasks across several Assets.
-- The SDK Command Catalog function and Task helper names and signatures.
-- Upload-first scan completion is under [evaluation](../adr/0008-complete-scan-tasks-when-required-results-are-available.md#upload-first-evaluation); until a successor decision, both arrival orders and declaration-time protection remain required.
+The [queue representation](#queue-representation-and-coherent-reads), [shared report context](asset-reporting.md#shared-report-context), [synchronization contract](sdk.md#synchronization-wire-and-application-boundary), [result declarations](#result-declarations-and-execution-fixtures) and [MVP spatial contract](spatial-data.md) settle the corresponding specification tickets. Author their complete OpenAPI schemas and SDK signatures in their implementation slices.
+
+- Command variants beyond the MVP, including their progress details, failure reasons and capability fields.
+- Command-specific deadlines and validation for conflicting immediate actions beyond Pause and Resume, preserving the accepted control ordering and Core-time rules.
+- Asset-specific execution recovery and behavior after cancellation or failure of queued work. Core records the Asset's evidence and does not select its scheduling policy.
+- Grouping Tasks across several Assets remains a proposal.
 
 ## Decisions
 
 - [ADR-0004](../adr/0004-core-owns-commands-and-assets-execute-tasks.md): Core owns Commands and Assets execute Tasks; Plugins may create Tasks but are not Task targets.
 - [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md): Task reconciliation after disconnection, confirmed cancellation, queued and immediate scheduling, Pause and Resume, and Asset-process recovery.
-- [ADR-0008](../adr/0008-complete-scan-tasks-when-required-results-are-available.md): scans complete when required results are available.
+- [ADR-0026](../adr/0026-record-asset-completion-independently-of-result-availability.md): Asset-reported completion, independent result declarations and actual applied scan geometry; supersedes ADR-0008.
 - [ADR-0009](../adr/0009-expose-objects-only-when-ready.md): Object readiness, Required-result protection and uploads that continue after cancellation.
 - [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md): Task retention across Restart and clearing on Reset.
 - [ADR-0019](../adr/0019-retire-assets-without-inventing-task-outcomes.md): retirement blocks new assignments without inventing Task outcomes.

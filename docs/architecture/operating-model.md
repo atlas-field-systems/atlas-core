@@ -15,7 +15,31 @@ An Asset temporarily losing radio contact does not end the mission. Closing the 
 
 ## Expected workload
 
-The first deployment uses one Core server with field devices. Expected use is local coordination for a few hours, rather than months. A busy run has roughly 20 Assets and one or two operators. An ADS-B integration may add 100–200 local aircraft Tracks, potentially more. Thousands are a future scale to evaluate, not a promised first-version capacity. Reporting frequency, burst rates and Object sizes remain unspecified; resource counts alone do not establish throughput or storage needs. A mission or session is a usage description, not a new API resource.
+The first deployment uses one Core server with field devices. A busy run has roughly 20 Assets, 100–200 Tracks and one or two operators. Thousands are a future scale to evaluate, not a promised first-version capacity. The user accepted the following provisional sizing targets on 3 October 2026; they are inputs to testing, not measured capacity or automatic runtime limits. A mission or session remains a usage description, not a new API resource.
+
+| Dimension | Normal test target |
+| --- | --- |
+| Reports | Two reports per second per Asset; one observation update per second per Track |
+| Activity | Four-hour Missions; eight active hours across multiple runs in one Dataset |
+| Files | 100 MB typical, 1 GB large, four concurrent uploads; 10 GB total published file content per field day |
+| Core host | Linux, four CPU cores, 8 GB RAM and local SSD; the storage fixture starts with 64 GB free to measure metadata, staging and retained content separately |
+| Operator host | Ordinary 8 GB laptop |
+| Ordinary requests | 95% confirmed within 250 ms over a normal local IP connection |
+| Picture delivery | Committed updates visible within one second; initial operational picture ready within ten seconds |
+
+MB and GB are decimal bytes. The daily file target is neither maximum Object size nor storage quota. Reset remains explicit, with no automatic expiry. Report rates describe accepted fresh input; retries, backlog and burst traffic add load. The 20-Asset/200-Track profile produces 6,912,000 reports in eight hours, so history and index growth must be measured rather than inferred from current Entity count. Asset types are integration choices; Core's completion tests use a simulated Asset rather than defining device-side arrival logic.
+
+### Workload fixtures and admission bounds
+
+Engineering starts with these explicit, unmeasured fixture assumptions. Use 2 KiB ordinary Asset reports and 1 KiB Track reports; exercise 64 KiB report payloads separately. Submit one queued Task per Asset per minute and one Elevation Lookup Operation per second during the eight-hour profile, retaining 9,600 terminal Tasks and 28,800 Operation records. Add a tenfold report burst for ten seconds, a reconnecting Asset's ten-minute backlog, a slow picture consumer, four 1 GB uploads and four simultaneous downloads. Backlog is historical input, not fresh Contact.
+
+Initial admission bounds are a 1 MiB ordinary JSON body, 2 GB file, four uploading streams, 1,000 outstanding Tasks per Asset and 32 active synchronization connections. Values are engineering starting bounds, not promises that all maximal cases fit together. The public configuration's live fields and validation follow [Core configuration](../topics/dataset-lifecycle.md#core-configuration); synchronization staging/replay bounds follow [SDK synchronization](../topics/sdk.md#synchronization-wire-and-application-boundary). Object quota starts at 16 GB with an 8 GB free-space reserve, accounting for published bytes, staged/reserved attempts and content retained by downloads. Required protected data is never evicted to admit another request.
+
+Use explicit `payload_too_large`/413 for body or file limits, `resource_limit`/429 for finite concurrency or outstanding-work admission, and `storage_limit`/507 for refused uploads. Include a retryable indication and `Retry-After` where time-based recovery is known, without claiming a failed request was accepted. Identity retry lookup still returns an already-accepted result without creating more work. Release reservations when an attempt ends or ownership-safe recovery abandons it. Reports and cancellation retain their separate admission path when Object quota is exhausted. If the actual filesystem cannot honor the operational reserve, report that failure explicitly; no request may receive false durable success.
+
+Measure normal load and the burst/fault profile separately through actual SDK/Core/Plugin boundaries. Record request p50/p95/p99, picture lag, initial load/replay latency, transferred bytes including retries, SQLite contention, Core RSS, SDK picture/staging memory, metadata/index/history growth, staging and ready-file usage, refusal counts and correctness errors. Provisional resource goals are Core RSS at most 2 GiB, SDK picture at most 512 MiB and eight-hour SQLite/history growth at most 8 GB. Exceeding a measured goal calls for an explicit budget or scope decision, not dropped observations, overwritten history or hidden deletions.
+
+Repeat two four-hour runs without Reset, then a full eight-hour run and an extended accumulation run. Verify that terminal records remain queryable and feed/replay/paging buffers stay bounded; an expired replay window triggers an explicit rebuild. Under each fault, compare accepted identities, current values and retained history against independent expected counts. A throughput result with lost accepted data fails. Physical movement, constrained radio and whole-file transfer latency are excluded from the local-IP responsiveness goals.
 
 ## Scope of this design
 
@@ -37,7 +61,7 @@ Status: accepted initial scope, not yet implemented. Build Core, Protocol and SD
 | Elevation Lookup Plugin | A client invokes an Operation with a geographic position and receives the ground elevation at that position. | This is independent of Move To. It needs no Asset Task, input Object or output Object; a small value can be the Operation result. |
 | Object transfer | A client uploads known fixture content through the SDK, obtains a ready Object and downloads matching content. | Test Objects independently, without making either example manufacture a file. |
 
-Use a small local elevation dataset for the example and repeatable tests, so the MVP works without internet. The result must state its units and elevation reference. Exact coordinate fields, dataset and lookup behavior remain implementation choices; a production elevation provider is not selected.
+Use the small offline fixture and shared units/reference in [Spatial data](../topics/spatial-data.md#elevation-lookup). A production elevation provider remains unselected.
 
 Plugins normally live in separate repositories. This example may start under `examples/plugins/` in the Atlas Core repository, with its own build and container, using the supported Plugin contract and SDK. Keep it separable so it can move to its own repository without changing Core behavior.
 
@@ -67,7 +91,7 @@ An operator can cancel a scan of one area and issue another while an Asset is ou
 
 This remains a broader system example, beyond the initial MVP's separate workflows.
 
-The operator tasks an Asset to scan an area. Its hardware determines the result: an Asset with a software-defined radio and antenna produces an Object containing scan data. While uploading the required result, it has not yet met the [scan completion promise](../topics/tasks.md#scan-completion). [Objects become visible when ready](../topics/objects.md#ready-only-visibility).
+The operator tasks an Asset to scan an area. Its hardware determines the result: an Asset with a software-defined radio and antenna produces an Object containing scan data. The Asset decides whether uploading belongs to its Task; [completion records its reported outcome](../topics/tasks.md#scan-completion), while [Objects become visible when ready](../topics/objects.md#ready-only-visibility).
 
 The operator separately invokes a Plugin Operation on that Object. The Plugin owns the algorithm and specialized result format. Processing does not hold the original scan Task open, and the accepted Operation continues if the operator closes or disconnects the Command Interface. A returning operator can obtain its result. Published detections enter the shared picture directly.
 

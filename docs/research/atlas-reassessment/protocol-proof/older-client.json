@@ -1,0 +1,124 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Independent older-client fixture",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/entity": {
+      "get": {
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Older known Asset representation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Asset": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id",
+          "type",
+          "alias",
+          "labels",
+          "position",
+          "operational_status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "asset"
+            ]
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true
+          },
+          "labels": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "position": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "required": [
+              "latitude",
+              "longitude"
+            ],
+            "properties": {
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              }
+            }
+          },
+          "operational_status": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "ready",
+              "stopped"
+            ]
+          }
+        }
+      },
+      "Response": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Asset"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "data"
+        ]
+      }
+    }
+  }
+}

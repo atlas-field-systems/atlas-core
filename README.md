@@ -7,6 +7,8 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Users, field workflow and expected workload | [Operating model](docs/architecture/operating-model.md) |
 | End-to-end testing policy, SDK–Core parity and required scenarios | [Testing strategy](docs/testing-strategy.md) |
 | Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/testing-strategy.md#mvp-integration-checks) |
+| Implementation slices, route/scenario coverage and specification tickets | [Implementation sequence](docs/architecture/implementation-sequence.md) |
+| Executed representative generation and validation proof | [Pinned toolchain proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
 | Collaboration between Core, SDK, Protocol and local tools | [System design](docs/architecture/system-design.md) |
 | Deep-module design and review criteria | [Structure and interfaces](docs/agents/code-conventions.md#structure-and-interfaces) |
@@ -18,6 +20,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Track publishers, corrections, observation age and deliberate combination | [Track publisher decision](docs/adr/0022-one-publisher-per-track.md) |
 | Deletion of resources required by unfinished Tasks | [Required Entity references](docs/adr/0023-protect-required-entity-references-during-tasks.md) |
 | Live Geofeature geometry, offline adoption and geometry cutoffs | [Live geometry decision](docs/adr/0024-use-live-geofeature-geometry-in-tasks.md) |
+| Asset-owned completion and independent result availability | [Completion decision](docs/adr/0026-record-asset-completion-independently-of-result-availability.md) |
 | Reference clock for age, freshness and deadlines | [Core time decision](docs/adr/0025-use-core-time-as-the-installation-reference-clock.md) |
 | Current rules by area | [Topic pages](docs/topics/README.md) |
 | Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
@@ -25,7 +28,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
 | Source evidence, technology alternatives and proposed experiments | [Research index](docs/research/atlas-reassessment/README.md) |
 
-The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted; implementation has not started.
+The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted; product implementation has not started. The isolated Protocol proof is executable research evidence.
 
 ## API and SDK behavior
 

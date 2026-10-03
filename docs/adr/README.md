@@ -11,7 +11,7 @@ ADRs record accepted tradeoffs and their rationale. Superseded records stay for 
 | [ADR-0005](0005-allow-compatible-client-versions.md) | Allow compatible client versions | Accepted |
 | [ADR-0006](0006-protect-active-plugin-work-during-lifecycle-changes.md) | Protect active Plugin work during lifecycle changes | Accepted |
 | [ADR-0007](0007-reconcile-asset-tasks-after-disconnection.md) | Reconcile Asset Tasks after disconnection | Accepted |
-| [ADR-0008](0008-complete-scan-tasks-when-required-results-are-available.md) | Complete scan Tasks when required results are available | Accepted |
+| [ADR-0008](0008-complete-scan-tasks-when-required-results-are-available.md) | Complete scan Tasks when required results are available | Superseded by ADR-0026 |
 | [ADR-0009](0009-expose-objects-only-when-ready.md) | Expose Objects only when ready | Accepted |
 | [ADR-0010](0010-operate-without-internet-access.md) | Operate without internet access | Accepted |
 | [ADR-0011](0011-generate-shared-contracts-with-minimal-customization.md) | Generate shared contracts with minimal customization | Accepted |
@@ -29,3 +29,4 @@ ADRs record accepted tradeoffs and their rationale. Superseded records stay for 
 | [ADR-0023](0023-protect-required-entity-references-during-tasks.md) | Protect required Entity references during Tasks | Accepted |
 | [ADR-0024](0024-use-live-geofeature-geometry-in-tasks.md) | Use live Geofeature geometry in Tasks | Accepted |
 | [ADR-0025](0025-use-core-time-as-the-installation-reference-clock.md) | Use Core time as the installation reference clock | Accepted |
+| [ADR-0026](0026-record-asset-completion-independently-of-result-availability.md) | Record Asset completion independently of result availability | Accepted |

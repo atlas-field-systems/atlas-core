@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: superseded by ADR-0026
 ---
 
 # Complete scan Tasks when required results are available
+
+Superseded on 3 October 2026 by [ADR-0026](0026-record-asset-completion-independently-of-result-availability.md). This record preserves the earlier decision and evaluation; its readiness gate and edit-first scan-finish rule are no longer current requirements.
 
 A scan Task reaches Completed when the scan has finished and its required result is available in Atlas. The user chose this over marking completion after physical acquisition alone, so operators can rely on a completed scan having its required result ready for use. A later Plugin Operation on the result has its own lifecycle and does not delay completion of the scan Task. [Objects appear only when ready](0009-expose-objects-only-when-ready.md).
 

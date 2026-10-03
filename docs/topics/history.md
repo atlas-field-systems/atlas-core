@@ -38,7 +38,7 @@ Plugins and public clients cannot directly write arbitrary entries or alter reco
 
 ### Local actions
 
-Local administrative actions through the CLI or TUI are recorded with an identified actor, including actions taken while Core is stopped. The local identity and recording mechanism remain implementation choices. They follow the same Reset retention boundary and do not require operator roles or another public administration API.
+Local administrative actions through the CLI or TUI are recorded with an identified actor, including actions taken while Core is stopped. The host manager obtains local caller evidence through [authenticated private Unix coordination](dataset-lifecycle.md#host-supervision-and-private-coordination). Activity records preserve that evidence without claiming it proves which human used the local account. They follow the same Reset retention boundary and do not require operator roles or another public administration API.
 
 While Core runs, local management records its actions through Core's private coordination. While Core is stopped, it appends each action to a local activity journal on the installation mount, keyed by action identity and recording the accepted request or its later known outcome. This keeps SQLite accessed only by Core under [ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md).
 
@@ -54,18 +54,18 @@ Read access follows the operator administrative boundary under [Operator clients
 
 ### Capture
 
-Core keeps a small store of reported Asset and Track movement, separate from current telemetry. When it accepts an ordinary create, update or check-in report, it captures the explicitly supplied position, speed and altitude as an append-only Movement sample, in the same transaction as the current-state write.
+Core keeps a small store of reported Asset and Track movement, separate from current telemetry. When it accepts an ordinary create, update or check-in report, it captures previously unrecorded explicitly supplied position, speed and altitude in the report's write commit. A valid older fact may add movement without replacing a current quantity, under [Asset ordering and independent effects](asset-reporting.md#ordering-and-independent-effects) and [Track movement ingestion](tracks-and-geofeatures.md#movement-ingestion-and-independent-observation-fixtures).
 
 - Only explicitly supplied quantities are captured. A position requires a complete latitude and longitude pair; speed-only and altitude-only samples are valid.
 - Core does not store whole Entity snapshots or infer measurements from the merged Entity.
 - Unrelated changes add no sample.
-- A fresh report repeating a stationary position is still an observation and adds a sample. Replaying the same report adds no sample.
+- A new observation repeating a stationary position adds a sample. Replaying or re-signing the same original fact adds no sample, even through a replacement process or new outer report ID. Original per-quantity identities and conflict rules live in the reporting contracts above.
 
 Existing Asset report authority and freshness rules still apply under [Asset report acceptance](asset-reporting.md#asset-report-acceptance). Accepted Track corrections append samples through this ordinary capture and never edit recorded ones, under [Corrections to current observations](tracks-and-geofeatures.md#corrections-to-current-observations).
 
 ### Sample contents and timing
 
-Each sample records its Entity association, report or sample identity, optional observation time, Core receipt time and the supplied measurements. Receipt time is recorded in [Core time](../adr/0025-use-core-time-as-the-installation-reference-clock.md). Unknown observation time stays explicitly unknown; receipt time provides the labeled fallback for ordering.
+Each sample records its Entity association, stable sample identity, originating report/evidence correlation, Core receipt time and supplied measurements. Each quantity retains its own observation time, uncertainty and correction identity from the reporting contract; differently aged quantities do not acquire one invented observation time. Receipt time is recorded in [Core time](../adr/0025-use-core-time-as-the-installation-reference-clock.md). Unknown observation time stays explicitly unknown; receipt time provides a labeled alternative for history ordering, never evidence of observation freshness.
 
 ### Retention and deletion
 
@@ -75,14 +75,21 @@ Entity deletion does not silently cascade-delete retained samples or attach them
 
 ### Reading movement history
 
-One paginated read returns raw samples for one Entity and a bounded time range, with their timing and stable ordering, not reconstructed Entity state.
+One paginated read returns raw samples for one Entity and a bounded time range, with their timing and stable ordering, not reconstructed Entity state. The request names `time_basis` as `received_at` or `observed_at`, defaulting to receipt time. Observation-based filtering applies to the explicitly timed quantities in each sample and returns the full sample with `matched_quantities`; unknown observation times never match a known interval. Ranges include `from` and exclude `to`. Observation ordering uses the earliest matching quantity's time; equal time values use stable sample identity as the tie-breaker. The cursor pins the Dataset, Entity, time basis, range and upper accepted-sample boundary, so concurrent arrivals do not change that traversal.
 
 - Core resolves the Entity through its live record or its retained Dataset identity and deletion record, including its original kind. A live-Entity lookup does not gate the read.
 - A deleted Asset or Track ID stays queryable, with an explicit deleted-Entity indicator.
 - An empty interval returns an empty page. An ID never present in the current Dataset returns not found.
 - Dataset and Entity association checks and a stable pagination boundary prevent Reset, identity replacement or concurrent inserts from mixing results. An obsolete-Dataset request cannot read a replacement Dataset.
 
-Request bounds and ingestion capacity must be measured against Asset and Track report rates. Core does not silently sample away observations or truncate a requested interval.
+Request bounds and ingestion capacity must be measured against the [provisional field profile](../architecture/operating-model.md#expected-workload). Core does not silently sample away observations or truncate a requested interval.
+
+| Independent read fixture | Expected answer |
+| --- | --- |
+| Sample S received at 200 contains position observed at 10 and speed observed at 100; observation range 90..110 | S returned with `matched_quantities: ["speed"]`; position time remains 10 |
+| Same S, receipt range 190..210 | S returned with both supplied quantities, without changing their observation times |
+| Sample U has unknown observation times | U can match its receipt interval; it matches no known observation interval |
+| A new sample arrives between pages | Original traversal excludes it using the pinned upper boundary; a new read can include it |
 
 A Command Interface can display returned samples; this page does not select its UI.
 
@@ -105,10 +112,10 @@ These are deferred:
 
 ## Open questions
 
-- Exact local coordination, local actor identity, activity field formats, query limits and failure presentation.
+- Exact activity field formats, query limits and failure presentation, preserving authenticated local-caller evidence from the host manager.
 - Placement of the shared recording and query facility: System operations is the proposed home under [Activity recording](../architecture/system-design.md#activity-recording).
-- Exact sample columns, report identity encoding and cursor fields.
-- Numeric request bounds and ingestion capacity, pending measurement of Asset and Track report rates.
+- Physical sample columns and full response schemas, preserving the specified per-quantity identity/time and pagination boundaries.
+- Measured ingestion capacity and deployment tuning; provisional Asset/Track report rates are specified in the operating model.
 
 ## Decisions
 

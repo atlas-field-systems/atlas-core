@@ -4,6 +4,7 @@ This is a dated history of user decisions and authorizations. Current behavior r
 
 The planning session and the architecture merged in PR #1 originally disagreed. The user accepted the reconciling recommendations on 22 September 2026, and [Plugin configuration recovery](#plugin-configuration-recovery) closed the last reconciliation choice. Later rounds:
 
+- The [3 October specification decisions](#specification-grilling-and-proof-3-october-2026) supersede the earlier ready-result completion promise and settle the planning-review specifications.
 - The [28 September SDK decision](#sdk-and-gateway-decisions-28-september-2026) supersedes the Asset hybrid portions below.
 - The [28 September Plugin storage decision](#plugin-storage-decision-28-september-2026) extends Reset to Plugin-private operational storage.
 - The [first documentation grilling round](#documentation-grilling-round-one-28-september-2026) additionally settles descriptive-edit conflicts, Track publishers, required Entity-reference deletion and private Plugin work on uninstall.
@@ -261,3 +262,23 @@ The user requested autonomous follow-up to the codebase-design review and a read
 | Physical storage | Apply the existing rule that logical components and retry kinds do not each require a table or repository interface | [Storage direction](data-components.md#agreed-storage-approach); choose mappings with each implementation slice's queries, constraints and lifetimes rather than adding a generic storage-design ticket |
 
 Keep HTTP mode and Full synchronization mode behind one interface, synchronization-only picture inputs, distinct report acceptance and Contact evidence, either-order scan results and existing lifecycle retention. Exact wire contracts, management supervision and the required real integration scenarios remain open. This follow-up does not close the referenced tickets or make runtime implementation ready-for-agent.
+
+## Specification grilling and proof, 3 October 2026
+
+The user accepted the recommendations across fifteen questions and confirmed the shared summary. Their corrections establish that the Asset OS and its `operate` code own execution completion and queue advancement. Core records valid Asset evidence; neither its acknowledgement nor file readiness releases the next Task. Product implementation remains future work.
+
+| Topic | Accepted direction | Current authority |
+| --- | --- | --- |
+| Completion and uploading | An Asset may finish a scan with files still uploading and choose whether upload is part of execution. Accept valid completion independently of result declarations and availability; retain required results until Reset | [ADR-0026](adr/0026-record-asset-completion-independently-of-result-availability.md), [Task results](topics/tasks.md#result-declarations-and-execution-fixtures) |
+| Scan geometry | Accept delayed actual execution against the Asset's applied revision, showing the saved/applied difference. Scanning a later revision needs another Task | [Collection finished and geometry](topics/tasks.md#collection-finished-and-geometry) |
+| Entity edits | Keep descriptive edits and reported/observed updates in separate atomic requests with their own preconditions | [Mutation classes](topics/asset-reporting.md#mutation-classes-and-atomic-validation) |
+| Object durability and deletion | Acknowledged saved data survives power loss on healthy supported storage. Permitted deletion removes discovery and new downloads immediately; already-open downloads can finish | [Durability and publication fixtures](topics/objects.md#durability-and-publication-fixtures) |
+| Workload and responsiveness | Use the agreed provisional field workload, Linux Core/laptop sizing and ordinary-request, picture-update and initial-load targets. Normal daily file content is 10 GB, distinct from file size and quota | [Workload and limits](architecture/operating-model.md#expected-workload) |
+| Configuration | Apply a small set of operational limits live; save network/storage-location changes for explicit local application outside Missions | [Core configuration](topics/dataset-lifecycle.md#core-configuration) |
+| Retention | Accumulate the provisional eight active hours over multiple runs in one Dataset; no automatic expiry or cleanup substitutes for explicit Reset | [Workload](architecture/operating-model.md#expected-workload), [Dataset lifecycle](topics/dataset-lifecycle.md) |
+
+The earlier scan-completion and result-readiness entries in this log remain history; ADR-0026 supersedes those gates. Engineering specified report/process proof, original-evidence deduplication, queue values, synchronization barriers, unknown-outcome handling, Plugin dispatch and historical identity, host supervision, retained-format updates, TLS/bootstrap, registration and spatial fixtures in their owning topic pages. These mechanisms implement the accepted behavior rather than authorizing new product scope.
+
+The [implementation sequence](architecture/implementation-sequence.md) maps the 21 open specification tickets, all public routes, local lifecycle actions and required scenario groups to proposed slices and evidence. It does not waive required tests or turn external field validation into simulated evidence. The [isolated pinned toolchain proof](research/atlas-reassessment/13-protocol-toolchain-proof.md) executes representative generated Go/TypeScript bindings over real SQLite and files; it establishes no product capacity, power-loss or complete API-parity result.
+
+After the final review, the user asked to proceed following the recommendation to reserve post-registration Entity Descriptive edits to operators and managed Plugins. The [caller permissions](topics/identity-and-access.md#assets) record that direction. Initial Asset registration can still supply its permitted Descriptive fields; Asset and gateway credentials cannot make later descriptive edits, even to their own or bound Asset. The mutation matrix and independent authorization fixtures complete #81's remaining caller boundary.

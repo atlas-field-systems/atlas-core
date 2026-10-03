@@ -103,7 +103,7 @@ Entity data an Asset authors about itself, including its Operational status and 
 _Avoid_: Observed data, Descriptive data
 
 **Descriptive data**:
-Entity data that operators edit, such as an Alias, protected against conflicting concurrent edits.
+Entity data edited by operators or managed Plugins, such as an Alias, protected against conflicting concurrent edits.
 _Avoid_: Reported data, Observed data
 
 **Derived data**:
@@ -189,7 +189,7 @@ One request to execute a Command on one assigned Asset, with a recorded lifecycl
 _Avoid_: Command definition, mutable assignment
 
 **Required result**:
-An Object the assigned Asset declares its Task needs before the Task can be Completed.
+An Object the assigned Asset declares as a retained result of its Task, protected until Reset. Its availability does not determine Task completion.
 _Avoid_: attachment, optional result
 
 **Required-result protection**:
@@ -197,8 +197,8 @@ Keeping a Required result from being deleted from the acceptance of its declarat
 _Avoid_: Object lock
 
 **Collection finished**:
-The end of a scan's data gathering, reported by its Asset. Its Required results may still be uploading.
-_Avoid_: Completed Task, Task lifecycle status
+The end of a scan's data gathering, reported by its Asset against the geometry it used. The Asset decides whether subsequent uploads remain part of its Task.
+_Avoid_: Task lifecycle status, Core permission to advance
 
 **Task scheduling**:
 The selection of queued execution or immediate handling for a Task, within the Command and Asset's supported behavior.

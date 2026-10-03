@@ -20,6 +20,24 @@ Plugin discovery and status are outside the operational picture and use their AP
 
 Individual Plugin failures are reported on the affected Plugin and do not make an otherwise functioning Core globally unready.
 
+## Installation manifest and capability schemas
+
+This specification addresses [#64](https://github.com/atlas-field-systems/atlas-core/issues/64) and the Plugin identity/lookup parts of [#76](https://github.com/atlas-field-systems/atlas-core/issues/76). It selects contracts for implementation; no container or fault scenario has passed yet.
+
+A Plugin release is a local install bundle containing `manifest.json`, local schema files and an OCI image archive, or a manifest referencing an image already acquired by digest. Installation acquires every artifact before an offline Mission. Atlas does not select a marketplace or require registry access at runtime. The manifest has `format_version=1`, permanent `package_id`, independent SemVer `release`, immutable `image_digest`, supported public `protocol_versions`, private `dispatch_contract_versions`, configuration schema and `capabilities`. Each capability has permanent `capability_id`, explicit `input_version`, input and output schema, and optional declared cancellation support. Schemas use [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12/json-schema-core) with local bundle references only; no remote reference retrieval occurs during validation. A changed input contract uses a new input version. Reusing a published package/release with different bytes fails installation.
+
+Core resolves the installed release and capability, checks supported contract versions, availability and bounded input validation before accepting a first Operation. The public submission carries `request_id`, `capability_id`, `input_version` and `input`; Core records the selected release/digest with the original input. Matching retries compare recorded original facts before checking current availability, so removing or updating a Plugin cannot turn the retry into new processing. Invalid input or an unsupported capability/version produces an explicit rejection without an Operation or dispatch. Core never executes arbitrary capability endpoint URLs supplied by the caller.
+
+Installed capabilities and Operation input/output schemas are public discovery facts. Provider credentials and configuration values remain private. Capability discovery returns installed `plugin_id`, package/release, supported versions and availability, plus those schema identities. Plugin discovery and Operation changes use explicit API reads/polling in both SDK modes; they produce no Entity/Task/Object feed events. The SDK outcome helper polls with bounded backoff and cancellation of the local wait never cancels the Operation.
+
+### Installation and historical identity
+
+`plugin_id` identifies one Plugin installation, not a package or display name. Host management allocates it once as a UUID. Updates retain it; uninstall retires it; reinstall always receives a new one. Core supplies a unique `principal_id` and usable credential to the installed Plugin. Reinstall provisions fresh authority rather than reviving the old principal's revoked credentials. A release is identified by package ID, version and digest. `publisher_id` follows [publisher continuity](identity-and-access.md#publisher-continuity), independent of all those IDs.
+
+Core preserves a nonsecret Plugin identity record with original installation ID, package/release identity and removal condition as long as Dataset Operations or attribution require it. Installation selections and working credentials retain their installation lifetimes; historical Operation ownership and snapshots belong to the Dataset and disappear at Reset. Publisher reservations/provenance retain their installation lifetime under the linked identity contract. Names can be reused without reusing IDs. Reinstall by the same publisher can continue existing Tracks only after local authority binds the new principal under the [publisher proof contract](identity-and-access.md#publisher-continuity). A matching display name supplies no proof and does not retarget existing Tasks.
+
+`GET /plugins/{plugin_id}/operations` queries Core-owned records by that immutable installation ID even after uninstall. An unknown ID is not-found; a known historical ID with no matching Operations returns an empty page. `GET /plugins/{plugin_id}/operations/{operation_id}` first resolves the retained Operation and checks its recorded installation owner; an ID nested under another Plugin is not-found. Neither read requires a live installed container. Results include recorded package/release and `plugin_installed=false` after removal. `GET /plugins/{plugin_id}` for the retired installation returns historical identity with `availability=removed` and no callable capabilities; current discovery lists installed Plugins only. New submission against the removed ID fails `plugin_unavailable`. A reused name/new installation cannot claim or run the old Operations.
+
 ## Operations
 
 An Operation is one submitted invocation of a Plugin capability, with its own identity, lifecycle and outcome. Each invocation is a separate Operation.
@@ -68,6 +86,48 @@ Core retains Operations across Restart and Plugin removal until Reset. Retained 
 
 Neither Plugin restart nor Core restart reruns an Operation automatically. Once an Operation is known to have failed, retain its failure and require an explicit operator rerun; restarting the Plugin must not automatically retry it. Starting compatible enabled Plugins with Core does not resume or rerun interrupted Operations. Recovery must not blindly reissue Asset Commands.
 
+## Private operation dispatch and reconciliation
+
+The private Plugin contract is versioned independently as `dispatch_contract_version=1`. It is shared with the standalone Plugin package, outside the public HTTP route generator. Core's Plugins module owns its recorded state; the Plugin owns a durable deduplication ledger in its [working directory](#private-operational-storage). The host supplies a per-installation Unix socket mount and a secret token file, following [host coordination](dataset-lifecycle.md#host-supervision-and-private-coordination). This channel exposes no Docker or Core database access.
+
+Plugins initiate authenticated long-poll `next` requests to Core's private per-Plugin socket. Core validates an ephemeral token bound to `plugin_id`, `principal_id`, `dataset_id`, `core_run_id` and a Core-issued Plugin `runtime_generation`. The token is invalid after that runtime ends. The Plugin reports `ready` with its immutable image digest, supported versions, configuration revision and available capabilities before admission opens. A mismatch faults startup. Dispatch, cancellation, acknowledgements, progress and outcomes use the same authenticated channel and identity binding. No user-provided Plugin ID or input token establishes authority.
+
+| Message | Required correlation and effect |
+| --- | --- |
+| `dispatch` | `operation_id`, original Dataset/Core run/runtime generation, package/release/digest, capability/input version, original input and `input_digest`. Core commits `dispatch_exposed` before handing the message to transport |
+| `dispatch_ack` | Same Operation and input digest; confirms the Plugin durably recorded acceptance, never claims completion. Duplicate acknowledgement has no new effect |
+| `progress` | Operation ID and increasing decimal-string `report_sequence`, known output resource references and bounded progress. Core records it without clearing cancellation intent |
+| `outcome` | Stable sequence and terminal `completed`, `failed` or `cancelled`, typed result/error and known outputs/effects. Core replies with the recorded outcome revision after committing it |
+| `cancel` | Operation ID and stable cancellation identity. Plugin returns a confirmed cancellation or eventual definitive outcome; merely receiving this message does not establish cancellation |
+| `inspect` / `inspection` | Same Operation/input digest and Core run. Plugin reports durable ledger state `never_seen`, `accepted`, `running` or `terminal`, plus known outcomes. Missing/unreadable evidence is `unknown`, not `never_seen` |
+| `drain` / `drained` | Stop new dispatch, stop continuous ingestion and report finite active work. Only confirmed draining allows an ordinary planned container stop |
+
+Core durably records acceptance before exposure. Its dispatch state is `not_exposed`, `exposed`, `acknowledged` or `resolved`, separate from public Operation status. It sets exposed in a short transaction before sending any bytes. A lost acknowledgement therefore leaves possible execution, never definite nonexecution. Within the same live runtime, Core may resend the exact dispatch identity or inspect it. The Plugin writes and syncs its accepted ledger record before starting effects, writes a running marker before the first effect, and returns the existing record on repeated dispatch. The unique key is Dataset + Operation ID; a changed digest conflicts. Deduplication prevents a second execution, not duplicate arbitrary effects within one execution.
+
+If the ledger is corrupt, missing unexpectedly, or belongs to another Dataset/run, the Plugin rejects dispatch and faults rather than treating the Operation as new. A fresh runtime reports retained evidence during readiness/reconciliation, but does not execute any old accepted/running ledger entries. Host and Core distinguish independently restarting a Plugin from reconnecting an unchanged live runtime. Only never-exposed pending work from the current Core run remains eligible for its original first dispatch after a manual Plugin restart. Previously exposed unfinished work resolves from known evidence or becomes Interrupted; it is never redispatched to the replacement runtime. Whole-Core Start makes every retained unfinished Operation Interrupted before Plugins start, even if their files remain. An explicit new submission is the rerun path.
+
+Cancellation races on the same Core-owned Operation lock/transaction. Core may directly confirm Cancelled only if no dispatch has been exposed and it atomically disables future dispatch. If exposure committed first, cancellation stays requested until confirmed; lost acknowledgement does not permit the undispatched shortcut. A valid completion/failure racing cancellation wins according to the existing transition table. Uncertain processing becomes Interrupted, retaining known effects. A Plugin crash is a reported fault and requires manual restart; restarting neither rewrites terminal states nor reruns work.
+
+Core validates every report against its authenticated binding, original capability version, output schema and allowed transition before committing it. Invalid output does not become a successful recorded outcome; unestablishable completion follows Interrupted rules. Known public output references must resolve to valid published resources; private filenames cannot be returned as Objects. Terminal reports remain in the Plugin ledger until Core acknowledges their committed outcome. Losing that acknowledgement retries the same report identity and payload. Core accepts an identical terminal repeat without another effect; a conflicting terminal report returns `terminal_conflict`. Lower or duplicate progress cannot regress a later recorded outcome. Once Core has classified an Operation Interrupted after runtime loss, later reports can attach known evidence but cannot rewrite its terminal status or trigger execution. The Plugin can never infer that an absent acknowledgement permits replaying external effects.
+
+### Elevation Lookup and failure fixtures
+
+The independent example package declares `elevation_lookup`, input version 1, using the named position and output contract in [Elevation Lookup](spatial-data.md#elevation-lookup). That page owns interpolation, fixture values, `reference_data_id`, vertical reference, invalid-coordinate, `out_of_coverage` and `no_data` outcomes. The example reads installed reference data, writes its Operation ledger in managed work and returns the expected result through this private contract; it does not create a Task or require an Object. Test barriers control dispatch/effect/report timing and do not slow the production algorithm.
+
+| Independently scheduled sequence | Required result |
+| --- | --- |
+| Acceptance commits; caller disconnects; valid dispatch completes | One Operation returns the independently expected centre elevation 130 m when caller returns; no connection-owned cancellation |
+| Plugin accepts dispatch; acknowledgement is lost; exact dispatch repeats | Same ledger entry and one lookup execution; inspection/ack recovers that Operation |
+| Dispatch exposure commits; cancel arrives; dispatch acknowledgement is lost | Cancellation requested remains; no definite-undispatched cancellation |
+| Cancel commits before exposure | Cancelled, zero dispatches and zero Plugin effects |
+| Terminal report commits; acknowledgement is lost; report repeats | Same immutable outcome and one attribution, no repeated lookup |
+| Completed report followed by a conflicting Failed report | Terminal conflict; Completed result retained |
+| Plugin produces an output/effect then crashes before confirmed outcome | Known output retained; unresolved Operation Interrupted; manual restart does not rerun |
+| Invalid coordinates, unsupported units/reference, outside coverage or declared no-data fixture | Validate inputs before acceptance where required; definitive supported coverage/no-data failures come from the capability; never return invented zero |
+| Independent stop/update meets active finite work | Stop admission/ingestion and drain or explicit cancel; Core/unrelated Plugins remain serving |
+| Core Restart retains unfinished record and Plugin work | Interrupted before admission; no automatic dispatch/resume; original submission retry returns that record |
+| Uninstall then read old terminal/Interrupted Operation; reinstall same visible name | Old nested URL remains readable; new Plugin ID has separate Operations and no old usable credential |
+
 ## Plugin Tasks and published resources
 
 Plugins may create Tasks for Assets through the ordinary Task API under [Task creation](tasks.md#task-creation). Plugin work is separate from the Asset Tasks that produced its input Objects. Stopping a Plugin does not alter those Tasks or their execution outcomes; Core and the assigned Asset retain their tasking responsibilities. A Plugin Operation on a scan result has its own lifecycle under [scan completion](tasks.md#scan-completion).
@@ -104,7 +164,9 @@ Plugin settings declare a schema with required fields and defaults. Core validat
 
 Applying is an explicit local CLI/TUI action. For a running Plugin, it follows the [stopping procedure](#protecting-active-work), then starts the Plugin with the selected settings. Applying to a disabled Plugin validates and retains settings for its next start without enabling it; report that startup has not tested that revision.
 
-Track saved settings, the configuration actually running, and the last startup-validated revision separately. Schema validation alone does not make a revision active or last-working.
+Track saved settings, the configuration actually running, and the last startup-validated revision separately. Each settings revision is a monotonically increasing decimal string with an immutable canonical payload and private secret references. The private result carries `saved_revision`, optional `active_revision`, optional `last_working_revision`, `apply_state` and a safe error. Schema validation uses the manifest's local schema and resolves secrets privately; ordinary status never returns their values.
+
+Saving a candidate requires its reviewed saved revision and validates the whole merged result atomically. Stale save is `version_conflict`; missing base is `precondition_required`. An explicit apply selects an existing immutable revision and obtains the per-Plugin lifecycle lock. Startup is validated only after the matching container authenticates and returns `ready` for its digest, configuration revision and capability set within 30 seconds. A timeout is a failed apply, not last-working success. Applying a disabled Plugin leaves active unchanged and returns `saved_not_started`. Restarting a container alone does not make saved configuration active. Schema validation alone does not make a revision active or last-working.
 
 If applying settings prevents startup, Core records the failed apply and leaves the Plugin faulted. Recovery requires the local operator to explicitly restore the last working settings and restart, or correct the candidate and apply again. Core does not automatically restore settings or restart. Preserve the failed candidate and last startup-validated settings for diagnosis while the Plugin remains installed; restoration must not erase the failed attempt. If no working revision exists, the operator must supply corrected settings. A failed recovery remains faulted and requires another explicit action. Never rerun failed Operations as part of configuration recovery.
 
@@ -162,10 +224,6 @@ Open: any UI contribution contract. If supported, Core may expose contribution m
 
 ## Open questions
 
-- Private Docker-control coordination, installation metadata and manifest, distribution and invocation fields.
-- Operation envelopes, private local management outcomes, and live notification behavior for Operations and Plugin discovery and status.
-- Configuration schema format, startup success criteria and detailed reporting of saved, active, failed and last working settings.
-- Implementation choices: shutdown deadlines and outcome fields for stopping and force stop, detection and shutdown mechanisms after unexpected Core loss, and exact working-directory mount paths and how the Plugin receives them.
 - The UI contribution contract.
 - Permanent Plugin placement and combined backend and UI packaging remain [proposals](../architecture/system-outline.md).
 

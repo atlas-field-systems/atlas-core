@@ -13,3 +13,5 @@ Each page owns the current rules for one area of Atlas behavior. The [documentat
 | Start, Stop, Restart, Reset and Hard Reset, retained operational state and Installation setup, diagnostic logs, Dataset identity, Reset execution, unfinished work, release updates and the Mission boundary | [Dataset lifecycle](dataset-lifecycle.md) |
 | SDK consumers and responsibilities, HTTP mode and Full synchronization mode, the Local operational picture, write results, Dataset Reset handling, historical reads, helpers, the Asset client and the SDK operations catalog | [SDK](sdk.md) |
 | Activity history, its attribution, local actions and the local activity journal, and Movement samples, their retention and the movement-history read | [Activity and movement history](history.md) |
+
+Shared spatial quantities and MVP examples follow [Spatial data](spatial-data.md).

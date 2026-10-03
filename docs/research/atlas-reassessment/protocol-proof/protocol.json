@@ -1,0 +1,1286 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Atlas isolated contract-fidelity proof",
+    "version": "0.2.0"
+  },
+  "x-atlas-supported-protocol-versions": [
+    "0.1.0",
+    "0.2.0"
+  ],
+  "paths": {
+    "/entity": {
+      "get": {
+        "operationId": "getEntity",
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proof response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Atlas-Protocol-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Unsupported Protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchEntity",
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proof response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Atlas-Protocol-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Unsupported Protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntityPatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/command": {
+      "post": {
+        "operationId": "executeCommand",
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proof response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Atlas-Protocol-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Unsupported Protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/report": {
+      "post": {
+        "operationId": "acceptReport",
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proof response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Atlas-Protocol-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Unsupported Protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskReport"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/object": {
+      "get": {
+        "operationId": "getObject",
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proof response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Atlas-Protocol-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectMetadataResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Unsupported Protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putObject",
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Proof response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Atlas-Protocol-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectMetadataResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Unsupported Protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/object/content": {
+      "get": {
+        "operationId": "getContent",
+        "parameters": [
+          {
+            "name": "Atlas-Dataset-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Atlas-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Immutable file bytes",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Atlas-Protocol-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dataset mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Unsupported Protocol",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Position": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "$ref": "#/components/schemas/Latitude"
+          },
+          "longitude": {
+            "$ref": "#/components/schemas/Longitude"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ]
+      },
+      "EntityPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "type": "string",
+            "nullable": true
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "fixture_component": {
+            "$ref": "#/components/schemas/FixtureComponentPatch"
+          }
+        }
+      },
+      "Asset": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "position": {
+            "$ref": "#/components/schemas/EntityPosition"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "asset"
+            ]
+          },
+          "operational_status": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "initializing",
+              "ready",
+              "busy",
+              "paused",
+              "error",
+              "stopped"
+            ]
+          },
+          "battery_percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "fixture_component": {
+            "$ref": "#/components/schemas/FixtureComponent"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "alias",
+          "labels",
+          "position",
+          "operational_status",
+          "fixture_component"
+        ]
+      },
+      "Track": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "position": {
+            "$ref": "#/components/schemas/EntityPosition"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "track"
+            ]
+          },
+          "publisher_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "alias",
+          "labels",
+          "position",
+          "publisher_id"
+        ]
+      },
+      "Geofeature": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "geofeature"
+            ]
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "geometry"
+        ]
+      },
+      "Entity": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Asset"
+          },
+          {
+            "$ref": "#/components/schemas/Track"
+          },
+          {
+            "$ref": "#/components/schemas/Geofeature"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "asset": "#/components/schemas/Asset",
+            "track": "#/components/schemas/Track",
+            "geofeature": "#/components/schemas/Geofeature"
+          }
+        }
+      },
+      "MoveTo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "move_to"
+            ]
+          },
+          "destination": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "required": [
+          "command",
+          "destination"
+        ],
+        "x-atlas-command": {
+          "name": "move_to",
+          "scheduling": [
+            "queued"
+          ],
+          "success": "arrival_reported_by_asset"
+        }
+      },
+      "Pause": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "pause"
+            ]
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "x-atlas-command": {
+          "name": "pause",
+          "scheduling": [
+            "immediate"
+          ],
+          "success": "suspension_reported_by_asset"
+        }
+      },
+      "Command": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MoveTo"
+          },
+          {
+            "$ref": "#/components/schemas/Pause"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "command",
+          "mapping": {
+            "move_to": "#/components/schemas/MoveTo",
+            "pause": "#/components/schemas/Pause"
+          }
+        }
+      },
+      "EvidenceOrigin": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "process_generation": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "sequence": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          }
+        },
+        "required": [
+          "process_generation",
+          "sequence"
+        ]
+      },
+      "MovementObservationTime": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "clock_uncertainty_ms": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "observed_at",
+          "clock_uncertainty_ms"
+        ]
+      },
+      "ReportContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "process_generation": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "sequence": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "clock_uncertainty_ms": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "nullable": true
+          },
+          "evidence_kind": {
+            "type": "string",
+            "enum": [
+              "current",
+              "historical"
+            ]
+          },
+          "evidence_origin": {
+            "$ref": "#/components/schemas/EvidenceOrigin"
+          },
+          "retained_evidence_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "observation_times": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MovementObservationTime"
+            }
+          },
+          "contact_challenge": {
+            "type": "string",
+            "nullable": true
+          },
+          "process_proof": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "asset_id",
+          "process_generation",
+          "sequence",
+          "generated_at",
+          "clock_uncertainty_ms",
+          "evidence_kind",
+          "evidence_origin",
+          "retained_evidence_id",
+          "contact_challenge",
+          "process_proof"
+        ]
+      },
+      "TaskReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/ReportContext"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed",
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "context",
+          "task_id",
+          "outcome"
+        ]
+      },
+      "ChangeEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "commit_id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "change_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "change_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "resource_kind": {
+            "type": "string",
+            "enum": [
+              "entity"
+            ]
+          },
+          "resource_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resource_version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "upsert"
+            ]
+          },
+          "resource": {
+            "$ref": "#/components/schemas/Entity"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "commit_id",
+          "change_index",
+          "change_count",
+          "resource_kind",
+          "resource_id",
+          "resource_version",
+          "action",
+          "resource"
+        ]
+      },
+      "PluginDispatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "input": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "operation_id",
+          "input"
+        ]
+      },
+      "ObjectMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          }
+        },
+        "required": [
+          "id",
+          "content_type",
+          "size_bytes"
+        ]
+      },
+      "Latitude": {
+        "type": "number",
+        "minimum": -90,
+        "maximum": 90,
+        "format": "double"
+      },
+      "Longitude": {
+        "type": "number",
+        "minimum": -180,
+        "maximum": 180,
+        "format": "double"
+      },
+      "EntityPosition": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "$ref": "#/components/schemas/Latitude"
+          },
+          "longitude": {
+            "$ref": "#/components/schemas/Longitude"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "nullable": true
+      },
+      "FixtureComponent": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "left",
+          "right"
+        ],
+        "properties": {
+          "left": {
+            "type": "number",
+            "format": "double"
+          },
+          "right": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FixtureComponentPatch": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "left": {
+            "type": "number",
+            "format": "double"
+          },
+          "right": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ResponseContext": {
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "commit_cursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id"
+        ]
+      },
+      "EntityResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/Entity"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "CommandResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/Command"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "TaskReportResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/TaskReport"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ObjectMetadataResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/ObjectMetadata"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ErrorInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid_request",
+              "unsupported_protocol",
+              "dataset_mismatch"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorInfo"
+          },
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    }
+  }
+}

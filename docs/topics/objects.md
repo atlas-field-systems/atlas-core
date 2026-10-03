@@ -22,7 +22,7 @@ Reads, queries, the feed and the SDK's local picture carry only ready Object met
 
 To support either arrival order of Task completion reports and file uploads, the SDK allocates a stable Object ID locally before either request. The producer supplies that ID with `POST /objects/upload`, along with the Dataset-scoped upload request identity, and uses the same ID in required-result references. IDs must follow Protocol validation and be collision-resistant. Allocating an ID requires no reservation endpoint and creates no publicly visible Object.
 
-Core may retain a validated completion report containing references to Objects not yet published. Those references cannot satisfy readiness until matching complete Objects are published. Conversely, an upload may publish before the report arrives. Tasks retains unresolved required-result references without a placeholder Object row or an exposed incomplete Object, and [scan completion](tasks.md#scan-completion) combines the two.
+Core may retain assigned-Asset result declarations containing Objects not yet published. Task completion reports and declarations are separate operations; either may precede upload. Tasks retains unresolved result references without a placeholder Object row or an exposed incomplete Object. Consumers resolve their availability independently under [scan completion](tasks.md#scan-completion).
 
 Core validates the supplied Object ID and serializes publication so two different upload requests cannot claim the same ID. Binding an upload identity to an Object ID is immutable: reusing an upload request with another Object ID, or claiming an already used Object ID with a different request, conflicts. A previously published or deleted ID cannot be repurposed within the Dataset. No per-caller ownership policy applies to uploads. Reset invalidates the old Dataset's uploads and reports.
 
@@ -53,7 +53,7 @@ Publication is file-first. Objects makes complete content durable in its private
 2. In a short SQLite transaction, recheck the current Dataset, publication authority and the Object and upload identities, including successful retries and deletion markers. Serialize publication authorization with credential revocation under [revocation and retirement](#revocation-and-retirement-during-publication), and serialize required-result checks under [Required-result protection](#declaration-publication-and-deletion-order). Commit ready metadata, the successful upload identity and the public change record together. Return publication success only after that commit. A concurrent retry or Dataset change must not turn the same file into a second publication.
 3. On retained-state startup, Objects reconciles interrupted publication before serving Object state. Preserve files referenced by committed ready Objects and their successful identities. Remove abandoned staging and unreferenced publication files only after establishing that they belong to abandoned work; cleanup must not race an active upload or remove another identity's content. Never reconstruct ready metadata or complete a Task merely because a file exists.
 
-When publication satisfies a waiting Task's last Required result, Tasks commits any resulting completion in the same transaction under its completion and terminal-state rules; publication never reopens a terminal Task. See [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership).
+Publication changes Object availability, never a Task's execution outcome. Tasks places required-result holds through Objects when accepting declarations; Objects enforces those holds without calling Task transition logic. See [Object publication and recovery ownership](../architecture/system-design.md#object-publication-and-recovery-ownership).
 
 ### Attempt locations and cleanup
 
@@ -97,7 +97,7 @@ Required-result references survive Restart until Reset, including declarations w
 
 ### Declaration, publication and deletion order
 
-Declaration acceptance, Object publication and deletion serialize against the same Object identity. If the required declaration commits first, deletion fails. If an allowed deletion commits first, Core rejects a later declaration referencing that deleted ID with an explicit deleted-result error; it does not accept an unsatisfiable required reference or completion report. A rejected report changes neither the Task's result references nor its status. The Asset can upload under a new Object ID and submit a corrected report, or report failure when it cannot supply the result.
+Declaration acceptance, Object publication and deletion serialize against the same Object identity. If the required declaration commits first, deletion fails. If an allowed deletion commits first, Core rejects a later declaration referencing that deleted ID with an explicit deleted-result error. A rejected declaration changes no result references or holds; it does not reject or change an independently reported completion. The Asset may upload under a new Object ID and declare that result. Failure is an Asset-reported execution outcome, not a consequence Core infers from an unavailable file.
 
 Physical cleanup must never remove a protected file because it was scheduled against stale metadata. Exact transaction mechanics follow storage implementation.
 
@@ -113,6 +113,38 @@ Object storage has a quota that leaves headroom for operational writes. Core exp
 
 A missing or unreadable file behind committed Object metadata is a per-Object integrity fault. Core still opens the Dataset and serves other state. The affected Object and any Task that requires it show an integrity flag, the Object's content read fails explicitly, and a Completed Task stays Completed. Core does not delete the record, reconstruct content or reopen the Task.
 
+## Durability and publication fixtures
+
+The supported initial platform is Linux with local SSD-backed ext4 storage, including Core's bind-mounted Object and SQLite directories. Staging and immutable content installation stay on the same filesystem. Storage must honor flush requests and write barriers; network filesystems, faulty media and controllers that acknowledge unwritten data are outside the durability assumption. The user selected retention of acknowledged saved data through sudden power loss on healthy storage. This requires durable acknowledgement, not continuity of executing work across a Core restart.
+
+Open every SQLite write connection with WAL and `synchronous=FULL`, verify those settings, and acknowledge successful mutations only after commit. [SQLite's synchronous contract](https://sqlite.org/pragma.html#pragma_synchronous) distinguishes power-loss durability in WAL mode from the weaker `NORMAL` setting. Bulk file transfer never holds that write transaction.
+
+For content, use an attempt-owned private directory and exclusive file creation. Stream complete bytes, compute and verify size and SHA-256, then `fsync` the file. Install without replacement into the attempt's immutable private location and `fsync` every changed parent directory before the metadata commit. A unique attempt location avoids replacing a competing successful upload. [Linux fsync](https://man7.org/linux/man-pages/man2/fsync.2.html) requires an explicit directory sync for directory-entry durability. Check every write, close, install and sync failure; a durable file alone does not establish a ready Object.
+
+The publication transaction checks current Dataset and authority, upload/Object identity, declared content facts and any holds. Its commit is the public success boundary. If it fails or the outcome is unknown, follow ordinary retry lookup before declaring success; preserve files until ownership proves cleanup safe. Clean staging and abandoned installed files without touching committed files or active attempts. `ENOSPC` during streaming/install/sync returns an explicit failed attempt with no publication; the caller can retry the same identity from zero after capacity is restored. A missing committed file remains a reported integrity fault, not a reconstructed success.
+
+The SDK upload producer is a caller-owned replayable source: `{ object_id, request_id, byte_size, sha256, content_type, metadata, open }`, where each `open()` returns a new byte stream positioned at zero. The SDK keeps the descriptor immutable for one prepared upload and invokes `open` for each attempt; it retains no partial bytes or offsets. The source owner must retain unchanged content until confirmed publication or deliberate abandonment. A one-shot stream can make one attempt but cannot be transparently retried; report `source_not_replayable` rather than silently submit different bytes.
+
+HTTP upload uses multipart parts for the typed descriptor and the binary content, with one content part. Server-measured byte count and SHA-256 must match the descriptor before first publication or successful retry response. Retry equality includes Object ID, byte size, digest, content type and canonical original metadata/associations. Conflicting bytes or facts return an identity conflict; mutable current Object metadata does not redefine the original upload. Concurrent identical attempts serialize at publication and produce one Object/change. An entire successful retry still proves the supplied content rather than trusting a client digest for unchecked bytes.
+
+Allowed deletion commits its tombstone, removes live metadata and publishes the deletion before returning `204`. That commit is the discovery and new-download cut-off. Open the immutable content file under the same identity serialization as download authorization: download-first keeps that descriptor and finishes, deletion-first rejects a new open. Linux permits an already-open file to remain readable after [unlink](https://man7.org/linux/man-pages/man2/unlink.2.html). Physical unlink and directory sync may complete afterward; Objects retains a cleanup record until durable removal and retries on startup or later cleanup passes. Do not release physical-space quota accounting until the bytes are actually reclaimable, including active download leases. A failed cleanup is visible to local resource diagnostics and never resurrects metadata or reports another deletion event.
+
+| Interruption or race | Independent expected result |
+| --- | --- |
+| Kill while staging, before complete validation | No ready Object; owned staging removed; retry starts at zero |
+| Kill after file sync/install but before SQLite commit | No ready Object; safe ownership-based orphan cleanup; same identity may retry in a new attempt location |
+| Kill after FULL commit before response | One durable ready Object and successful identity; matching retry returns it with no duplicate publication |
+| File sync, directory sync or SQLite commit fails | No acknowledged ready success; preserve unknown ownership and expose the failure |
+| Quota or free-space reserve refuses upload | No publication; ordinary reports continue; same prepared source can retry later |
+| Credential revoked or Reset commits while bytes stream | Publication denied at the short commit; abandoned attempt cleaned; no old-Dataset resource |
+| Declaration commits before deletion | Deletion conflict; no cleanup scheduled for protected content |
+| Deletion commits before declaration or upload retry | Deleted-result error; no reference hold or content resurrection |
+| Download opens before deletion commit | Already-open stream finishes; Object immediately disappears from discovery and new downloads fail |
+| Unlink fails after deletion commits | Public deletion remains successful; retained cleanup retries only that owned content |
+| Committed file is missing | Core opens; Object/content reads flag integrity fault; reported Task outcome is unchanged |
+
+Run process-kill fixtures against real SQLite and the supported filesystem. They establish process-interruption behavior only. Power-loss claims additionally require storage-stack validation or controlled power-cut testing that verifies acknowledged bytes and metadata together; documentation and ordinary process kills do not supply that evidence.
+
 ## Metadata edits
 
 Descriptive fields and associations may be staged with the upload and edited after publication through `PATCH /objects/{object_id}`. Edits use the [concurrent-edit protection](../architecture/system-design.md#concurrent-descriptive-edits): a stale edit conflicts for caller review. Edits cannot change immutable content or Core-owned storage facts, and they cannot release [Required-result protection](#required-result-protection).
@@ -125,27 +157,24 @@ Descriptive fields and associations may be staged with the upload and edited aft
 
 - Read Objects: `GET /objects` and `GET /objects/{object_id}` in the [Objects routes](../api-endpoints.md#objects), `GET /entities/{entity_id}/objects` in the [Entities routes](../api-endpoints.md#entities) and `GET /tasks/{task_id}/objects` in the [Tasks routes](../api-endpoints.md#tasks), through the ordinary read operations in both SDK modes.
 - Upload: `POST /objects/upload`, through the SDK's Upload Object content [operation](sdk.md#operations-catalog). It takes the complete file stream, the SDK-allocated Object ID, the Dataset-scoped request identity, metadata and associations, and returns the ready Object, the original success or the explicit deleted-result error. There is no resume or offset API.
-- Required-result uploads: the SDK's [Asset client](sdk.md#asset-client) preallocates the result Object ID, uses it in the completion report and delegates the whole-file upload to the upload operation. No route is added.
+- Required-result uploads: the SDK's [Asset client](sdk.md#asset-client) preallocates the result Object ID, declares it independently through `POST /tasks/{task_id}/results` and delegates the whole-file content to the existing upload operation.
 - Edit metadata: `PATCH /objects/{object_id}` with a version precondition.
 - Delete: `DELETE /objects/{object_id}`. SDK deletion helpers return Core's conflict for a protected Required result.
 - Download and preview: `GET /objects/{object_id}/download` and `GET /objects/{object_id}/view`. File content is outside the synchronized picture in every SDK mode.
 
 ## Open questions
 
-- Exact Object ID encoding, upload request fields and wire fields.
-- Content-equivalence verification for upload retries.
-- Exact filesystem primitives for the supported host storage, and exact transaction mechanics for declaration, publication and deletion.
-- Transfer limits, quota size and headroom, set from the measured workload.
-- Deletion completion.
+- Production Protocol schema authoring for the selected descriptor and [public wire conventions](../architecture/system-design.md#public-wire-conventions).
+- Storage-stack validation and performance measurements for the selected primitives, digest verification, quota and headroom; starting bounds follow the [workload profile](../architecture/operating-model.md#workload-fixtures-and-admission-bounds).
+- Physical implementation and power-cut evidence for the selected durability primitives; process-kill evidence alone is insufficient.
 - Supported preview formats.
 - Exact Object metadata schema and reference representation, and revision and error encodings for metadata edits.
 - Resumable uploads are deferred; [ADR-0009](../adr/0009-expose-objects-only-when-ready.md#rationale-and-alternatives) records when to reconsider them.
-- The upload-first scan-completion evaluation follows the [Tasks open questions](tasks.md#open-questions).
 
 ## Decisions
 
 - [ADR-0009](../adr/0009-expose-objects-only-when-ready.md): ready-only visibility, whole-file upload retries, file-first publication, deleted-result retries, Required-result protection, uploads that continue after cancellation, the storage quota and per-Object integrity faults.
-- [ADR-0008](../adr/0008-complete-scan-tasks-when-required-results-are-available.md): scans complete when Required results are available, with result Object IDs allocated before upload.
+- [ADR-0026](../adr/0026-record-asset-completion-independently-of-result-availability.md): completion and file availability are independent, including declarations after terminal outcomes.
 - [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md): Object retention across Restart and cleanup on Reset.
 - [ADR-0016](../adr/0016-use-go-sqlite-and-openapi-tooling.md): private local Object files with metadata in SQLite.
 - [ADR-0019](../adr/0019-retire-assets-without-inventing-task-outcomes.md): retirement serializes with upload publication and keeps Required-result protection.
