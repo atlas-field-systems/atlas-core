@@ -87,7 +87,7 @@ func ValidateRequests(spec *openapi3.T, next http.Handler) http.Handler {
 		if err == nil && media == "application/json" && r.Body != nil && r.Body != http.NoBody {
 			body, readErr := io.ReadAll(r.Body)
 			closeErr := r.Body.Close()
-			if readErr != nil || closeErr != nil || !json.Valid(body) {
+			if readErr != nil || closeErr != nil || len(body) > 0 && !json.Valid(body) {
 				RequestError(w, r, errors.New("JSON body must contain one complete document"))
 				return
 			}

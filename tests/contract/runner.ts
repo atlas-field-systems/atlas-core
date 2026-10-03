@@ -28,7 +28,7 @@ export class FixtureStartupError extends Error {
 }
 
 export interface FixtureOptions {
-  mode?: "normal" | "missing_readiness" | "startup_failure";
+  mode?: "normal" | "missing_readiness" | "startup_failure" | "request_hooks";
   startupMs?: number;
 }
 

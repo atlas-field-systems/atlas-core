@@ -21,6 +21,7 @@ import (
 	"github.com/atlas-field-systems/atlas-core/httpcontract"
 	"github.com/atlas-field-systems/atlas-core/tests/contractfixture/generated/contract"
 	"github.com/atlas-field-systems/atlas-core/tests/contractfixture/generated/storage"
+	"github.com/getkin/kin-openapi/openapi3"
 	_ "modernc.org/sqlite"
 )
 
@@ -28,8 +29,9 @@ const datasetID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 const protocolVersion = "0.2.0"
 
 type fixtureServer struct {
-	queries *storage.Queries
-	dataset contract.Identifier
+	queries     *storage.Queries
+	dataset     contract.Identifier
+	patchSchema *openapi3.SchemaRef
 }
 
 func (s *fixtureServer) save(ctx context.Context, value contract.FixtureValue) error {
@@ -62,7 +64,7 @@ func (s *fixtureServer) GetValue(ctx context.Context, request contract.GetValueR
 	}
 	return contract.GetValue200JSONResponse{
 		Body:    contract.FixtureValueResponse{DatasetId: s.dataset, Data: value},
-		Headers: contract.GetValue200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: protocolVersion},
+		Headers: contract.GetValue200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: request.Params.AtlasProtocolVersion},
 	}, nil
 }
 
@@ -75,7 +77,7 @@ func (s *fixtureServer) PutValue(ctx context.Context, request contract.PutValueR
 	}
 	return contract.PutValue200JSONResponse{
 		Body:    contract.FixtureValueMutationResponse{DatasetId: s.dataset, Data: *request.Body, CommitCursor: "fixture:commit:1"},
-		Headers: contract.PutValue200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: protocolVersion},
+		Headers: contract.PutValue200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: request.Params.AtlasProtocolVersion},
 	}, nil
 }
 
@@ -129,6 +131,9 @@ func run() (result error) {
 	if err := fixture.save(ctx, seed.Initial); err != nil {
 		return err
 	}
+	if err := fixture.initializePatch(ctx); err != nil {
+		return err
+	}
 	if *mode == "startup_failure" {
 		return errors.New("controlled fixture startup failure after private SQLite initialization")
 	}
@@ -139,6 +144,7 @@ func run() (result error) {
 	if err := spec.Validate(ctx); err != nil {
 		return fmt.Errorf("validate fixture contract: %w", err)
 	}
+	fixture.patchSchema = spec.Components.Schemas["FixturePatchResource"]
 	binding := contract.HandlerWithOptions(contract.NewStrictHandlerWithOptions(fixture, nil, contract.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: httpcontract.RequestError,
 		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
@@ -147,12 +153,13 @@ func run() (result error) {
 		},
 	}), contract.StdHTTPServerOptions{ErrorHandlerFunc: httpcontract.RequestError})
 	validated := httpcontract.ValidateRequests(spec, binding)
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Atlas-Dataset-ID", datasetID)
-		w.Header().Set("Atlas-Protocol-Version", protocolVersion)
+	if *mode == "request_hooks" {
+		validated = binding
+	}
+	handler := fixtureContext(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		validated.ServeHTTP(w, r)
-	})
+	}))
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return fmt.Errorf("listen for fixture HTTP: %w", err)
