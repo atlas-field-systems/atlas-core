@@ -43,6 +43,8 @@ def generate(env, go, sqlc):
     subprocess.run(["npm", "run", "generate"], cwd=ROOT / "Atlas SDK", env=env, check=True, timeout=120)
     subprocess.run([str(ROOT / "Atlas SDK/node_modules/.bin/openapi-typescript"), "generated/protocol.json", "--output", "generated/protocol.ts"],
                    cwd=ROOT / "tests/contract", env=env, check=True, timeout=120)
+    subprocess.run([str(ROOT / "Atlas SDK/node_modules/.bin/openapi-typescript"), "older-client.json", "--output", "generated/older-client.ts"],
+                   cwd=ROOT / "tests/contract", env=env, check=True, timeout=120)
 
 
 if __name__ == "__main__":

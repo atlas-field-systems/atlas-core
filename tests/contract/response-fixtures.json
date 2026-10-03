@@ -1,0 +1,859 @@
+[
+  {
+    "kind": "read",
+    "fault": "",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": []
+  },
+  {
+    "kind": "read",
+    "fault": "invalid_receipt",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "not a receipt"
+    },
+    "omit_headers": [],
+    "reason": "header"
+  },
+  {
+    "kind": "read",
+    "fault": "missing_receipt",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Fixture-Receipt"
+    ],
+    "reason": "header"
+  },
+  {
+    "kind": "read",
+    "fault": "invalid_optional_header",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Note": "wrong"
+    },
+    "omit_headers": [],
+    "reason": "header"
+  },
+  {
+    "kind": "read",
+    "fault": "valid_optional_header",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Note": "optional"
+    },
+    "omit_headers": []
+  },
+  {
+    "kind": "read",
+    "fault": "omit_optional",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": []
+  },
+  {
+    "kind": "read",
+    "fault": "missing_field",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "read",
+    "fault": "wrong_field",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":9},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "read",
+    "fault": "invalid_enum",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"invalid\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "read",
+    "fault": "wrong_variant",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"count\",\"value\":\"wrong variant\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "read",
+    "fault": "nested_null",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":null,\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "read",
+    "fault": "extra_nested_field",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\",\"extra\":\"forbidden\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "read",
+    "fault": "missing_envelope_dataset",
+    "status": 200,
+    "body": "{\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "read",
+    "fault": "wrong_envelope_dataset",
+    "status": 200,
+    "body": "{\"dataset_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "read",
+    "fault": "malformed_json",
+    "status": 200,
+    "body": "{\"dataset_id\":",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "json"
+  },
+  {
+    "kind": "read",
+    "fault": "wrong_status",
+    "status": 202,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "status"
+  },
+  {
+    "kind": "read",
+    "fault": "wrong_media",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "text/plain",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "media_type"
+  },
+  {
+    "kind": "read",
+    "fault": "missing_media",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Content-Type"
+    ],
+    "reason": "media_type"
+  },
+  {
+    "kind": "read",
+    "fault": "missing_dataset",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Dataset-ID"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "read",
+    "fault": "malformed_dataset",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "not a UUID"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "read",
+    "fault": "wrong_dataset",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "read",
+    "fault": "missing_version",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Protocol-Version"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "read",
+    "fault": "wrong_version",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Protocol-Version": "9.0.0"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "error",
+    "fault": "missing_dataset",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Dataset-ID"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "error",
+    "fault": "malformed_dataset",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "not a UUID"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "error",
+    "fault": "wrong_dataset",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "error",
+    "fault": "missing_version",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Protocol-Version"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "error",
+    "fault": "wrong_version",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Protocol-Version": "9.0.0"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "openapi",
+    "fault": "missing_dataset",
+    "status": 200,
+    "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Raw fixture contract\",\"version\":\"0.2.0\"},\"paths\":{}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Dataset-ID"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "openapi",
+    "fault": "malformed_dataset",
+    "status": 200,
+    "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Raw fixture contract\",\"version\":\"0.2.0\"},\"paths\":{}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "not a UUID"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "openapi",
+    "fault": "wrong_dataset",
+    "status": 200,
+    "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Raw fixture contract\",\"version\":\"0.2.0\"},\"paths\":{}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "openapi",
+    "fault": "missing_version",
+    "status": 200,
+    "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Raw fixture contract\",\"version\":\"0.2.0\"},\"paths\":{}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Protocol-Version"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "openapi",
+    "fault": "wrong_version",
+    "status": 200,
+    "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Raw fixture contract\",\"version\":\"0.2.0\"},\"paths\":{}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Protocol-Version": "9.0.0"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "empty",
+    "fault": "missing_dataset",
+    "status": 204,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Dataset-ID",
+      "Content-Type"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "empty",
+    "fault": "malformed_dataset",
+    "status": 204,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "not a UUID"
+    },
+    "omit_headers": [
+      "Content-Type"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "empty",
+    "fault": "wrong_dataset",
+    "status": 204,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    },
+    "omit_headers": [
+      "Content-Type"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "empty",
+    "fault": "missing_version",
+    "status": 204,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Atlas-Protocol-Version",
+      "Content-Type"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "empty",
+    "fault": "wrong_version",
+    "status": 204,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17",
+      "Atlas-Protocol-Version": "9.0.0"
+    },
+    "omit_headers": [
+      "Content-Type"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "binary",
+    "fault": "missing_dataset",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Content-Length": "3"
+    },
+    "omit_headers": [
+      "Atlas-Dataset-ID"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "binary",
+    "fault": "malformed_dataset",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Content-Length": "3",
+      "Atlas-Dataset-ID": "not a UUID"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "binary",
+    "fault": "wrong_dataset",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Content-Length": "3",
+      "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "binary",
+    "fault": "missing_version",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Content-Length": "3"
+    },
+    "omit_headers": [
+      "Atlas-Protocol-Version"
+    ],
+    "reason": "context"
+  },
+  {
+    "kind": "binary",
+    "fault": "wrong_version",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Content-Length": "3",
+      "Atlas-Protocol-Version": "9.0.0"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "mutation",
+    "fault": "",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"},\"commit_cursor\":\"fixture:commit:17\"}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": []
+  },
+  {
+    "kind": "mutation",
+    "fault": "missing_cursor",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "mutation",
+    "fault": "wrong_cursor",
+    "status": 200,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"data\":{\"state\":\"ready\",\"result\":{\"kind\":\"value\",\"value\":\"response fixture\"},\"label\":\"new optional field\"},\"commit_cursor\":17}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": []
+  },
+  {
+    "kind": "error",
+    "fault": "missing_code",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "wrong_code",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":false,\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "empty_code",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "wrong_message",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":17,\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "wrong_request_id",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"submission-id-is-not-diagnostic\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "wrong_details",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":[]}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "missing_request_id",
+    "status": 400,
+    "body": "{\"dataset_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "missing_envelope_dataset",
+    "status": 400,
+    "body": "{\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "error",
+    "fault": "wrong_envelope_dataset",
+    "status": 400,
+    "body": "{\"dataset_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"error\":{\"code\":\"fixture_refusal\",\"message\":\"Fixture read refused\",\"request_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"details\":{\"retryable\":false,\"scope\":\"read fixture\"}}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "context"
+  },
+  {
+    "kind": "error",
+    "fault": "malformed_json",
+    "status": 400,
+    "body": "{\"error\":",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "json"
+  },
+  {
+    "kind": "openapi",
+    "fault": "",
+    "status": 200,
+    "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Raw fixture contract\",\"version\":\"0.2.0\"},\"paths\":{}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": []
+  },
+  {
+    "kind": "openapi",
+    "fault": "missing_paths",
+    "status": 200,
+    "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Raw fixture contract\",\"version\":\"0.2.0\"}}",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "schema"
+  },
+  {
+    "kind": "empty",
+    "fault": "",
+    "status": 204,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [
+      "Content-Type"
+    ]
+  },
+  {
+    "kind": "empty",
+    "fault": "wrong_media",
+    "status": 204,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json",
+      "Fixture-Receipt": "receipt:17"
+    },
+    "omit_headers": [],
+    "reason": "media_type"
+  },
+  {
+    "kind": "binary",
+    "fault": "",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Content-Length": "3",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "omit_headers": []
+  },
+  {
+    "kind": "binary",
+    "fault": "missing_digest",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Content-Length": "3"
+    },
+    "omit_headers": [
+      "Fixture-Digest"
+    ],
+    "reason": "header"
+  },
+  {
+    "kind": "binary",
+    "fault": "wrong_digest",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Content-Length": "3",
+      "Fixture-Digest": "sha256:secret-bearing-diagnostic"
+    },
+    "omit_headers": [],
+    "reason": "header"
+  },
+  {
+    "kind": "binary",
+    "fault": "wrong_media",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "text/plain",
+      "Fixture-Receipt": "receipt:17",
+      "Content-Length": "3",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "omit_headers": [],
+    "reason": "media_type"
+  },
+  {
+    "kind": "binary",
+    "fault": "missing_length",
+    "status": 200,
+    "body": "bin",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Fixture-Receipt": "receipt:17",
+      "Fixture-Digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "omit_headers": [
+      "Content-Length"
+    ],
+    "reason": "header"
+  }
+]
