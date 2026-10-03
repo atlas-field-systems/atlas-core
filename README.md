@@ -43,4 +43,4 @@ Current API and SDK rules live on the topic pages. The [decision log](docs/plann
 
 ## Contract foundation
 
-[Slice 0](tests/contract/README.md) adds the shared Protocol baseline, generated Core/SDK bindings and one isolated HTTP/SQLite workflow. Run its required checks with `python3 scripts/verify.py --bootstrap`. Operational Core workflows remain with their owning implementation slices.
+[Slice 0](tests/contract/README.md) adds the shared Protocol baseline, generated Core/SDK bindings, narrow validation adapters and local representative Catalog lookup. Its isolated checks cover HTTP/SQLite/file workflows and canonical non-HTTP messages. Run its required checks with `python3 scripts/verify.py --bootstrap`. Operational Core workflows remain with their owning implementation slices.
