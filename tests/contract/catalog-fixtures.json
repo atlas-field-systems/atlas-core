@@ -1,0 +1,65 @@
+{
+  "valid_inputs": [
+    {
+      "name": "named position without a vertical target",
+      "command": "move_to",
+      "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 0, "longitude": 0 } } }
+    },
+    {
+      "name": "point Geofeature reference",
+      "command": "move_to",
+      "input": { "command": "move_to", "target": { "kind": "geofeature", "geofeature_id": "88888888-8888-4888-8888-888888888888" } }
+    },
+    {
+      "name": "known zero ellipsoid altitude",
+      "command": "move_to",
+      "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "target_altitude": { "value_m": 0, "vertical_reference": "wgs84_ellipsoid" } }
+    },
+    {
+      "name": "negative ellipsoid altitude with a Geofeature reference",
+      "command": "move_to",
+      "input": { "command": "move_to", "target": { "kind": "geofeature", "geofeature_id": "88888888-8888-4888-8888-888888888888" }, "target_altitude": { "value_m": -12.5, "vertical_reference": "wgs84_ellipsoid" } }
+    },
+    {
+      "name": "Pause has no extra input",
+      "command": "pause",
+      "input": { "command": "pause" }
+    }
+  ],
+  "invalid_inputs": [
+    { "name": "wrong Command tag", "command": "move_to", "input": { "command": "pause", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } } } },
+    { "name": "missing Command tag", "command": "move_to", "input": { "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } } } },
+    { "name": "missing target", "command": "move_to", "input": { "command": "move_to" } },
+    { "name": "old illustrative destination", "command": "move_to", "input": { "command": "move_to", "destination": { "latitude": 10, "longitude": 20 } } },
+    { "name": "null input", "command": "move_to", "input": null },
+    { "name": "array input", "command": "move_to", "input": [] },
+    { "name": "scalar input", "command": "move_to", "input": "move_to" },
+    { "name": "unknown input field", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "secret": "must stay in caller input" } },
+    { "name": "scheduling is Task metadata rather than Command input", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "scheduling": "immediate" } },
+    { "name": "unknown target tag", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "track", "geofeature_id": "88888888-8888-4888-8888-888888888888" } } },
+    { "name": "missing target tag", "command": "move_to", "input": { "command": "move_to", "target": { "position": { "latitude": 10, "longitude": 20 } } } },
+    { "name": "target tag does not match fields", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "geofeature_id": "88888888-8888-4888-8888-888888888888" } } },
+    { "name": "both target variants", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 }, "geofeature_id": "88888888-8888-4888-8888-888888888888" } } },
+    { "name": "missing longitude", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10 } } } },
+    { "name": "missing latitude", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "longitude": 20 } } } },
+    { "name": "latitude is outside WGS84 range", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 120, "longitude": 10 } } } },
+    { "name": "longitude is outside WGS84 range", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": -181 } } } },
+    { "name": "coordinate is not coerced", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": "10", "longitude": 20 } } } },
+    { "name": "tuple is not a named position", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": [20, 10] } } },
+    { "name": "unknown coordinate reference", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20, "reference": "other" } } } },
+    { "name": "missing Geofeature identity", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "geofeature" } } },
+    { "name": "malformed Geofeature UUID", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "geofeature", "geofeature_id": "not-a-uuid" } } },
+    { "name": "numeric Geofeature identity", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "geofeature", "geofeature_id": 123 } } },
+    { "name": "unknown target field", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "geofeature", "geofeature_id": "88888888-8888-4888-8888-888888888888", "geometry": "point" } } },
+    { "name": "another vertical reference is not relabelled", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "target_altitude": { "value_m": 100, "vertical_reference": "mean_sea_level" } } },
+    { "name": "missing altitude value", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "target_altitude": { "vertical_reference": "wgs84_ellipsoid" } } },
+    { "name": "missing altitude reference", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "target_altitude": { "value_m": 0 } } },
+    { "name": "null is not omitted altitude", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "target_altitude": null } },
+    { "name": "altitude value is not coerced", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "target_altitude": { "value_m": "100", "vertical_reference": "wgs84_ellipsoid" } } },
+    { "name": "unknown altitude field", "command": "move_to", "input": { "command": "move_to", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } }, "target_altitude": { "value_m": 0, "vertical_reference": "wgs84_ellipsoid", "reference_data_id": "other" } } },
+    { "name": "Pause rejects a different Command tag", "command": "pause", "input": { "command": "move_to" } },
+    { "name": "Pause requires its tag", "command": "pause", "input": {} },
+    { "name": "Pause rejects a target", "command": "pause", "input": { "command": "pause", "target": { "kind": "position", "position": { "latitude": 10, "longitude": 20 } } } },
+    { "name": "Pause rejects an unknown field", "command": "pause", "input": { "command": "pause", "enabled": true } }
+  ]
+}
