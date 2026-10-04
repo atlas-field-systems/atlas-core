@@ -21,5 +21,7 @@ export function contractValidator(document: ContractDocument) {
 }
 
 export function pointer(value: string) {
-  return value.replaceAll("~", "~0").replaceAll("/", "~1");
+  // Callers embed this token in a URI-fragment JSON Pointer (RFC 6901 §6).
+  // Escape the pointer identity first, then encode literal URI characters.
+  return encodeURIComponent(value.replaceAll("~", "~0").replaceAll("/", "~1"));
 }

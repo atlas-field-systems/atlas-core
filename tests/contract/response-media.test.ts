@@ -107,6 +107,9 @@ try {
     ['Application/JSON; charset="UTF-8"', "application/json"],
     ['application/problem+json; note="semicolon; value"', "application/problem+json"],
     ["application/json;;charset=utf-8;", "application/json"],
+    ["application/json; note=%2F", "application/json"],
+    ['application/json; note="100%"', "application/json"],
+    ['application/json; note="#"', "application/json"],
   ] as const) {
     const client = clientFor({ [authored]: { schema: textSchema } });
     receivedMedia = received;
