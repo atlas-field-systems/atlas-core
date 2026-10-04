@@ -15,7 +15,7 @@ const validateError = contractValidator(protocol).compile<components["schemas"][
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
     const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     async function read(expected: unknown) {
       if (mode === "generated transport") {
         const response = await client.GET("/__fixture/patch/{fixture_id}", { params });

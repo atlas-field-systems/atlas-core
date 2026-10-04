@@ -30,81 +30,92 @@ func jsonContract(t *testing.T) *openapi3.T {
 }
 
 // The ordinary fixture adds assembly wrappers. This exercises the reusable
-// adapter itself, over HTTP with both fixed-length and chunked body streams.
+// adapter itself, over HTTP with fixed-length and chunked streams. Non-JSON
+// media exercise the supported middleware's wrapped MaxBytesError too.
 func TestJSONBodyBoundBeforeEffects(t *testing.T) {
-	var effects atomic.Int32
-	handler, err := httpcontract.ValidateRequests(jsonContract(t), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		effects.Add(1)
-		w.WriteHeader(http.StatusOK)
-	}), 4096)
-	if err != nil {
-		t.Fatal(err)
-	}
-	server := httptest.NewServer(handler)
-	defer server.Close()
-	client := &http.Client{Timeout: 5 * time.Second}
-	body := []byte(`{"value":"` + strings.Repeat("x", 65536) + `"}`)
-	for _, chunked := range []bool{false, true} {
-		var input io.Reader = bytes.NewReader(body)
-		if chunked {
-			input = io.NopCloser(bytes.NewReader(body))
-		}
-		request, err := http.NewRequest(http.MethodPut, server.URL+"/value", input)
-		if err != nil {
-			t.Fatal(err)
-		}
-		request.Header.Set("Content-Type", "application/json")
-		if chunked {
-			request.ContentLength = -1
-		}
-		response, err := client.Do(request)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var rejection protocol.Error
-		decodeErr := json.NewDecoder(response.Body).Decode(&rejection)
-		response.Body.Close()
-		if response.StatusCode != 400 {
-			t.Fatalf("chunked=%v: status=%d, effects=%d", chunked, response.StatusCode, effects.Load())
-		}
-		if decodeErr != nil || rejection.Error.Code != "invalid_request" {
-			t.Fatalf("expected shared typed rejection: %v %+v", decodeErr, rejection)
-		}
-	}
-	if effects.Load() != 0 {
-		t.Fatalf("rejected streams dispatched %d effects", effects.Load())
-	}
-	for _, chunked := range []bool{false, true} {
-		for _, size := range []int{4096, 4097} {
-			document := `{"value":"` + strings.Repeat("x", size-12) + `"}`
-			var input io.Reader = strings.NewReader(document)
-			if chunked {
-				input = io.NopCloser(strings.NewReader(document))
+	for _, media := range []string{"application/json", "text/plain", "application/octet-stream"} {
+		t.Run(media, func(t *testing.T) {
+			var effects atomic.Int32
+			spec := jsonContract(t)
+			if media != "application/json" {
+				spec.Paths.Value("/value").Put.RequestBody.Value.Content = openapi3.Content{
+					media: &openapi3.MediaType{Schema: &openapi3.SchemaRef{Value: openapi3.NewStringSchema()}},
+				}
 			}
-			request, err := http.NewRequest(http.MethodPut, server.URL+"/value", input)
+			handler, err := httpcontract.ValidateRequests(spec, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				effects.Add(1)
+				w.WriteHeader(http.StatusOK)
+			}), 4096)
 			if err != nil {
 				t.Fatal(err)
 			}
-			request.Header.Set("Content-Type", "application/json")
-			if chunked {
-				request.ContentLength = -1
+			server := httptest.NewServer(handler)
+			defer server.Close()
+			client := &http.Client{Timeout: 5 * time.Second}
+			body := []byte(`{"value":"` + strings.Repeat("x", 65536) + `"}`)
+			for _, chunked := range []bool{false, true} {
+				var input io.Reader = bytes.NewReader(body)
+				if chunked {
+					input = io.NopCloser(bytes.NewReader(body))
+				}
+				request, err := http.NewRequest(http.MethodPut, server.URL+"/value", input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				request.Header.Set("Content-Type", media)
+				if chunked {
+					request.ContentLength = -1
+				}
+				response, err := client.Do(request)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var rejection protocol.Error
+				decodeErr := json.NewDecoder(response.Body).Decode(&rejection)
+				response.Body.Close()
+				if response.StatusCode != http.StatusRequestEntityTooLarge {
+					t.Fatalf("chunked=%v: status=%d, effects=%d", chunked, response.StatusCode, effects.Load())
+				}
+				if decodeErr != nil || rejection.Error.Code != "payload_too_large" {
+					t.Fatalf("expected shared typed rejection: %v %+v", decodeErr, rejection)
+				}
 			}
-			response, err := client.Do(request)
-			if err != nil {
-				t.Fatal(err)
+			if effects.Load() != 0 {
+				t.Fatalf("rejected streams dispatched %d effects", effects.Load())
 			}
-			response.Body.Close()
-			expected := http.StatusOK
-			if size > 4096 {
-				expected = http.StatusBadRequest
+			for _, chunked := range []bool{false, true} {
+				for _, size := range []int{4096, 4097} {
+					document := `{"value":"` + strings.Repeat("x", size-12) + `"}`
+					var input io.Reader = strings.NewReader(document)
+					if chunked {
+						input = io.NopCloser(strings.NewReader(document))
+					}
+					request, err := http.NewRequest(http.MethodPut, server.URL+"/value", input)
+					if err != nil {
+						t.Fatal(err)
+					}
+					request.Header.Set("Content-Type", media)
+					if chunked {
+						request.ContentLength = -1
+					}
+					response, err := client.Do(request)
+					if err != nil {
+						t.Fatal(err)
+					}
+					response.Body.Close()
+					expected := http.StatusOK
+					if size > 4096 {
+						expected = http.StatusRequestEntityTooLarge
+					}
+					if response.StatusCode != expected {
+						t.Fatalf("chunked=%v, bytes=%d: status %d, expected %d", chunked, len(document), response.StatusCode, expected)
+					}
+				}
 			}
-			if response.StatusCode != expected {
-				t.Fatalf("chunked=%v, bytes=%d: status %d, expected %d", chunked, len(document), response.StatusCode, expected)
+			if effects.Load() != 2 {
+				t.Fatalf("only exact-limit bodies dispatch effects, got %d", effects.Load())
 			}
-		}
-	}
-	if effects.Load() != 2 {
-		t.Fatalf("only exact-limit bodies dispatch effects, got %d", effects.Load())
+		})
 	}
 }
 

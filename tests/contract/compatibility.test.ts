@@ -17,13 +17,13 @@ for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
     if (mode === "generated transport") {
       const older = createTransport<OlderPaths>({ baseUrl, headers: oldHeaders, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-      older.use(responseValidation(olderProtocol, { datasetId: dataset, protocolVersion: "0.1.0" }));
+      older.use(responseValidation(olderProtocol, { datasetId: dataset, protocolVersion: "0.1.0" }, { maxJSONBytes: 1_048_576 }));
       const addition = await older.GET("/__fixture/response/read", { params: { header: oldHeaders } });
       assert.equal(addition.response.status, 200);
       assert.equal(addition.response.headers.get("Atlas-Protocol-Version"), "0.1.0");
       assert.deepEqual(addition.data, expectedAddition);
       const current = createTransport<paths>({ baseUrl, headers: currentHeaders, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-      current.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: "0.2.0" }));
+      current.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: "0.2.0" }, { maxJSONBytes: 1_048_576 }));
       const omission = await current.GET("/__fixture/response/read", { params: { header: currentHeaders, query: { fault: "omit_optional" } } });
       assert.deepEqual(omission.data, expectedOmission);
       assert.equal(omission.response.headers.get("Atlas-Protocol-Version"), "0.2.0");

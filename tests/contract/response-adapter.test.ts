@@ -14,7 +14,7 @@ const document = { ...protocol, paths: { "/__fixture/value": {
 } } };
 await withFixture(async ({ baseUrl }) => {
   const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-  client.use(responseValidation(document, { datasetId: dataset, protocolVersion: version }));
+  client.use(responseValidation(document, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
   const read = await client.GET("/__fixture/value", { params: { header: headers } });
   assert.deepEqual(read.data, { dataset_id: dataset, data: { value: "initial fixture value", count: "0" } });
   const write = await client.PUT("/__fixture/value", { params: { header: headers }, body: { value: "metadata workflow", count: "1" } });
@@ -36,7 +36,7 @@ for (const authoredMedia of ["application/json", "Application/JSON"]) {
       const client = createTransport<paths>({ baseUrl: "http://response-adapter.invalid", fetch: async () => new Response(
         JSON.stringify({ dataset_id: dataset, data: { value: "media casing", count: valid ? "1" : 1 } }),
         { status: 200, headers: { ...headers, "Content-Type": receivedMedia } }) });
-      client.use(responseValidation(mediaDocument, { datasetId: dataset, protocolVersion: version }));
+      client.use(responseValidation(mediaDocument, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
       if (valid) {
         const result = await client.GET("/__fixture/value", { params: { header: headers } });
         assert.equal(result.data?.data.value, "media casing", `${authoredMedia}/${receivedMedia}`);
@@ -48,7 +48,7 @@ for (const authoredMedia of ["application/json", "Application/JSON"]) {
   }
   const unsupported = createTransport<paths>({ baseUrl: "http://response-adapter.invalid", fetch: async () => new Response(
     '{}', { status: 200, headers: { ...headers, "Content-Type": "text/plain" } }) });
-  unsupported.use(responseValidation(mediaDocument, { datasetId: dataset, protocolVersion: version }));
+  unsupported.use(responseValidation(mediaDocument, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
   await assert.rejects(() => unsupported.GET("/__fixture/value", { params: { header: headers } }),
     (error: unknown) => error instanceof ResponseValidationError && error.reason === "media_type");
 }

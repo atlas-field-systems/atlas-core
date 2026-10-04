@@ -15,7 +15,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": edition };
       if (mode === "generated transport") {
         const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-        client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: edition }));
+        client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: edition }, { maxJSONBytes: 1_048_576 }));
         const written = await client.PUT("/__fixture/value", { params: { header: headers }, body: input });
         assert.equal(written.response.status, 200);
         assert.equal(written.response.headers.get("Atlas-Protocol-Version"), edition);

@@ -120,7 +120,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         return fetch(wire, { signal: AbortSignal.timeout(5000) });
       },
     });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     if (mode === "generated transport") {
       const seed = await client.PUT("/__fixture/report", { params: { header: headers }, body: validBody });
       assert.equal(seed.response.status, 200);

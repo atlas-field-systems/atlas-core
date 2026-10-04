@@ -57,6 +57,11 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 	if operation != "" {
 		message += " " + operation
 	}
+	var maximum *http.MaxBytesError
+	if errors.As(err, &maximum) {
+		WriteError(w, http.StatusRequestEntityTooLarge, "payload_too_large", "Request body exceeds its configured byte bound for "+r.Method+" "+operation)
+		return
+	}
 	WriteError(w, http.StatusBadRequest, "invalid_request", message)
 }
 

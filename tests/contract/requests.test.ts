@@ -42,7 +42,7 @@ const invalidBodies = [
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
     const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     async function unchanged() {
       if (mode === "generated transport") {
         const response = await client.GET("/__fixture/patch/{fixture_id}", { params });
@@ -92,6 +92,12 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert(!JSON.stringify(response.error).includes("sensitive"));
         await unchanged();
       }
+      const oversized = await client.PATCH("/__fixture/patch/{fixture_id}", { params, body: { alias: "sensitive".repeat(1024) } });
+      assert.equal(oversized.response.status, 413, "generated over-limit JSON body");
+      assert(validateError(oversized.error));
+      assert.equal(oversized.error.error.code, "payload_too_large");
+      assert(!JSON.stringify(oversized.error).includes("sensitive"));
+      await unchanged();
       for (const scenario of [
         { name: "generated malformed path UUID", params: { ...params, path: { fixture_id: "sensitive-fixture-credential" } } },
         { name: "generated malformed Dataset UUID", params: { ...params, header: { ...headers, "Atlas-Dataset-ID": "sensitive-fixture-credential" } } },
@@ -117,7 +123,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
     await rejected('{"alias":"must not commit"} {"alias":"second"}', "multiple JSON documents");
     await rejected('{"alias":"must not commit"} trailing', "trailing malformed JSON");
     await rejected('', "missing required JSON body");
-    await rejected(JSON.stringify({ alias: "sensitive".repeat(1024) }), "bounded JSON body");
+    await rejected(JSON.stringify({ alias: "sensitive".repeat(1024) }), "bounded JSON body", fixtureId, headers, 413, "payload_too_large");
     await rejected('[]', "top-level array");
     await rejected('null', "top-level null");
     await rejected('{"position":{"latitude":NaN,"longitude":0}}', "nonfinite JSON token");

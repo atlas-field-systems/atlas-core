@@ -7,6 +7,7 @@ export interface Ready {
 export interface FixtureOptions {
   mode?: "normal" | "missing_readiness" | "startup_failure" | "request_hooks";
   startupMs?: number;
+  unprivilegedRemoval?: boolean;
 }
 export class FixtureStartupError extends Error {
   constructor(message: string, readonly dataDir: string, readonly pid: number | undefined, readonly trace: string) {
@@ -34,6 +35,7 @@ export function isReady(value: unknown): value is Ready {
 function isOptions(value: unknown): value is FixtureOptions {
   return typeof value === "object" && value !== null &&
     (!("mode" in value) || ["normal", "missing_readiness", "startup_failure", "request_hooks"].some((mode) => mode === value.mode)) &&
+    (!("unprivilegedRemoval" in value) || typeof value.unprivilegedRemoval === "boolean") &&
     (!("startupMs" in value) || typeof value.startupMs === "number" && Number.isFinite(value.startupMs) && value.startupMs > 0);
 }
 export function isFixtureCommand(value: unknown): value is FixtureCommand {

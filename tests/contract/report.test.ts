@@ -17,7 +17,7 @@ for (const version of ["0.1.0", "0.2.0"]) {
       const client = createTransport<paths>({
         baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }),
       });
-      client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+      client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
       for (const scenario of reports) {
         assert(validateReport(scenario.body), scenario.name);
         if (mode === "generated transport") {

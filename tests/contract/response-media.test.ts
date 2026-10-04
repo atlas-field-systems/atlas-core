@@ -38,7 +38,7 @@ try {
     } } } } } };
     const client = createTransport<paths>({ baseUrl, headers,
       fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(document, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(document, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     return client;
   };
   for (const authoredMedia of ["application/problem+json", "Application/Problem+JSON", "application/vnd.atlas.fixture+json"]) {
@@ -123,6 +123,15 @@ try {
   const mixed = clientFor({ "Application/JSON": { schema: ordinarySchema }, "application/problem+json": { schema },
     "application/octet-stream": { schema: { type: "string", format: "binary" } } });
   const ordinary = { dataset_id: dataset, data: { value: "ordinary JSON", count: "2" } };
+  for (const [first, second] of [
+    ["application/json", "application/json; profile=alternate"],
+    ["application/json", "Application/JSON"],
+    ["application/problem+json", 'Application/Problem+JSON; note="alternate"'],
+  ] as const) {
+    assert.throws(() => clientFor({ [first]: { schema: ordinarySchema }, [second]: { schema } }),
+      /Response JSON media declarations have ambiguous normalized keys/u);
+  }
+  console.log("PASS ambiguous normalized JSON declarations are refused before requests");
   for (const [media, validBody, invalidBody] of [
     ["APPLICATION/JSON; charset=utf-8", ordinary, expected],
     ["Application/Problem+JSON; charset=utf-8", expected, ordinary],

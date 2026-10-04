@@ -74,6 +74,24 @@
               }
             }
           },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "426": {
             "description": "Test-only fixture response",
             "headers": {
@@ -169,6 +187,24 @@
           },
           "409": {
             "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
             "headers": {
               "Atlas-Dataset-ID": {
                 "$ref": "#/components/headers/Atlas-Dataset-ID"

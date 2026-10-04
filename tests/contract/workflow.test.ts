@@ -18,7 +18,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
     assert.equal(journalMode, "wal");
     if (mode === "generated transport") {
       const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-      client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+      client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
       const written = await client.PUT("/__fixture/value", { params: { header: headers }, body: input });
       assert.equal(written.response.status, 200);
       assert.deepEqual(written.data, expected);

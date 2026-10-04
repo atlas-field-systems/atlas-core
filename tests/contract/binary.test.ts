@@ -26,7 +26,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl, dataDir }) => {
     ownedDirectory = dataDir;
     const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     if (mode === "generated transport") {
       const atLimit = await client.PUT(path, {
         params: { header: headers, path: { content_id: contentId } }, headers: { "Content-Type": "application/octet-stream" },
@@ -104,7 +104,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
     if (mode === "generated transport") {
       const bodyless = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(
         new Request(request.url, { method: request.method, headers: request.headers }), { signal: AbortSignal.timeout(5000) }) });
-      bodyless.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+      bodyless.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
       const response = await bodyless.PUT(path, { params: { header: headers, path: { content_id: contentId } },
         headers: { "Content-Type": "application/octet-stream" }, body });
       assert.equal(response.response.status, 400, "required binary body is absent");
@@ -130,7 +130,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
           if (failure.media === null) request.headers.delete("Content-Type");
           return fetch(request, { signal: AbortSignal.timeout(5000) });
         } });
-        failingClient.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+        failingClient.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
         const rejected = await failingClient.PUT(path, {
           params: { header: { "Atlas-Dataset-ID": failure.dataset ?? dataset, "Atlas-Protocol-Version": failure.version ?? version }, path: { content_id: failure.path } },
           headers: { "Content-Type": failure.media ?? "application/octet-stream" }, body: payload,

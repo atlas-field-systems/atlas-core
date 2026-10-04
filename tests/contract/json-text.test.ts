@@ -19,7 +19,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
     let injected: Uint8Array<ArrayBuffer> | undefined;
     const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(injected !== undefined && request.method === "PUT" ?
       new Request(request, { body: injected }) : request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     const seed = await client.PUT("/__fixture/value", { params: { header: headers }, body: baseline });
     assert.equal(seed.response.status, 200);
     for (const scenario of invalid) {

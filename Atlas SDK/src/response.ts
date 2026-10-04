@@ -2,7 +2,7 @@ import type { ValidateFunction } from "ajv";
 import type { Middleware } from "openapi-fetch";
 import { contractValidator, pointer, type ContractDocument } from "./schema.js";
 
-export type ResponseFailureReason = "context" | "status" | "media_type" | "json" | "schema" | "header";
+export type ResponseFailureReason = "context" | "status" | "media_type" | "body_size" | "json" | "schema" | "header";
 
 // This failure says the response cannot be interpreted. It makes no claim about
 // whether a mutation committed. Operational retry outcomes belong to SDK helpers.
@@ -40,7 +40,12 @@ interface ResponseContract extends ContractDocument {
   paths: Record<string, PathItem>;
 }
 
-export function responseValidation(document: ResponseContract, context: { datasetId: string; protocolVersion: string }): Middleware {
+export function responseValidation(document: ResponseContract, context: { datasetId: string; protocolVersion: string },
+  options: { maxJSONBytes: number }): Middleware {
+  const maxJSONBytes = options.maxJSONBytes;
+  if (!Number.isSafeInteger(maxJSONBytes) || maxJSONBytes <= 0) {
+    throw new Error("Response JSON byte bound must be a positive safe integer");
+  }
   const ajv = contractValidator(document);
   const responses = new Map<string, { media: Set<string>; validators: Map<string, ValidateFunction>; headers: { name: string; required: boolean; validate: ValidateFunction }[] }>();
   for (const [path, item] of Object.entries(document.paths)) {
@@ -74,6 +79,7 @@ export function responseValidation(document: ResponseContract, context: { datase
         const validators = new Map<string, ValidateFunction>();
         for (const { authored, normalized } of mediaDeclarations) {
           if (normalized !== "application/json" && !normalized.endsWith("+json")) continue;
+          if (validators.has(normalized)) throw new Error("Response JSON media declarations have ambiguous normalized keys");
           const ref = `atlas${location}/content/${pointer(authored)}/schema`;
           validators.set(normalized, ajv.compile({ $ref: ref }));
         }
@@ -84,7 +90,12 @@ export function responseValidation(document: ResponseContract, context: { datase
   return {
     async onResponse({ response, schemaPath, request }) {
       const operation = `${request.method} ${schemaPath}`;
-      const invalid = (reason: ResponseFailureReason): never => { throw new ResponseValidationError(reason, response.status, operation); };
+      const invalid = (reason: ResponseFailureReason): never => {
+        // No caller receives a refused response. Stop its transport stream even
+        // when refusal happens before JSON reading, without waiting on a tee.
+        void response.body?.cancel().catch(() => {});
+        throw new ResponseValidationError(reason, response.status, operation);
+      };
       const declared = responses.get(`${operation} ${response.status}`);
       if (!declared) return invalid("status");
       for (const header of declared.headers) {
@@ -103,9 +114,39 @@ export function responseValidation(document: ResponseContract, context: { datase
       if (declared.media.size === 0 ? media !== "" : !declared.media.has(media)) invalid("media_type");
       const validate = declared.validators.get(media);
       if (validate) {
+        const reader = response.clone().body?.getReader();
+        const chunks: Uint8Array[] = [];
+        let length = 0;
+        const cancel = () => {
+          // A tee cancellation waits for the other branch. Cancel both without
+          // awaiting either, so a refused streaming supplier cannot block us.
+          void reader?.cancel().catch(() => {});
+          void response.body?.cancel().catch(() => {});
+        };
+        if (reader) {
+          try {
+            for (;;) {
+              const chunk = await reader.read();
+              if (chunk.done) break;
+              if (chunk.value.byteLength === 0) continue;
+              if (chunk.value.byteLength > maxJSONBytes - length) {
+                cancel();
+                return invalid("body_size");
+              }
+              length += chunk.value.byteLength;
+              chunks.push(chunk.value);
+            }
+          } catch (error) {
+            cancel();
+            if (error instanceof ResponseValidationError) throw error;
+            return invalid("json");
+          } finally { reader.releaseLock(); }
+        }
+        const bytes = new Uint8Array(length);
+        let offset = 0;
+        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
         let body: unknown;
         try {
-          const bytes = await response.clone().arrayBuffer();
           // Fetch's JSON decoder replaces bad UTF-8 instead of rejecting it.
           body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
         } catch { return invalid("json"); }

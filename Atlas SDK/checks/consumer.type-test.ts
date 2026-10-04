@@ -18,6 +18,9 @@ const pathMetadata = {
     get: { responses: { "204": {} } },
   } },
 };
-responseValidation(pathMetadata, { datasetId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", protocolVersion: "0.2.0" });
+responseValidation(pathMetadata, { datasetId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", protocolVersion: "0.2.0" }, { maxJSONBytes: 1_048_576 });
 // @ts-expect-error Metadata support does not remove the operation responses requirement.
-responseValidation({ components: { schemas: {} }, paths: { "/example": { get: { summary: "missing responses" } } } }, { datasetId: "id", protocolVersion: "0.2.0" });
+responseValidation({ components: { schemas: {} }, paths: { "/example": { get: { summary: "missing responses" } } } }, { datasetId: "id", protocolVersion: "0.2.0" }, { maxJSONBytes: 1_048_576 });
+
+// @ts-expect-error Response validation requires an explicit caller-selected JSON byte bound.
+responseValidation(pathMetadata, { datasetId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", protocolVersion: "0.2.0" });

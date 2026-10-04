@@ -12,7 +12,7 @@ await withFixture(async ({ baseUrl }) => {
   for (const [index, spelling] of spellings.entries()) {
     const headers = { ...canonicalHeaders, "Atlas-Dataset-ID": spelling };
     const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: spelling, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: spelling, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     const read = await client.GET("/__fixture/value", { params: { header: headers } });
     assert.equal(read.response.status, 200, `GET accepts Dataset identity ${spelling}`);
     const value = { value: `identity spelling ${index}`, count: "1" };
@@ -25,7 +25,7 @@ await withFixture(async ({ baseUrl }) => {
   const different = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const headers = { ...canonicalHeaders, "Atlas-Dataset-ID": different };
   const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-  client.use(responseValidation(protocol, { datasetId: different, protocolVersion: version }));
+  client.use(responseValidation(protocol, { datasetId: different, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
   const isContextFailure = (error: unknown) => error instanceof ResponseValidationError && error.reason === "context" && error.status === 409;
   await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }), isContextFailure);
   await assert.rejects(() => client.PUT("/__fixture/value", { params: { header: headers }, body: { value: "must not commit", count: "1" } }), isContextFailure);
@@ -40,7 +40,7 @@ for (const spelling of spellings) {
     const client = createTransport<paths>({ baseUrl: "http://response-adapter.invalid", fetch: async () => new Response(
       JSON.stringify({ dataset_id: location === "envelope" ? spelling : dataset, data: { value: "response identity", count: "1" } }),
       { status: 200, headers: { ...canonicalHeaders, "Atlas-Dataset-ID": location === "header" ? spelling : dataset, "Content-Type": "application/json" } }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     const read = await client.GET("/__fixture/value", { params: { header: canonicalHeaders } });
     assert.equal(read.response.status, 200, `${location} accepts equivalent identity ${spelling}`);
     assert.equal(read.data?.dataset_id, location === "envelope" ? spelling : dataset, "validation preserves response spelling");

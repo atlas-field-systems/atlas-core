@@ -21,7 +21,7 @@ const routes: Record<string, ResponsePath> = {
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
     const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
+    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     if (mode === "generated transport") {
       const validRead = await client.GET("/__fixture/response/read", { params: { header: headers } });
       assert.deepEqual(validRead.data, read);
