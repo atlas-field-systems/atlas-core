@@ -172,7 +172,9 @@ func run() (result error) {
 	if err != nil {
 		return fmt.Errorf("listen for fixture HTTP: %w", err)
 	}
-	server := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, IdleTimeout: 5 * time.Second}
+	// Clients can preconnect without sending headers. Expire those accepted
+	// sockets before the three-second graceful shutdown deadline.
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, IdleTimeout: 5 * time.Second}
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
 	if *mode != "missing_readiness" {
