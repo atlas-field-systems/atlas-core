@@ -26,7 +26,7 @@ The planning session and the architecture merged in PR #1 originally disagreed. 
 | Objects | Stage upload identity and metadata separately. Publish only ready Objects; content is immutable, descriptive metadata remains editable | [ADR-0009](adr/0009-expose-objects-only-when-ready.md) |
 | Compatibility | Allow explicitly supported compatible versions and reject unsupported clients. Validate Asset Command support. SDK Command Catalog lookup stays local | [ADR-0005](adr/0005-allow-compatible-client-versions.md), [SDK compatibility](topics/sdk.md#compatibility) |
 | Storage | SQLite with typed relational fields and validated JSON. OpenAPI defines public contracts; private SQL defines storage and sqlc generates access code. Do not generate tables from public resource models | [ADR-0016](adr/0016-use-go-sqlite-and-openapi-tooling.md), [component catalog](data-components.md) |
-| Vocabulary | Tracks can be stationary or moving; Geofeatures are defined spatial designations with geometry. One canonical glossary | [CONTEXT.md](../CONTEXT.md) |
+| Vocabulary | Tracks can be stationary or moving; Geofeatures are defined spatial designations with geometry. One canonical glossary | [GLOSSARY.md](../GLOSSARY.md) |
 | Reset | Every SDK mode checks Dataset identity; discard obsolete pictures, history, responses and pending submissions without replaying old writes into a new Dataset | [Dataset boundary](topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary), [SDK boundary](topics/sdk.md#dataset-reset-handling) |
 | Scan completion | Require the assigned Asset's completion report and all its declared required ready Objects, in either arrival order | [ADR-0008](adr/0008-complete-scan-tasks-when-required-results-are-available.md) |
 | Hybrid scope, superseded 28 September | Originally selected transmission filtering with local in-scope reads and one-off HTTP outside scope. Now deferred with matching Core machinery | [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
@@ -132,7 +132,7 @@ A second architecture review looked for rules that every caller had to repeat. T
 
 The review also resolved four contradictions between documents:
 
-- **Check-in.** Some documents said check-in reconciles Tasks, while the operations catalog made it an Entity report. Check-in now means only the Entity report, and [reconnect reconciliation](../CONTEXT.md) names the workflow.
+- **Check-in.** Some documents said check-in reconciles Tasks, while the operations catalog made it an Entity report. Check-in now means only the Entity report, and [reconnect reconciliation](../GLOSSARY.md) names the workflow.
 - **Queue order.** The responsibility map gave the Asset OS "queue order" while ADR-0007 kept requested and confirmed revisions in Core. The Asset OS owns execution and the confirmed order it adopts; Core records submission sequence, requested revisions and confirmations.
 - **Activity while Core is stopped.** Local actions are journaled on the installation mount and imported when the retained Dataset or a new installation's first Dataset opens, keeping SQLite accessed only by Core. This resolves the local activity recording left open in the 23 September architecture review above.
 - **Credentials and separate storage.** Separate operational and installation storage could not keep registration and Asset deletion atomic with credential facts. One database grouped by lifetime settles the database split that review left unselected.
@@ -238,8 +238,8 @@ An audit of the documentation for contradictions, undefined terms, behavioral ga
 | Registration and Command support | Registration carries only Descriptive data and Command support. Command support is Asset-reported; dropped support leaves outstanding Tasks for the Asset to fail as unsupported | [Dropped Command support](topics/tasks.md#dropped-command-support) |
 | Geometry | Each Geofeature-referencing Command declares its cutoff, by default the terminal report, and Core records the applied revision. Before the cutoff, edits that would invalidate a Task's input are rejected | [Geometry cutoff](topics/tasks.md#live-geofeature-geometry) |
 | Object storage | A quota keeps headroom for operational writes; a missing Object file is a per-Object integrity fault and Core still opens | [Storage limits](topics/objects.md#storage-quota-and-integrity-faults) |
-| Activity attribution | Activity history records which authenticated caller acted, not a person | [Glossary](../CONTEXT.md) |
-| Vocabulary | Installation, Installation setup, Operational status, Communication state, Contact, Enrollment, Asset registration, Operation, Plugin capability, Interrupted Operation, field authorship terms, SDK mode names, Required result and the other entries added to the glossary | [Glossary](../CONTEXT.md) |
+| Activity attribution | Activity history records which authenticated caller acted, not a person | [Glossary](../GLOSSARY.md) |
+| Vocabulary | Installation, Installation setup, Operational status, Communication state, Contact, Enrollment, Asset registration, Operation, Plugin capability, Interrupted Operation, field authorship terms, SDK mode names, Required result and the other entries added to the glossary | [Glossary](../GLOSSARY.md) |
 | Documentation structure | Apply these content decisions first, then reorganize into one owning page per topic, one topic per change, with this log as history rather than authority and `docs/research/` left unchanged | This log |
 
 ## Open enrollment cleanup, 1 October 2026

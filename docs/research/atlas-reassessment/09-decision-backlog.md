@@ -82,7 +82,7 @@ Small swaps such as zerolog to slog, npm to pnpm, or chi to the standard router 
 ## How this fits the existing skills
 
 - Research stays in this folder. Each report separates source observations, recommendations, alternative costs and unknowns.
-- `CONTEXT.md` stays a glossary. It does not hold the proposed stack or implementation plan.
+- `GLOSSARY.md` stays a glossary. It does not hold the proposed stack or implementation plan.
 - Once a hard-to-reverse tradeoff is accepted, record the decision in `docs/adr/` and link its research evidence. No accepted ADR is created merely because a researcher prefers an option.
 - Once an experiment or implementation slice is requested, publish its specification as a GitHub issue under the repository's issue convention. Include behavior, acceptance conditions and the selected scope; do not turn every research question into a ticket automatically.
 - Source `docs/problems/` reports are investigation leads. This architecture review does not reproduce or inherit them as confirmed runtime defects.

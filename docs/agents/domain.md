@@ -1,12 +1,12 @@
 # Domain documentation
 
-Atlas uses one root [CONTEXT.md](../../CONTEXT.md), one [topic page](../topics/README.md) per area of behavior and shared [ADRs](../adr/README.md). Read the glossary before exploring or changing domain behavior, then the topic page and the ADRs relevant to that work. Use its canonical terms and flag conflicts with accepted decisions explicitly.
+Atlas uses one root [GLOSSARY.md](../../GLOSSARY.md), one [topic page](../topics/README.md) per area of behavior and shared [ADRs](../adr/README.md). Read the glossary before exploring or changing domain behavior, then the topic page and the ADRs relevant to that work. Use its canonical terms and flag conflicts with accepted decisions explicitly.
 
 ## Where information belongs
 
 | Information | Authoritative home | When to read or update it |
 | --- | --- | --- |
-| Domain terms | [CONTEXT.md](../../CONTEXT.md) | Defining or using Atlas vocabulary; keep definitions short and free of implementation details |
+| Domain terms | [GLOSSARY.md](../../GLOSSARY.md) | Defining or using Atlas vocabulary; keep definitions short and free of implementation details |
 | Users, workload and field assumptions | [Operating model](../architecture/operating-model.md) | Evaluating product scope or a proposed workflow |
 | Current behavior rules, their routes and SDK operations, and open questions for one area | [Topic pages](../topics/README.md) | Planning, implementing or reviewing behavior in that area; each rule lives on exactly one page |
 | Repository boundaries and responsibility assignments | [System outline](../architecture/system-outline.md) | Assigning ownership or planning a module; candidate subsystems remain proposals |

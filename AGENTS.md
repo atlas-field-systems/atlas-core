@@ -7,7 +7,7 @@
 
 ## Agent skills
 
-- Before exploring, planning, implementing or reviewing domain behavior, read `CONTEXT.md` and the relevant ADRs using `docs/agents/domain.md`. This includes behavior specified in documentation.
+- Before exploring, planning, implementing or reviewing domain behavior, read `GLOSSARY.md` and the relevant ADRs using `docs/agents/domain.md`. This includes behavior specified in documentation.
 - Before designing, implementing or reviewing code, read all of `docs/agents/code-conventions.md` and inspect existing implementations in the area. During review, check every applicable convention and the originating issue or specification separately.
 - When creating or updating issues, follow `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`.
 
