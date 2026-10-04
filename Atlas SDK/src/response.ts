@@ -42,7 +42,7 @@ interface ResponseContract extends ContractDocument {
 
 export function responseValidation(document: ResponseContract, context: { datasetId: string; protocolVersion: string }): Middleware {
   const ajv = contractValidator(document);
-  const responses = new Map<string, { media: Set<string>; validate?: ValidateFunction; headers: { name: string; required: boolean; validate: ValidateFunction }[] }>();
+  const responses = new Map<string, { media: Set<string>; validators: Map<string, ValidateFunction>; headers: { name: string; required: boolean; validate: ValidateFunction }[] }>();
   for (const [path, item] of Object.entries(document.paths)) {
     for (const method of methods) {
       const operation = item[method];
@@ -67,13 +67,14 @@ export function responseValidation(document: ResponseContract, context: { datase
           if (!definition.schema) throw new Error("Response header requires an authored schema");
           return { name, required: definition.required === true, validate: ajv.compile({ $ref: `atlas${ref}/schema` }) };
         });
-        const jsonMedia = mediaKeys.find((key) => mediaType(key) === "application/json");
-        if (jsonMedia !== undefined) {
-          const ref = `atlas#/paths/${pointer(path)}/${method}/responses/${status}/content/${pointer(jsonMedia)}/schema`;
-          responses.set(key, { media, headers, validate: ajv.compile({ $ref: ref }) });
-        } else {
-          responses.set(key, { media, headers });
+        const validators = new Map<string, ValidateFunction>();
+        for (const authoredMedia of mediaKeys) {
+          const normalized = mediaType(authoredMedia);
+          if (normalized !== "application/json" && !normalized.endsWith("+json")) continue;
+          const ref = `atlas${location}/content/${pointer(authoredMedia)}/schema`;
+          validators.set(normalized, ajv.compile({ $ref: ref }));
         }
+        responses.set(key, { media, headers, validators });
       }
     }
   }
@@ -96,10 +97,11 @@ export function responseValidation(document: ResponseContract, context: { datase
       }
       const media = mediaType(response.headers.get("Content-Type") ?? "");
       if (declared.media.size === 0 ? media !== "" : !declared.media.has(media)) invalid("media_type");
-      if (declared.validate) {
+      const validate = declared.validators.get(media);
+      if (validate) {
         let body: unknown;
         try { body = await response.clone().json(); } catch { return invalid("json"); }
-        if (!declared.validate(body)) invalid("schema");
+        if (!validate(body)) invalid("schema");
         if (typeof body === "object" && body !== null && "dataset_id" in body &&
             (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))) {
           invalid("context");

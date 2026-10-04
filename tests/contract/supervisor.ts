@@ -7,7 +7,7 @@ import { startFixture, type OwnedFixture } from "./fixture-owner.js";
 import { fixtureFailure, isFixtureCommand, type FixtureReply } from "./fixture-messages.js";
 
 const loader = fileURLToPath(new URL("../../Atlas SDK/node_modules/tsx/dist/loader.mjs", import.meta.url));
-export interface SupervisorOptions { timeoutMs?: number; args?: string[] }
+export interface SupervisorOptions { timeoutMs?: number; args?: string[]; signal?: AbortSignal }
 
 // One surviving owner runs each test worker and owns its real Go children.
 // Worker termination cannot skip this owner's exit/reaping or directory cleanup.
@@ -19,6 +19,7 @@ export async function runContractTest(file: string, options: SupervisorOptions =
   const fixtures = new Map<string, Promise<OwnedFixture | undefined>>();
   let closing = false;
   let timedOut = false;
+  let cancelled = false;
   let killTimer: ReturnType<typeof setTimeout> | undefined;
   const controlErrors: unknown[] = [];
   const child = spawn(process.execPath, ["--import", loader, file, ...options.args ?? []],
@@ -61,25 +62,33 @@ export async function runContractTest(file: string, options: SupervisorOptions =
       })();
     }
   });
-  const deadline = setTimeout(() => {
+  const stopWorker = () => {
     closing = true;
-    timedOut = true;
-    child.kill("SIGTERM");
-    killTimer = setTimeout(() => child.kill("SIGKILL"), 2000);
-  }, timeoutMs);
-  let outcome: { status: number | null; timedOut: boolean } | undefined;
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGTERM");
+      killTimer ??= setTimeout(() => child.kill("SIGKILL"), 2000);
+    }
+  };
+  const cancel = () => { cancelled = true; stopWorker(); };
+  const deadline = setTimeout(() => { timedOut = true; stopWorker(); }, timeoutMs);
+  options.signal?.addEventListener("abort", cancel, { once: true });
+  // Cancellation can arrive while the private root is being allocated, before
+  // the listener exists. Recheck it before dispatching any worker messages.
+  if (options.signal?.aborted) cancel();
+  let outcome: { status: number | null; timedOut: boolean; cancelled: boolean } | undefined;
   let primary: unknown;
   try {
     const status = await new Promise<number | null>((resolve, reject) => {
       child.once("close", resolve);
       child.once("error", reject);
     });
-    outcome = { status, timedOut };
+    outcome = { status, timedOut, cancelled };
   } catch (error) { primary = error; }
   finally {
     closing = true;
     clearTimeout(deadline);
     clearTimeout(killTimer);
+    options.signal?.removeEventListener("abort", cancel);
   }
   const cleanupErrors: unknown[] = [...controlErrors];
   const pending = await Promise.allSettled(fixtures.values());
