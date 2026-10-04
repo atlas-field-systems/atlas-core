@@ -1,6 +1,6 @@
 # Atlas Core
 
-Atlas Core is being extracted and simplified from Atlas Modernization. This repository is currently a design and research workspace for Core, Protocol and SDK; the Command Interface is a separate consumer.
+Atlas Core is being extracted and simplified from Atlas Modernization. This repository contains Core, Protocol and SDK design, research and a bounded [Slice 0 contract foundation](tests/contract/README.md); the Command Interface is a separate consumer.
 
 | Read for | Document |
 | --- | --- |
@@ -28,7 +28,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
 | Source evidence, technology alternatives and proposed experiments | [Research index](docs/research/atlas-reassessment/README.md) |
 
-The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted; product implementation has not started. The isolated Protocol proof is executable research evidence.
+The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted. Slice 0 establishes shared contract tooling and an isolated fixture workflow; operational Core behavior remains unimplemented. The original isolated Protocol proof remains executable research evidence.
 
 ## API and SDK behavior
 
@@ -40,3 +40,7 @@ Current API and SDK rules live on the topic pages. The [decision log](docs/plann
 | Route families, public methods, paths, inputs and effects | [API endpoint map](docs/api-endpoints.md) |
 | Component applicability and proposed storage mappings | [Data component catalog](docs/data-components.md) |
 | Earlier implementation evidence | [Atlas Modernization reference](docs/atlas-modernization-reference.md) |
+
+## Contract foundation
+
+[Slice 0](tests/contract/README.md) adds the shared Protocol baseline, generated Core/SDK bindings, narrow validation adapters and local representative Catalog lookup. Its isolated checks cover HTTP/SQLite/file workflows and canonical non-HTTP messages. Run its required checks with `python3 scripts/verify.py --bootstrap`. Operational Core workflows remain with their owning implementation slices.

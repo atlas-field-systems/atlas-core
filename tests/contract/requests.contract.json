@@ -1,0 +1,581 @@
+{
+  "paths": {
+    "/__fixture/patch/{fixture_id}": {
+      "get": {
+        "operationId": "getPatchResource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "name": "fixture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixturePatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchResource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "name": "fixture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixturePatchMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only fixture response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixturePatch"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FixturePatchComponent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "left": {
+            "type": "number",
+            "format": "double"
+          },
+          "right": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "left",
+          "right"
+        ],
+        "nullable": true,
+        "description": "Illustrative nested partial-update component. It has no movement semantics."
+      },
+      "FixturePatchRequiredComponent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "FixturePatchResource": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "asset"
+            ]
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "fixture_component": {
+            "$ref": "#/components/schemas/FixturePatchComponent"
+          },
+          "required_component": {
+            "$ref": "#/components/schemas/FixturePatchRequiredComponent"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          },
+          "count": {
+            "$ref": "#/components/schemas/DecimalCounter"
+          },
+          "positive_count": {
+            "$ref": "#/components/schemas/PositiveDecimalCounter"
+          },
+          "fixture_entity": {
+            "$ref": "#/components/schemas/FixtureRequestEntity"
+          },
+          "fixture_command": {
+            "$ref": "#/components/schemas/FixtureRequestCommand"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "alias",
+          "labels",
+          "fixture_component",
+          "required_component",
+          "position",
+          "count",
+          "positive_count",
+          "fixture_entity",
+          "fixture_command"
+        ],
+        "description": "Illustrative patch fixture. This is not a public Entity schema or telemetry/reporting endpoint."
+      },
+      "FixturePatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "type": "string",
+            "nullable": true
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "fixture_component": {
+            "$ref": "#/components/schemas/FixturePatchComponentUpdate"
+          },
+          "count": {
+            "$ref": "#/components/schemas/DecimalCounter"
+          },
+          "positive_count": {
+            "$ref": "#/components/schemas/PositiveDecimalCounter"
+          },
+          "fixture_entity": {
+            "$ref": "#/components/schemas/FixtureRequestEntity"
+          },
+          "fixture_command": {
+            "$ref": "#/components/schemas/FixtureRequestCommand"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          },
+          "required_component": {
+            "$ref": "#/components/schemas/FixturePatchRequiredComponent"
+          }
+        }
+      },
+      "FixturePatchResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixturePatchResource"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "FixturePatchMutationResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MutationResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixturePatchResource"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "FixturePatchComponentUpdate": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "left": {
+            "type": "number",
+            "format": "double"
+          },
+          "right": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FixtureRequestAsset": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "asset"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "stopped",
+              "moving"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "state"
+        ]
+      },
+      "FixtureRequestTrack": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "track"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "observation": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "observation"
+        ]
+      },
+      "FixtureRequestEntity": {
+        "description": "Illustrative request variants, independent of shipped Entity coverage.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/FixtureRequestAsset"
+          },
+          {
+            "$ref": "#/components/schemas/FixtureRequestTrack"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "asset": "#/components/schemas/FixtureRequestAsset",
+            "track": "#/components/schemas/FixtureRequestTrack"
+          }
+        }
+      },
+      "FixtureRequestMove": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "fixture_move"
+            ]
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "required": [
+          "command",
+          "position"
+        ]
+      },
+      "FixtureRequestPause": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "fixture_pause"
+            ]
+          }
+        },
+        "required": [
+          "command"
+        ]
+      },
+      "FixtureRequestCommand": {
+        "description": "Illustrative tagged Command inputs. This is not a Catalog projection or operational Task creation.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/FixtureRequestMove"
+          },
+          {
+            "$ref": "#/components/schemas/FixtureRequestPause"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "command",
+          "mapping": {
+            "fixture_move": "#/components/schemas/FixtureRequestMove",
+            "fixture_pause": "#/components/schemas/FixtureRequestPause"
+          }
+        }
+      }
+    }
+  }
+}

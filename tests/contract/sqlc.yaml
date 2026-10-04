@@ -1,0 +1,9 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "sql/schema.sql"
+    queries: "sql/queries.sql"
+    gen:
+      go:
+        package: "storage"
+        out: "../../Atlas Core/tests/contractfixture/generated/storage"

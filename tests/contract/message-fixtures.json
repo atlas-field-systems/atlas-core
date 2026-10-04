@@ -1,0 +1,914 @@
+[
+  {
+    "name": "private dispatch retains canonical double coordinates",
+    "schema": "FixturePluginDispatch",
+    "valid": true,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 10.123456789012344,
+        "longitude": 20.987654321098766
+      }
+    },
+    "expected_latitude": 10.123456789012344,
+    "expected_longitude": 20.987654321098766
+  },
+  {
+    "name": "change message retains its Asset variant, large tokens and precise position",
+    "schema": "FixtureChangeMessage",
+    "valid": true,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    },
+    "expected_latitude": 10.123456789012344,
+    "expected_longitude": 20.987654321098766,
+    "expected_commit_id": "9007199254740993",
+    "expected_resource_version": "9007199254740994",
+    "expected_entity_version": "9007199254740994"
+  },
+  {
+    "name": "dispatch preserves known zero coordinates",
+    "schema": "FixturePluginDispatch",
+    "valid": true,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 0,
+        "longitude": 0
+      }
+    },
+    "expected_latitude": 0,
+    "expected_longitude": 0
+  },
+  {
+    "name": "dispatch accepts complete coordinate boundaries",
+    "schema": "FixturePluginDispatch",
+    "valid": true,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": -90,
+        "longitude": 180
+      }
+    },
+    "expected_latitude": -90,
+    "expected_longitude": 180
+  },
+  {
+    "name": "dispatch lacks longitude",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 10.123456789012344
+      }
+    }
+  },
+  {
+    "name": "dispatch rejects invalid latitude without swapping",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 120,
+        "longitude": 10
+      }
+    }
+  },
+  {
+    "name": "dispatch rejects longitude out of range",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 10.123456789012344,
+        "longitude": -181
+      }
+    }
+  },
+  {
+    "name": "dispatch rejects coordinate strings",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": "10",
+        "longitude": 20.987654321098766
+      }
+    }
+  },
+  {
+    "name": "dispatch rejects null position",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": null
+    }
+  },
+  {
+    "name": "dispatch rejects unknown coordinate field",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 10.123456789012344,
+        "longitude": 20.987654321098766,
+        "reference": "another-reference"
+      }
+    }
+  },
+  {
+    "name": "dispatch rejects malformed operation UUID",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "invalid-uuid",
+      "input": {
+        "latitude": 10.123456789012344,
+        "longitude": 20.987654321098766
+      }
+    }
+  },
+  {
+    "name": "dispatch rejects malformed Dataset UUID",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "invalid-uuid",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 10.123456789012344,
+        "longitude": 20.987654321098766
+      }
+    }
+  },
+  {
+    "name": "dispatch requires its operation identity",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "input": {
+        "latitude": 10.123456789012344,
+        "longitude": 20.987654321098766
+      }
+    }
+  },
+  {
+    "name": "dispatch rejects unknown top-level field",
+    "schema": "FixturePluginDispatch",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "operation_id": "44444444-4444-4444-8444-444444444444",
+      "input": {
+        "latitude": 10.123456789012344,
+        "longitude": 20.987654321098766
+      },
+      "extra": true
+    }
+  },
+  {
+    "name": "change preserves its track tagged variant and large decimal tokens",
+    "schema": "FixtureChangeMessage",
+    "valid": true,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "22222222-2222-4222-8222-222222222222",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "22222222-2222-4222-8222-222222222222",
+        "type": "track",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": -10.123456789012344,
+          "longitude": -20.987654321098766
+        }
+      }
+    },
+    "expected_latitude": -10.123456789012344,
+    "expected_longitude": -20.987654321098766,
+    "expected_commit_id": "9007199254740993",
+    "expected_resource_version": "9007199254740994",
+    "expected_entity_version": "9007199254740994"
+  },
+  {
+    "name": "change preserves its geofeature tagged variant and large decimal tokens",
+    "schema": "FixtureChangeMessage",
+    "valid": true,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "33333333-3333-4333-8333-333333333333",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "type": "geofeature",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 90,
+          "longitude": -180
+        }
+      }
+    },
+    "expected_latitude": 90,
+    "expected_longitude": -180,
+    "expected_commit_id": "9007199254740993",
+    "expected_resource_version": "9007199254740994",
+    "expected_entity_version": "9007199254740994"
+  },
+  {
+    "name": "change rejects unknown Entity tag",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "task",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change requires its Entity tag",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects Command in place of Entity",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "type": "move_to",
+        "position": {
+          "latitude": 10,
+          "longitude": 20
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects malformed Entity UUID",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "invalid-uuid",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects numeric Entity version",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": 9007199254740993,
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects zero Entity version",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "0",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects noncanonical Entity version",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "01",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects incomplete Entity position",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects unknown Entity field",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        },
+        "extra": true
+      }
+    }
+  },
+  {
+    "name": "change rejects invalid resource kind",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "tasks",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects invalid action",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "unknown",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects malformed resource UUID",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "invalid-uuid",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change requires its resource",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert"
+    }
+  },
+  {
+    "name": "upsert requires a nonnull resource",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": null
+    }
+  },
+  {
+    "name": "change rejects negative index",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": -1,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects fractional index",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0.5,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects empty change count",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 0,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects unknown top-level field",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      },
+      "extra": true
+    }
+  },
+  {
+    "name": "change rejects commit_id=\"0\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "0",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects commit_id=\"01\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "01",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects commit_id=\"-1\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "-1",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects commit_id=\"1.5\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "1.5",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects commit_id=9007199254740993",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": 9007199254740993,
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "9007199254740994",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects resource_version=\"0\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "0",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects resource_version=\"01\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "01",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects resource_version=\"-1\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "-1",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects resource_version=\"1.5\"",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": "1.5",
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  },
+  {
+    "name": "change rejects resource_version=9007199254740993",
+    "schema": "FixtureChangeMessage",
+    "valid": false,
+    "body": {
+      "dataset_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "commit_id": "9007199254740993",
+      "change_index": 0,
+      "change_count": 1,
+      "resource_kind": "entities",
+      "resource_id": "11111111-1111-4111-8111-111111111111",
+      "resource_version": 9007199254740993,
+      "action": "upsert",
+      "resource": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "type": "asset",
+        "version": "9007199254740994",
+        "position": {
+          "latitude": 10.123456789012344,
+          "longitude": 20.987654321098766
+        }
+      }
+    }
+  }
+]

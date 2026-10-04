@@ -1,0 +1,8 @@
+Atlas Core/generated/
+Atlas Core/tests/contractfixture/generated/
+Atlas SDK/generated/
+Atlas SDK/node_modules/
+Atlas SDK/dist/
+tests/contract/generated/
+.artifacts/
+__pycache__/

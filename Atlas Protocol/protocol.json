@@ -1,0 +1,339 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Atlas Protocol shared baseline",
+    "version": "0.0.0",
+    "description": "Unpublished Slice 0 shared definitions. Operational routes are added by their owning slices."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Identifier": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "NullableIdentifier": {
+        "type": "string",
+        "format": "uuid",
+        "nullable": true
+      },
+      "DecimalCounter": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)$"
+      },
+      "PositiveDecimalCounter": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*$"
+      },
+      "ProtocolVersion": {
+        "type": "string"
+      },
+      "Latitude": {
+        "type": "number",
+        "minimum": -90,
+        "maximum": 90,
+        "format": "double"
+      },
+      "Longitude": {
+        "type": "number",
+        "minimum": -180,
+        "maximum": 180,
+        "format": "double"
+      },
+      "Position": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "$ref": "#/components/schemas/Latitude"
+          },
+          "longitude": {
+            "$ref": "#/components/schemas/Longitude"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ]
+      },
+      "MoveToPositionTarget": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["position"] },
+          "position": { "$ref": "#/components/schemas/Position" }
+        },
+        "required": ["kind", "position"]
+      },
+      "MoveToGeofeatureTarget": {
+        "description": "Structural identity only. Task admission must resolve a live point Geofeature.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["geofeature"] },
+          "geofeature_id": { "$ref": "#/components/schemas/Identifier" }
+        },
+        "required": ["kind", "geofeature_id"]
+      },
+      "MoveToTarget": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/MoveToPositionTarget" },
+          { "$ref": "#/components/schemas/MoveToGeofeatureTarget" }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "position": "#/components/schemas/MoveToPositionTarget",
+            "geofeature": "#/components/schemas/MoveToGeofeatureTarget"
+          }
+        }
+      },
+      "TargetAltitude": {
+        "description": "Optional target height in metres above the WGS84 ellipsoid. Omission imposes no vertical target.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value_m": { "type": "number", "format": "double" },
+          "vertical_reference": { "type": "string", "enum": ["wgs84_ellipsoid"] }
+        },
+        "required": ["value_m", "vertical_reference"]
+      },
+      "MoveTo": {
+        "description": "Representative input binding only. Task admission, validity, references and execution remain operational work.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "enum": ["move_to"] },
+          "target": { "$ref": "#/components/schemas/MoveToTarget" },
+          "target_altitude": { "$ref": "#/components/schemas/TargetAltitude" }
+        },
+        "required": ["command", "target"],
+        "x-atlas-command": {
+          "name": "move_to",
+          "scheduling": ["queued", "immediate"],
+          "default_scheduling": "queued",
+          "success": "arrival_reported_by_asset",
+          "binding": "representative"
+        }
+      },
+      "Pause": {
+        "description": "Representative tagged input binding only. Control ordering, validity and suspension remain operational work.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "enum": ["pause"] }
+        },
+        "required": ["command"],
+        "x-atlas-command": {
+          "name": "pause",
+          "scheduling": ["immediate"],
+          "default_scheduling": "immediate",
+          "success": "suspension_reported_by_asset",
+          "binding": "representative"
+        }
+      },
+      "EvidenceOrigin": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "process_generation": {
+            "$ref": "#/components/schemas/PositiveDecimalCounter"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/PositiveDecimalCounter"
+          }
+        },
+        "required": [
+          "process_generation",
+          "sequence"
+        ]
+      },
+      "MovementObservationTime": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "clock_uncertainty_ms": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "observed_at",
+          "clock_uncertainty_ms"
+        ]
+      },
+      "ReportContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "process_generation": {
+            "$ref": "#/components/schemas/PositiveDecimalCounter"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/PositiveDecimalCounter"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "clock_uncertainty_ms": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "nullable": true
+          },
+          "evidence_kind": {
+            "type": "string",
+            "enum": [
+              "current",
+              "historical"
+            ]
+          },
+          "evidence_origin": {
+            "$ref": "#/components/schemas/EvidenceOrigin"
+          },
+          "retained_evidence_id": {
+            "$ref": "#/components/schemas/NullableIdentifier"
+          },
+          "observation_times": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MovementObservationTime"
+            }
+          },
+          "contact_challenge": {
+            "type": "string",
+            "nullable": true
+          },
+          "process_proof": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "asset_id",
+          "process_generation",
+          "sequence",
+          "generated_at",
+          "clock_uncertainty_ms",
+          "evidence_kind",
+          "evidence_origin",
+          "retained_evidence_id",
+          "contact_challenge",
+          "process_proof"
+        ]
+      },
+      "ResponseContext": {
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "commit_cursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id"
+        ]
+      },
+      "MutationResponseContext": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "required": [
+              "commit_cursor"
+            ]
+          }
+        ]
+      },
+      "ErrorInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorInfo"
+          },
+          "dataset_id": {
+            "$ref": "#/components/schemas/Identifier"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    },
+    "headers": {
+      "Atlas-Dataset-ID": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Atlas-Protocol-Version": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ProtocolVersion"
+        }
+      }
+    },
+    "parameters": {
+      "Atlas-Dataset-ID": {
+        "in": "header",
+        "name": "Atlas-Dataset-ID",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Atlas-Protocol-Version": {
+        "in": "header",
+        "name": "Atlas-Protocol-Version",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ProtocolVersion"
+        }
+      }
+    }
+  }
+}

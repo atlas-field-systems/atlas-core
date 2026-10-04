@@ -1,0 +1,402 @@
+{
+  "paths": {
+    "/__fixture/content/{content_id}": {
+      "get": {
+        "operationId": "getFixtureContent",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "path",
+            "name": "content_id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              },
+              "Content-Length": {
+                "required": true,
+                "schema": {
+                  "$ref": "#/components/schemas/DecimalCounter"
+                }
+              },
+              "Fixture-Digest": {
+                "required": true,
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureSHA256"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putFixtureContent",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "path",
+            "name": "content_id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureContentReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only bounded content result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FixtureSHA256": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "FixtureContentMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "byte_length": {
+            "$ref": "#/components/schemas/DecimalCounter"
+          },
+          "sha256": {
+            "$ref": "#/components/schemas/FixtureSHA256"
+          }
+        },
+        "required": [
+          "byte_length",
+          "sha256"
+        ]
+      },
+      "FixtureContentReceipt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MutationResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixtureContentMetadata"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

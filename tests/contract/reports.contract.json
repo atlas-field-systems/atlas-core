@@ -1,0 +1,315 @@
+{
+  "paths": {
+    "/__fixture/report": {
+      "get": {
+        "operationId": "getReport",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixturePositionReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putReport",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixturePositionReportMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only report result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixturePositionReport"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FixturePositionReport": {
+        "description": "Test-only typed position report. Storage round-trip does not establish report acceptance, signing, ordering or Contact.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "report_context": {
+            "$ref": "#/components/schemas/ReportContext"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "required": [
+          "report_context",
+          "position"
+        ]
+      },
+      "FixturePositionReportResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixturePositionReport"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "FixturePositionReportMutationResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MutationResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixturePositionReport"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

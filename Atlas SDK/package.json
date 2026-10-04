@@ -1,0 +1,38 @@
+{
+  "name": "@atlas-field-systems/sdk",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "openapi-typescript \"../Atlas Protocol/protocol.json\" --output generated/protocol.ts",
+    "check": "tsc --noEmit",
+    "lint": "node ../scripts/lint-typescript.mjs && node ../scripts/lint-typescript-checks.mjs",
+    "build": "tsc -p tsconfig.build.json",
+    "check:consumer": "node checks/consumer.mjs && tsc --noEmit -p tsconfig.consumer.json",
+    "test": "node ../tests/contract/run.mjs"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "openapi-typescript": "7.13.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/generated/protocol.d.ts",
+      "default": "./dist/generated/protocol.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "version": "0.0.0"
+}
