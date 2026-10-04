@@ -61,6 +61,60 @@ try {
   }
   console.log("PASS authored +json schemas, invalid JSON, distinct Dataset mismatch, and media casing/parameters over real HTTP");
 
+  const textSchema = protocol.paths["/__fixture/value"].get.responses["200"].content["application/json"].schema;
+  const textClient = clientFor({ "application/json": { schema: textSchema }, "application/problem+json": { schema: textSchema } });
+  for (const media of ["application/json", "application/problem+json"]) {
+    receivedMedia = media;
+    for (const invalidBytes of [[255], [192, 175], [226, 130], [237, 160, 128], [244, 144, 128, 128]]) {
+      body = new Uint8Array([...new TextEncoder().encode(`{"dataset_id":"${dataset}","data":{"value":"`), ...invalidBytes,
+        ...new TextEncoder().encode('","count":"1"}}')]);
+      await assert.rejects(() => textClient.GET("/__fixture/value", { params: { header: headers } }),
+        (error: unknown) => error instanceof ResponseValidationError && error.reason === "json");
+    }
+    for (const [jsonString, value] of [['"船 🚀 �"', "船 🚀 �"], ['"\\ud83d\\ude80"', "🚀"]]) {
+      body = new TextEncoder().encode(`{"dataset_id":"${dataset}","data":{"value":${jsonString},"count":"1"}}`);
+      const result = await textClient.GET("/__fixture/value", { params: { header: headers } });
+      assert.deepEqual(result.data, { dataset_id: dataset, data: { value, count: "1" } });
+    }
+  }
+  console.log("PASS JSON-family UTF-8 rejects corrupted bytes, preserves multibyte/pairs and legitimate U+FFFD, and leaves the body readable");
+
+  body = JSON.stringify({ dataset_id: dataset, data: { value: "ordinary text", count: "1" } });
+  for (const media of [
+    "application/json; charset", "application/json; charset=", "application/json; =utf-8",
+    'application/json; note="unterminated', 'application/json; note="trailing\\',
+    "application/json; charset =utf-8", "application/json; charset= utf-8", "application/json; charset=utf-8 extra",
+    'application/json; note="closed"garbage', "application /json", "application/json, text/plain",
+    "application/json; note=one/two",
+  ]) {
+    receivedMedia = media;
+    await assert.rejects(() => textClient.GET("/__fixture/value", { params: { header: headers } }),
+      (error: unknown) => error instanceof ResponseValidationError && error.reason === "media_type", media);
+    assert.throws(() => clientFor({ [media]: { schema: textSchema } }), /Response media type declaration has invalid syntax/u);
+  }
+  assert.throws(() => clientFor({ "": { schema: textSchema } }), /Response media type declaration has invalid syntax/u);
+  for (const media of [
+    'Application/JSON; CHARSET="UTF-8"', 'application/json; note="semicolon; value"; charset=utf-8',
+    'application/json; note="escaped \\"quote\\" and \\\\backslash"',
+    'application/json \t; \tnote=""; ; charset=utf-8;', 'application/json; note="tab\tvalue"',
+    'application/json; note="\x80\xff"',
+  ]) {
+    receivedMedia = media;
+    const result = await textClient.GET("/__fixture/value", { params: { header: headers } });
+    assert.deepEqual(result.data, { dataset_id: dataset, data: { value: "ordinary text", count: "1" } }, media);
+  }
+  for (const [authored, received] of [
+    ['Application/JSON; charset="UTF-8"', "application/json"],
+    ['application/problem+json; note="semicolon; value"', "application/problem+json"],
+    ["application/json;;charset=utf-8;", "application/json"],
+  ] as const) {
+    const client = clientFor({ [authored]: { schema: textSchema } });
+    receivedMedia = received;
+    const result = await client.GET("/__fixture/value", { params: { header: headers } });
+    assert.deepEqual(result.data, { dataset_id: dataset, data: { value: "ordinary text", count: "1" } }, authored);
+  }
+  console.log("PASS complete response media syntax rejects malformed parameters/declarations and preserves quoted values, escapes and empty slots");
+
   // Each JSON representation has a different accepted value. Using either
   // validator for both must fail one success and accept one wrong-media body.
   const ordinarySchema = { type: "object", required: ["data"], properties: {

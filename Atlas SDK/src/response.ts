@@ -48,8 +48,12 @@ export function responseValidation(document: ResponseContract, context: { datase
       const operation = item[method];
       if (!operation) continue;
       for (const [status, response] of Object.entries(operation.responses)) {
-        const mediaKeys = Object.keys(response.content ?? {});
-        const media = new Set(mediaKeys.map(mediaType));
+        const mediaDeclarations = Object.keys(response.content ?? {}).map((authored) => {
+          const normalized = mediaType(authored);
+          if (!normalized) throw new Error("Response media type declaration has invalid syntax");
+          return { authored, normalized };
+        });
+        const media = new Set(mediaDeclarations.map(({ normalized }) => normalized));
         const key = `${method.toUpperCase()} ${path} ${status}`;
         const location = `#/paths/${pointer(path)}/${method}/responses/${status}`;
         const headers = Object.entries(response.headers ?? {}).map(([name, authored]) => {
@@ -68,10 +72,9 @@ export function responseValidation(document: ResponseContract, context: { datase
           return { name, required: definition.required === true, validate: ajv.compile({ $ref: `atlas${ref}/schema` }) };
         });
         const validators = new Map<string, ValidateFunction>();
-        for (const authoredMedia of mediaKeys) {
-          const normalized = mediaType(authoredMedia);
+        for (const { authored, normalized } of mediaDeclarations) {
           if (normalized !== "application/json" && !normalized.endsWith("+json")) continue;
-          const ref = `atlas${location}/content/${pointer(authoredMedia)}/schema`;
+          const ref = `atlas${location}/content/${pointer(authored)}/schema`;
           validators.set(normalized, ajv.compile({ $ref: ref }));
         }
         responses.set(key, { media, headers, validators });
@@ -96,11 +99,16 @@ export function responseValidation(document: ResponseContract, context: { datase
             header.name.toLowerCase() === "atlas-protocol-version" && value !== context.protocolVersion) invalid("context");
       }
       const media = mediaType(response.headers.get("Content-Type") ?? "");
+      if (media === undefined) return invalid("media_type");
       if (declared.media.size === 0 ? media !== "" : !declared.media.has(media)) invalid("media_type");
       const validate = declared.validators.get(media);
       if (validate) {
         let body: unknown;
-        try { body = await response.clone().json(); } catch { return invalid("json"); }
+        try {
+          const bytes = await response.clone().arrayBuffer();
+          // Fetch's JSON decoder replaces bad UTF-8 instead of rejecting it.
+          body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+        } catch { return invalid("json"); }
         if (!validate(body)) invalid("schema");
         if (typeof body === "object" && body !== null && "dataset_id" in body &&
             (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))) {
@@ -120,5 +128,45 @@ function sameDataset(left: string, right: string) {
 }
 
 function mediaType(value: string) {
-  return value.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  // RFC 9110 sections 5.6 and 8.3.1. Validate the entire field before ignoring
+  // parameters for schema selection; quoted semicolons are parameter data.
+  const token = /[!#$%&'*+.^_`|~0-9A-Za-z-]+/y;
+  let offset = 0;
+  const whitespace = () => { while (value[offset] === " " || value[offset] === "\t") offset++; };
+  const readToken = () => {
+    token.lastIndex = offset;
+    const match = token.exec(value);
+    if (!match) return undefined;
+    offset = token.lastIndex;
+    return match[0];
+  };
+  whitespace();
+  if (offset === value.length) return "";
+  const type = readToken();
+  if (!type || value[offset++] !== "/") return undefined;
+  const subtype = readToken();
+  if (!subtype) return undefined;
+  while (offset < value.length) {
+    whitespace();
+    if (offset === value.length) break;
+    if (value[offset++] !== ";") return undefined;
+    whitespace();
+    // The parameter grammar permits empty slots between semicolons.
+    if (offset === value.length || value[offset] === ";") continue;
+    if (!readToken() || value[offset++] !== "=") return undefined;
+    if (value[offset] !== '"') {
+      if (!readToken()) return undefined;
+      continue;
+    }
+    offset++;
+    let closed = false;
+    while (offset < value.length) {
+      const character = value[offset++];
+      if (character === '"') { closed = true; break; }
+      const code = character === "\\" ? value.charCodeAt(offset++) : value.charCodeAt(offset - 1);
+      if (!(code === 9 || code >= 32 && code <= 126 || code >= 128 && code <= 255)) return undefined;
+    }
+    if (!closed) return undefined;
+  }
+  return `${type}/${subtype}`.toLowerCase();
 }

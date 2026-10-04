@@ -25,7 +25,7 @@ func (s *fixtureServer) PutReport(ctx context.Context, request contract.PutRepor
 	}
 	return contract.PutReport200JSONResponse{
 		Body:    contract.FixturePositionReportMutationResponse{DatasetId: s.dataset, Data: *request.Body, CommitCursor: "fixture:report:1"},
-		Headers: contract.PutReport200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: protocolVersion},
+		Headers: contract.PutReport200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: request.Params.AtlasProtocolVersion},
 	}, nil
 }
 
@@ -40,6 +40,6 @@ func (s *fixtureServer) GetReport(ctx context.Context, request contract.GetRepor
 	}
 	return contract.GetReport200JSONResponse{
 		Body:    contract.FixturePositionReportResponse{DatasetId: s.dataset, Data: report},
-		Headers: contract.GetReport200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: protocolVersion},
+		Headers: contract.GetReport200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: request.Params.AtlasProtocolVersion},
 	}, nil
 }
