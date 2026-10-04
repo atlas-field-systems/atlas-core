@@ -2,7 +2,7 @@ import type { ValidateFunction } from "ajv";
 import type { Middleware } from "openapi-fetch";
 import { contractValidator, pointer, type ContractDocument } from "./schema.js";
 
-export type ResponseFailureReason = "context" | "status" | "media_type" | "body_size" | "json" | "schema" | "header";
+export type ResponseFailureReason = "context" | "status" | "media_type" | "body" | "body_size" | "json" | "schema" | "header";
 
 // This failure says the response cannot be interpreted. It makes no claim about
 // whether a mutation committed. Operational retry outcomes belong to SDK helpers.
@@ -66,12 +66,14 @@ export function responseValidation(document: ResponseContract, context: { datase
           let ref = `${location}/headers/${pointer(name)}`;
           if (authored.$ref) {
             const prefix = "#/components/headers/";
-            if (!authored.$ref.startsWith(prefix)) throw new Error("Response headers require local component references");
-            const component = authored.$ref.slice(prefix.length).replaceAll("~1", "/").replaceAll("~0", "~");
+            // URI fragment decoding precedes JSON Pointer token decoding.
+            const reference = authored.$ref.startsWith("#") ? decodeURIComponent(authored.$ref) : "";
+            if (!reference.startsWith(prefix)) throw new Error("Response headers require local component references");
+            const component = reference.slice(prefix.length).replaceAll("~1", "/").replaceAll("~0", "~");
             const resolved = document.components.headers?.[component];
             if (!resolved) throw new Error("Response header reference is unresolved");
             definition = resolved;
-            ref = authored.$ref;
+            ref = `${prefix}${pointer(component)}`;
           }
           if (!definition.schema) throw new Error("Response header requires an authored schema");
           return { name, required: definition.required === true, validate: ajv.compile({ $ref: `atlas${ref}/schema` }) };
@@ -111,9 +113,10 @@ export function responseValidation(document: ResponseContract, context: { datase
       }
       const media = mediaType(response.headers.get("Content-Type") ?? "");
       if (media === undefined) return invalid("media_type");
-      if (declared.media.size === 0 ? media !== "" : !declared.media.has(media)) invalid("media_type");
+      const noBody = declared.media.size === 0;
+      if (noBody ? media !== "" : !declared.media.has(media)) invalid("media_type");
       const validate = declared.validators.get(media);
-      if (validate) {
+      if (validate || noBody) {
         const reader = response.clone().body?.getReader();
         const chunks: Uint8Array[] = [];
         let length = 0;
@@ -129,6 +132,10 @@ export function responseValidation(document: ResponseContract, context: { datase
               const chunk = await reader.read();
               if (chunk.done) break;
               if (chunk.value.byteLength === 0) continue;
+              if (noBody) {
+                cancel();
+                return invalid("body");
+              }
               if (chunk.value.byteLength > maxJSONBytes - length) {
                 cancel();
                 return invalid("body_size");
@@ -139,9 +146,12 @@ export function responseValidation(document: ResponseContract, context: { datase
           } catch (error) {
             cancel();
             if (error instanceof ResponseValidationError) throw error;
-            return invalid("json");
+            return invalid(noBody ? "body" : "json");
           } finally { reader.releaseLock(); }
         }
+        // An empty reply was checked through a clone, retaining its original
+        // Response and readable body for the transport's chosen representation.
+        if (!validate) return response;
         const bytes = new Uint8Array(length);
         let offset = 0;
         for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
