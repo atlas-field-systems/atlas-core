@@ -1,0 +1,314 @@
+{
+  "paths": {
+    "/__fixture/value": {
+      "get": {
+        "operationId": "getValue",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureValueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putValue",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureValueMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Fixture result",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixtureValue"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FixtureValue": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "count": {
+            "$ref": "#/components/schemas/DecimalCounter"
+          }
+        },
+        "required": [
+          "value",
+          "count"
+        ]
+      },
+      "FixtureValueResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixtureValue"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "FixtureValueMutationResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MutationResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixtureValue"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

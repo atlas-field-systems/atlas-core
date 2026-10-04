@@ -4,6 +4,7 @@ This is a dated history of user decisions and authorizations. Current behavior r
 
 The planning session and the architecture merged in PR #1 originally disagreed. The user accepted the reconciling recommendations on 22 September 2026, and [Plugin configuration recovery](#plugin-configuration-recovery) closed the last reconciliation choice. Later rounds:
 
+- The [3 October JSON representation decision](#json-request-representation-3-october-2026) rejects unpaired surrogate escapes at the request boundary.
 - The [3 October specification decisions](#specification-grilling-and-proof-3-october-2026) supersede the earlier ready-result completion promise and settle the planning-review specifications.
 - The [28 September SDK decision](#sdk-and-gateway-decisions-28-september-2026) supersedes the Asset hybrid portions below.
 - The [28 September Plugin storage decision](#plugin-storage-decision-28-september-2026) extends Reset to Plugin-private operational storage.
@@ -282,3 +283,9 @@ The earlier scan-completion and result-readiness entries in this log remain hist
 The [implementation sequence](architecture/implementation-sequence.md) maps the 21 open specification tickets, all public routes, local lifecycle actions and required scenario groups to proposed slices and evidence. It does not waive required tests or turn external field validation into simulated evidence. The [isolated pinned toolchain proof](research/atlas-reassessment/13-protocol-toolchain-proof.md) executes representative generated Go/TypeScript bindings over real SQLite and files; it establishes no product capacity, power-loss or complete API-parity result.
 
 After the final review, the user asked to proceed following the recommendation to reserve post-registration Entity Descriptive edits to operators and managed Plugins. The [caller permissions](topics/identity-and-access.md#assets) record that direction. Initial Asset registration can still supply its permitted Descriptive fields; Asset and gateway credentials cannot make later descriptive edits, even to their own or bound Asset. The mutation matrix and independent authorization fixtures complete #81's remaining caller boundary.
+
+## JSON request representation, 3 October 2026
+
+While fixing PR #101's request-boundary findings, the user selected "Reject unpaired surrogate escapes" rather than retaining Go's replacement with `�`. The [Protocol JSON request profile](../Atlas%20Protocol/README.md#json-request-representation) owns the current rule for string values and member names. Valid surrogate pairs and multibyte text remain supported.
+
+The same authorized fixes reject recursively duplicated decoded member names and invalid UTF-8 before schema or typed decoding, enforce explicit adapter body limits, compare validated Dataset UUID identities consistently, and keep test-fixture cleanup under a surviving supervisor. These repairs preserve Slice 0's structural scope and do not implement operational APIs or change their deferred authority, lifecycle or durability requirements.

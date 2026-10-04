@@ -1,0 +1,988 @@
+{
+  "paths": {
+    "/__fixture/response/read": {
+      "get": {
+        "operationId": "getResponseRead",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "query",
+            "name": "fault",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Test-only response validation fixture",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              },
+              "Fixture-Receipt": {
+                "$ref": "#/components/headers/FixtureResponseReceipt"
+              },
+              "Fixture-Note": {
+                "$ref": "#/components/headers/FixtureResponseNote"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureReadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__fixture/response/mutation": {
+      "get": {
+        "operationId": "getResponseMutation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "query",
+            "name": "fault",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Test-only response validation fixture",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              },
+              "Fixture-Receipt": {
+                "$ref": "#/components/headers/FixtureResponseReceipt"
+              },
+              "Fixture-Note": {
+                "$ref": "#/components/headers/FixtureResponseNote"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureMutationEnvelopeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__fixture/response/error": {
+      "get": {
+        "operationId": "getResponseError",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "query",
+            "name": "fault",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__fixture/response/openapi": {
+      "get": {
+        "operationId": "getResponseOpenapi",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "query",
+            "name": "fault",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Test-only response validation fixture",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              },
+              "Fixture-Receipt": {
+                "$ref": "#/components/headers/FixtureResponseReceipt"
+              },
+              "Fixture-Note": {
+                "$ref": "#/components/headers/FixtureResponseNote"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureRawOpenAPI"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__fixture/response/empty": {
+      "get": {
+        "operationId": "getResponseEmpty",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "query",
+            "name": "fault",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Test-only response validation fixture",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              },
+              "Fixture-Receipt": {
+                "$ref": "#/components/headers/FixtureResponseReceipt"
+              },
+              "Fixture-Note": {
+                "$ref": "#/components/headers/FixtureResponseNote"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__fixture/response/binary": {
+      "get": {
+        "operationId": "getResponseBinary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Atlas-Dataset-ID"
+          },
+          {
+            "$ref": "#/components/parameters/Atlas-Protocol-Version"
+          },
+          {
+            "in": "query",
+            "name": "fault",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Configured request body bound exceeded",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Test-only error response",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixtureResponseError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Test-only response validation fixture",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Atlas-Dataset-ID"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Atlas-Protocol-Version"
+              },
+              "Fixture-Receipt": {
+                "$ref": "#/components/headers/FixtureResponseReceipt"
+              },
+              "Fixture-Note": {
+                "$ref": "#/components/headers/FixtureResponseNote"
+              },
+              "Content-Length": {
+                "$ref": "#/components/headers/FixtureResponseLength"
+              },
+              "Fixture-Digest": {
+                "$ref": "#/components/headers/FixtureResponseDigest"
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FixtureResponseData": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "stopped"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/FixtureResponsePayload"
+          }
+        },
+        "required": [
+          "state",
+          "result"
+        ]
+      },
+      "FixtureReadResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixtureResponseData"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "FixtureResponsePayload": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/FixtureResponseValue"
+          },
+          {
+            "$ref": "#/components/schemas/FixtureResponseCount"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        }
+      },
+      "FixtureResponseValue": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "value"
+            ]
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ]
+      },
+      "FixtureResponseCount": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "count"
+            ]
+          },
+          "count": {
+            "$ref": "#/components/schemas/DecimalCounter"
+          }
+        },
+        "required": [
+          "kind",
+          "count"
+        ]
+      },
+      "FixtureMutationEnvelopeResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MutationResponseContext"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/FixtureResponseData"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "FixtureResponseError": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "required": [
+              "dataset_id"
+            ]
+          }
+        ]
+      },
+      "FixtureRawOpenAPI": {
+        "type": "object",
+        "properties": {
+          "openapi": {
+            "type": "string",
+            "enum": [
+              "3.0.3"
+            ]
+          },
+          "info": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "version"
+            ]
+          },
+          "paths": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "openapi",
+          "info",
+          "paths"
+        ]
+      }
+    },
+    "headers": {
+      "FixtureResponseReceipt": {
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^receipt:[0-9]+$"
+        }
+      },
+      "FixtureResponseNote": {
+        "schema": {
+          "type": "string",
+          "enum": [
+            "optional"
+          ]
+        }
+      },
+      "FixtureResponseLength": {
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$"
+        }
+      },
+      "FixtureResponseDigest": {
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

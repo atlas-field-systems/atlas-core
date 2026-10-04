@@ -1,0 +1,58 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Independently authored artificial older fixture client",
+    "version": "0.1.0",
+    "description": "Test-only edition. It establishes no supported range for an Atlas release."
+  },
+  "paths": {
+    "/__fixture/response/read": {
+      "get": {
+        "operationId": "getOlderResponseRead",
+        "parameters": [
+          {"name": "Atlas-Dataset-ID", "in": "header", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "Atlas-Protocol-Version", "in": "header", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Older fixture shape tolerates optional additions",
+            "headers": {
+              "Atlas-Dataset-ID": {"required": true, "schema": {"type": "string", "format": "uuid"}},
+              "Atlas-Protocol-Version": {"required": true, "schema": {"type": "string"}}
+            },
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/OlderFixtureResponse"}}}
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "OlderFixtureResponse": {
+        "type": "object",
+        "properties": {
+          "dataset_id": {"type": "string", "format": "uuid"},
+          "data": {"$ref": "#/components/schemas/OlderFixtureData"}
+        },
+        "required": ["dataset_id", "data"]
+      },
+      "OlderFixtureData": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "state": {"type": "string", "enum": ["ready", "stopped"]},
+          "result": {"$ref": "#/components/schemas/OlderFixtureValue"}
+        },
+        "required": ["state", "result"]
+      },
+      "OlderFixtureValue": {
+        "type": "object",
+        "properties": {
+          "kind": {"type": "string", "enum": ["value"]},
+          "value": {"type": "string"}
+        },
+        "required": ["kind", "value"]
+      }
+    }
+  }
+}

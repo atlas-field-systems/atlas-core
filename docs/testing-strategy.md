@@ -12,7 +12,7 @@ Start feature coverage with a complete workflow and its observable outcome, then
 
 Accepted on 22 September 2026. Atlas requires extensive integration testing between the real SDK and Core. External systems are expected to integrate through the SDK; demonstrating its behavioral parity with Core makes those external SDK tests useful evidence about Core integration. Cover the contracts thoroughly with independent expected outcomes, rather than maximizing test count or testing generated code against another output of the same generator.
 
-This is a required testing plan. The repository currently contains documentation, not an implemented suite or measured parity result.
+This remains the required operational testing plan. The [Slice 0 contract fixture](../tests/contract/README.md) executes a bounded generated-client/direct-HTTP workflow with real SQLite and fixture lifetime checks. It does not establish operational Core/SDK parity or measured performance.
 
 ## Real boundaries and independent expectations
 
