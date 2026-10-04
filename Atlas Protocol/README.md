@@ -56,7 +56,15 @@ Position always supplies both latitude and longitude. Each coordinate explicitly
 
 Ajv keeps strict schema checking except `strictRequired`, a compilation diagnostic that treats a field required by one `allOf` member as undeclared when another member defines it. Runtime `required` validation remains enabled. An independent profile check confirms the composed mutation context rejects an absent commit cursor. This is a supported adapter configuration, not another declaration of that field.
 
+The SDK response adapter qualifies separately declared `application/json`, JSON suffix media such as `application/problem+json`, and binary alternatives at one response status. It selects the authored schema by the received media type; [response coverage](../tests/contract/README-97.md) records the independent HTTP checks.
+
 External references, recursive schemas, other composition profiles, nullable enum combinations, OpenAPI 3.1/3.2 features and custom endpoint templates remain unqualified. A new feature needs an independent fixture and executed check before adoption. Operational range, authority and cross-field decisions stay with their owning modules.
+
+### Binding representation limits
+
+Generated Go UUID and date-time bindings can change a valid string's spelling when re-encoding it. For example, uppercase or UUID URN inputs become bare lowercase UUIDs, and date-times ending in `+00:00` or `.500Z` become `Z` or `.5Z`. These examples retain equivalent UUID identities and time instants, but their original string values are not retained by those bindings.
+
+Slice 0 does not qualify signing or canonicalization. The later [signed-report workflow](../docs/topics/asset-reporting.md#shared-report-context) must canonicalize the validated original facts rather than reconstruct them from re-encoded Go UUID/date-time values.
 
 ### JSON request representation
 

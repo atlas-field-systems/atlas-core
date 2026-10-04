@@ -26,6 +26,8 @@ The report handler writes a single keyed fixture value and reads it through the 
 
 Go's non-HTTP consumer imports the shared Core adapter to register its supported schema formats. The independent malformed-UUID cases exposed kin-openapi's opt-in UUID validation. The format rule belongs to that common adapter, rather than another UUID declaration in a message consumer.
 
+Generated Go UUID/date-time bindings normalize some valid spellings; [binding representation limits](../../Atlas%20Protocol/README.md#binding-representation-limits) records why a typed round trip is not evidence of original string retention for later signing.
+
 The exact qualified tools are Go 1.27.1, Node 24.21.0, npm 11.19.0, sqlc 1.31.1, oapi-codegen 2.8.0, openapi-typescript 7.13.0, openapi-fetch 0.17.0, TypeScript 5.9.3 and tsx 4.23.15. OpenAPI is 3.0.3. Runtime kin-openapi is 0.149.0; the generator parser remains 0.142.0. Ajv is 8.20.0 with ajv-formats 3.0.1; modernc.org/sqlite is 1.60.1 with SQLite 3.53.4. [Protocol's lock record](../../Atlas%20Protocol/README.md#exact-qualified-pins) also records nullable/runtime/middleware pins and archive checksums. The verifier checks installed tools and both locked dependency graphs.
 
 Red traces are retained outside the repository in `/tmp/atlas-spec94/ticket-98-red-http.log` and `ticket-98-red-{messages,change}-{go,ts}.log`: the HTTP tracer initially returned 400 for the absent route, and both message consumers initially refused the absent definitions. The final verification log/report carries the passing evidence and exact final revision; a failed or dirty verification is not final completion evidence.
