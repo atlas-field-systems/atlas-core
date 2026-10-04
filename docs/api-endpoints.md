@@ -4,7 +4,7 @@ Approved endpoint map as of 2026-09-22, based on the API planning decisions and 
 
 [Asset retirement](topics/identity-and-access.md#asset-retirement) and independent result declarations now have concrete bindings below. Route specification is not evidence of implementation.
 
-Use [the glossary](../CONTEXT.md) for resource meanings. Protocol owns resource and Command schemas; the descriptions below identify inputs and results without freezing every field.
+Use [the glossary](../GLOSSARY.md) for resource meanings. Protocol owns resource and Command schemas; the descriptions below identify inputs and results without freezing every field.
 
 See [the data component catalog](data-components.md) for the proposed component applicability and database inventory that will guide detailed schemas.
 

@@ -23,7 +23,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Asset-owned completion and independent result availability | [Completion decision](docs/adr/0026-record-asset-completion-independently-of-result-availability.md) |
 | Reference clock for age, freshness and deadlines | [Core time decision](docs/adr/0025-use-core-time-as-the-installation-reference-clock.md) |
 | Current rules by area | [Topic pages](docs/topics/README.md) |
-| Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
+| Domain vocabulary | [GLOSSARY.md](GLOSSARY.md) |
 | Accepted tradeoffs and their rationale | [ADR index](docs/adr/README.md) |
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
 | Source evidence, technology alternatives and proposed experiments | [Research index](docs/research/atlas-reassessment/README.md) |
