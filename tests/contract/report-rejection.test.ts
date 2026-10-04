@@ -51,7 +51,7 @@ const invalidBodies = [
   { name: "unknown route payload field", body: { ...baseline.body, extra: true } },
 ];
 
-const rejected = invalidBodies.map(({ name, body }) => ({ name, json: JSON.stringify(body) }));
+const rejected: Array<{ name: string; json: string; media?: string }> = invalidBodies.map(({ name, body }) => ({ name, json: JSON.stringify(body) }));
 for (const field of ["process_generation", "sequence"]) {
   for (const value of ["0", "01", "-1", "+1", "1.5", "1e3", "", " 1", "1 ", "1\n", "1\r\n", 1]) {
     rejected.push({ name: `${field} rejects ${JSON.stringify(value)}`, json: JSON.stringify({ ...baseline.body, report_context: { ...context, [field]: value } }) });
@@ -90,16 +90,35 @@ for (const key of ['\\ud800', '\\udfff']) {
   });
 }
 
+// The pinned validator strips parameters before selecting its JSON decoder.
+// Malformed parameters must not skip the earlier original-document checks.
+const malformedMedia = ["application/json; =x", "application/json; charset=first; charset=second"];
+for (const media of malformedMedia) {
+  rejected.push({ name: `duplicate context with ${media}`, media,
+    json: '{"report_context":{"observation_times":{"movement":{"observed_at":null,"clock_uncertainty_ms":-1}}},' +
+      `"report_context":${JSON.stringify(context)},"position":{"latitude":10,"longitude":20}}`,
+  });
+  rejected.push({ name: `unpaired observation name with ${media}`, media,
+    json: JSON.stringify({ ...baseline.body, report_context: { ...context, observation_times: {
+      "unicode-key": { observed_at: null, clock_uncertainty_ms: null },
+    } } }).replace('"unicode-key"', '"\\ud800"'),
+  });
+}
+
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
     let injectedJSON: string | undefined;
+    let injectedMedia: string | undefined;
     const client = createTransport<paths>({
       baseUrl, headers,
       // Invalid inputs cannot be expressed by generated types. Injection at the
       // transport boundary exercises untrusted wire bytes over the real HTTP
       // handler, without asserting or weakening those types.
-      fetch: (request) => fetch(injectedJSON !== undefined && request.method === "PUT" ?
-        new Request(request, { body: injectedJSON }) : request, { signal: AbortSignal.timeout(5000) }),
+      fetch: (request) => {
+        const wire = injectedJSON !== undefined && request.method === "PUT" ? new Request(request, { body: injectedJSON }) : request;
+        if (injectedMedia !== undefined && request.method === "PUT") wire.headers.set("Content-Type", injectedMedia);
+        return fetch(wire, { signal: AbortSignal.timeout(5000) });
+      },
     });
     client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }));
     if (mode === "generated transport") {
@@ -118,14 +137,16 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       let errorBody: unknown;
       if (mode === "generated transport") {
         injectedJSON = scenario.json;
+        injectedMedia = scenario.media;
         const result = await client.PUT("/__fixture/report", { params: { header: headers }, body: validBody });
         injectedJSON = undefined;
+        injectedMedia = undefined;
         assert.equal(result.response.status, 400, scenario.name);
         assert.equal(result.data, undefined);
         errorBody = result.error;
       } else {
         const response = await fetch(`${baseUrl}/__fixture/report`, {
-          method: "PUT", headers: { ...headers, "Content-Type": "application/json" },
+          method: "PUT", headers: { ...headers, "Content-Type": scenario.media ?? "application/json" },
           body: scenario.json, signal: AbortSignal.timeout(5000),
         });
         assert.equal(response.status, 400, scenario.name);
@@ -144,6 +165,21 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         const read = await fetch(`${baseUrl}/__fixture/report`, { headers, signal: AbortSignal.timeout(5000) });
         assert.equal(read.status, 200);
         assert.deepEqual(await read.json(), baseline.expected, `${scenario.name} preserves stored report`);
+      }
+    }
+    // Valid payloads retain the pinned validator's existing parameter handling.
+    for (const media of malformedMedia) {
+      if (mode === "generated transport") {
+        injectedMedia = media;
+        const accepted = await client.PUT("/__fixture/report", { params: { header: headers }, body: validBody });
+        injectedMedia = undefined;
+        assert.equal(accepted.response.status, 200, `valid report retains acceptance for ${media}`);
+        assert.deepEqual(accepted.data, { ...baseline.expected, commit_cursor: "fixture:report:1" });
+      } else {
+        const accepted = await fetch(`${baseUrl}/__fixture/report`, { method: "PUT",
+          headers: { ...headers, "Content-Type": media }, body: JSON.stringify(validBody), signal: AbortSignal.timeout(5000) });
+        assert.equal(accepted.status, 200, `valid report retains acceptance for ${media}`);
+        assert.deepEqual(await accepted.json(), { ...baseline.expected, commit_cursor: "fixture:report:1" });
       }
     }
     const pairedName = JSON.stringify({ ...baseline.body, report_context: { ...context, observation_times: {

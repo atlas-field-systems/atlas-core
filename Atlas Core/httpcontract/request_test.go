@@ -115,3 +115,79 @@ func TestJSONBodyBoundMustBePositive(t *testing.T) {
 		}
 	}
 }
+
+// The fixture declares application/json only. This public adapter check authors
+// another JSON media type already decoded by the pinned validator, including its
+// existing parameter acceptance, without adding a shipped route or media type.
+func TestJSONDocumentChecksFollowDeclaredMedia(t *testing.T) {
+	for _, media := range []string{"application/json", "application/problem+json"} {
+		t.Run(media, func(t *testing.T) {
+			spec := jsonContract(t)
+			body := spec.Paths.Value("/value").Put.RequestBody.Value
+			body.Content = openapi3.Content{media: body.Content["application/json"]}
+			if err := spec.Validate(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			var effects atomic.Int32
+			adapter, err := httpcontract.ValidateRequests(spec, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				effects.Add(1)
+				w.WriteHeader(http.StatusOK)
+			}), 4096)
+			if err != nil {
+				t.Fatal(err)
+			}
+			server := httptest.NewServer(adapter)
+			defer server.Close()
+			client := &http.Client{Timeout: 5 * time.Second}
+			for _, parameters := range []string{"", "; =x", "; charset=first; charset=second"} {
+				for _, scenario := range []struct {
+					name   string
+					body   string
+					status int
+				}{
+					{"valid Unicode", `{"value":"雪\ud83c\udf0d"}`, 200},
+					{"duplicate name", `{"value":"first","value":"second"}`, 400},
+					{"unpaired surrogate", `{"value":"\ud800"}`, 400},
+					{"invalid UTF-8", "{\"value\":\"\xff\"}", 400},
+				} {
+					t.Run(parameters+"/"+scenario.name, func(t *testing.T) {
+						before := effects.Load()
+						request, err := http.NewRequest(http.MethodPut, server.URL+"/value", strings.NewReader(scenario.body))
+						if err != nil {
+							t.Fatal(err)
+						}
+						request.Header.Set("Content-Type", media+parameters)
+						response, err := client.Do(request)
+						if err != nil {
+							t.Fatal(err)
+						}
+						defer func() {
+							if err := response.Body.Close(); err != nil {
+								t.Fatal(err)
+							}
+						}()
+						if response.StatusCode != scenario.status {
+							t.Fatalf("status %d, expected %d; dispatched effects %d", response.StatusCode, scenario.status, effects.Load()-before)
+						}
+						if scenario.status == http.StatusOK {
+							if effects.Load()-before != 1 {
+								t.Fatal("valid payload must retain one handler effect")
+							}
+							return
+						}
+						var rejection protocol.Error
+						if err := json.NewDecoder(response.Body).Decode(&rejection); err != nil {
+							t.Fatal(err)
+						}
+						if rejection.Error.Code != "invalid_request" || !strings.Contains(rejection.Error.Message, "PUT /value") {
+							t.Fatalf("expected typed rejection with safe route context: %+v", rejection)
+						}
+						if effects.Load() != before {
+							t.Fatal("rejected original JSON dispatched effects")
+						}
+					})
+				}
+			}
+		})
+	}
+}

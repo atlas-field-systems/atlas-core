@@ -111,8 +111,13 @@ func ValidateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (
 		if r.Body != nil && r.Body != http.NoBody {
 			r.Body = http.MaxBytesReader(w, r.Body, maxJSONBytes)
 		}
-		media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err == nil && media == "application/json" && r.Body != nil && r.Body != http.NoBody {
+		// The pinned validator selects its decoder from the base token, even
+		// when parameters are malformed. Check that same original JSON stream
+		// without changing the header or the validator's media acceptance.
+		base, _, _ := strings.Cut(r.Header.Get("Content-Type"), ";")
+		media, _, _ := mime.ParseMediaType(base)
+		isJSON := media == "application/json" || strings.HasSuffix(media, "+json")
+		if isJSON && r.Body != nil && r.Body != http.NoBody {
 			body, readErr := io.ReadAll(r.Body)
 			closeErr := r.Body.Close()
 			bodyErr := errors.Join(readErr, closeErr)
