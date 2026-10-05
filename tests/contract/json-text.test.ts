@@ -5,14 +5,23 @@ import { dataset, fixtureClient, headers, timedFetch, validateError } from "./su
 const encoder = new TextEncoder();
 const baseline = { value: "preserved before rejected text", count: "1" };
 const invalid = [
-  { name: "invalid UTF-8 byte", bytes: Uint8Array.from([...encoder.encode('{"value":"'), 255, ...encoder.encode('","count":"1"}')]) },
-  ...['\\ud800', '\\udfff', '\\ud800\\u0041'].map((text) => ({ name: `unpaired surrogate ${text}`, bytes: encoder.encode(`{"value":"${text}","count":"1"}`) })),
+  {
+    name: "invalid UTF-8 byte",
+    bytes: Uint8Array.from([...encoder.encode('{"value":"'), 255, ...encoder.encode('","count":"1"}')]),
+  },
+  ...["\\ud800", "\\udfff", "\\ud800\\u0041"].map((text) => ({
+    name: `unpaired surrogate ${text}`,
+    bytes: encoder.encode(`{"value":"${text}","count":"1"}`),
+  })),
 ];
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
     let injected: Uint8Array<ArrayBuffer> | undefined;
     const client = fixtureClient(baseUrl, {
-      fetch: (request) => timedFetch(injected !== undefined && request.method === "PUT" ? new Request(request, { body: injected }) : request),
+      fetch: (request) =>
+        timedFetch(
+          injected !== undefined && request.method === "PUT" ? new Request(request, { body: injected }) : request,
+        ),
     });
     const seed = await client.PUT("/__fixture/value", { params: { header: headers }, body: baseline });
     assert.equal(seed.response.status, 200);
@@ -26,7 +35,9 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         error = response.error;
       } else {
         const response = await timedFetch(`${baseUrl}/__fixture/value`, {
-          method: "PUT", headers: { ...headers, "Content-Type": "application/json" }, body: scenario.bytes,
+          method: "PUT",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: scenario.bytes,
         });
         assert.equal(response.status, 400, scenario.name);
         error = await response.json();
@@ -51,7 +62,9 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.equal(response.data?.data.value, expected);
       } else {
         const response = await timedFetch(`${baseUrl}/__fixture/value`, {
-          method: "PUT", headers: { ...headers, "Content-Type": "application/json" }, body: json,
+          method: "PUT",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: json,
         });
         assert.equal(response.status, 200);
       }

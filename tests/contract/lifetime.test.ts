@@ -10,7 +10,10 @@ console.log("PASS normal fixture completion stops process and removes private da
 for (const mode of ["missing_readiness", "startup_failure"] as const) {
   let failure: FixtureStartupError | undefined;
   try {
-    await withFixture(async () => assert.fail("failed fixture must never dispatch workflow"), { mode, startupMs: 1000 });
+    await withFixture(async () => assert.fail("failed fixture must never dispatch workflow"), {
+      mode,
+      startupMs: 1000,
+    });
     assert.fail("fixture startup control must fail");
   } catch (error) {
     assert(error instanceof FixtureStartupError);

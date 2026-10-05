@@ -42,4 +42,6 @@ for (const fixture of fixtures) {
     }
   }
 }
-console.log(`PASS TypeScript canonical message consumer: ${fixtures.length} independent fixtures and generated-type serialization`);
+console.log(
+  `PASS TypeScript canonical message consumer: ${fixtures.length} independent fixtures and generated-type serialization`,
+);

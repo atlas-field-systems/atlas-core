@@ -2,12 +2,17 @@ import type { Ajv, ValidateFunction } from "ajv";
 import type { Middleware } from "openapi-fetch";
 import { contractValidator, pointer, type ContractDocument } from "./schema.js";
 
-export type ResponseFailureReason = "context" | "status" | "media_type" | "body" | "body_size" | "json" | "schema" | "header";
+export type ResponseFailureReason =
+  "context" | "status" | "media_type" | "body" | "body_size" | "json" | "schema" | "header";
 
 // This failure says the response cannot be interpreted. It makes no claim about
 // whether a mutation committed. Operational retry outcomes belong to SDK helpers.
 export class ResponseValidationError extends Error {
-  constructor(readonly reason: ResponseFailureReason, readonly status: number, readonly operation: string) {
+  constructor(
+    readonly reason: ResponseFailureReason,
+    readonly status: number,
+    readonly operation: string,
+  ) {
     // The contract path contains no request values, credentials or response body.
     super(`Invalid Protocol response for ${operation} (${status}): ${reason}`);
     this.name = "ResponseValidationError";
@@ -24,7 +29,7 @@ interface HeaderDefinition {
   schema?: unknown;
 }
 const methods = ["get", "put", "post", "delete", "options", "head", "patch", "trace"] as const;
-type HTTPMethod = typeof methods[number];
+type HTTPMethod = (typeof methods)[number];
 interface OperationDefinition {
   responses: Record<string, ResponseDefinition>;
 }
@@ -52,8 +57,11 @@ interface DeclaredResponse {
   headers: DeclaredHeader[];
 }
 
-export function responseValidation(document: ResponseContract, context: { datasetId: string; protocolVersion: string },
-  options: { maxJSONBytes: number }): Middleware {
+export function responseValidation(
+  document: ResponseContract,
+  context: { datasetId: string; protocolVersion: string },
+  options: { maxJSONBytes: number },
+): Middleware {
   const maxJSONBytes = options.maxJSONBytes;
   if (!Number.isSafeInteger(maxJSONBytes) || maxJSONBytes <= 0) {
     throw new Error("Response JSON byte bound must be a positive safe integer");
@@ -98,10 +106,16 @@ export function responseValidation(document: ResponseContract, context: { datase
       try {
         // Fetch's JSON decoder replaces bad UTF-8 instead of rejecting it.
         body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-      } catch { throw refuse("json"); }
+      } catch {
+        throw refuse("json");
+      }
       if (!validate(body)) throw refuse("schema");
-      if (typeof body === "object" && body !== null && "dataset_id" in body &&
-          (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))) {
+      if (
+        typeof body === "object" &&
+        body !== null &&
+        "dataset_id" in body &&
+        (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))
+      ) {
         throw refuse("context");
       }
       return response;
@@ -126,14 +140,20 @@ function declareResponses(document: ResponseContract) {
   return responses;
 }
 
-function declareResponse(document: ResponseContract, ajv: Ajv, location: string, response: ResponseDefinition): DeclaredResponse {
+function declareResponse(
+  document: ResponseContract,
+  ajv: Ajv,
+  location: string,
+  response: ResponseDefinition,
+): DeclaredResponse {
   const mediaDeclarations = Object.keys(response.content ?? {}).map((authored) => {
     const normalized = mediaType(authored);
     if (!normalized) throw new Error("Response media type declaration has invalid syntax");
     return { authored, normalized };
   });
   const headers = Object.entries(response.headers ?? {}).map(([name, authored]) =>
-    declareHeader(document, ajv, `${location}/headers/${pointer(name)}`, name, authored));
+    declareHeader(document, ajv, `${location}/headers/${pointer(name)}`, name, authored),
+  );
   const validators = new Map<string, ValidateFunction>();
   for (const { authored, normalized } of mediaDeclarations) {
     if (normalized !== "application/json" && !normalized.endsWith("+json")) continue;
@@ -143,7 +163,13 @@ function declareResponse(document: ResponseContract, ajv: Ajv, location: string,
   return { media: new Set(mediaDeclarations.map(({ normalized }) => normalized)), headers, validators };
 }
 
-function declareHeader(document: ResponseContract, ajv: Ajv, location: string, name: string, authored: HeaderDefinition): DeclaredHeader {
+function declareHeader(
+  document: ResponseContract,
+  ajv: Ajv,
+  location: string,
+  name: string,
+  authored: HeaderDefinition,
+): DeclaredHeader {
   let definition = authored;
   let ref = location;
   if (authored.$ref) {
@@ -187,10 +213,15 @@ async function readClone(response: Response, limit: number): Promise<Uint8Array 
   } catch {
     void reader.cancel().catch(() => {});
     return "unreadable";
-  } finally { reader.releaseLock(); }
+  } finally {
+    reader.releaseLock();
+  }
   const bytes = new Uint8Array(length);
   let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   return bytes;
 }
 
@@ -206,7 +237,9 @@ function mediaType(value: string) {
   // parameters for schema selection; quoted semicolons are parameter data.
   const token = /[!#$%&'*+.^_`|~0-9A-Za-z-]+/y;
   let offset = 0;
-  const whitespace = () => { while (value[offset] === " " || value[offset] === "\t") offset++; };
+  const whitespace = () => {
+    while (value[offset] === " " || value[offset] === "\t") offset++;
+  };
   const readToken = () => {
     token.lastIndex = offset;
     const match = token.exec(value);
@@ -236,9 +269,12 @@ function mediaType(value: string) {
     let closed = false;
     while (offset < value.length) {
       const character = value[offset++];
-      if (character === '"') { closed = true; break; }
+      if (character === '"') {
+        closed = true;
+        break;
+      }
       const code = character === "\\" ? value.charCodeAt(offset++) : value.charCodeAt(offset - 1);
-      if (!(code === 9 || code >= 32 && code <= 126 || code >= 128 && code <= 255)) return undefined;
+      if (!(code === 9 || (code >= 32 && code <= 126) || (code >= 128 && code <= 255))) return undefined;
     }
     if (!closed) return undefined;
   }

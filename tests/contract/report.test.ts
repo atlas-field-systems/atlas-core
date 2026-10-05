@@ -28,12 +28,18 @@ for (const version of [olderVersion, currentVersion]) {
           assert.deepEqual(read.data, scenario.expected, scenario.name);
         } else {
           const written = await timedFetch(`${baseUrl}/__fixture/report`, {
-            method: "PUT", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(scenario.body),
+            method: "PUT",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify(scenario.body),
           });
           assert.equal(written.status, 200, scenario.name);
           assert.equal(written.headers.get("Atlas-Dataset-ID"), dataset);
           assert.equal(written.headers.get("Atlas-Protocol-Version"), version);
-          assert.deepEqual(await written.json(), { ...scenario.expected, commit_cursor: "fixture:report:1" }, scenario.name);
+          assert.deepEqual(
+            await written.json(),
+            { ...scenario.expected, commit_cursor: "fixture:report:1" },
+            scenario.name,
+          );
           const read = await timedFetch(`${baseUrl}/__fixture/report`, { headers });
           assert.equal(read.status, 200);
           assert.equal(read.headers.get("Atlas-Protocol-Version"), version);
@@ -41,6 +47,8 @@ for (const version of [olderVersion, currentVersion]) {
         }
       }
     });
-    console.log(`PASS ${mode}: ${reports.length} report writes and persisted read-backs under selected artificial edition ${version}`);
+    console.log(
+      `PASS ${mode}: ${reports.length} report writes and persisted read-backs under selected artificial edition ${version}`,
+    );
   }
 }

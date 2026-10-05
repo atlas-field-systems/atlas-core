@@ -3,7 +3,14 @@ import { withFixture } from "./runner.js";
 import seed from "./patch.fixtures.json" with { type: "json" };
 import type { components } from "./generated/protocol.js";
 import {
-  dataset, fixtureClient, headers, otherDataset, timedFetch, unallocatedRequestId, validateError, version,
+  dataset,
+  fixtureClient,
+  headers,
+  otherDataset,
+  timedFetch,
+  unallocatedRequestId,
+  validateError,
+  version,
 } from "./support.js";
 
 const fixtureId = "11111111-1111-4111-8111-111111111111";
@@ -32,8 +39,12 @@ const invalidBodies = [
   ["Command tag", { fixture_command: { command: "unknown", position: { latitude: 0, longitude: 0 } } }],
   ["wrong Command variant", { fixture_command: { command: "fixture_pause", position: { latitude: 0, longitude: 0 } } }],
   ["incomplete Command position", { fixture_command: { command: "fixture_move", position: { latitude: 0 } } }],
-  ...["01", "-1", "1.5", "", " 1", "1 ", "1\n", "1\r\n", 9007199254740993].map((count) => ["malformed decimal", { count }] as const),
-  ...["0", "01", "-1", "1.5", "", " 1", "1 ", 9007199254740993].map((positive_count) => ["malformed positive decimal", { positive_count }] as const),
+  ...["01", "-1", "1.5", "", " 1", "1 ", "1\n", "1\r\n", 9007199254740993].map(
+    (count) => ["malformed decimal", { count }] as const,
+  ),
+  ...["0", "01", "-1", "1.5", "", " 1", "1 ", 9007199254740993].map(
+    (positive_count) => ["malformed positive decimal", { positive_count }] as const,
+  ),
 ] as const;
 
 for (const mode of ["generated transport", "direct Protocol"]) {
@@ -51,11 +62,22 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       }
     }
     const requestIds = new Set<string>();
-    async function rejected(body: string, name: string, pathId = fixtureId, requestHeaders: Record<string, string> = headers,
-      status = 400, code = "invalid_request") {
+    async function rejected(
+      body: string,
+      name: string,
+      pathId = fixtureId,
+      requestHeaders: Record<string, string> = headers,
+      status = 400,
+      code = "invalid_request",
+    ) {
       const response = await timedFetch(`${baseUrl}/__fixture/patch/${pathId}?secret=sensitive-fixture-credential`, {
-        method: "PATCH", body,
-        headers: { ...requestHeaders, "Content-Type": "application/json", "Authorization": "Bearer sensitive fixture credential" },
+        method: "PATCH",
+        body,
+        headers: {
+          ...requestHeaders,
+          "Content-Type": "application/json",
+          Authorization: "Bearer sensitive fixture credential",
+        },
       });
       assert.equal(response.status, status, name);
       assert.equal(response.headers.get("Content-Type")?.split(";")[0], "application/json", name);
@@ -93,14 +115,20 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert(!JSON.stringify(response.error).includes("sensitive"));
         await unchanged();
       }
-      const oversized = await client.PATCH("/__fixture/patch/{fixture_id}", { params, body: { alias: "sensitive".repeat(1024) } });
+      const oversized = await client.PATCH("/__fixture/patch/{fixture_id}", {
+        params,
+        body: { alias: "sensitive".repeat(1024) },
+      });
       assert.equal(oversized.response.status, 413, "generated over-limit JSON body");
       assert(validateError(oversized.error));
       assert.equal(oversized.error.error.code, "payload_too_large");
       assert(!JSON.stringify(oversized.error).includes("sensitive"));
       await unchanged();
       for (const scenario of [
-        { name: "generated malformed path UUID", params: { ...params, path: { fixture_id: "sensitive-fixture-credential" } } },
+        {
+          name: "generated malformed path UUID",
+          params: { ...params, path: { fixture_id: "sensitive-fixture-credential" } },
+        },
         {
           name: "generated malformed Dataset UUID",
           params: { ...params, header: { ...headers, "Atlas-Dataset-ID": "sensitive-fixture-credential" } },
@@ -116,22 +144,52 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       }
     }
     const contextBody = JSON.stringify({ alias: "must not commit" });
-    await rejected(contextBody, "wrong Dataset", fixtureId, { ...headers, "Atlas-Dataset-ID": otherDataset }, 409, "dataset_mismatch");
-    await rejected(contextBody, "missing Dataset", fixtureId, { "Atlas-Protocol-Version": version }, 400, "dataset_required");
-    await rejected(contextBody, "malformed Dataset UUID", fixtureId, { ...headers, "Atlas-Dataset-ID": "sensitive-fixture-credential" });
+    await rejected(
+      contextBody,
+      "wrong Dataset",
+      fixtureId,
+      { ...headers, "Atlas-Dataset-ID": otherDataset },
+      409,
+      "dataset_mismatch",
+    );
+    await rejected(
+      contextBody,
+      "missing Dataset",
+      fixtureId,
+      { "Atlas-Protocol-Version": version },
+      400,
+      "dataset_required",
+    );
+    await rejected(contextBody, "malformed Dataset UUID", fixtureId, {
+      ...headers,
+      "Atlas-Dataset-ID": "sensitive-fixture-credential",
+    });
     await rejected(contextBody, "missing Protocol edition", fixtureId, { "Atlas-Dataset-ID": dataset });
-    await rejected(contextBody, "unsupported artificial edition", fixtureId,
-      { ...headers, "Atlas-Protocol-Version": "9.0.0" }, 426, "unsupported_protocol");
+    await rejected(
+      contextBody,
+      "unsupported artificial edition",
+      fixtureId,
+      { ...headers, "Atlas-Protocol-Version": "9.0.0" },
+      426,
+      "unsupported_protocol",
+    );
     for (const [name, body] of invalidBodies) {
       await rejected(JSON.stringify({ alias: "must not commit", ...body }), name);
     }
     await rejected('{"alias":"must not commit",', "malformed JSON");
     await rejected('{"alias":"must not commit"} {"alias":"second"}', "multiple JSON documents");
     await rejected('{"alias":"must not commit"} trailing', "trailing malformed JSON");
-    await rejected('', "missing required JSON body");
-    await rejected(JSON.stringify({ alias: "sensitive".repeat(1024) }), "bounded JSON body", fixtureId, headers, 413, "payload_too_large");
-    await rejected('[]', "top-level array");
-    await rejected('null', "top-level null");
+    await rejected("", "missing required JSON body");
+    await rejected(
+      JSON.stringify({ alias: "sensitive".repeat(1024) }),
+      "bounded JSON body",
+      fixtureId,
+      headers,
+      413,
+      "payload_too_large",
+    );
+    await rejected("[]", "top-level array");
+    await rejected("null", "top-level null");
     await rejected('{"position":{"latitude":NaN,"longitude":0}}', "nonfinite JSON token");
     await rejected(JSON.stringify({ alias: "must not commit" }), "malformed path UUID", "sensitive-fixture-credential");
   });

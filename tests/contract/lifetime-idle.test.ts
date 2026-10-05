@@ -13,7 +13,9 @@ for (const mode of ["immediate cleanup", "peer expires before GET"]) {
       const address = new URL(baseUrl);
       const peer = createConnection({ host: address.hostname, port: Number(address.port) });
       silent = peer;
-      peer.on("close", () => { peerClosed = true; });
+      peer.on("close", () => {
+        peerClosed = true;
+      });
       await new Promise<void>((resolve, reject) => {
         peer.once("connect", resolve);
         peer.once("error", reject);
@@ -36,6 +38,10 @@ for (const mode of ["immediate cleanup", "peer expires before GET"]) {
     assert(peerClosed, "accepted silent peer is closed after fixture shutdown");
     assertProcessGone(owned.pid);
     await assertPathRemoved(owned.dataDir);
-    console.log(`PASS ${mode}: accepted silent peer permits graceful fixture shutdown; peer/PID/private directory are gone`);
-  } finally { silent?.destroy(); }
+    console.log(
+      `PASS ${mode}: accepted silent peer permits graceful fixture shutdown; peer/PID/private directory are gone`,
+    );
+  } finally {
+    silent?.destroy();
+  }
 }

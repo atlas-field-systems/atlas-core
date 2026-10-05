@@ -14,7 +14,11 @@ export async function run(signal: AbortSignal) {
     let observed: { pid: number; dataDir: string } | undefined;
     try {
       const before = performance.now();
-      const result = await runContractTest(fileURLToPath(new URL("timeout-probe.ts", import.meta.url)), { signal, timeoutMs: 2500, args: [mode, marker] });
+      const result = await runContractTest(fileURLToPath(new URL("timeout-probe.ts", import.meta.url)), {
+        signal,
+        timeoutMs: 2500,
+        args: [mode, marker],
+      });
       if (result.cancelled) return;
       assert(result.timedOut, `${mode}: actual outer deadline must fire`);
       assert.notEqual(result.status, 0);
@@ -39,11 +43,17 @@ export async function run(signal: AbortSignal) {
     } finally {
       // Failed red runs still leave no resources after the independent observer.
       if (observed) {
-        try { process.kill(observed.pid, "SIGTERM"); } catch (error) {
+        try {
+          process.kill(observed.pid, "SIGTERM");
+        } catch (error) {
           if (!hasErrorCode(error, "ESRCH")) throw error;
         }
         for (let attempt = 0; attempt < 100; attempt++) {
-          try { process.kill(observed.pid, 0); } catch { break; }
+          try {
+            process.kill(observed.pid, 0);
+          } catch {
+            break;
+          }
           await new Promise((resolve) => setTimeout(resolve, 20));
         }
         await rm(observed.dataDir, { recursive: true, force: true });

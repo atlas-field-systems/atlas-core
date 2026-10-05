@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import { withFixture } from "./runner.js";
 import seed from "./patch.fixtures.json" with { type: "json" };
 import type { components } from "./generated/protocol.js";
-import { dataset, fixtureClient, headers, timedFetch, unallocatedRequestId, validateError, version } from "./support.js";
+import {
+  dataset,
+  fixtureClient,
+  headers,
+  timedFetch,
+  unallocatedRequestId,
+  validateError,
+  version,
+} from "./support.js";
 
 const fixtureId = "11111111-1111-4111-8111-111111111111";
 const params = { header: headers, path: { fixture_id: fixtureId } };
@@ -28,12 +36,18 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.deepEqual(response.data, { dataset_id: dataset, data: expected, commit_cursor: "fixture:commit:patch" });
       } else {
         const response = await timedFetch(`${baseUrl}/__fixture/patch/${fixtureId}`, {
-          method: "PATCH", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(body),
+          method: "PATCH",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         });
         assert.equal(response.status, 200);
         assert.equal(response.headers.get("Atlas-Dataset-ID"), dataset);
         assert.equal(response.headers.get("Atlas-Protocol-Version"), version);
-        assert.deepEqual(await response.json(), { dataset_id: dataset, data: expected, commit_cursor: "fixture:commit:patch" });
+        assert.deepEqual(await response.json(), {
+          dataset_id: dataset,
+          data: expected,
+          commit_cursor: "fixture:commit:patch",
+        });
       }
       await read(expected);
     }
@@ -59,7 +73,9 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.notEqual(response.error.error.request_id, unallocatedRequestId);
       } else {
         const response = await timedFetch(`${baseUrl}/__fixture/patch/${fixtureId}`, {
-          method: "PATCH", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(body),
+          method: "PATCH",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         });
         assert.equal(response.status, 400);
         const error: unknown = await response.json();
@@ -73,16 +89,25 @@ for (const mode of ["generated transport", "direct Protocol"]) {
     const recreated = { ...nullValues, fixture_component: { left: 0, right: 40 } };
     await patch({ fixture_component: { left: 0, right: 40 } }, recreated);
     const scalars = {
-      count: "9007199254740993", positive_count: "1", required_component: { enabled: false }, position: { latitude: 0, longitude: 0 },
+      count: "9007199254740993",
+      positive_count: "1",
+      required_component: { enabled: false },
+      position: { latitude: 0, longitude: 0 },
     } as const;
     await patch(scalars, { ...recreated, ...scalars });
     const variants = {
       fixture_entity: { type: "track", id: "33333333-3333-4333-8333-333333333333", observation: 0 },
-      fixture_command: { command: "fixture_move", position: { latitude: 10.123456789012345, longitude: 20.987654321098765 } },
+      fixture_command: {
+        command: "fixture_move",
+        position: { latitude: 10.123456789012345, longitude: 20.987654321098765 },
+      },
     } as const;
     const moved = { ...recreated, ...scalars, ...variants };
     await patch(variants, moved);
-    await patch({ count: "0", position: { latitude: -90, longitude: 180 } }, { ...moved, count: "0", position: { latitude: -90, longitude: 180 } });
+    await patch(
+      { count: "0", position: { latitude: -90, longitude: 180 } },
+      { ...moved, count: "0", position: { latitude: -90, longitude: 180 } },
+    );
   });
   console.log(`PASS ${mode}: omission/null/arrays, nested partial updates and atomic recreation persist`);
 }

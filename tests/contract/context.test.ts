@@ -15,11 +15,16 @@ await withFixture(async ({ baseUrl }) => {
     assert.equal(write.response.status, 200, `PUT returns committed success for ${spelling}`);
     assert.deepEqual(write.data, { dataset_id: dataset, data: value, commit_cursor: "fixture:commit:1" });
     const stored = await timedFetch(`${baseUrl}/__fixture/value`, { headers: canonicalHeaders });
-    assert.deepEqual(await stored.json(), { dataset_id: dataset, data: value }, "canonical read-back confirms the successful PUT");
+    assert.deepEqual(
+      await stored.json(),
+      { dataset_id: dataset, data: value },
+      "canonical read-back confirms the successful PUT",
+    );
   }
   const headers = { ...canonicalHeaders, "Atlas-Dataset-ID": otherDataset };
   const client = fixtureClient(baseUrl, { headers, datasetId: otherDataset });
-  const isContextFailure = (error: unknown) => error instanceof ResponseValidationError && error.reason === "context" && error.status === 409;
+  const isContextFailure = (error: unknown) =>
+    error instanceof ResponseValidationError && error.reason === "context" && error.status === 409;
   await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }), isContextFailure);
   const body = { value: "must not commit", count: "1" };
   await assert.rejects(() => client.PUT("/__fixture/value", { params: { header: headers }, body }), isContextFailure);
@@ -31,15 +36,32 @@ await withFixture(async ({ baseUrl }) => {
 // validation point without changing Core's serialization behavior.
 for (const spelling of spellings) {
   for (const location of ["header", "envelope"]) {
-    const client = fixtureClient("http://response-adapter.invalid", { fetch: async () => new Response(
-      JSON.stringify({ dataset_id: location === "envelope" ? spelling : dataset, data: { value: "response identity", count: "1" } }),
-      {
-        status: 200,
-        headers: { ...canonicalHeaders, "Atlas-Dataset-ID": location === "header" ? spelling : dataset, "Content-Type": "application/json" },
-      }) });
+    const client = fixtureClient("http://response-adapter.invalid", {
+      fetch: async () =>
+        new Response(
+          JSON.stringify({
+            dataset_id: location === "envelope" ? spelling : dataset,
+            data: { value: "response identity", count: "1" },
+          }),
+          {
+            status: 200,
+            headers: {
+              ...canonicalHeaders,
+              "Atlas-Dataset-ID": location === "header" ? spelling : dataset,
+              "Content-Type": "application/json",
+            },
+          },
+        ),
+    });
     const read = await client.GET("/__fixture/value", { params: { header: canonicalHeaders } });
     assert.equal(read.response.status, 200, `${location} accepts equivalent identity ${spelling}`);
-    assert.equal(read.data?.dataset_id, location === "envelope" ? spelling : dataset, "validation preserves response spelling");
+    assert.equal(
+      read.data?.dataset_id,
+      location === "envelope" ? spelling : dataset,
+      "validation preserves response spelling",
+    );
   }
 }
-console.log("PASS Dataset UUID case/URN GET and committed PUT, independent header/envelope spellings and different-ID rejection");
+console.log(
+  "PASS Dataset UUID case/URN GET and committed PUT, independent header/envelope spellings and different-ID rejection",
+);

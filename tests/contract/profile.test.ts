@@ -18,7 +18,9 @@ await withFixture(async ({ baseUrl }) => {
   const initial = { dataset_id: dataset, data: { value: "initial fixture value", count: "0" } };
   for (const count of ["1\n", "1\r\n", "01", "-1", "1.0", " 1", "1 "]) {
     const response = await timedFetch(`${baseUrl}/__fixture/value`, {
-      method: "PUT", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ value: "must remain unchanged", count }),
+      method: "PUT",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "must remain unchanged", count }),
     });
     assert.equal(response.status, 400, `Go validator rejects ${JSON.stringify(count)}`);
   }

@@ -7,7 +7,13 @@ import {
   ResponseValidationError,
 } from "@atlas-field-systems/sdk";
 
-for (const exported of [createTransport, contractValidator, lookupCommand, responseValidation, ResponseValidationError]) {
+for (const exported of [
+  createTransport,
+  contractValidator,
+  lookupCommand,
+  responseValidation,
+  ResponseValidationError,
+]) {
   assert.equal(typeof exported, "function");
 }
 

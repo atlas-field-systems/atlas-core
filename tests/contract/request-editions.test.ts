@@ -24,13 +24,17 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.deepEqual(read.data, stored);
       } else {
         const written = await timedFetch(`${baseUrl}/__fixture/value`, {
-          method: "PUT", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(input),
+          method: "PUT",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify(input),
         });
         assert.equal(written.status, 200);
         assert.equal(written.headers.get("Atlas-Dataset-ID"), dataset);
         assert.equal(written.headers.get("Atlas-Protocol-Version"), edition);
         assert.deepEqual(await written.json(), committed);
-        const read = await timedFetch(`${baseUrl}/__fixture/value`, { headers: { ...headers, "Content-Type": "application/json" } });
+        const read = await timedFetch(`${baseUrl}/__fixture/value`, {
+          headers: { ...headers, "Content-Type": "application/json" },
+        });
         assert.equal(read.status, 200);
         assert.equal(read.headers.get("Atlas-Protocol-Version"), edition);
         assert.deepEqual(await read.json(), stored);

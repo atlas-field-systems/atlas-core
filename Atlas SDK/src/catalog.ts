@@ -21,13 +21,15 @@ function compileCatalog() {
     const metadata = schema["x-atlas-command"];
     const inputSchema = `#/components/schemas/${pointer(name)}`;
     const validate = ajv.compile<unknown>({ $ref: `atlas${inputSchema}` });
-    return [Object.freeze({
-      protocolVersion: protocol.info.version,
-      inputSchema,
-      metadata: Object.freeze({ ...metadata, scheduling: Object.freeze([...metadata.scheduling]) }),
-      validateInput(input: unknown): boolean {
-        return validate(input) === true;
-      },
-    })];
+    return [
+      Object.freeze({
+        protocolVersion: protocol.info.version,
+        inputSchema,
+        metadata: Object.freeze({ ...metadata, scheduling: Object.freeze([...metadata.scheduling]) }),
+        validateInput(input: unknown): boolean {
+          return validate(input) === true;
+        },
+      }),
+    ];
   });
 }

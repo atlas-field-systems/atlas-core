@@ -11,7 +11,8 @@ export async function run(ownerSignal: AbortSignal) {
   if (ownerSignal.aborted) return;
   const cancellation = new AbortController();
   const pending = runContractTest(fileURLToPath(new URL("timeout-probe.ts", import.meta.url)), {
-    signal: cancellation.signal, args: ["startup", "unused-marker"],
+    signal: cancellation.signal,
+    args: ["startup", "unused-marker"],
   });
   cancellation.abort();
   const cancelled = await pending;
@@ -35,15 +36,27 @@ export async function run(ownerSignal: AbortSignal) {
         const marker = join(evidence, "ready.json");
         await mkdir(privateTmp);
         const runner = spawn(process.execPath, [fileURLToPath(new URL("run.mjs", import.meta.url)), file], {
-          detached: true, stdio: ["ignore", "pipe", "pipe"],
-          env: { ...process.env, TMPDIR: privateTmp, ATLAS_CONTRACT_PROBE_MODE: mode, ATLAS_CONTRACT_PROBE_MARKER: marker },
+          detached: true,
+          stdio: ["ignore", "pipe", "pipe"],
+          env: {
+            ...process.env,
+            TMPDIR: privateTmp,
+            ATLAS_CONTRACT_PROBE_MODE: mode,
+            ATLAS_CONTRACT_PROBE_MARKER: marker,
+          },
         });
-        const cancelRunner = () => { runner.kill("SIGTERM"); };
+        const cancelRunner = () => {
+          runner.kill("SIGTERM");
+        };
         ownerSignal.addEventListener("abort", cancelRunner, { once: true });
         if (ownerSignal.aborted) cancelRunner();
         let output = "";
-        runner.stdout.setEncoding("utf8").on("data", (chunk: string) => { output += chunk; });
-        runner.stderr.setEncoding("utf8").on("data", (chunk: string) => { output += chunk; });
+        runner.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+          output += chunk;
+        });
+        runner.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+          output += chunk;
+        });
         const exited = new Promise<{ status: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
           runner.once("close", (status, exitSignal) => resolve({ status, signal: exitSignal }));
           runner.once("error", reject);
@@ -60,7 +73,11 @@ export async function run(ownerSignal: AbortSignal) {
                 assert(runner.pid !== undefined);
                 const children = await readFile(`/proc/${runner.pid}/task/${runner.pid}/children`, "utf8");
                 for (const pid of children.trim().split(/\s+/u).filter(Boolean).map(Number)) {
-                  if (await readlink(`/proc/${pid}/exe`) !== fileURLToPath(new URL("../../.artifacts/contract-fixture", import.meta.url))) continue;
+                  if (
+                    (await readlink(`/proc/${pid}/exe`)) !==
+                    fileURLToPath(new URL("../../.artifacts/contract-fixture", import.meta.url))
+                  )
+                    continue;
                   for (const root of await readdir(privateTmp)) {
                     if (!root.startsWith("atlas-contract-test-")) continue;
                     for (const fixture of await readdir(join(privateTmp, root))) {
@@ -74,9 +91,12 @@ export async function run(ownerSignal: AbortSignal) {
               } else {
                 // The lifetime check allocates its own evidence beneath TMPDIR.
                 // Interrupt the actual check after its nested fixture is serving.
-                const nestedEvidence = file === "timeout-probe.ts" ? undefined :
-                  (await readdir(privateTmp)).find((name) => name.startsWith("atlas-timeout-evidence-"));
-                const readyMarker = file === "timeout-probe.ts" ? marker : join(privateTmp, nestedEvidence ?? "pending", "ready.json");
+                const nestedEvidence =
+                  file === "timeout-probe.ts"
+                    ? undefined
+                    : (await readdir(privateTmp)).find((name) => name.startsWith("atlas-timeout-evidence-"));
+                const readyMarker =
+                  file === "timeout-probe.ts" ? marker : join(privateTmp, nestedEvidence ?? "pending", "ready.json");
                 const state: unknown = JSON.parse(await readFile(readyMarker, "utf8"));
                 assert(isProbeEvidence(state), "real HTTP/SQLite readiness evidence is complete");
                 observed = state;
@@ -87,7 +107,10 @@ export async function run(ownerSignal: AbortSignal) {
             }
             await new Promise((resolve) => setTimeout(resolve, 20));
           }
-          assert(observed, `fixture must reach ${mode === "startup" ? "pending readiness" : "HTTP readiness"} before interruption: ${output}`);
+          assert(
+            observed,
+            `fixture must reach ${mode === "startup" ? "pending readiness" : "HTTP readiness"} before interruption: ${output}`,
+          );
           assert(runner.pid !== undefined);
           const before = performance.now();
           process.kill(signal === "SIGINT" ? -runner.pid : runner.pid, signal);
@@ -95,11 +118,14 @@ export async function run(ownerSignal: AbortSignal) {
           if (ownerSignal.aborted) return;
           assert(performance.now() - before < 12000, "interruption and cleanup have a finite deadline");
           assertProcessGone(observed.pid, "interrupted runner reaps the real Go fixture");
-          if (observed.workerPid !== undefined) assertProcessGone(observed.workerPid, "interrupted runner stops its test worker");
+          if (observed.workerPid !== undefined)
+            assertProcessGone(observed.workerPid, "interrupted runner stops its test worker");
           await assertPathRemoved(observed.dataDir);
           await assertPathRemoved(dirname(observed.dataDir));
           assert.deepEqual(outcome, { status: signal === "SIGTERM" ? 143 : 130, signal: null }, output);
-          console.log(`PASS ${file}/${mode}/${signal}: executable interruption reaps Go and removes both private directory levels`);
+          console.log(
+            `PASS ${file}/${mode}/${signal}: executable interruption reaps Go and removes both private directory levels`,
+          );
         } finally {
           ownerSignal.removeEventListener("abort", cancelRunner);
           // Let an interrupted observer's child owner drain first. The process-group
@@ -107,12 +133,16 @@ export async function run(ownerSignal: AbortSignal) {
           if (runner.exitCode === null && runner.signalCode === null) cancelRunner();
           const forceCleanup = () => {
             if (runner.pid === undefined) return;
-            try { process.kill(-runner.pid, "SIGKILL"); } catch (error) {
+            try {
+              process.kill(-runner.pid, "SIGKILL");
+            } catch (error) {
               if (!hasErrorCode(error, "ESRCH")) throw error;
             }
           };
           const cleanupDeadline = setTimeout(forceCleanup, 12000);
-          try { await exited; } finally {
+          try {
+            await exited;
+          } finally {
             clearTimeout(cleanupDeadline);
             forceCleanup();
             await rm(evidence, { recursive: true, force: true });

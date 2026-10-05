@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { access } from "node:fs/promises";
 import { createServer, type RequestListener } from "node:http";
 import {
-  contractValidator, createTransport, responseValidation, ResponseValidationError, type ResponseFailureReason,
+  contractValidator,
+  createTransport,
+  responseValidation,
+  ResponseValidationError,
+  type ResponseFailureReason,
 } from "../../Atlas SDK/src/index.js";
 import protocol from "./generated/protocol.json" with { type: "json" };
 import type { components, paths } from "./generated/protocol.js";
@@ -35,11 +39,17 @@ interface FixtureClientOptions {
 // Dataset/edition context before the transport interprets them.
 export function fixtureClient<Paths extends {} = paths>(baseUrl: string, options: FixtureClientOptions = {}) {
   const client = createTransport<Paths>({
-    baseUrl, headers: options.headers ?? headers, fetch: options.fetch ?? ((request) => timedFetch(request)),
+    baseUrl,
+    headers: options.headers ?? headers,
+    fetch: options.fetch ?? ((request) => timedFetch(request)),
   });
-  client.use(responseValidation(options.document ?? protocol,
-    { datasetId: options.datasetId ?? dataset, protocolVersion: options.protocolVersion ?? version },
-    { maxJSONBytes: options.maxJSONBytes ?? 1_048_576 }));
+  client.use(
+    responseValidation(
+      options.document ?? protocol,
+      { datasetId: options.datasetId ?? dataset, protocolVersion: options.protocolVersion ?? version },
+      { maxJSONBytes: options.maxJSONBytes ?? 1_048_576 },
+    ),
+  );
   return client;
 }
 
@@ -66,9 +76,20 @@ export function hasErrorCode(error: unknown, code: string) {
 
 // Readiness evidence written by timeout-probe.ts after real HTTP/SQLite readiness.
 export function isProbeEvidence(value: unknown): value is { pid: number; dataDir: string; workerPid: number } {
-  return typeof value === "object" && value !== null && "pid" in value && typeof value.pid === "number" &&
-    "workerPid" in value && typeof value.workerPid === "number" && "dataDir" in value && typeof value.dataDir === "string" &&
-    "sqliteVersion" in value && value.sqliteVersion === pinnedSQLiteVersion && "journalMode" in value && value.journalMode === "wal";
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "pid" in value &&
+    typeof value.pid === "number" &&
+    "workerPid" in value &&
+    typeof value.workerPid === "number" &&
+    "dataDir" in value &&
+    typeof value.dataDir === "string" &&
+    "sqliteVersion" in value &&
+    value.sqliteVersion === pinnedSQLiteVersion &&
+    "journalMode" in value &&
+    value.journalMode === "wal"
+  );
 }
 
 // Rejects unless `work` settles within `ms`. A function message is evaluated
@@ -76,17 +97,25 @@ export function isProbeEvidence(value: unknown): value is { pid: number; dataDir
 export async function within<T>(work: Promise<T>, ms: number, message: string | (() => string)): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await Promise.race([work, new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(typeof message === "string" ? message : message())), ms);
-    })]);
-  } finally { clearTimeout(timer); }
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(typeof message === "string" ? message : message())), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Serves a controlled loopback supplier for adapter checks the Go fixture cannot
 // produce. A close failure never hides the workflow's own failure.
 export async function withLoopbackServer(listener: RequestListener, workflow: (baseUrl: string) => Promise<void>) {
   const server = createServer(listener);
-  await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
   let failure: { error: unknown } | undefined;
   try {
     const address = server.address();
@@ -97,7 +126,8 @@ export async function withLoopbackServer(listener: RequestListener, workflow: (b
   }
   server.closeAllConnections();
   const closeError = await new Promise<Error | undefined>((resolve) => server.close(resolve));
-  if (failure && closeError) throw new AggregateError([failure.error, closeError], "Workflow and loopback server close both failed");
+  if (failure && closeError)
+    throw new AggregateError([failure.error, closeError], "Workflow and loopback server close both failed");
   if (failure) throw failure.error;
   if (closeError) throw closeError;
 }

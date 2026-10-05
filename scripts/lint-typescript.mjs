@@ -45,15 +45,18 @@ function castOnly(node) {
     cast = true;
     value = unparenthesized(value.expression);
   }
-  return cast && ts.isIdentifier(value) && node.parameters.some((parameter) =>
-    ts.isIdentifier(parameter.name) && parameter.name.text === value.text);
+  return (
+    cast &&
+    ts.isIdentifier(value) &&
+    node.parameters.some((parameter) => ts.isIdentifier(parameter.name) && parameter.name.text === value.text)
+  );
 }
 
 function lint(path) {
   const source = ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true);
   const name = relative(root, path).replaceAll("\\", "/");
-  const negativeTypeTest = name.endsWith(".type-test.ts") &&
-    (name.startsWith("Atlas SDK/checks/") || name.startsWith("tests/contract/"));
+  const negativeTypeTest =
+    name.endsWith(".type-test.ts") && (name.startsWith("Atlas SDK/checks/") || name.startsWith("tests/contract/"));
   const findings = [];
   const comments = new Map();
   function report(position, rule) {
@@ -61,21 +64,32 @@ function lint(path) {
     findings.push(`${name}:${line + 1}:${character + 1}: ${rule}`);
   }
   function visit(node) {
-    for (const range of [...ts.getLeadingCommentRanges(source.text, node.pos) ?? [],
-      ...ts.getTrailingCommentRanges(source.text, node.end) ?? []]) comments.set(range.pos, range);
+    for (const range of [
+      ...(ts.getLeadingCommentRanges(source.text, node.pos) ?? []),
+      ...(ts.getTrailingCommentRanges(source.text, node.end) ?? []),
+    ])
+      comments.set(range.pos, range);
     if (node.kind === ts.SyntaxKind.AnyKeyword) report(node.getStart(source), "explicit any is prohibited");
     if (assertion(node) && !constAssertion(node)) {
       const inner = unparenthesized(node.expression);
       if (assertion(inner) && !constAssertion(inner)) report(node.getStart(source), "double assertions are prohibited");
     }
-    if ((ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) && castOnly(node)) {
+    if (
+      (ts.isFunctionDeclaration(node) ||
+        ts.isFunctionExpression(node) ||
+        ts.isArrowFunction(node) ||
+        ts.isMethodDeclaration(node)) &&
+      castOnly(node)
+    ) {
       report(node.getStart(source), "cast-only functions are prohibited");
     }
     ts.forEachChild(node, visit);
   }
   visit(source);
   for (const comment of comments.values()) {
-    for (const directive of source.text.slice(comment.pos, comment.end).matchAll(/@ts-(ignore|nocheck|expect-error)\b/g)) {
+    for (const directive of source.text
+      .slice(comment.pos, comment.end)
+      .matchAll(/@ts-(ignore|nocheck|expect-error)\b/g)) {
       if (directive[1] !== "expect-error" || !negativeTypeTest) {
         report(comment.pos + directive.index, "type-error suppression is prohibited outside negative type tests");
       }
@@ -84,8 +98,10 @@ function lint(path) {
   return findings;
 }
 
-const files = process.argv.length > 2 ? process.argv.slice(2).map((path) => resolve(path)) :
-  scopes.flatMap((scope) => sources(join(root, scope))).sort();
+const files =
+  process.argv.length > 2
+    ? process.argv.slice(2).map((path) => resolve(path))
+    : scopes.flatMap((scope) => sources(join(root, scope))).sort();
 const findings = files.flatMap(lint);
 if (findings.length) {
   console.error(findings.join("\n"));
