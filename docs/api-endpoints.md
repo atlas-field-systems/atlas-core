@@ -1,6 +1,6 @@
 # API endpoint map
 
-Approved endpoint map as of 2026-09-22, based on the API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. Approval does not mean implementation; no endpoints are implemented in this repository yet.
+Approved endpoint map as of 2026-09-22, based on the API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. The delivered [Slice 0 foundation](../tests/contract/README.md) has no public routes; its test-only operations do not implement this map. Production schemas and behavior follow the [owning workflows](architecture/implementation-sequence.md#public-api-and-sdk-inventory).
 
 [Asset retirement](topics/identity-and-access.md#asset-retirement) and independent result declarations now have concrete bindings below. Route specification is not evidence of implementation.
 

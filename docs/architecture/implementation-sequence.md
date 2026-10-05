@@ -1,12 +1,14 @@
 # Specification evidence and implementation sequence
 
-This page maps accepted contracts to implementation slices and required evidence. The specification work tracked by #63–#82 and #84 is closed. The [Slice 0 foundation](../../tests/contract/README.md), delivered under #94–#100, implements shared contract tooling and isolated validation fixtures. The earlier [Protocol experiment](../research/atlas-reassessment/13-protocol-toolchain-proof.md) supplies #69's research evidence and remains prior art. S1 and later slices remain proposed implementation work. This page establishes no new behavior and claims no operational Core or completed MVP.
+This page maps accepted contracts to implementation slices and required evidence. Specification issues #63-84 are closed, resolving the earlier specification prerequisite. [Spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94) delivered the bounded Slice 0 foundation through #95-100. The [#69 Protocol experiment](../research/atlas-reassessment/13-protocol-toolchain-proof.md) remains research prior art; it is not the sole S0 implementation evidence.
 
-## Implementation sequence and completion boundaries
+The [foundation-hardening spec #104](https://github.com/atlas-field-systems/atlas-core/issues/104) authorizes its stated follow-up work. Closing prerequisites and documenting S0 do not authorize operational slices. S1-S8 remain future work, with their existing contracts and completion obligations below.
+
+## Delivered foundation and proposed operational sequence
 
 | Slice | Scope and prerequisite specifications | Required completion evidence |
 | --- | --- | --- |
-| S0: Protocol/toolchain, implemented | Shared authored schema profile, locks and validation boundaries; #94–#100, with #69 as prior art | [Foundation coverage](../../tests/contract/README.md) records deterministic clean regeneration, independent valid/invalid fixtures, generated Go handler and TypeScript client with actual SQLite/files, and the tested scope limits |
+| S0: Protocol/toolchain, delivered | Canonical shared definitions, locked generation, Core/SDK validation adapters and representative local Catalog; #94/#95-100 | [Executed foundation qualification](../../tests/contract/README.md): deterministic absent-output regeneration, generated/direct HTTP with real SQLite/files, independent request/response, shared-message, Catalog and binary checks; public Protocol has no routes |
 | S1: Asset-to-Core Move To | TLS/bootstrap and Dataset/version boundary; enrollment, registration, report identity/process authority, basic ordered delivery, cancellation and actual outcomes; #63/#66/#71/#78/#79/#81/#82 | Real SDK/Core/direct-Protocol parity with simulated Asset, lost responses, offline issuance/cancellation, historical versus fresh reports, initial defaults, movement capture, no arrival or upload gate |
 | S2: Independent Object transfer | File-first durable publication, replayable producer, identity/digest, quota, deletion and protected hold seam; #70/#72 | Actual SQLite/filesystem kill barriers, interrupted/lost-response upload, concurrency/revocation/Reset races, exact downloaded bytes, download/delete ordering and no exposed partial Object |
 | S3: Independent Elevation Plugin | Manifest/capability validation, private dispatch ledger, local host lifetime and offline fixture; #64/#68/#76/#78/#79/#80 | Separately built Plugin container, accepted work survives caller loss, dispatch acknowledgement lost without re-execution, known elevation/reference, cancellation/stop/fault and retained Operation lookup |
@@ -18,9 +20,21 @@ This page maps accepted contracts to implementation slices and required evidence
 
 S1–S3 are incremental workflow slices, not a release that waives Full synchronization parity. The initial Core-contract MVP is complete only when its applicable S4 coverage and the MVP Stop/Start/Restart/Reset checks pass. Implement the necessary lifecycle/bootstrap seams with those workflows; S7 extends them to the full interruption/update and measured-load matrix. Each new feature ships its required fault evidence, rather than postponing correctness until S7.
 
+## Foundation evidence and limits
+
+The delivered [#94 foundation](https://github.com/atlas-field-systems/atlas-core/issues/94) has separate coverage records for [#95 generation and fixture lifetime](../../tests/contract/README.md), [#96 requests and patches](../../tests/contract/README-96.md), [#97 responses and artificial-edition compatibility](../../tests/contract/README-97.md), [#98 reports and messages](../../tests/contract/README-98.md), [#99 local Catalog](../../tests/contract/README-99.md) and [#100 binary bindings](../../tests/contract/README-100.md). Its shared verifier records only executed successful checks; those records do not pass the operational scenario matrix below.
+
+Fixture body limits, fixed Dataset/context values and artificial `0.1.0`/`0.2.0` editions are qualification inputs. They establish no production sizing, actual supported release range, power-loss durability or field readiness. The public Protocol's unpublished `0.0.0` metadata is also not a released edition. See the [foundation limits](../../tests/contract/README.md#current-limits) and [Protocol profile](../../Atlas%20Protocol/README.md#supported-schema-profile).
+
+Later workflow owners retain the accepted obligations:
+
+- Operational SDK methods own validation wiring and [mutation outcomes and retries](../topics/sdk.md#mutation-outcomes-and-retries); the foundation's configurable response middleware does not implement those methods or their retained submission descriptors.
+- S1/S6 signed reports use [validated original facts](../topics/asset-reporting.md#shared-report-context), accounting for the generated Go [UUID/date-time normalization limit](../../Atlas%20Protocol/README.md#binding-representation-limits).
+- The binary fixture's private byte replacement is test behavior. S2 must preserve [Object content immutability](../topics/objects.md#what-an-object-is), [whole-file retry identity](../topics/objects.md#retries-after-a-lost-response) and [durable publication](../topics/objects.md#durability-and-publication-fixtures).
+
 ## Public API and SDK inventory
 
-The [endpoint map](../api-endpoints.md) currently specifies 53 method/path pairs. This inventory groups all 53; it links current authority instead of copying each contract. Every corresponding method in the [SDK operations catalog](../topics/sdk.md#operations-catalog) has the same owner. Administrative/history/content methods remain explicit HTTP operations in either SDK mode; operational picture reads use the selected mode's source.
+The [endpoint map](../api-endpoints.md) specifies 53 future public method/path pairs; the shipped S0 public Protocol has no routes. This inventory groups all 53 and assigns their production schemas and behavior to the owning workflow. Every corresponding method in the [SDK operations catalog](../topics/sdk.md#operations-catalog) has the same owner. Administrative/history/content methods remain explicit HTTP operations in either SDK mode; operational picture reads use the selected mode's source.
 
 | Accepted route group | Count | Owning slice and SDK operation coverage | Authority |
 | --- | --- | --- | --- |
@@ -40,7 +54,7 @@ The [endpoint map](../api-endpoints.md) currently specifies 53 method/path pairs
 | Plugin list/get | 2 | S3 discovery; S5 historical removed identity | [Plugins](../topics/plugins.md#plugin-capabilities-and-discovery) |
 | Plugin Operation submit/list/get/cancel | 4 | S3 capability invocation and retained outcomes; S6 broader consumers | [Operation dispatch](../topics/plugins.md#private-operation-dispatch-and-reconciliation) |
 | Full load, changed-since and WebSocket feed | 3 | S4 full picture, Core/local changed-since, status/query/feed helpers | [Synchronization](../topics/sdk.md#synchronization-wire-and-application-boundary) |
-| Health/readiness/docs/OpenAPI | 4 | S1 operational schemas and authenticated discovery/Core time/Asset challenge; S4 reconnect; S5 diagnostics | [Setup](../topics/dataset-lifecycle.md#offline-tls-and-first-time-setup), [Contact proof](../topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
+| Health/readiness/docs/OpenAPI | 4 | S1 production schemas, authenticated discovery/Core time/Asset challenge, baseline readiness and protected docs/raw OpenAPI; S4 reconnect; S5 diagnostics; S7 full dependency/lifecycle faults | [Health and documentation](../api-endpoints.md#health-and-documentation), [Setup](../topics/dataset-lifecycle.md#offline-tls-and-first-time-setup), [Contact proof](../topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
 
 Local Command Catalog lookup is a package function, not an extra HTTP route, and belongs to S0/S1. Connection, readiness, query, local subscription/history and Dataset-rebuild SDK methods belong to S4. The Asset client wraps registration, reports, assigned work, result uploads, queue adoption and reconnect/process recovery in S1/S6 without implementing the Asset OS.
 
@@ -57,7 +71,7 @@ Local Command Catalog lookup is a package function, not an extra HTTP route, and
 
 ## Required-scenario homes
 
-Every row of the [required scenario table](../testing-strategy.md#required-scenario-coverage) has a feature-triggered home below. These are future completion obligations; the isolated toolchain experiment does not pass them.
+Every row of the [required scenario table](../testing-strategy.md#required-scenario-coverage) has a feature-triggered home below. These are future completion obligations; neither the #69 experiment nor the delivered S0 fixture passes them.
 
 | Required scenario group | Owning slice |
 | --- | --- |
@@ -90,7 +104,7 @@ Cross-cutting validation focus remains mandatory with its triggering feature: sh
 
 ## Specification ticket evidence
 
-All of these tickets request specifications, with runtime verification later except the executable experiment explicitly required by #69. This mapping is evidence for review; it does not change their GitHub state or mark application tests passed.
+The specification work in #63-84 is closed. These tickets specified the future contracts below; #69 additionally required its executable research experiment. Their closure does not mark application tests passed. Delivered S0 evidence is recorded separately above.
 
 | Ticket | Concrete current specification/evidence | Future workflow owner |
 | --- | --- | --- |
@@ -100,7 +114,7 @@ All of these tickets request specifications, with runtime verification later exc
 | [#66](https://github.com/atlas-field-systems/atlas-core/issues/66) | [Empty/requested/confirmed queue and coherent pages](../topics/tasks.md#queue-representation-and-coherent-reads) | S1/S4/S6 |
 | [#67](https://github.com/atlas-field-systems/atlas-core/issues/67) | [Retained formats, drift refusal and explicit update](../topics/dataset-lifecycle.md#retained-formats-and-explicit-release-update) | S7 |
 | [#68](https://github.com/atlas-field-systems/atlas-core/issues/68) | [Host owner, durable phases, state diagram and interruption fixtures](../topics/dataset-lifecycle.md#host-supervision-and-private-coordination) | S3/S7 |
-| [#69](https://github.com/atlas-field-systems/atlas-core/issues/69) | [Pinned executable Protocol proof](../research/atlas-reassessment/13-protocol-toolchain-proof.md) | S0, coverage extended with every production contract |
+| [#69](https://github.com/atlas-field-systems/atlas-core/issues/69) | [Pinned executable Protocol proof](../research/atlas-reassessment/13-protocol-toolchain-proof.md), research prior art for delivered #94 | S0 foundation evidence above; qualification extended with each later production contract |
 | [#70](https://github.com/atlas-field-systems/atlas-core/issues/70) | [Workload targets, bounds, overload and measurements](operating-model.md#expected-workload) | S7 |
 | [#71](https://github.com/atlas-field-systems/atlas-core/issues/71) | [Outcome categories and operation retry matrix](../topics/sdk.md#mutation-outcomes-and-retries) | S1–S7 |
 | [#72](https://github.com/atlas-field-systems/atlas-core/issues/72) | [Durability primitives, source replay and deletion fixtures](../topics/objects.md#durability-and-publication-fixtures) | S2/S7 |
