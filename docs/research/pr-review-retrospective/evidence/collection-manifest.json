@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "collected_on": "2026-10-05",
+  "account": "the-Drunken-coder",
+  "conventions_revision": "e642fe43b98f96f8cabffa870e54eefe359d785c",
+  "provenance": "Recovered from the original collector scripts and saved API outputs during PR #110 review. This manifest does not claim a fresh collection.",
+  "inventory_endpoint": "user/repos?per_page=100&affiliation=owner,collaborator,organization_member&sort=updated",
+  "initial_involvement_endpoint": "search/issues?q=is%3Apr+involves%3Athe-Drunken-coder&per_page=100",
+  "complete_involvement_queries": [
+    "is:pr involves:the-Drunken-coder created:<2026-01-01",
+    "is:pr involves:the-Drunken-coder created:2026-01-01..2026-06-30",
+    "is:pr involves:the-Drunken-coder created:2026-07-01..2026-07-31",
+    "is:pr involves:the-Drunken-coder created:2026-08-01..2026-08-31",
+    "is:pr involves:the-Drunken-coder created:2026-09-01..2026-09-30",
+    "is:pr involves:the-Drunken-coder created:>=2026-10-01"
+  ],
+  "reviewed_by_search": {
+    "endpoint": "search/issues",
+    "query": "is:pr reviewed-by:the-Drunken-coder",
+    "query_provenance": "Reconstructed from the saved reviewed-by result set and original coverage account; the original command was not retained."
+  },
+  "repository_endpoints": [
+    "repos/{repository}/pulls?state=all&per_page=100&sort=created&direction=asc",
+    "repos/{repository}/pulls/comments?per_page=100&sort=created&direction=asc",
+    "repos/{repository}/issues/comments?per_page=100&sort=created&direction=asc"
+  ],
+  "extra_pr_endpoints": [
+    "repos/{repository}/pulls/{number}",
+    "repos/{repository}/pulls/{number}/comments?per_page=100",
+    "repos/{repository}/issues/{number}/comments?per_page=100",
+    "repos/{repository}/pulls/{number}/reviews?per_page=100"
+  ],
+  "review_graphql": {
+    "batch_size": 30,
+    "initial_query": "query { nodes(ids: {pull_request_node_ids}) { ... on PullRequest { id number url repository { nameWithOwner } reviews(first: 100) { pageInfo { hasNextPage endCursor } nodes { databaseId body state url submittedAt author { login } } } } } }",
+    "continuation_query": "query { node(id: {pull_request_node_id}) { ... on PullRequest { reviews(first: 100, after: {end_cursor}) { pageInfo { hasNextPage endCursor } nodes { databaseId body state url submittedAt author { login } } } } } }",
+    "retry_rule": "Retry every PR in a failed initial batch, follow each review connection to completion and deduplicate by review database ID."
+  },
+  "rest_pagination": "gh api --paginate follows Link headers; flatten every returned array page. Filter repository-wide issue comments to collected PR numbers.",
+  "search_pagination": "Use per_page=100 and gh api --paginate. Reject a complete partition when retrieved count differs from total_count or any page has incomplete_results=true.",
+  "repository_scope": "Inventory repositories plus repositories found by the initial involvement search get full histories. Missing PRs found by the complete search are fetched individually.",
+  "identity_rules": {
+    "pull_request": [
+      "repository",
+      "number"
+    ],
+    "comment_or_review": [
+      "repository",
+      "kind",
+      "id"
+    ],
+    "root_inline": "kind=inline and no in_reply_to_id",
+    "nonempty_review": "kind=review and body.strip() is nonempty"
+  },
+  "hash_rules": {
+    "source_snapshot": "SHA-256 of the exact saved file bytes, without JSON reserialization.",
+    "cited_body": "SHA-256 of the exact saved body string encoded as UTF-8, without normalization.",
+    "repository_records": "Sort the original repository records by (kind, id); form [kind, id, pr, cited_body_sha256] arrays; serialize the outer array with Python json.dumps using separators=(comma, colon) and default ensure_ascii=True; SHA-256 its UTF-8 bytes."
+  },
+  "screening_evidence": "Selected source URLs, identities, body hashes and document labels are preserved in result-summary.json. Full keyword lists and all individual screening decisions were not retained; exhaustive screening is not replayable.",
+  "privacy": "All raw bodies are omitted. Private repository identities and source URLs are replaced with anonymous keys, PR numbers and record IDs. Public source URLs remain directly linked."
+}

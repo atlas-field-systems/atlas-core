@@ -29,6 +29,7 @@ Accepted successor decisions govern over research alternatives. Keep source obse
 - [Mission extensions](11-mission-extensions.md): the original removable-extension motivation and design proposals, followed by the accepted Plugin decisions above.
 - [Adversarial generation review](12-protocol-generation-adversarial-review.md): arguments, counterarguments and an unexecuted comparison for Protocol generation.
 - [Pinned toolchain proof](13-protocol-toolchain-proof.md): later executed representative generation, runtime-validation and binary-transfer evidence, with exact locks and independent fixtures.
+- [Coding conventions retrospective](../pr-review-retrospective/README.md): later proposals based on historical PR feedback, with collection evidence and adoption criteria.
 
 | Area | Report | Main question |
 | --- | --- | --- |
