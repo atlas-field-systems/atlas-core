@@ -56,7 +56,8 @@ def verify(bootstrap):
         formatted = run([go.parent / "gofmt", "-l", *sorted(core.rglob("*.go"))], env, capture=True)
         if formatted:
             raise RuntimeError(f"Go formatting mismatch: {formatted}")
-        for arguments in [[go, "build", "./..."], [go, "test", "./..."], [go, "vet", "./..."]]:
+        # Shared JSON fixtures live outside the Go module and escape test-cache tracking.
+        for arguments in [[go, "build", "./..."], [go, "test", "-count=1", "./..."], [go, "vet", "./..."]]:
             run(arguments, env, cwd=core)
         run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=core)
     with check(passed, "TypeScript structural lint and independent rule probes"):
