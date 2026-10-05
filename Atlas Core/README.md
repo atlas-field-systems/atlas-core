@@ -13,3 +13,5 @@ Use the repository's single verification entry point:
 ```sh
 python3 scripts/verify.py --bootstrap
 ```
+
+The verifier executes Go tests freshly on every run, including the message checks whose shared corpus is outside this module. Go compilation and dependency caches remain available. The [verification evidence](../tests/contract/README.md) describes the required real-toolchain regression and passing-report lifecycle.
