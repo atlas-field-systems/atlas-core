@@ -46,7 +46,7 @@ func TestCanonicalMessageConsumers(t *testing.T) {
 			if !ok {
 				t.Fatalf("canonical message schema %s missing", fixture.Schema)
 			}
-			var value interface{}
+			var value any
 			if err := json.Unmarshal(fixture.Body, &value); err != nil {
 				t.Fatal(err)
 			}
@@ -133,7 +133,7 @@ func TestCanonicalMessageConsumers(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var decoded interface{}
+			var decoded any
 			if err := json.Unmarshal(encoded, &decoded); err != nil {
 				t.Fatal(err)
 			}

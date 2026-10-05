@@ -26,40 +26,72 @@ import (
 )
 
 const datasetID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-const protocolVersion = "0.2.0"
+
+// The fixture serves two artificial editions. Neither is a released Protocol.
+const (
+	olderEdition    = "0.1.0"
+	protocolVersion = "0.2.0"
+)
+
+// This bound qualifies the JSON adapter, not an operational request size policy.
+const fixtureJSONLimit int64 = 4096
+
+func supportedEdition(edition string) bool {
+	return edition == olderEdition || edition == protocolVersion
+}
 
 type fixtureServer struct {
 	queries     *storage.Queries
 	dataset     contract.Identifier
 	patchSchema *openapi3.SchemaRef
 	contentDir  string
+	responses   []responseWire
 }
 
-func (s *fixtureServer) save(ctx context.Context, value contract.FixtureValue) error {
+// The runner starts the executable from the repository root.
+func fixtureFile(name string) string {
+	return filepath.Join("tests", "contract", name)
+}
+
+// readFixtureFile decodes one authored test input from tests/contract.
+func readFixtureFile[T any](name string) (T, error) {
+	var value T
+	encoded, err := os.ReadFile(fixtureFile(name))
+	if err != nil {
+		return value, fmt.Errorf("read fixture file %s: %w", name, err)
+	}
+	if err := json.Unmarshal(encoded, &value); err != nil {
+		return value, fmt.Errorf("decode fixture file %s: %w", name, err)
+	}
+	return value, nil
+}
+
+// Each fixture resource is one JSON row in the private SQLite table.
+func storeJSON(ctx context.Context, queries *storage.Queries, key string, value any) error {
 	encoded, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("encode fixture value: %w", err)
+		return fmt.Errorf("encode fixture %s: %w", key, err)
 	}
-	if err := s.queries.PutValue(ctx, storage.PutValueParams{Key: "value", Value: string(encoded)}); err != nil {
-		return fmt.Errorf("store fixture value: %w", err)
+	if err := queries.PutValue(ctx, storage.PutValueParams{Key: key, Value: string(encoded)}); err != nil {
+		return fmt.Errorf("store fixture %s: %w", key, err)
 	}
 	return nil
 }
 
-func (s *fixtureServer) read(ctx context.Context) (contract.FixtureValue, error) {
-	encoded, err := s.queries.ReadValue(ctx, "value")
+func loadJSON[T any](ctx context.Context, queries *storage.Queries, key string) (T, error) {
+	var value T
+	encoded, err := queries.ReadValue(ctx, key)
 	if err != nil {
-		return contract.FixtureValue{}, fmt.Errorf("read fixture value: %w", err)
+		return value, fmt.Errorf("read fixture %s: %w", key, err)
 	}
-	var value contract.FixtureValue
 	if err := json.Unmarshal([]byte(encoded), &value); err != nil {
-		return value, fmt.Errorf("decode fixture value: %w", err)
+		return value, fmt.Errorf("decode fixture %s: %w", key, err)
 	}
 	return value, nil
 }
 
 func (s *fixtureServer) GetValue(ctx context.Context, request contract.GetValueRequestObject) (contract.GetValueResponseObject, error) {
-	value, err := s.read(ctx)
+	value, err := loadJSON[contract.FixtureValue](ctx, s.queries, "value")
 	if err != nil {
 		return nil, err
 	}
@@ -73,13 +105,24 @@ func (s *fixtureServer) PutValue(ctx context.Context, request contract.PutValueR
 	if request.Body == nil {
 		return nil, errors.New("validated fixture body missing")
 	}
-	if err := s.save(ctx, *request.Body); err != nil {
+	if err := storeJSON(ctx, s.queries, "value", *request.Body); err != nil {
 		return nil, err
 	}
 	return contract.PutValue200JSONResponse{
 		Body:    contract.FixtureValueMutationResponse{DatasetId: s.dataset, Data: *request.Body, CommitCursor: "fixture:commit:1"},
 		Headers: contract.PutValue200ResponseHeaders{AtlasDatasetID: s.dataset, AtlasProtocolVersion: request.Params.AtlasProtocolVersion},
 	}, nil
+}
+
+// seedFixture stores the "initial" value authored in a tests/contract file.
+func seedFixture[T any](ctx context.Context, queries *storage.Queries, name, key string) error {
+	seed, err := readFixtureFile[struct {
+		Initial T `json:"initial"`
+	}](name)
+	if err != nil {
+		return err
+	}
+	return storeJSON(ctx, queries, key, seed.Initial)
 }
 
 func run() (result error) {
@@ -100,7 +143,7 @@ func run() (result error) {
 	}
 	defer func() { result = errors.Join(result, db.Close()) }()
 	db.SetMaxOpenConns(1)
-	schema, err := os.ReadFile(filepath.Join("tests", "contract", "sql", "schema.sql"))
+	schema, err := os.ReadFile(fixtureFile(filepath.Join("sql", "schema.sql")))
 	if err != nil {
 		return fmt.Errorf("read authored fixture SQL: %w", err)
 	}
@@ -114,25 +157,19 @@ func run() (result error) {
 	if err := db.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&journalMode); err != nil {
 		return fmt.Errorf("read SQLite journal mode: %w", err)
 	}
-	var seed struct {
-		Initial contract.FixtureValue `json:"initial"`
-	}
-	initial, err := os.ReadFile(filepath.Join("tests", "contract", "fixtures.json"))
-	if err != nil {
-		return fmt.Errorf("read fixture seed: %w", err)
-	}
-	if err := json.Unmarshal(initial, &seed); err != nil {
-		return fmt.Errorf("decode fixture seed: %w", err)
-	}
 	var dataset contract.Identifier
 	if err := dataset.UnmarshalText([]byte(datasetID)); err != nil {
 		return fmt.Errorf("decode fixture Dataset: %w", err)
 	}
-	fixture := &fixtureServer{queries: storage.New(db), dataset: dataset, contentDir: filepath.Join(*dataDir, "content")}
-	if err := fixture.save(ctx, seed.Initial); err != nil {
+	responses, err := readFixtureFile[[]responseWire]("response-fixtures.json")
+	if err != nil {
 		return err
 	}
-	if err := fixture.initializePatch(ctx); err != nil {
+	fixture := &fixtureServer{queries: storage.New(db), dataset: dataset, contentDir: filepath.Join(*dataDir, "content"), responses: responses}
+	if err := seedFixture[contract.FixtureValue](ctx, fixture.queries, "fixtures.json", "value"); err != nil {
+		return err
+	}
+	if err := seedFixture[contract.FixturePatchResource](ctx, fixture.queries, "patch.fixtures.json", "patch"); err != nil {
 		return err
 	}
 	if *mode == "startup_failure" {
@@ -153,7 +190,7 @@ func run() (result error) {
 			httpcontract.WriteError(w, http.StatusInternalServerError, "internal_error", "Fixture request failed")
 		},
 	}), contract.StdHTTPServerOptions{ErrorHandlerFunc: httpcontract.RequestError})
-	validated, err := httpcontract.ValidateBinaryRequests(spec, binding, "PutFixtureContent", fixtureContentLimit, 4096)
+	validated, err := httpcontract.ValidateBinaryRequests(spec, binding, "PutFixtureContent", fixtureContentLimit, fixtureJSONLimit)
 	if err != nil {
 		return fmt.Errorf("configure fixture binary validation: %w", err)
 	}
@@ -162,7 +199,7 @@ func run() (result error) {
 		// reach generated error hooks, while retaining its finite body bound.
 		validated = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Body != nil && r.Body != http.NoBody {
-				r.Body = http.MaxBytesReader(w, r.Body, 4096)
+				r.Body = http.MaxBytesReader(w, r.Body, fixtureJSONLimit)
 			}
 			binding.ServeHTTP(w, r)
 		})
