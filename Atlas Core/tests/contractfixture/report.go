@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/atlas-field-systems/atlas-core/tests/contractfixture/generated/contract"
-	"github.com/atlas-field-systems/atlas-core/tests/contractfixture/generated/storage"
 )
 
 // This route qualifies structural fidelity through real storage. It does not
@@ -16,12 +13,8 @@ func (s *fixtureServer) PutReport(ctx context.Context, request contract.PutRepor
 	if request.Body == nil {
 		return nil, errors.New("validated fixture report body missing")
 	}
-	encoded, err := json.Marshal(request.Body)
-	if err != nil {
-		return nil, fmt.Errorf("encode fixture report: %w", err)
-	}
-	if err := s.queries.PutValue(ctx, storage.PutValueParams{Key: "report", Value: string(encoded)}); err != nil {
-		return nil, fmt.Errorf("store fixture report: %w", err)
+	if err := storeJSON(ctx, s.queries, "report", *request.Body); err != nil {
+		return nil, err
 	}
 	return contract.PutReport200JSONResponse{
 		Body:    contract.FixturePositionReportMutationResponse{DatasetId: s.dataset, Data: *request.Body, CommitCursor: "fixture:report:1"},
@@ -30,13 +23,9 @@ func (s *fixtureServer) PutReport(ctx context.Context, request contract.PutRepor
 }
 
 func (s *fixtureServer) GetReport(ctx context.Context, request contract.GetReportRequestObject) (contract.GetReportResponseObject, error) {
-	encoded, err := s.queries.ReadValue(ctx, "report")
+	report, err := loadJSON[contract.FixturePositionReport](ctx, s.queries, "report")
 	if err != nil {
-		return nil, fmt.Errorf("read fixture report: %w", err)
-	}
-	var report contract.FixturePositionReport
-	if err := json.Unmarshal([]byte(encoded), &report); err != nil {
-		return nil, fmt.Errorf("decode fixture report: %w", err)
+		return nil, err
 	}
 	return contract.GetReport200JSONResponse{
 		Body:    contract.FixturePositionReportResponse{DatasetId: s.dataset, Data: report},

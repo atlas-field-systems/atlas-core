@@ -7,55 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/atlas-field-systems/atlas-core/httpcontract"
 	"github.com/atlas-field-systems/atlas-core/tests/contractfixture/generated/contract"
-	"github.com/atlas-field-systems/atlas-core/tests/contractfixture/generated/storage"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 )
 
-func (s *fixtureServer) initializePatch(ctx context.Context) error {
-	encoded, err := os.ReadFile(filepath.Join("tests", "contract", "patch.fixtures.json"))
-	if err != nil {
-		return fmt.Errorf("read patch fixture seed: %w", err)
-	}
-	var seed struct {
-		Initial contract.FixturePatchResource `json:"initial"`
-	}
-	if err := json.Unmarshal(encoded, &seed); err != nil {
-		return fmt.Errorf("decode patch fixture seed: %w", err)
-	}
-	return s.savePatch(ctx, seed.Initial)
-}
-
-func (s *fixtureServer) savePatch(ctx context.Context, resource contract.FixturePatchResource) error {
-	encoded, err := json.Marshal(resource)
-	if err != nil {
-		return fmt.Errorf("encode patch fixture: %w", err)
-	}
-	if err := s.queries.PutValue(ctx, storage.PutValueParams{Key: "patch", Value: string(encoded)}); err != nil {
-		return fmt.Errorf("store patch fixture: %w", err)
-	}
-	return nil
-}
-
-func (s *fixtureServer) readPatch(ctx context.Context) (contract.FixturePatchResource, error) {
-	encoded, err := s.queries.ReadValue(ctx, "patch")
-	if err != nil {
-		return contract.FixturePatchResource{}, fmt.Errorf("read patch fixture: %w", err)
-	}
-	var resource contract.FixturePatchResource
-	if err := json.Unmarshal([]byte(encoded), &resource); err != nil {
-		return resource, fmt.Errorf("decode stored patch fixture: %w", err)
-	}
-	return resource, nil
-}
-
 func (s *fixtureServer) GetPatchResource(ctx context.Context, request contract.GetPatchResourceRequestObject) (contract.GetPatchResourceResponseObject, error) {
-	resource, err := s.readPatch(ctx)
+	resource, err := loadJSON[contract.FixturePatchResource](ctx, s.queries, "patch")
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +29,7 @@ func (s *fixtureServer) PatchResource(ctx context.Context, request contract.Patc
 	if request.Body == nil {
 		return nil, errors.New("validated patch fixture body missing")
 	}
-	resource, err := s.readPatch(ctx)
+	resource, err := loadJSON[contract.FixturePatchResource](ctx, s.queries, "patch")
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +50,7 @@ func (s *fixtureServer) PatchResource(ctx context.Context, request contract.Patc
 	if err := json.Unmarshal(encoded, &resource); err != nil {
 		return nil, fmt.Errorf("decode validated patch candidate: %w", err)
 	}
-	if err := s.savePatch(ctx, resource); err != nil {
+	if err := storeJSON(ctx, s.queries, "patch", resource); err != nil {
 		return nil, err
 	}
 	return contract.PatchResource200JSONResponse{

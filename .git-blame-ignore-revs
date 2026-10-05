@@ -1,0 +1,4 @@
+# Mechanical formatting commits. Use with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# style: format TypeScript and JavaScript with Prettier
+04275a2147643e0be04669b3e5919790511f302d

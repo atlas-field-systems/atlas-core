@@ -55,7 +55,7 @@ func (s *fixtureServer) PutFixtureContent(ctx context.Context, request contract.
 	if err != nil {
 		var maximum *http.MaxBytesError
 		if errors.As(err, &maximum) {
-			return fixtureContentError{http.StatusRequestEntityTooLarge, "payload_too_large", "Fixture content exceeds the 1024-byte bound"}, nil
+			return fixtureContentError{http.StatusRequestEntityTooLarge, "payload_too_large", fmt.Sprintf("Fixture content exceeds the %d-byte bound", fixtureContentLimit)}, nil
 		}
 		return nil, fmt.Errorf("stream private fixture attempt: %w", err)
 	}

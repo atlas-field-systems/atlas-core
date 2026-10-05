@@ -1,0 +1,7 @@
+# Formatting and the default lint rules for repository Python source. Markdown
+# stays with the documentation rules. The research proof is unchanged prior
+# art and keeps its authored form.
+target-version = "py312"
+line-length = 120
+include = ["*.py"]
+extend-exclude = ["docs/research"]

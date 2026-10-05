@@ -11,9 +11,11 @@ assert.deepEqual(move.metadata, {
   success: "arrival_reported_by_asset",
   binding: "representative",
 });
-assert.equal(move.protocol_version, "0.0.0");
-assert.equal(move.input_schema, "#/components/schemas/MoveTo");
-assert(move.validateInput({ command: "move_to", target: { kind: "position", position: { latitude: 10, longitude: 20 } } }));
+assert.equal(move.protocolVersion, "0.0.0");
+assert.equal(move.inputSchema, "#/components/schemas/MoveTo");
+assert(
+  move.validateInput({ command: "move_to", target: { kind: "position", position: { latitude: 10, longitude: 20 } } }),
+);
 console.log("PASS local Move To metadata and canonical input lookup");
 
 const pause = lookupCommand("pause");
@@ -25,8 +27,8 @@ assert.deepEqual(pause.metadata, {
   success: "suspension_reported_by_asset",
   binding: "representative",
 });
-assert.equal(pause.protocol_version, "0.0.0");
-assert.equal(pause.input_schema, "#/components/schemas/Pause");
+assert.equal(pause.protocolVersion, "0.0.0");
+assert.equal(pause.inputSchema, "#/components/schemas/Pause");
 assert(pause.validateInput({ command: "pause" }));
 for (const name of ["resume", "unknown", "", "Move To"]) {
   assert.equal(lookupCommand(name), undefined, `unknown Command ${JSON.stringify(name)} stays absent`);
@@ -61,11 +63,27 @@ assert.deepEqual(decoded, {
   command: "move_to",
   target: { kind: "position", position: { latitude: 10.123456789012345, longitude: 20.987654321098765 } },
 });
-for (const position of [{ latitude: -90, longitude: -180 }, { latitude: 90, longitude: 180 }]) {
+for (const position of [
+  { latitude: -90, longitude: -180 },
+  { latitude: 90, longitude: 180 },
+]) {
   assert(move.validateInput({ command: "move_to", target: { kind: "position", position } }));
 }
 for (const nonfinite of [NaN, Infinity, -Infinity]) {
-  assert.equal(move.validateInput({ command: "move_to", target: { kind: "position", position: { latitude: nonfinite, longitude: 20 } } }), false);
-  assert.equal(move.validateInput({ command: "move_to", target: { kind: "position", position: { latitude: 10, longitude: 20 } }, target_altitude: { value_m: nonfinite, vertical_reference: "wgs84_ellipsoid" } }), false);
+  assert.equal(
+    move.validateInput({
+      command: "move_to",
+      target: { kind: "position", position: { latitude: nonfinite, longitude: 20 } },
+    }),
+    false,
+  );
+  assert.equal(
+    move.validateInput({
+      command: "move_to",
+      target: { kind: "position", position: { latitude: 10, longitude: 20 } },
+      target_altitude: { value_m: nonfinite, vertical_reference: "wgs84_ellipsoid" },
+    }),
+    false,
+  );
 }
 console.log("PASS generated typed Catalog input, precision, inclusive bounds and nonfinite rejection");

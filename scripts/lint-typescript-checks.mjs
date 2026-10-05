@@ -14,12 +14,35 @@ const probes = [
   { name: "explicit-any.ts", source: "const value: any = 1;", rule: "explicit any" },
   { name: "ignore.ts", source: "// @ts-ignore\nconst value: string = 1;", rule: "type-error suppression" },
   { name: "nocheck.ts", source: "/* @ts-nocheck */\nconst value: string = 1;", rule: "type-error suppression" },
-  { name: "implementation-expect.ts", source: "// @ts-expect-error\nconst value: string = 1;", rule: "type-error suppression" },
-  { name: "double-assertion.ts", source: "const input: unknown = 1; const value = (input as unknown) as string;", rule: "double assertions" },
-  { name: "cast-function.ts", source: "function value(input: unknown) { return input as string; }", rule: "cast-only functions" },
-  { name: "cast-arrow.ts", source: "const value = (input: unknown) => (input as string);", rule: "cast-only functions" },
-  { name: "allowed.ts", source: "const value = { kind: 'position' } as const satisfies { kind: string };\nconst label = `example ${value.kind} // @ts-ignore`;\nconst pattern = /\\/\\/ @ts-ignore/;\nfunction checked(input: unknown): string { if (typeof input !== 'string') throw new Error('invalid'); return input; }" },
-  { name: "negative.type-test.ts", source: "// @ts-expect-error A number cannot satisfy the required string.\nconst value: string = 1;" },
+  {
+    name: "implementation-expect.ts",
+    source: "// @ts-expect-error\nconst value: string = 1;",
+    rule: "type-error suppression",
+  },
+  {
+    name: "double-assertion.ts",
+    source: "const input: unknown = 1; const value = (input as unknown) as string;",
+    rule: "double assertions",
+  },
+  {
+    name: "cast-function.ts",
+    source: "function value(input: unknown) { return input as string; }",
+    rule: "cast-only functions",
+  },
+  {
+    name: "cast-arrow.ts",
+    source: "const value = (input: unknown) => (input as string);",
+    rule: "cast-only functions",
+  },
+  {
+    name: "allowed.ts",
+    source:
+      "const value = { kind: 'position' } as const satisfies { kind: string };\nconst label = `example ${value.kind} // @ts-ignore`;\nconst pattern = /\\/\\/ @ts-ignore/;\nfunction checked(input: unknown): string { if (typeof input !== 'string') throw new Error('invalid'); return input; }",
+  },
+  {
+    name: "negative.type-test.ts",
+    source: "// @ts-expect-error A number cannot satisfy the required string.\nconst value: string = 1;",
+  },
 ];
 
 function execute(tool, arguments_) {
@@ -38,7 +61,17 @@ try {
     if (probe.rule) assert(result.stderr.includes(probe.rule), probe.name);
   }
   const negative = join(directory, "negative.type-test.ts");
-  const compilerOptions = ["--noEmit", "--strict", "--module", "NodeNext", "--moduleResolution", "NodeNext", "--target", "ES2023", negative];
+  const compilerOptions = [
+    "--noEmit",
+    "--strict",
+    "--module",
+    "NodeNext",
+    "--moduleResolution",
+    "NodeNext",
+    "--target",
+    "ES2023",
+    negative,
+  ];
   assert.equal(execute(tsc, compilerOptions).status, 0, "a genuine negative type test compiles");
   writeFileSync(negative, "// @ts-expect-error The intended mismatch disappeared.\nconst value: string = 'valid';\n");
   const disappeared = execute(tsc, compilerOptions);

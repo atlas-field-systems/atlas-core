@@ -7,7 +7,11 @@ import { startFixture, type OwnedFixture } from "./fixture-owner.js";
 import { fixtureFailure, isFixtureCommand, type FixtureReply } from "./fixture-messages.js";
 
 const loader = fileURLToPath(new URL("../../Atlas SDK/node_modules/tsx/dist/loader.mjs", import.meta.url));
-export interface SupervisorOptions { timeoutMs?: number; args?: string[]; signal?: AbortSignal }
+export interface SupervisorOptions {
+  timeoutMs?: number;
+  args?: string[];
+  signal?: AbortSignal;
+}
 
 // One surviving owner runs each test worker and owns its real Go children.
 // Worker termination cannot skip this owner's exit/reaping or directory cleanup.
@@ -23,16 +27,22 @@ export async function runContractTest(file: string, options: SupervisorOptions =
   let cancelled = false;
   let killTimer: ReturnType<typeof setTimeout> | undefined;
   const controlErrors: unknown[] = [];
-  const child = spawn(process.execPath, ["--import", loader, file, ...options.args ?? []],
-    { stdio: ["inherit", "inherit", "inherit", "ipc"] });
+  const child = spawn(process.execPath, ["--import", loader, file, ...(options.args ?? [])], {
+    stdio: ["inherit", "inherit", "inherit", "ipc"],
+  });
   const send = (reply: FixtureReply) => {
     if (!child.connected || closing) return;
-    child.send(reply, (error) => { if (error && !closing) controlErrors.push(error); });
+    child.send(reply, (error) => {
+      if (error && !closing) controlErrors.push(error);
+    });
   };
   child.on("message", (message: unknown) => {
     if (closing || !isFixtureCommand(message)) return;
     if (message.action === "start") {
-      if (fixtures.has(message.id)) { send(fixtureFailure(message.id, new Error("Fixture start ID was reused"))); return; }
+      if (fixtures.has(message.id)) {
+        send(fixtureFailure(message.id, new Error("Fixture start ID was reused")));
+        return;
+      }
       // Register allocation before its first await, then gate launch after that
       // await. Deadline cleanup drains these entries before removing the root.
       const entry = (async () => {
@@ -47,19 +57,27 @@ export async function runContractTest(file: string, options: SupervisorOptions =
         try {
           const fixture = await entry;
           if (fixture) send({ id: message.id, event: "ready", state: await fixture.ready });
-        } catch (error) { send(fixtureFailure(message.id, error)); }
+        } catch (error) {
+          send(fixtureFailure(message.id, error));
+        }
       })();
     } else {
       const entry = fixtures.get(message.id);
-      if (!entry) { send({ id: message.id, event: "stopped" }); return; }
+      if (!entry) {
+        send({ id: message.id, event: "stopped" });
+        return;
+      }
       void (async () => {
         let fixture: OwnedFixture | undefined;
         try {
           fixture = await entry;
           if (fixture) await fixture.stop();
           send({ id: message.id, event: "stopped" });
-        } catch (error) { send(fixtureFailure(message.id, error)); }
-        finally { if (!fixture || fixture.cleaned) fixtures.delete(message.id); }
+        } catch (error) {
+          send(fixtureFailure(message.id, error));
+        } finally {
+          if (!fixture || fixture.cleaned) fixtures.delete(message.id);
+        }
       })();
     }
   });
@@ -70,8 +88,14 @@ export async function runContractTest(file: string, options: SupervisorOptions =
       killTimer ??= setTimeout(() => child.kill("SIGKILL"), 2000);
     }
   };
-  const cancel = () => { cancelled = true; stopWorker(); };
-  const deadline = setTimeout(() => { timedOut = true; stopWorker(); }, timeoutMs);
+  const cancel = () => {
+    cancelled = true;
+    stopWorker();
+  };
+  const deadline = setTimeout(() => {
+    timedOut = true;
+    stopWorker();
+  }, timeoutMs);
   options.signal?.addEventListener("abort", cancel, { once: true });
   // Cancellation can arrive while the private root is being allocated, before
   // the listener exists. Recheck it before dispatching any worker messages.
@@ -84,8 +108,9 @@ export async function runContractTest(file: string, options: SupervisorOptions =
       child.once("error", reject);
     });
     outcome = { status, timedOut, cancelled };
-  } catch (error) { primary = error; }
-  finally {
+  } catch (error) {
+    primary = error;
+  } finally {
     closing = true;
     clearTimeout(deadline);
     clearTimeout(killTimer);
@@ -95,19 +120,34 @@ export async function runContractTest(file: string, options: SupervisorOptions =
   const pending = await Promise.allSettled(fixtures.values());
   let writersStopped = true;
   for (const entry of pending) {
-    if (entry.status === "rejected") { cleanupErrors.push(entry.reason); continue; }
+    if (entry.status === "rejected") {
+      cleanupErrors.push(entry.reason);
+      continue;
+    }
     if (!entry.value) continue;
-    try { await entry.value.stop(); } catch (error) { cleanupErrors.push(error); }
+    try {
+      await entry.value.stop();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
     if (!entry.value.cleaned) writersStopped = false;
   }
   if (writersStopped) {
-    try { await rm(privateRoot, { recursive: true, force: true }); } catch (error) { cleanupErrors.push(error); }
+    try {
+      await rm(privateRoot, { recursive: true, force: true });
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
   }
   if (cleanupErrors.length) {
-    const failure = primary ?? new Error(timedOut ? `Test exceeded ${timeoutMs} ms deadline` : `Test worker exit ${outcome?.status}`);
-    throw new AggregateError([failure, ...cleanupErrors], `Test failed with fixture cleanup errors; owned root ${privateRoot}`);
+    const failure =
+      primary ?? new Error(timedOut ? `Test exceeded ${timeoutMs} ms deadline` : `Test worker exit ${outcome?.status}`);
+    throw new AggregateError(
+      [failure, ...cleanupErrors],
+      `Test failed with fixture cleanup errors; owned root ${privateRoot}`,
+    );
   }
   if (primary !== undefined) throw primary;
   if (!outcome) throw new Error("Test worker outcome unavailable");
-  return { ...outcome, privateRoot, fixtures: startedFixtures };
+  return { ...outcome, timeoutMs, privateRoot, fixtures: startedFixtures };
 }

@@ -119,6 +119,28 @@ func TestJSONBodyBoundBeforeEffects(t *testing.T) {
 	}
 }
 
+// An unrouted request has no authored pattern; its diagnostic still names the
+// method without trailing separator text.
+func TestUnroutedBodyBoundDiagnostic(t *testing.T) {
+	handler, err := httpcontract.ValidateRequests(jsonContract(t), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("unrouted oversized body dispatched an effect")
+	}), 16)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPut, "/unknown", strings.NewReader(`{"value":"`+strings.Repeat("x", 32)+`"}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	var rejection protocol.Error
+	if err := json.NewDecoder(recorder.Body).Decode(&rejection); err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusRequestEntityTooLarge || rejection.Error.Message != "Request body exceeds its configured byte bound for PUT" {
+		t.Fatalf("status %d, message %q", recorder.Code, rejection.Error.Message)
+	}
+}
+
 func TestJSONBodyBoundMustBePositive(t *testing.T) {
 	for _, limit := range []int64{0, -1} {
 		if handler, err := httpcontract.ValidateRequests(jsonContract(t), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), limit); err == nil || handler != nil {
