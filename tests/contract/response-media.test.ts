@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { createTransport, responseValidation, ResponseValidationError } from "../../Atlas SDK/src/index.js";
 import protocol from "./generated/protocol.json" with { type: "json" };
-import type { paths } from "./generated/protocol.js";
+import { dataset, fixtureClient, headers, isRefusal, otherDataset, version, withLoopbackServer } from "./support.js";
 
-const dataset = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const version = "0.2.0";
-const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": version };
 const declaredHeaders = protocol.paths["/__fixture/value"].get.responses["200"].headers;
 const expected = { dataset_id: dataset, data: { value: "alternate JSON", count: "1" } };
 // The Go fixture has no alternate JSON or mixed-media response declaration.
@@ -23,24 +18,13 @@ let body: string | Uint8Array = JSON.stringify(expected);
 let receivedMedia = "application/problem+json";
 let receivedHeaders: Record<string, string> = headers;
 let status = 200;
-const server = createServer((_request, response) => {
+await withLoopbackServer((_request, response) => {
   response.writeHead(status, { ...receivedHeaders, "Content-Type": receivedMedia });
   response.end(body);
-});
-await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
-try {
-  const address = server.address();
-  assert(address !== null && typeof address !== "string");
-  const baseUrl = `http://127.0.0.1:${address.port}`;
-  const clientFor = (content: Record<string, { schema: unknown }>) => {
-    const document = { ...protocol, paths: { "/__fixture/value": { get: { responses: { "200": {
-      headers: declaredHeaders, content,
-    } } } } } };
-    const client = createTransport<paths>({ baseUrl, headers,
-      fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(document, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
-    return client;
-  };
+}, async (baseUrl) => {
+  const clientFor = (content: Record<string, { schema: unknown }>) => fixtureClient(baseUrl, {
+    document: { ...protocol, paths: { "/__fixture/value": { get: { responses: { "200": { headers: declaredHeaders, content } } } } } },
+  });
   for (const authoredMedia of ["application/problem+json", "Application/Problem+JSON", "application/vnd.atlas.fixture+json"]) {
     const client = clientFor({ [authoredMedia]: { schema } });
     for (const suppliedMedia of [authoredMedia.toLowerCase(), `${authoredMedia.toUpperCase()}; CHARSET=UTF-8`]) {
@@ -50,13 +34,13 @@ try {
       assert.deepEqual(valid.data, expected);
       body = JSON.stringify({ dataset_id: dataset, data: { value: "alternate JSON", count: 1 } });
       await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }),
-        (error: unknown) => error instanceof ResponseValidationError && error.reason === "schema");
+        isRefusal("schema"));
       body = '{"dataset_id":';
       await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }),
-        (error: unknown) => error instanceof ResponseValidationError && error.reason === "json");
-      body = JSON.stringify({ ...expected, dataset_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" });
+        isRefusal("json"));
+      body = JSON.stringify({ ...expected, dataset_id: otherDataset });
       await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }),
-        (error: unknown) => error instanceof ResponseValidationError && error.reason === "context");
+        isRefusal("context"));
     }
   }
   console.log("PASS authored +json schemas, invalid JSON, distinct Dataset mismatch, and media casing/parameters over real HTTP");
@@ -69,7 +53,7 @@ try {
       body = new Uint8Array([...new TextEncoder().encode(`{"dataset_id":"${dataset}","data":{"value":"`), ...invalidBytes,
         ...new TextEncoder().encode('","count":"1"}}')]);
       await assert.rejects(() => textClient.GET("/__fixture/value", { params: { header: headers } }),
-        (error: unknown) => error instanceof ResponseValidationError && error.reason === "json");
+        isRefusal("json"));
     }
     for (const [jsonString, value] of [['"船 🚀 �"', "船 🚀 �"], ['"\\ud83d\\ude80"', "🚀"]]) {
       body = new TextEncoder().encode(`{"dataset_id":"${dataset}","data":{"value":${jsonString},"count":"1"}}`);
@@ -89,7 +73,7 @@ try {
   ]) {
     receivedMedia = media;
     await assert.rejects(() => textClient.GET("/__fixture/value", { params: { header: headers } }),
-      (error: unknown) => error instanceof ResponseValidationError && error.reason === "media_type", media);
+      isRefusal("media_type"), media);
     assert.throws(() => clientFor({ [media]: { schema: textSchema } }), /Response media type declaration has invalid syntax/u);
   }
   assert.throws(() => clientFor({ "": { schema: textSchema } }), /Response media type declaration has invalid syntax/u);
@@ -145,7 +129,7 @@ try {
     assert.deepEqual(result.data, validBody);
     body = JSON.stringify(invalidBody);
     await assert.rejects(() => mixed.GET("/__fixture/value", { params: { header: headers } }),
-      (error: unknown) => error instanceof ResponseValidationError && error.reason === "schema");
+      isRefusal("schema"));
   }
   console.log("PASS differing JSON schemas are selected by received media, including mixed JSON/binary declarations");
 
@@ -156,19 +140,17 @@ try {
   assert.deepEqual(new Uint8Array(binary.data), new Uint8Array([0, 255, 128, 123, 10]));
   receivedMedia = "image/png";
   await assert.rejects(() => mixed.GET("/__fixture/value", { params: { header: headers }, parseAs: "arrayBuffer" }),
-    (error: unknown) => error instanceof ResponseValidationError && error.reason === "media_type");
+    isRefusal("media_type"));
   receivedMedia = "application/octet-stream";
   receivedHeaders = { "Atlas-Protocol-Version": version };
   await assert.rejects(() => mixed.GET("/__fixture/value", { params: { header: headers }, parseAs: "arrayBuffer" }),
-    (error: unknown) => error instanceof ResponseValidationError && error.reason === "context");
-  receivedHeaders = { ...headers, "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
+    isRefusal("context"));
+  receivedHeaders = { ...headers, "Atlas-Dataset-ID": otherDataset };
   await assert.rejects(() => mixed.GET("/__fixture/value", { params: { header: headers }, parseAs: "arrayBuffer" }),
-    (error: unknown) => error instanceof ResponseValidationError && error.reason === "context");
+    isRefusal("context"));
   receivedHeaders = headers;
   status = 202;
   await assert.rejects(() => mixed.GET("/__fixture/value", { params: { header: headers }, parseAs: "arrayBuffer" }),
-    (error: unknown) => error instanceof ResponseValidationError && error.reason === "status");
+    isRefusal("status"));
   console.log("PASS selected binary preserves exact bytes and still rejects undeclared media, invalid context and status");
-} finally {
-  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-}
+});

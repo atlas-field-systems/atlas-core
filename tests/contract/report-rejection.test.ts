@@ -1,18 +1,14 @@
 import assert from "node:assert/strict";
-import { contractValidator, createTransport, responseValidation } from "../../Atlas SDK/src/index.js";
+import { contractValidator } from "../../Atlas SDK/src/index.js";
 import protocol from "./generated/protocol.json" with { type: "json" };
-import type { components, paths } from "./generated/protocol.js";
+import type { components } from "./generated/protocol.js";
 import reports from "./report-fixtures.json" with { type: "json" };
 import { withFixture } from "./runner.js";
+import { dataset, fixtureClient, headers, timedFetch, validateError, version } from "./support.js";
 
-const dataset = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const version = "0.2.0";
-const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": version };
-const validator = contractValidator(protocol);
-const validateReport = validator.compile<components["schemas"]["FixturePositionReport"]>({
+const validateReport = contractValidator(protocol).compile<components["schemas"]["FixturePositionReport"]>({
   $ref: "atlas#/components/schemas/FixturePositionReport",
 });
-const validateError = validator.compile<components["schemas"]["Error"]>({ $ref: "atlas#/components/schemas/Error" });
 const baseline = reports[0];
 assert(baseline);
 assert(validateReport(baseline.body));
@@ -109,26 +105,23 @@ for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
     let injectedJSON: string | undefined;
     let injectedMedia: string | undefined;
-    const client = createTransport<paths>({
-      baseUrl, headers,
+    const client = fixtureClient(baseUrl, {
       // Invalid inputs cannot be expressed by generated types. Injection at the
       // transport boundary exercises untrusted wire bytes over the real HTTP
       // handler, without asserting or weakening those types.
       fetch: (request) => {
         const wire = injectedJSON !== undefined && request.method === "PUT" ? new Request(request, { body: injectedJSON }) : request;
         if (injectedMedia !== undefined && request.method === "PUT") wire.headers.set("Content-Type", injectedMedia);
-        return fetch(wire, { signal: AbortSignal.timeout(5000) });
+        return timedFetch(wire);
       },
     });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
     if (mode === "generated transport") {
       const seed = await client.PUT("/__fixture/report", { params: { header: headers }, body: validBody });
       assert.equal(seed.response.status, 200);
       assert.deepEqual(seed.data, { ...baseline.expected, commit_cursor: "fixture:report:1" });
     } else {
-      const seed = await fetch(`${baseUrl}/__fixture/report`, {
-        method: "PUT", headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify(baseline.body), signal: AbortSignal.timeout(5000),
+      const seed = await timedFetch(`${baseUrl}/__fixture/report`, {
+        method: "PUT", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(baseline.body),
       });
       assert.equal(seed.status, 200);
       assert.deepEqual(await seed.json(), { ...baseline.expected, commit_cursor: "fixture:report:1" });
@@ -145,9 +138,8 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.equal(result.data, undefined);
         errorBody = result.error;
       } else {
-        const response = await fetch(`${baseUrl}/__fixture/report`, {
-          method: "PUT", headers: { ...headers, "Content-Type": scenario.media ?? "application/json" },
-          body: scenario.json, signal: AbortSignal.timeout(5000),
+        const response = await timedFetch(`${baseUrl}/__fixture/report`, {
+          method: "PUT", headers: { ...headers, "Content-Type": scenario.media ?? "application/json" }, body: scenario.json,
         });
         assert.equal(response.status, 400, scenario.name);
         assert.equal(response.headers.get("Content-Type"), "application/json");
@@ -162,7 +154,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         const read = await client.GET("/__fixture/report", { params: { header: headers } });
         assert.deepEqual(read.data, baseline.expected, `${scenario.name} preserves stored report`);
       } else {
-        const read = await fetch(`${baseUrl}/__fixture/report`, { headers, signal: AbortSignal.timeout(5000) });
+        const read = await timedFetch(`${baseUrl}/__fixture/report`, { headers });
         assert.equal(read.status, 200);
         assert.deepEqual(await read.json(), baseline.expected, `${scenario.name} preserves stored report`);
       }
@@ -176,8 +168,9 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.equal(accepted.response.status, 200, `valid report retains acceptance for ${media}`);
         assert.deepEqual(accepted.data, { ...baseline.expected, commit_cursor: "fixture:report:1" });
       } else {
-        const accepted = await fetch(`${baseUrl}/__fixture/report`, { method: "PUT",
-          headers: { ...headers, "Content-Type": media }, body: JSON.stringify(validBody), signal: AbortSignal.timeout(5000) });
+        const accepted = await timedFetch(`${baseUrl}/__fixture/report`, {
+          method: "PUT", headers: { ...headers, "Content-Type": media }, body: JSON.stringify(validBody),
+        });
         assert.equal(accepted.status, 200, `valid report retains acceptance for ${media}`);
         assert.deepEqual(await accepted.json(), { ...baseline.expected, commit_cursor: "fixture:report:1" });
       }

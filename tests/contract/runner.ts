@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { isFixtureReply, replyError, type FixtureCommand, type FixtureOptions, type FixtureReply, type Ready } from "./fixture-messages.js";
+import { isFixtureReply, replyError, type FixtureCommand, type FixtureOptions, type FixtureReply, type FixtureState } from "./fixture-messages.js";
 export { FixtureStartupError, type FixtureOptions } from "./fixture-messages.js";
 
 // Tests request fixtures from the surviving outer owner. They never spawn a Go
 // child or allocate private Dataset files in the killable worker process.
-export async function withFixture<T>(workflow: (ready: Ready & { dataDir: string; pid: number }) => Promise<T>, options: FixtureOptions = {}): Promise<T> {
+export async function withFixture<T>(workflow: (ready: FixtureState) => Promise<T>, options: FixtureOptions = {}): Promise<T> {
   if (!process.send) throw new Error("Run fixture tests through tests/contract/run.mjs so the supervisor owns cleanup");
   const id = randomUUID();
   let reply: ((response: FixtureReply) => void) | undefined;

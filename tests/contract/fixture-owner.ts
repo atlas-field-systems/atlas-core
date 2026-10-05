@@ -2,13 +2,13 @@ import { spawn } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { FixtureStartupError, isReady, type FixtureOptions, type Ready } from "./fixture-messages.js";
+import { FixtureStartupError, isReady, type FixtureOptions, type FixtureState } from "./fixture-messages.js";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 export interface OwnedFixture {
   readonly pid: number | undefined;
   readonly dataDir: string;
-  ready: Promise<Ready & { dataDir: string; pid: number }>;
+  ready: Promise<FixtureState>;
   stop(): Promise<void>;
   readonly cleaned: boolean;
 }
@@ -26,7 +26,7 @@ export function startFixture(dataDir: string, options: FixtureOptions): OwnedFix
     child.once("error", (error) => { spawnError = error; });
   });
   let readinessTimer: ReturnType<typeof setTimeout>;
-  const ready = new Promise<Ready & { dataDir: string; pid: number }>((resolveReady, reject) => {
+  const ready = new Promise<FixtureState>((resolveReady, reject) => {
     readinessTimer = setTimeout(() => reject(new FixtureStartupError("fixture readiness timeout", dataDir, child.pid, trace)), options.startupMs ?? 5000);
     const fail = (message: string) => { clearTimeout(readinessTimer); reject(new FixtureStartupError(message, dataDir, child.pid, trace)); };
     child.once("error", (error) => fail(`fixture startup failed: ${error.message}`));

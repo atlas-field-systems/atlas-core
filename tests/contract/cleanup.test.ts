@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { chmod, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { withFixture } from "./runner.js";
+import { assertProcessGone } from "./support.js";
 
 const observedFixtures: { dataDir: string; pid: number }[] = [];
 for (const mode of ["fixture exit", "directory removal"]) {
@@ -29,7 +30,7 @@ for (const mode of ["fixture exit", "directory removal"]) {
       assert.equal(error.errors.length, 2);
       assert(error.errors.some((failure: unknown) => failure instanceof Error && (mode === "fixture exit" ?
         /fixture exit/u.test(failure.message) : "code" in failure && failure.code === "EACCES")));
-      assert.throws(() => process.kill(fixturePid, 0), { code: "ESRCH" }, "Go fixture is reaped before removal refusal");
+      assertProcessGone(fixturePid, "Go fixture is reaped before removal refusal");
       return true;
     });
   } finally {

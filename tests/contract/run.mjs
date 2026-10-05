@@ -29,7 +29,7 @@ try {
     }
     const result = await runContractTest(fileURLToPath(new URL(file, import.meta.url)), { signal: cancellation.signal });
     if (result.cancelled) break;
-    if (result.timedOut) throw new Error(`Contract test ${file} exceeded 120000 ms deadline`);
+    if (result.timedOut) throw new Error(`Contract test ${file} exceeded ${result.timeoutMs} ms deadline`);
     if (result.status !== 0) { process.exitCode = result.status ?? 1; break; }
   }
 } catch (error) {

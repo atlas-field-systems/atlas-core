@@ -4,8 +4,12 @@ export interface Ready {
   sqliteVersion: string;
   journalMode: string;
 }
+// A started fixture: its readiness report plus the owner's process and directory.
+export type FixtureState = Ready & { dataDir: string; pid: number };
+// These match the Go fixture's -mode values.
+const fixtureModes = ["normal", "missing_readiness", "startup_failure", "request_hooks"] as const;
 export interface FixtureOptions {
-  mode?: "normal" | "missing_readiness" | "startup_failure" | "request_hooks";
+  mode?: typeof fixtureModes[number];
   startupMs?: number;
   unprivilegedRemoval?: boolean;
 }
@@ -22,7 +26,7 @@ interface Failure {
   errors?: Failure[];
   startup?: { dataDir: string; pid: number | null; trace: string };
 }
-export type FixtureReply = { id: string; event: "ready"; state: Ready & { dataDir: string; pid: number } } |
+export type FixtureReply = { id: string; event: "ready"; state: FixtureState } |
   { id: string; event: "stopped" } | ({ id: string; event: "failure" } & Failure);
 
 export function isReady(value: unknown): value is Ready {
@@ -34,7 +38,7 @@ export function isReady(value: unknown): value is Ready {
 }
 function isOptions(value: unknown): value is FixtureOptions {
   return typeof value === "object" && value !== null &&
-    (!("mode" in value) || ["normal", "missing_readiness", "startup_failure", "request_hooks"].some((mode) => mode === value.mode)) &&
+    (!("mode" in value) || fixtureModes.some((mode) => mode === value.mode)) &&
     (!("unprivilegedRemoval" in value) || typeof value.unprivilegedRemoval === "boolean") &&
     (!("startupMs" in value) || typeof value.startupMs === "number" && Number.isFinite(value.startupMs) && value.startupMs > 0);
 }

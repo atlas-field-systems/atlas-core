@@ -109,5 +109,5 @@ export async function runContractTest(file: string, options: SupervisorOptions =
   }
   if (primary !== undefined) throw primary;
   if (!outcome) throw new Error("Test worker outcome unavailable");
-  return { ...outcome, privateRoot, fixtures: startedFixtures };
+  return { ...outcome, timeoutMs, privateRoot, fixtures: startedFixtures };
 }

@@ -1,16 +1,13 @@
 import assert from "node:assert/strict";
-import { createTransport, responseValidation, contractValidator } from "../../Atlas SDK/src/index.js";
 import { withFixture } from "./runner.js";
-import protocol from "./generated/protocol.json" with { type: "json" };
 import seed from "./patch.fixtures.json" with { type: "json" };
-import type { paths, components } from "./generated/protocol.js";
+import type { components } from "./generated/protocol.js";
+import {
+  dataset, fixtureClient, headers, otherDataset, timedFetch, unallocatedRequestId, validateError, version,
+} from "./support.js";
 
-const dataset = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const fixtureId = "11111111-1111-4111-8111-111111111111";
-const version = "0.2.0";
-const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": version };
 const params = { header: headers, path: { fixture_id: fixtureId } };
-const validateError = contractValidator(protocol).compile<components["schemas"]["Error"]>({ $ref: "atlas#/components/schemas/Error" });
 const invalidBodies = [
   ["immutable id", { id: "33333333-3333-4333-8333-333333333333" }],
   ["immutable type", { type: "track" }],
@@ -41,24 +38,24 @@ const invalidBodies = [
 
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
-    const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
+    const client = fixtureClient(baseUrl);
     async function unchanged() {
       if (mode === "generated transport") {
         const response = await client.GET("/__fixture/patch/{fixture_id}", { params });
         assert.equal(response.response.status, 200);
         assert.deepEqual(response.data, { dataset_id: dataset, data: seed.initial });
       } else {
-        const response = await fetch(`${baseUrl}/__fixture/patch/${fixtureId}`, { headers, signal: AbortSignal.timeout(5000) });
+        const response = await timedFetch(`${baseUrl}/__fixture/patch/${fixtureId}`, { headers });
         assert.equal(response.status, 200);
         assert.deepEqual(await response.json(), { dataset_id: dataset, data: seed.initial });
       }
     }
     const requestIds = new Set<string>();
-    async function rejected(body: string, name: string, pathId = fixtureId, requestHeaders: Record<string, string> = headers, status = 400, code = "invalid_request") {
-      const response = await fetch(`${baseUrl}/__fixture/patch/${pathId}?secret=sensitive-fixture-credential`, {
-        method: "PATCH", headers: { ...requestHeaders, "Content-Type": "application/json", "Authorization": "Bearer sensitive fixture credential" },
-        body, signal: AbortSignal.timeout(5000),
+    async function rejected(body: string, name: string, pathId = fixtureId, requestHeaders: Record<string, string> = headers,
+      status = 400, code = "invalid_request") {
+      const response = await timedFetch(`${baseUrl}/__fixture/patch/${pathId}?secret=sensitive-fixture-credential`, {
+        method: "PATCH", body,
+        headers: { ...requestHeaders, "Content-Type": "application/json", "Authorization": "Bearer sensitive fixture credential" },
       });
       assert.equal(response.status, status, name);
       assert.equal(response.headers.get("Content-Type")?.split(";")[0], "application/json", name);
@@ -69,7 +66,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       assert.equal(error.error.code, code, name);
       assert.equal(error.dataset_id, dataset, `${name}: owner-supplied Dataset context`);
       assert.match(error.error.message, /PATCH/, `${name}: safe method diagnostic`);
-      assert.notEqual(error.error.request_id, "00000000-0000-0000-0000-000000000000", `${name}: diagnostic correlation is allocated`);
+      assert.notEqual(error.error.request_id, unallocatedRequestId, `${name}: diagnostic correlation is allocated`);
       assert(!requestIds.has(error.error.request_id), `${name}: separate rejections have separate diagnostics`);
       requestIds.add(error.error.request_id);
       await unchanged();
@@ -79,16 +76,20 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       const typedFailures: Array<{ name: string; body: components["schemas"]["FixturePatch"] }> = [
         { name: "generated malformed decimal", body: { count: "01" } },
         { name: "generated positive zero", body: { positive_count: "0" } },
-        { name: "generated malformed body UUID", body: { fixture_entity: { type: "asset", id: "sensitive-fixture-credential", state: "stopped" } } },
+        {
+          name: "generated malformed body UUID",
+          body: { fixture_entity: { type: "asset", id: "sensitive-fixture-credential", state: "stopped" } },
+        },
         { name: "generated coordinate bounds", body: { position: { latitude: 120, longitude: 0 } } },
       ];
       for (const scenario of typedFailures) {
-        const response = await client.PATCH("/__fixture/patch/{fixture_id}", { params, body: { alias: "must not commit", ...scenario.body } });
+        const body = { alias: "must not commit", ...scenario.body };
+        const response = await client.PATCH("/__fixture/patch/{fixture_id}", { params, body });
         assert.equal(response.response.status, 400, scenario.name);
         assert(validateError(response.error), scenario.name);
         assert.equal(response.error.error.code, "invalid_request");
         assert.match(response.error.error.message, /PATCH/);
-        assert.notEqual(response.error.error.request_id, "00000000-0000-0000-0000-000000000000");
+        assert.notEqual(response.error.error.request_id, unallocatedRequestId);
         assert(!JSON.stringify(response.error).includes("sensitive"));
         await unchanged();
       }
@@ -100,9 +101,13 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       await unchanged();
       for (const scenario of [
         { name: "generated malformed path UUID", params: { ...params, path: { fixture_id: "sensitive-fixture-credential" } } },
-        { name: "generated malformed Dataset UUID", params: { ...params, header: { ...headers, "Atlas-Dataset-ID": "sensitive-fixture-credential" } } },
+        {
+          name: "generated malformed Dataset UUID",
+          params: { ...params, header: { ...headers, "Atlas-Dataset-ID": "sensitive-fixture-credential" } },
+        },
       ]) {
-        const response = await client.PATCH("/__fixture/patch/{fixture_id}", { params: scenario.params, body: { alias: "must not commit" } });
+        const body = { alias: "must not commit" };
+        const response = await client.PATCH("/__fixture/patch/{fixture_id}", { params: scenario.params, body });
         assert.equal(response.response.status, 400, scenario.name);
         assert(validateError(response.error), scenario.name);
         assert.equal(response.error.error.code, "invalid_request");
@@ -111,11 +116,12 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       }
     }
     const contextBody = JSON.stringify({ alias: "must not commit" });
-    await rejected(contextBody, "wrong Dataset", fixtureId, { ...headers, "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }, 409, "dataset_mismatch");
+    await rejected(contextBody, "wrong Dataset", fixtureId, { ...headers, "Atlas-Dataset-ID": otherDataset }, 409, "dataset_mismatch");
     await rejected(contextBody, "missing Dataset", fixtureId, { "Atlas-Protocol-Version": version }, 400, "dataset_required");
     await rejected(contextBody, "malformed Dataset UUID", fixtureId, { ...headers, "Atlas-Dataset-ID": "sensitive-fixture-credential" });
     await rejected(contextBody, "missing Protocol edition", fixtureId, { "Atlas-Dataset-ID": dataset });
-    await rejected(contextBody, "unsupported artificial edition", fixtureId, { ...headers, "Atlas-Protocol-Version": "9.0.0" }, 426, "unsupported_protocol");
+    await rejected(contextBody, "unsupported artificial edition", fixtureId,
+      { ...headers, "Atlas-Protocol-Version": "9.0.0" }, 426, "unsupported_protocol");
     for (const [name, body] of invalidBodies) {
       await rejected(JSON.stringify({ alias: "must not commit", ...body }), name);
     }

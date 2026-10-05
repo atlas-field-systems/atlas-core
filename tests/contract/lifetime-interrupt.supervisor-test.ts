@@ -5,13 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runContractTest } from "./supervisor.js";
-
-function isReadyEvidence(value: unknown): value is { pid: number; dataDir: string; workerPid: number; sqliteVersion: string; journalMode: string } {
-  return typeof value === "object" && value !== null && "pid" in value && typeof value.pid === "number" &&
-    "workerPid" in value && typeof value.workerPid === "number" &&
-    "dataDir" in value && typeof value.dataDir === "string" && "sqliteVersion" in value && value.sqliteVersion === "3.53.4" &&
-    "journalMode" in value && value.journalMode === "wal";
-}
+import { assertPathRemoved, assertProcessGone, hasErrorCode, isProbeEvidence, within } from "./support.js";
 
 export async function run(ownerSignal: AbortSignal) {
   if (ownerSignal.aborted) return;
@@ -24,7 +18,7 @@ export async function run(ownerSignal: AbortSignal) {
   assert(cancelled.cancelled, "cancellation during root allocation is retained");
   assert.notEqual(cancelled.status, 0);
   assert.equal(cancelled.fixtures.length, 0, "cancelled allocation dispatches no fixture launch");
-  await assert.rejects(access(cancelled.privateRoot), { code: "ENOENT" });
+  await assertPathRemoved(cancelled.privateRoot);
   console.log("PASS cancellation during private-root allocation drains without launching a fixture");
 
   // A separate executable owns the fixture. This observer survives its signals
@@ -55,7 +49,6 @@ export async function run(ownerSignal: AbortSignal) {
           runner.once("error", reject);
         });
         let observed: { pid: number; dataDir: string; workerPid?: number } | undefined;
-        let deadline: ReturnType<typeof setTimeout> | undefined;
         try {
           const readyDeadline = performance.now() + 10000;
           while (performance.now() < readyDeadline) {
@@ -85,12 +78,12 @@ export async function run(ownerSignal: AbortSignal) {
                   (await readdir(privateTmp)).find((name) => name.startsWith("atlas-timeout-evidence-"));
                 const readyMarker = file === "timeout-probe.ts" ? marker : join(privateTmp, nestedEvidence ?? "pending", "ready.json");
                 const state: unknown = JSON.parse(await readFile(readyMarker, "utf8"));
-                assert(isReadyEvidence(state), "real HTTP/SQLite readiness evidence is complete");
+                assert(isProbeEvidence(state), "real HTTP/SQLite readiness evidence is complete");
                 observed = state;
               }
               if (observed) break;
             } catch (error) {
-              if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+              if (!hasErrorCode(error, "ENOENT")) throw error;
             }
             await new Promise((resolve) => setTimeout(resolve, 20));
           }
@@ -98,25 +91,16 @@ export async function run(ownerSignal: AbortSignal) {
           assert(runner.pid !== undefined);
           const before = performance.now();
           process.kill(signal === "SIGINT" ? -runner.pid : runner.pid, signal);
-          const outcome = await Promise.race([exited, new Promise<never>((_, reject) => {
-            deadline = setTimeout(() => reject(new Error(`interrupted runner did not exit: ${output}`)), 12000);
-          })]);
+          const outcome = await within(exited, 12000, () => `interrupted runner did not exit: ${output}`);
           if (ownerSignal.aborted) return;
           assert(performance.now() - before < 12000, "interruption and cleanup have a finite deadline");
-          const fixturePid = observed.pid;
-          assert.throws(() => process.kill(fixturePid, 0), (error: unknown) =>
-            error instanceof Error && "code" in error && error.code === "ESRCH", "interrupted runner reaps the real Go fixture");
-          if (observed.workerPid !== undefined) {
-            const workerPid = observed.workerPid;
-            assert.throws(() => process.kill(workerPid, 0), (error: unknown) =>
-              error instanceof Error && "code" in error && error.code === "ESRCH", "interrupted runner stops its test worker");
-          }
-          await assert.rejects(access(observed.dataDir), { code: "ENOENT" });
-          await assert.rejects(access(dirname(observed.dataDir)), { code: "ENOENT" });
+          assertProcessGone(observed.pid, "interrupted runner reaps the real Go fixture");
+          if (observed.workerPid !== undefined) assertProcessGone(observed.workerPid, "interrupted runner stops its test worker");
+          await assertPathRemoved(observed.dataDir);
+          await assertPathRemoved(dirname(observed.dataDir));
           assert.deepEqual(outcome, { status: signal === "SIGTERM" ? 143 : 130, signal: null }, output);
           console.log(`PASS ${file}/${mode}/${signal}: executable interruption reaps Go and removes both private directory levels`);
         } finally {
-          clearTimeout(deadline);
           ownerSignal.removeEventListener("abort", cancelRunner);
           // Let an interrupted observer's child owner drain first. The process-group
           // fallback also cleans up serving orphans when this regression goes red.
@@ -124,7 +108,7 @@ export async function run(ownerSignal: AbortSignal) {
           const forceCleanup = () => {
             if (runner.pid === undefined) return;
             try { process.kill(-runner.pid, "SIGKILL"); } catch (error) {
-              if (!(error instanceof Error && "code" in error && error.code === "ESRCH")) throw error;
+              if (!hasErrorCode(error, "ESRCH")) throw error;
             }
           };
           const cleanupDeadline = setTimeout(forceCleanup, 12000);

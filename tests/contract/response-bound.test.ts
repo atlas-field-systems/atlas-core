@@ -1,13 +1,9 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
 import { gzipSync } from "node:zlib";
-import { createTransport, responseValidation, ResponseValidationError } from "../../Atlas SDK/src/index.js";
+import { responseValidation } from "../../Atlas SDK/src/index.js";
 import protocol from "./generated/protocol.json" with { type: "json" };
-import type { paths } from "./generated/protocol.js";
+import { dataset, fixtureClient, headers, isRefusal, timedFetch, version, withLoopbackServer, within } from "./support.js";
 
-const dataset = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const version = "0.2.0";
-const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": version };
 const definition = protocol.paths["/__fixture/value"].get.responses["200"];
 const document = { ...protocol, paths: { "/__fixture/value": {
   get: { responses: { "200": definition } }, put: { responses: { "200": definition } },
@@ -22,9 +18,12 @@ let redirect = false;
 let receivedMedia = "application/json";
 let mutations = 0;
 let streamClosed: Promise<void> = Promise.resolve();
-const server = createServer((request, response) => {
+
+await withLoopbackServer((request, response) => {
   if (redirect && request.url === "/__fixture/value") {
-    response.writeHead(302, { Location: "/__fixture/final" }); response.end(); return;
+    response.writeHead(302, { Location: "/__fixture/final" });
+    response.end();
+    return;
   }
   if (request.method === "PUT") mutations++;
   const bytes = mode === "gzip" ? gzipSync(wire) : wire;
@@ -37,28 +36,25 @@ const server = createServer((request, response) => {
     streamClosed = new Promise<void>((resolve) => response.once("close", () => { clearInterval(timer); resolve(); }));
     response.write(bytes);
   } else if (mode === "chunked") {
-    response.write(bytes.subarray(0, 100)); response.end(bytes.subarray(100));
+    response.write(bytes.subarray(0, 100));
+    response.end(bytes.subarray(100));
   } else response.end(bytes);
-});
-await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
-try {
-  const address = server.address(); assert(address !== null && typeof address !== "string");
-  const baseUrl = `http://127.0.0.1:${address.port}`;
+}, async (baseUrl) => {
   let fetched: Response | undefined;
-  const client = createTransport<paths>({ baseUrl, headers, fetch: async (request) => {
-    fetched = await fetch(request, { signal: AbortSignal.timeout(5000) }); return fetched;
-  } });
+  const fetchAndKeep = async (request: Request) => {
+    fetched = await timedFetch(request);
+    return fetched;
+  };
   for (const maxJSONBytes of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
     assert.throws(() => responseValidation(document, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes }),
       /Response JSON byte bound must be a positive safe integer/u);
   }
   // The explicit qualification limit is not a default policy for operational clients.
-  client.use(responseValidation(document, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: bound }));
+  const client = fixtureClient(baseUrl, { document, maxJSONBytes: bound, fetch: fetchAndKeep });
   wire = new TextEncoder().encode(exact + " ");
   for (const transfer of ["fixed", "chunked", "gzip"] as const) {
     mode = transfer;
-    await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }),
-      (error: unknown) => error instanceof ResponseValidationError && error.reason === "body_size", transfer);
+    await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }), isRefusal("body_size"), transfer);
   }
   console.log("PASS fixed/chunked and compressed JSON responses reject bytes above the explicit bound");
   wire = new TextEncoder().encode(exact);
@@ -82,38 +78,27 @@ try {
   console.log("PASS exact-byte-bound Unicode bodies preserve original Response identity, URL, redirect/type and returned bytes");
   mode = "never-ending";
   wire = new TextEncoder().encode(" ".repeat(128));
-  await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }),
-    (error: unknown) => error instanceof ResponseValidationError && error.reason === "body_size");
-  await Promise.race([streamClosed, new Promise<never>((_, reject) => {
-    const timer = setTimeout(() => reject(new Error("oversized response supplier was not cancelled")), 1000);
-    streamClosed.finally(() => clearTimeout(timer)).catch(() => {});
-  })]);
+  await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }), isRefusal("body_size"));
+  await within(streamClosed, 1000, "oversized response supplier was not cancelled");
   receivedMedia = "text/plain";
-  await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }),
-    (error: unknown) => error instanceof ResponseValidationError && error.reason === "media_type");
-  await Promise.race([streamClosed, new Promise<never>((_, reject) => {
-    const timer = setTimeout(() => reject(new Error("refused-media supplier was not cancelled")), 1000);
-    streamClosed.finally(() => clearTimeout(timer)).catch(() => {});
-  })]);
+  await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }), isRefusal("media_type"));
+  await within(streamClosed, 1000, "refused-media supplier was not cancelled");
   receivedMedia = "application/json";
   console.log("PASS oversized and refused-media never-ending suppliers are cancelled before the HTTP timeout");
   mode = "fixed";
   wire = new TextEncoder().encode(exact + " ");
   await assert.rejects(() => client.PUT("/__fixture/value", { params: { header: headers }, body: { value: "committed", count: "1" } }),
-    (error: unknown) => error instanceof ResponseValidationError && error.reason === "body_size");
+    isRefusal("body_size"));
   assert.equal(mutations, 1, "response refusal makes no claim that a mutation did not commit");
   const binaryDocument = { ...document, paths: { "/__fixture/value": { get: { responses: { "200": {
     ...definition, content: { "application/json": definition.content["application/json"],
       "application/octet-stream": { schema: { type: "string", format: "binary" } } },
   } } } } } };
-  const binary = createTransport<paths>({ baseUrl, headers });
-  binary.use(responseValidation(binaryDocument, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: bound }));
+  const binary = fixtureClient(baseUrl, { document: binaryDocument, maxJSONBytes: bound });
   mode = "binary";
   wire = new Uint8Array(bound + 1).fill(255);
   const result = await binary.GET("/__fixture/value", { params: { header: headers }, parseAs: "arrayBuffer" });
-  assert(result.data !== undefined); assert.deepEqual(new Uint8Array(result.data), wire);
+  assert(result.data !== undefined);
+  assert.deepEqual(new Uint8Array(result.data), wire);
   console.log("PASS JSON refusal preserves unknown mutation outcome and the selected binary representation bypasses the JSON bound");
-} finally {
-  server.closeAllConnections();
-  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-}
+});

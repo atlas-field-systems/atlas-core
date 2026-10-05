@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { access } from "node:fs/promises";
 import { createConnection, type Socket } from "node:net";
 import { withFixture } from "./runner.js";
+import { assertPathRemoved, assertProcessGone, dataset, headers, timedFetch, within } from "./support.js";
 import fixtures from "./fixtures.json" with { type: "json" };
 
-const dataset = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": "0.2.0" };
 for (const mode of ["immediate cleanup", "peer expires before GET"]) {
   let silent: Socket | undefined;
   let peerClosed = false;
@@ -26,19 +24,18 @@ for (const mode of ["immediate cleanup", "peer expires before GET"]) {
       }
       // This later real HTTP connection proves the accept loop passed the silent
       // peer. No bytes are sent on that peer, including during normal cleanup.
-      const response = await fetch(`${baseUrl}/__fixture/value`, { headers, signal: AbortSignal.timeout(5000) });
+      const response = await timedFetch(`${baseUrl}/__fixture/value`, { headers });
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), { dataset_id: dataset, data: fixtures.initial });
       return { pid, dataDir };
     });
-    if (!peerClosed) await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("silent peer survived fixture shutdown")), 1000);
+    if (!peerClosed) {
       assert(silent !== undefined);
-      silent.once("close", () => { clearTimeout(timer); resolve(); });
-    });
+      await within(once(silent, "close"), 1000, "silent peer survived fixture shutdown");
+    }
     assert(peerClosed, "accepted silent peer is closed after fixture shutdown");
-    assert.throws(() => process.kill(owned.pid, 0), { code: "ESRCH" });
-    await assert.rejects(access(owned.dataDir), { code: "ENOENT" });
+    assertProcessGone(owned.pid);
+    await assertPathRemoved(owned.dataDir);
     console.log(`PASS ${mode}: accepted silent peer permits graceful fixture shutdown; peer/PID/private directory are gone`);
   } finally { silent?.destroy(); }
 }

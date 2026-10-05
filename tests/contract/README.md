@@ -56,7 +56,7 @@ The fixture's one-second header-read bound is shorter than its three-second HTTP
 
 ## Extending this fixture
 
-Add uniquely named fixture-only routes/components in a `*.contract.json` fragment. Assembly reuses canonical declarations before generation and fails instead of overriding a shared fact. Add a `*.test.ts` scenario; the shared test runner executes all such files without changing its list. Extend handwritten Go fixture handlers in `Atlas Core/tests/contractfixture`, private SQL here, or the same Core/SDK adapters when the ticket requires it. Keep effects and response-corruption controls test-only. Do not add another field schema in handwritten code or edit generated output.
+Add uniquely named fixture-only routes/components in a `*.contract.json` fragment. Assembly reuses canonical declarations before generation and fails instead of overriding a shared fact. Add a `*.test.ts` scenario; the shared test runner executes all such files without changing its list. Take fixture facts, the validated generated client, request deadlines, the error validator, loopback suppliers and process/directory absence checks from `support.ts` rather than restating them. Extend handwritten Go fixture handlers in `Atlas Core/tests/contractfixture`, private SQL here, or the same Core/SDK adapters when the ticket requires it. Keep effects and response-corruption controls test-only. Do not add another field schema in handwritten code or edit generated output.
 
 ## Current limits
 

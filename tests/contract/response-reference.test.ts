@@ -1,32 +1,19 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { createTransport, responseValidation, ResponseValidationError } from "../../Atlas SDK/src/index.js";
 import protocol from "./generated/protocol.json" with { type: "json" };
-import type { paths } from "./generated/protocol.js";
+import { dataset, fixtureClient, headers, isRefusal, otherDataset, version, withLoopbackServer } from "./support.js";
 
-const dataset = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const version = "0.2.0";
-const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": version };
 const expected = { dataset_id: dataset, data: { value: "reference identity", count: "1" } };
 const definition = protocol.paths["/__fixture/value"].get.responses["200"];
 let suppliedHeaders: Record<string, string> = headers;
-const server = createServer((_request, response) => {
+await withLoopbackServer((_request, response) => {
   response.writeHead(200, { ...suppliedHeaders, "Content-Type": "application/json" });
   response.end(JSON.stringify(expected));
-});
-await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
-try {
-  const address = server.address(); assert(address !== null && typeof address !== "string");
-  const baseUrl = `http://127.0.0.1:${address.port}`;
-  const clientFor = (reference: string) => {
-    const document = { ...protocol, paths: { "/__fixture/value": { get: { responses: { "200": {
+}, async (baseUrl) => {
+  const clientFor = (reference: string) => fixtureClient(baseUrl, { maxJSONBytes: 256, document: { ...protocol, paths: {
+    "/__fixture/value": { get: { responses: { "200": {
       ...definition, headers: { ...definition.headers, "Atlas-Dataset-ID": { $ref: reference } },
-    } } } } } };
-    const client = createTransport<paths>({ baseUrl, headers,
-      fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(document, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 256 }));
-    return client;
-  };
+    } } } },
+  } } });
   // Independently authored URI spellings identify the same existing Header
   // Object. Encoding applies to the fragment, including pointer separators.
   for (const reference of [
@@ -42,11 +29,11 @@ try {
     for (const invalidHeaders of [
       { "Atlas-Protocol-Version": version },
       { ...headers, "Atlas-Dataset-ID": "invalid-uuid" },
-      { ...headers, "Atlas-Dataset-ID": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+      { ...headers, "Atlas-Dataset-ID": otherDataset },
     ]) {
       suppliedHeaders = invalidHeaders;
       await assert.rejects(() => client.GET("/__fixture/value", { params: { header: headers } }),
-        (error: unknown) => error instanceof ResponseValidationError && error.reason === "context", reference);
+        isRefusal("context"), reference);
     }
   }
   console.log("PASS equivalent literal/encoded local header references preserve real HTTP body, required-header, UUID and context checks");
@@ -61,7 +48,4 @@ try {
     assert.throws(() => clientFor(reference), /Response headers require local component references/u);
   }
   console.log("PASS unresolved, malformed and unsupported header references still fail construction");
-} finally {
-  server.closeAllConnections();
-  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-}
+});

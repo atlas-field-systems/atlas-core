@@ -1,15 +1,20 @@
 import assert from "node:assert/strict";
-import { createTransport, responseValidation, ResponseValidationError } from "../../Atlas SDK/src/index.js";
+import { ResponseValidationError } from "../../Atlas SDK/src/index.js";
 import { withFixture } from "./runner.js";
-import protocol from "./generated/protocol.json" with { type: "json" };
 import fixtures from "./response-fixtures.json" with { type: "json" };
 import type { paths } from "./generated/protocol.js";
+import { dataset, fixtureClient, headers, timedFetch, version } from "./support.js";
 
-const dataset = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const version = "0.2.0";
-const headers = { "Atlas-Dataset-ID": dataset, "Atlas-Protocol-Version": version };
-const read = { dataset_id: dataset, data: { state: "ready", result: { kind: "value", value: "response fixture" }, label: "new optional field" } };
-const error = { dataset_id: dataset, error: { code: "fixture_refusal", message: "Fixture read refused", request_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", details: { retryable: false, scope: "read fixture" } } };
+const read = {
+  dataset_id: dataset, data: { state: "ready", result: { kind: "value", value: "response fixture" }, label: "new optional field" },
+};
+const error = {
+  dataset_id: dataset,
+  error: {
+    code: "fixture_refusal", message: "Fixture read refused", request_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    details: { retryable: false, scope: "read fixture" },
+  },
+};
 const openapi = { openapi: "3.0.3", info: { title: "Raw fixture contract", version }, paths: {} };
 const initial = { dataset_id: dataset, data: { value: "initial fixture value", count: "0" } };
 type ResponsePath = Extract<keyof paths, `/__fixture/response/${string}`>;
@@ -20,13 +25,13 @@ const routes: Record<string, ResponsePath> = {
 
 for (const mode of ["generated transport", "direct Protocol"]) {
   await withFixture(async ({ baseUrl }) => {
-    const client = createTransport<paths>({ baseUrl, headers, fetch: (request) => fetch(request, { signal: AbortSignal.timeout(5000) }) });
-    client.use(responseValidation(protocol, { datasetId: dataset, protocolVersion: version }, { maxJSONBytes: 1_048_576 }));
+    const client = fixtureClient(baseUrl);
     if (mode === "generated transport") {
       const validRead = await client.GET("/__fixture/response/read", { params: { header: headers } });
       assert.deepEqual(validRead.data, read);
       assert.equal(validRead.response.headers.get("Fixture-Receipt"), "receipt:17");
-      const withOptionalHeader = await client.GET("/__fixture/response/read", { params: { header: headers, query: { fault: "valid_optional_header" } } });
+      const withOptionalHeader = await client.GET("/__fixture/response/read",
+        { params: { header: headers, query: { fault: "valid_optional_header" } } });
       assert.deepEqual(withOptionalHeader.data, read);
       assert.equal(withOptionalHeader.response.headers.get("Fixture-Note"), "optional");
       const mutationEnvelope = await client.GET("/__fixture/response/mutation", { params: { header: headers } });
@@ -51,17 +56,17 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         ["/__fixture/response/error", error, 400],
         ["/__fixture/response/openapi", openapi, 200],
       ] as const) {
-        const response = await fetch(`${baseUrl}${route}`, { headers, signal: AbortSignal.timeout(5000) });
+        const response = await timedFetch(`${baseUrl}${route}`, { headers });
         assert.equal(response.status, status);
         assert.equal(response.headers.get("Atlas-Dataset-ID"), dataset);
         assert.equal(response.headers.get("Atlas-Protocol-Version"), version);
         assert.deepEqual(await response.json(), expected);
       }
-      const empty = await fetch(`${baseUrl}/__fixture/response/empty`, { headers, signal: AbortSignal.timeout(5000) });
+      const empty = await timedFetch(`${baseUrl}/__fixture/response/empty`, { headers });
       assert.equal(empty.status, 204);
       assert.equal(empty.headers.get("Content-Type"), null);
       assert.equal((await empty.arrayBuffer()).byteLength, 0);
-      const binary = await fetch(`${baseUrl}/__fixture/response/binary`, { headers, signal: AbortSignal.timeout(5000) });
+      const binary = await timedFetch(`${baseUrl}/__fixture/response/binary`, { headers });
       assert.equal(binary.status, 200);
       assert.equal(binary.headers.get("Content-Type"), "application/octet-stream");
       assert.equal(binary.headers.get("Content-Length"), "3");
@@ -83,7 +88,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
             return true;
           });
       } else {
-        const response = await fetch(`${baseUrl}${route}?fault=${encodeURIComponent(fixture.fault)}`, { headers, signal: AbortSignal.timeout(5000) });
+        const response = await timedFetch(`${baseUrl}${route}?fault=${encodeURIComponent(fixture.fault)}`, { headers });
         assert.equal(response.status, fixture.status, fixture.fault);
         for (const [name, value] of Object.entries(fixture.headers)) {
           if (!fixture.omit_headers.some((omitted) => omitted === name)) assert.equal(response.headers.get(name), value, fixture.fault);
@@ -92,7 +97,7 @@ for (const mode of ["generated transport", "direct Protocol"]) {
         assert.equal(await response.text(), fixture.body, fixture.fault);
       }
     }
-    const persisted = await fetch(`${baseUrl}/__fixture/value`, { headers, signal: AbortSignal.timeout(5000) });
+    const persisted = await timedFetch(`${baseUrl}/__fixture/value`, { headers });
     assert.deepEqual(await persisted.json(), initial);
   });
   console.log(`PASS ${mode}: response envelopes, exceptions and independent corruption corpus; fixture state preserved`);
