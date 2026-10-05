@@ -49,8 +49,13 @@ def run(arguments, env, *, cwd=ROOT, capture=False, timeout=180):
     return result.stdout.strip() if capture else None
 
 
-def prepare(bootstrap):
-    cache = Path(os.environ.get("ATLAS_TOOLS", Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "atlas-protocol-tools"))
+def default_cache():
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    return Path(os.environ.get("ATLAS_TOOLS", cache_home / "atlas-protocol-tools"))
+
+
+def prepare(bootstrap, cache=None):
+    cache = default_cache() if cache is None else cache
     cache.mkdir(mode=0o700, parents=True, exist_ok=True)
     go, sqlc = cache / "go/bin/go", cache / "bin/sqlc"
     if bootstrap:
@@ -60,12 +65,14 @@ def prepare(bootstrap):
             install_archive(LOCK["sqlc"], cache / "bin", cache)
     if not go.exists() or not sqlc.exists():
         raise ValueError("Go/sqlc are absent; run python3 scripts/verify.py --bootstrap or set ATLAS_TOOLS")
-    env = {**os.environ, "PATH": str(go.parent) + os.pathsep + os.environ["PATH"], "GOFLAGS": "-mod=readonly", "GOTOOLCHAIN": "local"}
+    env = {**os.environ, "PATH": str(go.parent) + os.pathsep + os.environ["PATH"],
+           "GOFLAGS": "-mod=readonly", "GOTOOLCHAIN": "local"}
     actual_go = run([go, "version"], env, capture=True)
     require_version(actual_go.split()[2], LOCK["go"]["version"], "Go")
     for command, expected in [([sqlc, "version"], LOCK["sqlc"]["version"]),
                               (["node", "--version"], LOCK["node"]), (["npm", "--version"], LOCK["npm"])]:
         require_version(run(command, env, capture=True), expected, str(command[0]))
-    generator = run([go, "tool", f"-modfile={ROOT / 'Atlas Protocol/tools/go.mod'}", "oapi-codegen", "--version"], env, cwd=ROOT / "Atlas Protocol/tools", capture=True)
+    generator = run([go, "tool", f"-modfile={ROOT / 'Atlas Protocol/tools/go.mod'}", "oapi-codegen", "--version"],
+                    env, cwd=ROOT / "Atlas Protocol/tools", capture=True)
     require_version(generator.splitlines()[-1], LOCK["oapi_codegen"], "oapi-codegen")
     return env, go, sqlc

@@ -1,7 +1,6 @@
 """Exercise locked bootstrap refusal before an archive can be extracted."""
 import hashlib
 import io
-import os
 from pathlib import Path
 import tarfile
 import tempfile
@@ -39,19 +38,11 @@ def check_toolchain_refusals():
         go.write_text('#!/bin/sh\nprintf "go version go1.0.0 linux/amd64\\n"\n')
         go.chmod(0o700)
         (cache / "bin/sqlc").touch()
-        previous = os.environ.get("ATLAS_TOOLS")
-        os.environ["ATLAS_TOOLS"] = str(cache)
         try:
-            try:
-                prepare(bootstrap=False)
-            except ValueError as error:
-                if "unexpected Go version" not in str(error):
-                    raise
-            else:
-                raise RuntimeError("bootstrap accepted deliberately wrong tool version")
-        finally:
-            if previous is None:
-                del os.environ["ATLAS_TOOLS"]
-            else:
-                os.environ["ATLAS_TOOLS"] = previous
+            prepare(bootstrap=False, cache=cache)
+        except ValueError as error:
+            if "unexpected Go version" not in str(error):
+                raise
+        else:
+            raise RuntimeError("bootstrap accepted deliberately wrong tool version")
     print("PASS bootstrap rejects wrong checksum before extraction and wrong tool version", flush=True)

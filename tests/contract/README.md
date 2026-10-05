@@ -8,7 +8,7 @@ From a supported clean checkout:
 python3 scripts/verify.py --bootstrap
 ```
 
-Prerequisites and exact locks are in [Protocol](../../Atlas%20Protocol/README.md). CI runs that same command for every pull request and branch push. It preserves `.artifacts/verification.log` and the passing `.artifacts/verification.json` report, including source revision, working-tree status, exact tool pins and regenerated file digests. A failed check removes any previous passing report. Required checks cannot be skipped by this entry point.
+Prerequisites and exact locks are in [Protocol](../../Atlas%20Protocol/README.md). CI runs that same command for every pull request and branch push. It preserves `.artifacts/verification.log` and the passing `.artifacts/verification.json` report, including source revision, working-tree status, exact tool pins, regenerated file digests and the checks recorded as each passed. A failed check removes any previous passing report. Required checks cannot be skipped by this entry point.
 
 The agreed behavioral boundary is generated TypeScript transport over actual loopback HTTP to generated Go strict interfaces, real temporary SQLite in WAL mode, and private temporary file locations. The independently authored direct-HTTP path starts from an equivalent separate fixture and checks the same literal expected outcome. Profile, non-HTTP message, local Catalog and runner checks supplement that workflow where the public boundary is schema consumption, package lookup or process lifetime. Clean generation is a separate build check, never a behavioral oracle.
 

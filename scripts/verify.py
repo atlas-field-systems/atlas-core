@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """One clean verification entry point for the Slice 0 foundation."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import shutil
@@ -15,56 +16,71 @@ def snapshot():
             for directory in OUTPUTS for path in sorted(directory.rglob("*")) if path.is_file()}
 
 
+@contextmanager
+def check(passed, name):
+    """Record `name` in the evidence report only after its block succeeds."""
+    yield
+    passed.append(name)
+
+
 def verify(bootstrap):
     artifacts = ROOT / ".artifacts"
     artifacts.mkdir(exist_ok=True)
     # Never leave a previous passing report after a failed verification.
     report = artifacts / "verification.json"
     report.unlink(missing_ok=True)
-    check_toolchain_refusals()
-    env, go, sqlc = prepare(bootstrap)
-    run(["npm", "ci", "--ignore-scripts"], env, cwd=ROOT / "Atlas SDK")
-    for module in [ROOT / "Atlas Core", ROOT / "Atlas Protocol/tools"]:
-        run([go, "mod", "verify"], env, cwd=module)
-    generate(env, go, sqlc)
-    first = snapshot()
-    if not first:
-        raise RuntimeError("generation produced no artifacts")
-    generate(env, go, sqlc)
-    if snapshot() != first:
-        raise RuntimeError("two clean generations changed output")
-    print(f"PASS clean deterministic generation: {len(first)} files match byte for byte", flush=True)
-    go_sources = sorted((ROOT / "Atlas Core").rglob("*.go"))
-    formatted = run([go.parent / "gofmt", "-l", *go_sources], env, capture=True)
-    if formatted:
-        raise RuntimeError(f"Go formatting mismatch: {formatted}")
-    for arguments in [[go, "build", "./..."], [go, "test", "./..."], [go, "vet", "./..."]]:
-        run(arguments, env, cwd=ROOT / "Atlas Core")
-    run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=ROOT / "Atlas Core")
-    run(["npm", "run", "lint"], env, cwd=ROOT / "Atlas SDK")
-    run(["npm", "run", "check"], env, cwd=ROOT / "Atlas SDK")
-    if (ROOT / "Atlas SDK/dist").exists():
-        shutil.rmtree(ROOT / "Atlas SDK/dist")
-    run(["npm", "run", "build"], env, cwd=ROOT / "Atlas SDK")
-    # Consumer exports resolve only built JS/declarations, absent before this build.
-    run(["npm", "run", "check:consumer"], env, cwd=ROOT / "Atlas SDK")
-    package = json.loads(run(["npm", "pack", "--dry-run", "--json", "--ignore-scripts"], env, cwd=ROOT / "Atlas SDK", capture=True))
-    allowed = ("dist/",)
-    for file in package[0]["files"]:
-        name = file["path"]
-        if name not in {"README.md", "package.json"} and not name.startswith(allowed):
-            raise RuntimeError(f"unexpected SDK consumer package artifact: {name}")
-    print("PASS SDK consumer package excludes fixture tooling", flush=True)
-    run(["npm", "test"], env, cwd=ROOT / "Atlas SDK")
+    passed = []
+    sdk, core = ROOT / "Atlas SDK", ROOT / "Atlas Core"
+    with check(passed, "bootstrap checksum/version refusal"):
+        check_toolchain_refusals()
+    with check(passed, "locked dependencies and tool versions"):
+        env, go, sqlc = prepare(bootstrap)
+        run(["npm", "ci", "--ignore-scripts"], env, cwd=sdk)
+        for module in [core, ROOT / "Atlas Protocol/tools"]:
+            run([go, "mod", "verify"], env, cwd=module)
+    with check(passed, "two clean generations"):
+        generate(env, go, sqlc)
+        first = snapshot()
+        if not first:
+            raise RuntimeError("generation produced no artifacts")
+        generate(env, go, sqlc)
+        if snapshot() != first:
+            raise RuntimeError("two clean generations changed output")
+        print(f"PASS clean deterministic generation: {len(first)} files match byte for byte", flush=True)
+    with check(passed, "Go format/build/test/vet"):
+        formatted = run([go.parent / "gofmt", "-l", *sorted(core.rglob("*.go"))], env, capture=True)
+        if formatted:
+            raise RuntimeError(f"Go formatting mismatch: {formatted}")
+        for arguments in [[go, "build", "./..."], [go, "test", "./..."], [go, "vet", "./..."]]:
+            run(arguments, env, cwd=core)
+        run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=core)
+    with check(passed, "TypeScript structural lint and independent rule probes"):
+        run(["npm", "run", "lint"], env, cwd=sdk)
+    with check(passed, "strict TypeScript and SDK build"):
+        run(["npm", "run", "check"], env, cwd=sdk)
+        if (sdk / "dist").exists():
+            shutil.rmtree(sdk / "dist")
+        run(["npm", "run", "build"], env, cwd=sdk)
+    with check(passed, "ordinary Node package exports and consumer declarations"):
+        # Consumer exports resolve only built JS/declarations, absent before this build.
+        run(["npm", "run", "check:consumer"], env, cwd=sdk)
+    with check(passed, "SDK consumer artifact isolation"):
+        package = json.loads(run(["npm", "pack", "--dry-run", "--json", "--ignore-scripts"], env, cwd=sdk, capture=True))
+        for file in package[0]["files"]:
+            name = file["path"]
+            if name not in {"README.md", "package.json"} and not name.startswith("dist/"):
+                raise RuntimeError(f"unexpected SDK consumer package artifact: {name}")
+        print("PASS SDK consumer package excludes fixture tooling", flush=True)
+    with check(passed, "generated transport/direct Protocol workflows and fixture cleanup"):
+        run(["npm", "test"], env, cwd=sdk)
     revision = run(["git", "rev-parse", "HEAD"], env, capture=True)
     dirty = bool(run(["git", "status", "--porcelain"], env, capture=True))
-    report.write_text(json.dumps({"source_revision": revision, "working_tree_changed": dirty,
-        "toolchain": LOCK, "generated_sha256": {name: hashlib.sha256(value).hexdigest() for name, value in first.items()},
-        "checks": ["bootstrap checksum/version refusal", "locked dependencies and tool versions", "two clean generations",
-                   "Go format/build/test/vet", "TypeScript structural lint and independent rule probes", "strict TypeScript and SDK build",
-                   "ordinary Node package exports and consumer declarations", "SDK consumer artifact isolation", "generated transport/direct Protocol workflows", "fixture cleanup"]}, indent=2) + "\n")
+    report.write_text(json.dumps({
+        "source_revision": revision, "working_tree_changed": dirty, "toolchain": LOCK,
+        "generated_sha256": {name: hashlib.sha256(value).hexdigest() for name, value in first.items()},
+        "checks": passed,
+    }, indent=2) + "\n")
     print(f"PASS Slice 0 foundation at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
