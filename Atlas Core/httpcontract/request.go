@@ -5,7 +5,6 @@ package httpcontract
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +20,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
+	"github.com/google/uuid"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 )
 
@@ -43,6 +43,7 @@ func init() {
 // RequestError is also used by generated parameter and strict-decoding hooks.
 // Responses intentionally omit rejected inputs because they may contain secrets.
 func RequestError(w http.ResponseWriter, r *http.Request, err error) {
+	// Registered patterns contain schema names, never submitted path values.
 	operation := strings.TrimPrefix(r.Pattern, r.Method+" ")
 	stage := "binding or JSON decoding"
 	var structural *openapi3filter.RequestError
@@ -52,28 +53,18 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 			operation = structural.Input.Route.Path
 		}
 	}
-	// Registered patterns contain schema names, never submitted path values.
-	message := "Request structure is invalid during " + stage + " for " + r.Method
-	if operation != "" {
-		message += " " + operation
-	}
+	target := strings.TrimSpace(r.Method + " " + operation)
 	var maximum *http.MaxBytesError
 	if errors.As(err, &maximum) {
-		WriteError(w, http.StatusRequestEntityTooLarge, "payload_too_large", "Request body exceeds its configured byte bound for "+r.Method+" "+operation)
+		WriteError(w, http.StatusRequestEntityTooLarge, "payload_too_large", "Request body exceeds its configured byte bound for "+target)
 		return
 	}
-	WriteError(w, http.StatusBadRequest, "invalid_request", message)
+	WriteError(w, http.StatusBadRequest, "invalid_request", "Request structure is invalid during "+stage+" for "+target)
 }
 
 // WriteError emits the shared Protocol envelope. The context owner sets the
 // Dataset/version headers before dispatching to this adapter.
 func WriteError(w http.ResponseWriter, status int, code, message string) {
-	var diagnosticID protocol.Identifier
-	if _, err := rand.Read(diagnosticID[:]); err != nil {
-		panic(fmt.Errorf("allocate HTTP diagnostic ID: %w", err))
-	}
-	diagnosticID[6] = (diagnosticID[6] & 0x0f) | 0x40
-	diagnosticID[8] = (diagnosticID[8] & 0x3f) | 0x80
 	var dataset *protocol.Identifier
 	if header := w.Header().Get("Atlas-Dataset-ID"); header != "" {
 		var identifier protocol.Identifier
@@ -86,7 +77,7 @@ func WriteError(w http.ResponseWriter, status int, code, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(protocol.Error{DatasetId: dataset, Error: protocol.ErrorInfo{
-		Code: code, Message: message, RequestId: diagnosticID,
+		Code: code, Message: message, RequestId: uuid.New(),
 	}}); err != nil {
 		log.Printf("write HTTP error response: %v", err)
 	}

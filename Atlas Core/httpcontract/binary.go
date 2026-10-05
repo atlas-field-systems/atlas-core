@@ -25,12 +25,15 @@ func ValidateBinaryRequests(spec *openapi3.T, next http.Handler, operationID str
 			if operation.OperationID != operationID {
 				continue
 			}
-			if found || operation.RequestBody == nil || operation.RequestBody.Value == nil || len(operation.RequestBody.Value.Content) == 0 {
-				return nil, errors.New("binary validation requires one operation with declared binary content")
+			if found {
+				return nil, fmt.Errorf("binary validation operation %q is declared more than once", operationID)
+			}
+			if operation.RequestBody == nil || operation.RequestBody.Value == nil || len(operation.RequestBody.Value.Content) == 0 {
+				return nil, fmt.Errorf("binary validation operation %q declares no request content", operationID)
 			}
 			for _, media := range operation.RequestBody.Value.Content {
 				if media.Schema == nil || media.Schema.Value == nil || !media.Schema.Value.Type.Is("string") || media.Schema.Value.Format != "binary" {
-					return nil, errors.New("binary validation requires a binary schema for each declared media type")
+					return nil, fmt.Errorf("binary validation operation %q requires a binary schema for each declared media type", operationID)
 				}
 			}
 			found = true
