@@ -20,7 +20,7 @@ assert.deepEqual(pause.metadata, {
   success: "suspension_reported_by_asset",
   binding: "representative",
 });
-assert.equal(pause.input_schema, "#/components/schemas/Pause");
+assert.equal(pause.inputSchema, "#/components/schemas/Pause");
 assert.equal(pause.validateInput({ command: "pause" }), true);
 assert.equal(pause.validateInput({ command: "pause", unexpected: true }), false);
 assert.equal(lookupCommand("unknown"), undefined);

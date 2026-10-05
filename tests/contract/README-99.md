@@ -6,7 +6,7 @@ This is [ticket #99](https://github.com/atlas-field-systems/atlas-core/issues/99
 python3 scripts/verify.py --bootstrap
 ```
 
-The public SDK export `lookupCommand(name)` returns an installed Command definition or `undefined`. Each definition contains its Protocol edition, complete representative metadata, canonical `input_schema` reference and `validateInput(unknown)` function. Lookup and validation require no network or Core process. Metadata is immutable, and validation does not change the caller's input.
+The public SDK export `lookupCommand(name)` returns an installed Command definition or `undefined`. Each definition contains its Protocol edition (`protocolVersion`), complete representative `metadata` copied from Protocol, canonical `inputSchema` reference and `validateInput(unknown)` function. SDK-authored members use camelCase; `metadata` keeps Protocol's snake_case names. Lookup and validation require no network or Core process. Metadata is immutable, and validation does not change the caller's input.
 
 Protocol authors `MoveTo` and `Pause` inputs and their `x-atlas-command` metadata once. The metadata's containing schema establishes the association. Clean generation copies the same canonical `protocol.json` bytes into the SDK's disposable generated directory, so the package includes its own contract artifact. The SDK discovers the metadata and compiles references into that artifact with the existing pinned schema adapter. It declares no second input schema, custom generator template, operation wrapper or registration API. The normal verifier includes the copied artifact in its two fresh generation comparisons and SDK build/package isolation checks.
 

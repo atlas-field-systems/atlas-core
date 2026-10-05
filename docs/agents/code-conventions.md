@@ -22,6 +22,7 @@ These conventions govern code quality. The [system design](../architecture/syste
 - A type or non-null assertion requires an identified compiler or library limitation and evidence of the invariant that establishes the value's type. Keep it at the narrowest affected boundary and document that evidence; calling it necessary is insufficient. Assertions cannot replace runtime validation of untrusted values. Const assertions and `satisfies` remain available for preserving and checking inferred types.
 - In Go, use typed inputs and results for known shapes. Return errors with useful operation context while preserving their cause. Handle errors explicitly, including failures in background work.
 - Keep optional, absent and null values distinct wherever the contract distinguishes them. Do not erase those differences for implementation convenience.
+- Name handwritten TypeScript identifiers and SDK-authored object members in camelCase, including acronyms written as in `maxJSONBytes`. Values that mirror Protocol, such as generated types, wire bodies and copied Protocol metadata, keep Protocol's snake_case names; do not mix the two styles among an object's own members.
 - Use [domain vocabulary](../../GLOSSARY.md) in public interfaces, tests and messages. Comments explain intent, constraints or non-obvious behavior; update them with the code they describe.
 
 ## Protocol and generation
