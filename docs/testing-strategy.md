@@ -12,7 +12,9 @@ Start feature coverage with a complete workflow and its observable outcome, then
 
 Accepted on 22 September 2026. Atlas requires extensive integration testing between the real SDK and Core. External systems are expected to integrate through the SDK; demonstrating its behavioral parity with Core makes those external SDK tests useful evidence about Core integration. Cover the contracts thoroughly with independent expected outcomes, rather than maximizing test count or testing generated code against another output of the same generator.
 
-This remains the required operational testing plan. The [Slice 0 contract fixture](../tests/contract/README.md) executes a bounded generated-client/direct-HTTP workflow with real SQLite and fixture lifetime checks. It does not establish operational Core/SDK parity or measured performance.
+This remains the required operational testing plan. The delivered [#94 Slice 0 foundation](https://github.com/atlas-field-systems/atlas-core/issues/94) has [#95-100 qualification records](../tests/contract/README.md) for generated-client/direct-HTTP workflows with real SQLite/files, validation, fixture lifetime, shared messages, local Catalog and binary bindings. The [#69 proof](research/atlas-reassessment/13-protocol-toolchain-proof.md) remains research prior art. S0's public Protocol has no routes. Fixture bounds and artificial editions qualify the tested bindings, without establishing operational Core/SDK parity, production capacity or released-version compatibility.
+
+Operational requirements below remain pending with their [owning slices](architecture/implementation-sequence.md#required-scenario-homes), including SDK mutation-outcome/retry evidence and real Object durability. Foundation checks do not waive them.
 
 ## Real boundaries and independent expectations
 

@@ -8,7 +8,8 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | End-to-end testing policy, SDK–Core parity and required scenarios | [Testing strategy](docs/testing-strategy.md) |
 | Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/testing-strategy.md#mvp-integration-checks) |
 | Implementation slices, route/scenario coverage and specification tickets | [Implementation sequence](docs/architecture/implementation-sequence.md) |
-| Executed representative generation and validation proof | [Pinned toolchain proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) |
+| Delivered foundation and per-ticket qualification | [Slice 0 coverage](tests/contract/README.md) |
+| Earlier representative generation and validation research | [Pinned toolchain proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
 | Collaboration between Core, SDK, Protocol and local tools | [System design](docs/architecture/system-design.md) |
 | Deep-module design and review criteria | [Structure and interfaces](docs/agents/code-conventions.md#structure-and-interfaces) |
@@ -43,4 +44,6 @@ Current API and SDK rules live on the topic pages. The [decision log](docs/plann
 
 ## Contract foundation
 
-[Slice 0](tests/contract/README.md) adds the shared Protocol baseline, generated Core/SDK bindings, narrow validation adapters and local representative Catalog lookup. Its isolated checks cover HTTP/SQLite/file workflows and canonical non-HTTP messages. Run its required checks with `python3 scripts/verify.py --bootstrap`. Operational Core workflows remain with their owning implementation slices.
+[Spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94) delivered [Slice 0](tests/contract/README.md), with the #95-100 coverage records linked there. It contains the shared Protocol baseline, generated Core/SDK bindings, narrow validation adapters and local representative Catalog lookup. Its isolated checks cover HTTP/SQLite/file workflows and canonical non-HTTP messages. The shipped public Protocol has no routes; fixture operations stay in test-only contracts. The [#69 proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) remains research prior art.
+
+Run required foundation checks with `python3 scripts/verify.py --bootstrap`. Fixture bounds and artificial editions qualify these adapters, without establishing production capacity or release compatibility. Operational workflows and their required failure evidence remain with the owners in the [implementation sequence](docs/architecture/implementation-sequence.md).
