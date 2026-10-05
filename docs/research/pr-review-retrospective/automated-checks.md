@@ -21,7 +21,7 @@ There is no absent-CI finding here. The explicit Bash shell provides pipeline fa
 
 Priority: medium; strong recurrence across repositories.
 
-[Atlas Core #101](https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175233368), [easymanet #58](https://github.com/the-Drunken-coder/easymanet/pull/58#discussion_r3785947416) and [Ridgeline #102](https://github.com/the-Drunken-coder/Ridgeline/pull/102#discussion_r4187454710) identified cleanup throws hiding the primary failure. A separate [easymanet finding](https://github.com/the-Drunken-coder/easymanet/pull/58#discussion_r3778441141) identified a return from `finally`.
+[Atlas Core #101](https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175233368), [easymanet #58](https://github.com/the-Drunken-coder/easymanet/pull/58#discussion_r3785947416) and [private_017 #102, comment 4187454710](evidence/result-summary.json) identified cleanup throws hiding the primary failure. A separate [easymanet finding](https://github.com/the-Drunken-coder/easymanet/pull/58#discussion_r3778441141) identified a return from `finally`.
 
 The active conventions already specify preserving both failures. The custom lint has no corresponding rule.
 

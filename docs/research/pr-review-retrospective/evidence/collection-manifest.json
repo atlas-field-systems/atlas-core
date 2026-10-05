@@ -58,5 +58,5 @@
     "repository_records": "Sort the original repository records by (kind, id); form [kind, id, pr, cited_body_sha256] arrays; serialize the outer array with Python json.dumps using separators=(comma, colon) and default ensure_ascii=True; SHA-256 its UTF-8 bytes."
   },
   "screening_evidence": "Selected source URLs, identities, body hashes and document labels are preserved in result-summary.json. Full keyword lists and all individual screening decisions were not retained; exhaustive screening is not replayable.",
-  "privacy": "All raw bodies are omitted. Private repository identities are replaced with anonymous keys. Previously published cited URLs remain in the selected evidence."
+  "privacy": "All raw bodies are omitted. Private repository identities and source URLs are replaced with anonymous keys, PR numbers and record IDs. Public source URLs remain directly linked."
 }

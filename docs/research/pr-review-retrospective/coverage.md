@@ -8,6 +8,8 @@ GitHub was accessed read-only through the authenticated `gh` account `the-Drunke
 
 The [query manifest](evidence/collection-manifest.json) preserves the recovered endpoint templates, search partitions, pagination and deduplication rules. The [frozen result summary](evidence/result-summary.json) was recomputed from the original saved collection. It includes per-repository counts, source snapshot hashes, search completeness and the cited record identities and body hashes. These files preserve this collection's results; a new query can return different results as repositories and comments change.
 
+Private sources use the same anonymous repository keys in the coverage table, proposal citations and result summary. Their citations point to the summary, which retains PR numbers, record IDs and body hashes without publishing repository names or URLs. Public sources remain directly linked to GitHub. Access to an original private source is required to audit its contents.
+
 | Measure | Result |
 | --- | ---: |
 | Repositories returned by the owner/collaborator/organization-member inventory | 108 |
@@ -31,7 +33,7 @@ The records span 18 September 2025 through 5 October 2026. Empty approvals, revi
 | --- | ---: | ---: | ---: | ---: | ---: |
 | atlas-field-systems/atlas-core | 37 | 407 | 177 | 222 | 806 |
 | the-Drunken-coder/Atlas-Modernization | 423 | 3,637 | 3,266 | 2,431 | 9,334 |
-| the-Drunken-coder/ATLAS-retired | 820 | 1,887 | 1,408 | 706 | 4,001 |
+| Private repository `private_006` | 820 | 1,887 | 1,408 | 706 | 4,001 |
 | Other repositories, 65 with PRs | 599 | 4,433 | 2,210 | 2,250 | 8,893 |
 | Total | 1,879 | 10,364 | 7,061 | 5,609 | 23,034 |
 
@@ -63,7 +65,7 @@ For each candidate:
 2. Read available replies for acceptance, correction, withdrawal or an authorized scope change.
 3. Compare the failure with current conventions, the testing strategy and relevant accepted Atlas architecture/topics/ADRs.
 4. Classify it as a new clarification, an existing rule needing a review procedure, a mechanical enforcement gap or unsuitable historical guidance.
-5. Cite representative primary comments directly in the corresponding proposal.
+5. Link representative public comments directly in the corresponding proposal. Cite private comments through their anonymous record references in the result summary.
 
 Recurring themes are supported by distinct incidents, often across repositories. No exact defect-frequency ranking is claimed. Duplicate bot summaries, copied prompts, repeated reviews of the same change and replies confirming one fix are not independent incidents. The two optimized-Python reviews in Atlas #93 are one example of this deduplication.
 
@@ -76,7 +78,7 @@ Fix-confirmation replies establish what participants reported. They do not estab
 | Claimed missed socket-close event in the pinned Node test | Excluded as a withdrawn false positive | [Evidence response](https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4178564165), [withdrawal](https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4178565383) |
 | Rejecting intentionally recorded failing benchmark measurements | Excluded as an acceptance-policy inference contradicted by research purpose | [Finding](https://github.com/the-Drunken-coder/Atlas-Modernization/pull/318#discussion_r3946627593), [withdrawal](https://github.com/the-Drunken-coder/Atlas-Modernization/pull/318#discussion_r3947490209) |
 | Additional URI validation beyond the governing contract | Excluded as unsupported stricter behavior | [Finding](https://github.com/the-Drunken-coder/DCS/pull/3#discussion_r3777478955), [rebuttal](https://github.com/the-Drunken-coder/DCS/pull/3#discussion_r3777484727) |
-| Universal compatibility inferred from one historical root export | Excluded because the repository intentionally changed that boundary | [Finding](https://github.com/the-Drunken-coder/Atlas-Mesh/pull/2#discussion_r3756840414), [rebuttal](https://github.com/the-Drunken-coder/Atlas-Mesh/pull/2#discussion_r3756870439) |
+| Universal compatibility inferred from one historical root export | Excluded because the repository intentionally changed that boundary | [private_007 #2, comment 3756840414](evidence/result-summary.json), [private_007 #2, comment 3756870439](evidence/result-summary.json) |
 | Restoring old scan-result completion gates or enforcing a bot's docstring percentage | Excluded as superseded or unowned requirements | [Atlas #93 response](https://github.com/atlas-field-systems/atlas-core/pull/93#issuecomment-5966850834) |
 | Historical write-response updates to synchronized pictures | Excluded as successor guidance | [Current ADR-0018](../../adr/0018-confirm-writes-when-core-commits.md) |
 | Missing CI or a required tracked-output generation diff | Excluded after inspecting the existing workflow and verifier | [Workflow](../../../.github/workflows/contract-foundation.yml), [verifier](../../../scripts/verify.py), [generation](../../../scripts/generate.py) |
@@ -93,4 +95,4 @@ Initial verification covered the eight proposal documents. Local links/anchors, 
 
 The existing manual command `python3 -O scripts/verify.py --toolchain-self-test` passed, demonstrating checksum refusal before extraction and wrong-version refusal under optimization. Application tests and the full foundation verifier were not rerun for documentation-only suggestions. A read-only TypeScript lint probe was unavailable because installed SDK dependencies were absent.
 
-Raw fetched records remain outside the repository because the corpus includes private repositories and comment bodies. The result summary replaces private repository identities with anonymous keys and omits raw bodies. Its counts and hashes do not grant access to those sources or reproduce their omitted contents. GitHub links retain the selected primary evidence; the committed manifest and summary retain collection provenance without depending on temporary paths.
+Raw fetched records remain outside the repository because the corpus includes private repositories and comment bodies. Private identities and URLs are anonymized throughout the bundle, and raw bodies are omitted. Counts and hashes do not grant access to those sources or reproduce their omitted contents. Public GitHub links and anonymous private record references retain the selected evidence identities; the committed manifest and summary retain collection provenance without depending on temporary paths.
