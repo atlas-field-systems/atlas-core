@@ -50,6 +50,22 @@ These conventions govern code quality. The [system design](../architecture/syste
 - Coordinate asynchronous scenarios with observable readiness and deterministic barriers. Preserve failing seeds or schedules when randomness is used.
 - Add coverage for new promises and demonstrated defects. Avoid duplicate smoke tests and tests that break on harmless internal refactors.
 
+## Recurring defects
+
+These patterns were found and corrected in this codebase. Each instance looks locally reasonable, so check new and changed code for them explicitly.
+
+- **Restated facts.** The same identifier, limit, timeout, edition set or mode list appears as literals in several places, or once as a type and again as a runtime list. Give each fact one named definition and derive the others from it: derive a union type from an `as const` array, interpolate a limit into the message that reports it, and call one predicate wherever a rule applies.
+- **Copied scaffolding.** Setup is repeated across files with small variations, such as client construction, request deadlines, schema compilation, stub servers, storage encode/decode pairs or absence checks. Extract it by the third copy. Contract-test scaffolding lives in `tests/contract/support.ts`; expected outcomes stay literal in each test.
+- **Duplicate defensive checks.** A handler re-implements a rule that an upstream boundary already enforces. The copy is unreachable, untested and drifts. Enforce each rule at one boundary; a second layer that genuinely needs the rule calls the same function.
+- **Reimplemented primitives and impossible branches.** Code hand-builds identifiers, encoders or timer races that the standard library or an already-locked dependency provides, or handles errors the API documents as impossible. Use the existing facility and delete branches that cannot execute. A handwritten parser needs a stated tooling gap.
+- **Hidden control flow.** A helper that throws is called as a statement in some places and returned in others. Have it return the error and `throw` at each call site, so readers and the compiler see every exit.
+- **Mixed phases.** One long function both compiles configuration and handles each request, with inline anonymous types and per-request recomputation of fixed decisions. Separate one-time construction from per-call work, name the intermediate structure and precompute what does not vary.
+- **Import-time work.** A library module compiles schemas, reads files or starts work when imported. Define values at import; build on first use.
+- **Steering through global state.** A test mutates environment variables or other process-wide state so the code under test finds a different input. Pass the input as a parameter and read the environment only at the entry point.
+- **Cleanup that replaces the failure.** A `finally` block or deferred close throws its own error and hides the original failure. Report both, using `errors.Join` or `AggregateError`.
+- **Unbacked claims.** An evidence report lists checks from a hand-written list instead of recording what ran. Documentation cites local or temporary files a reader cannot retrieve. Prose promises a universal property, such as a deadline on every request, that some instances lack. Record evidence as each step passes, cite only committed files or CI artifacts, and route every instance of a promised property through the helper that provides it.
+- **Inconsistent idioms.** The same check or construct has several spellings, such as three ways to assert that a process exited. Use one idiom, preferably the shortest standard form, through its shared helper. When one instance differs from its siblings, remove the difference or cite the requirement that causes it; do not invent a rationale for an accident.
+
 ## Review and maintenance
 
 - Check the requested behavior against its issue or specification and the applicable accepted documents. Passing conventions does not prove that the right behavior was implemented.
