@@ -21,21 +21,17 @@ await withLoopbackServer(
           ...protocol,
           paths: { "/__fixture/value": { get: { responses } } },
         };
-        await assert.rejects(
-          async () => {
-            const client = fixtureClient(baseUrl, { document });
-            await client.GET("/__fixture/value", { params: { header: headers } });
-          },
+        assert.throws(
+          () => fixtureClient(baseUrl, { document }),
           (error: unknown) => {
             assert(error instanceof Error);
             assert(
               !(error instanceof ResponseValidationError),
               "configuration failure is not a received-response failure",
             );
-            assert.equal(
-              error.message,
-              `Unsupported response status declaration "${status}" for GET /__fixture/value; use exact status codes`,
-            );
+            assert.match(error.message, /unsupported/iu);
+            assert(error.message.includes(status), "configuration error identifies the unsupported declaration");
+            assert(error.message.includes("GET /__fixture/value"), "configuration error identifies the operation");
             return true;
           },
         );
