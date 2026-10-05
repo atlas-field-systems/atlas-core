@@ -9,6 +9,11 @@
     "linux_amd64_url": "https://github.com/sqlc-dev/sqlc/releases/download/v1.31.1/sqlc_1.31.1_linux_amd64.tar.gz",
     "sha256": "497ae4fcdfa64c5b0c311ffe4c2bd991e43991e82e5367792ed78bc2dca27354"
   },
+  "ruff": {
+    "version": "0.16.10",
+    "linux_amd64_url": "https://github.com/astral-sh/ruff/releases/download/0.16.10/ruff-x86_64-unknown-linux-gnu.tar.gz",
+    "sha256": "9567ff1201e2fb3da31ff04c35587d768c66d6cb42dfa84de474e2bfe360b608"
+  },
   "oapi_codegen": "v2.8.0",
   "node": "v24.21.0",
   "npm": "11.19.0",

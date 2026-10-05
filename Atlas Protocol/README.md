@@ -10,7 +10,13 @@ Run from the repository root with Python 3.12+, Linux amd64, Node 24.21.0 and np
 python3 scripts/verify.py --bootstrap
 ```
 
-The entry point checks exact versions, downloads checksum-pinned Go/sqlc when absent, installs npm dependencies locally, verifies both Go module graphs, and regenerates from absent outputs twice. It then runs Go formatting/build/test/vet, strict TypeScript checking, SDK compilation, and real contract workflows. No global generator or npm package installation is needed. `ATLAS_TOOLS` selects another user-owned cache; the default is `$XDG_CACHE_HOME/atlas-protocol-tools` or `~/.cache/atlas-protocol-tools`. Fresh downloaded archives are checked before extraction; cached executables must still report their locked versions. `python3 -O scripts/verify.py --toolchain-self-test` also executes the deliberately wrong checksum/version checks.
+The entry point checks exact versions, downloads checksum-pinned Go/sqlc/Ruff when absent, installs npm dependencies locally, verifies both Go module graphs, and regenerates from absent outputs twice. It then runs Go formatting/build/test/vet, Prettier formatting of handwritten TypeScript/JavaScript, Ruff formatting and lint of repository Python, strict TypeScript checking, SDK compilation, and real contract workflows. No global generator or npm package installation is needed. `ATLAS_TOOLS` selects another user-owned cache; the default is `$XDG_CACHE_HOME/atlas-protocol-tools` or `~/.cache/atlas-protocol-tools`. Fresh downloaded archives are checked before extraction; cached executables must still report their locked versions. `python3 -O scripts/verify.py --toolchain-self-test` also executes the deliberately wrong checksum/version checks.
+
+Apply the checked formatting (Prettier, then Ruff import order and formatting) after a bootstrap run. The shared settings live in `.prettierrc.json` and `ruff.toml` at the repository root:
+
+```sh
+python3 scripts/format.py
+```
 
 Generation alone, after locked dependencies have been installed:
 
@@ -22,7 +28,7 @@ The four generated directories are ignored build artifacts. Delete them freely. 
 
 | Owner | Authored files and locks |
 | --- | --- |
-| Protocol | `protocol.json`, `toolchain.json`, `tools/go.mod`, `tools/go.sum`, generator configuration; exact OpenAPI and generator editions |
+| Protocol | `protocol.json`, `toolchain.json`, `tools/go.mod`, `tools/go.sum`, generator configuration; exact OpenAPI, generator and Ruff editions |
 | Core | `../Atlas Core/go.mod`, `go.sum`, `httpcontract/`; request-validation integration, nullable/runtime bindings and SQLite dependencies |
 | SDK | `../Atlas SDK/package.json`, `package-lock.json`, `src/`; TypeScript transport, Ajv response-validation integration and local npm tooling locks |
 | Test tooling | `../tests/contract/`; illustrative contracts, expectations, runner, private SQL; `../Atlas Core/tests/contractfixture/` for handwritten fixture handlers |
@@ -43,10 +49,13 @@ These preserve the [#69 proof](../docs/research/atlas-reassessment/13-protocol-t
 | openapi-typescript, openapi-fetch | 7.13.0, 0.17.0 |
 | Ajv, ajv-formats | 8.20.0, 3.0.1 |
 | TypeScript, tsx, Node types | 5.9.3, 4.23.15, 24.10.1 |
+| Prettier (SDK npm lock), Ruff | 3.9.9, 0.16.10 |
 
 Go archive SHA-256: `63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445`.
 
 sqlc archive SHA-256: `497ae4fcdfa64c5b0c311ffe4c2bd991e43991e82e5367792ed78bc2dca27354`.
+
+Ruff archive SHA-256: `9567ff1201e2fb3da31ff04c35587d768c66d6cb42dfa84de474e2bfe360b608`.
 
 ## Supported schema profile
 

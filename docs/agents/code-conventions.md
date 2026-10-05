@@ -17,7 +17,7 @@ These conventions govern code quality. The [system design](../architecture/syste
 
 ## Types and language conventions
 
-- Use the language's normal idioms and the repository's configured tools. Let formatters and linters enforce mechanical style.
+- Use the language's normal idioms and the repository's configured tools. Let formatters and linters enforce mechanical style: gofmt for Go, Prettier for handwritten TypeScript/JavaScript and Ruff for Python. Run `python3 scripts/format.py` before committing; verification fails on unformatted files.
 - In handwritten TypeScript, use inferred types and concrete contracts. Do not introduce `any`, double assertions or functions whose only purpose is a cast. Do not suppress type errors in implementation code. Negative type tests must fail when the intended type error disappears. Use `unknown` for untrusted values and validate them at the boundary.
 - A type or non-null assertion requires an identified compiler or library limitation and evidence of the invariant that establishes the value's type. Keep it at the narrowest affected boundary and document that evidence; calling it necessary is insufficient. Assertions cannot replace runtime validation of untrusted values. Const assertions and `satisfies` remain available for preserving and checking inferred types.
 - In Go, use typed inputs and results for known shapes. Return errors with useful operation context while preserving their cause. Handle errors explicitly, including failures in background work.

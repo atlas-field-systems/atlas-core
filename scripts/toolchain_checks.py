@@ -1,11 +1,12 @@
 """Exercise locked bootstrap refusal before an archive can be extracted."""
+
 import hashlib
 import io
-from pathlib import Path
 import tarfile
 import tempfile
+from pathlib import Path
 
-from toolchain import extract_archive, prepare
+from toolchain import extract_archive, prepare, tool_paths
 
 
 def check_toolchain_refusals():
@@ -32,12 +33,12 @@ def check_toolchain_refusals():
         if (destination / "tool").read_bytes() != b"independent bootstrap fixture":
             raise RuntimeError("verified archive extraction changed fixture bytes")
         cache = root / "wrong-version"
-        (cache / "go/bin").mkdir(parents=True)
-        (cache / "bin").mkdir()
-        go = cache / "go/bin/go"
-        go.write_text('#!/bin/sh\nprintf "go version go1.0.0 linux/amd64\\n"\n')
-        go.chmod(0o700)
-        (cache / "bin/sqlc").touch()
+        paths = tool_paths(cache)
+        for path in paths.values():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+        paths["go"].write_text('#!/bin/sh\nprintf "go version go1.0.0 linux/amd64\\n"\n')
+        paths["go"].chmod(0o700)
         try:
             prepare(bootstrap=False, cache=cache)
         except ValueError as error:

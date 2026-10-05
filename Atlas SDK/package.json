@@ -6,6 +6,9 @@
     "generate": "openapi-typescript \"../Atlas Protocol/protocol.json\" --output generated/protocol.ts",
     "check": "tsc --noEmit",
     "lint": "node ../scripts/lint-typescript.mjs && node ../scripts/lint-typescript-checks.mjs",
+    "prettier": "prettier \"src/**/*.ts\" \"checks/**/*.{ts,mjs}\" \"../tests/contract/*.{ts,mjs}\" \"../scripts/*.mjs\"",
+    "format": "npm run -s prettier -- --write",
+    "format:check": "npm run -s prettier -- --check",
     "build": "tsc -p tsconfig.build.json",
     "check:consumer": "node checks/consumer.mjs && tsc --noEmit -p tsconfig.consumer.json",
     "test": "node ../tests/contract/run.mjs"
@@ -18,6 +21,7 @@
   "devDependencies": {
     "@types/node": "24.10.1",
     "openapi-typescript": "7.13.0",
+    "prettier": "3.9.9",
     "tsx": "4.23.15",
     "typescript": "5.9.3"
   },

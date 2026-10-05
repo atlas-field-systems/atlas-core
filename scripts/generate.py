@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Reconstruct disposable bindings from Protocol and private SQL."""
+
 import json
 import shutil
 
 from toolchain import ROOT, prepare, run
 
-OUTPUTS = [ROOT / "Atlas Core/generated", ROOT / "Atlas Core/tests/contractfixture/generated",
-           ROOT / "Atlas SDK/generated", ROOT / "tests/contract/generated"]
+OUTPUTS = [
+    ROOT / "Atlas Core/generated",
+    ROOT / "Atlas Core/tests/contractfixture/generated",
+    ROOT / "Atlas SDK/generated",
+    ROOT / "tests/contract/generated",
+]
 
 
 def assemble_contract():
@@ -38,16 +43,38 @@ def generate(env, go, sqlc):
     generator_module = ROOT / "Atlas Protocol/tools/go.mod"
     for directory, spec, output in [
         (ROOT / "Atlas Protocol", "protocol.json", ROOT / "Atlas Core/generated/protocol/protocol.gen.go"),
-        (ROOT / "tests/contract", "generated/protocol.json", ROOT / "Atlas Core/tests/contractfixture/generated/contract/contract.gen.go"),
+        (
+            ROOT / "tests/contract",
+            "generated/protocol.json",
+            ROOT / "Atlas Core/tests/contractfixture/generated/contract/contract.gen.go",
+        ),
     ]:
-        run([go, "tool", f"-modfile={generator_module}", "oapi-codegen", "--config", directory / "oapi-codegen.yaml", "-o", output, directory / spec],
-            env, cwd=ROOT / "Atlas Core", timeout=120)
+        run(
+            [
+                go,
+                "tool",
+                f"-modfile={generator_module}",
+                "oapi-codegen",
+                "--config",
+                directory / "oapi-codegen.yaml",
+                "-o",
+                output,
+                directory / spec,
+            ],
+            env,
+            cwd=ROOT / "Atlas Core",
+            timeout=120,
+        )
     run([sqlc, "generate"], env, cwd=ROOT / "tests/contract", timeout=120)
     run(["npm", "run", "generate"], env, cwd=ROOT / "Atlas SDK", timeout=120)
     openapi_typescript = ROOT / "Atlas SDK/node_modules/.bin/openapi-typescript"
-    for source, output in [("generated/protocol.json", "generated/protocol.ts"), ("older-client.json", "generated/older-client.ts")]:
+    for source, output in [
+        ("generated/protocol.json", "generated/protocol.ts"),
+        ("older-client.json", "generated/older-client.ts"),
+    ]:
         run([openapi_typescript, source, "--output", output], env, cwd=ROOT / "tests/contract", timeout=120)
 
+
 if __name__ == "__main__":
-    environment, go_binary, sqlc_binary = prepare(bootstrap=False)
-    generate(environment, go_binary, sqlc_binary)
+    tools = prepare(bootstrap=False)
+    generate(tools.env, tools.go, tools.sqlc)
