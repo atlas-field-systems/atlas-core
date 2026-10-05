@@ -1,12 +1,12 @@
 # Specification evidence and implementation sequence
 
-This page maps accepted contracts to implementation slices and required evidence. It does not establish new behavior or claim an implemented Core. The user keeps product implementation on hold until the existing specification tickets are resolved and closed. The isolated [Protocol experiment](../research/atlas-reassessment/13-protocol-toolchain-proof.md) supplies the executable evidence requested by #69 without starting product implementation.
+This page maps accepted contracts to implementation slices and required evidence. The specification work tracked by #63–#82 and #84 is closed. The [Slice 0 foundation](../../tests/contract/README.md), delivered under #94–#100, implements shared contract tooling and isolated validation fixtures. The earlier [Protocol experiment](../research/atlas-reassessment/13-protocol-toolchain-proof.md) supplies #69's research evidence and remains prior art. S1 and later slices remain proposed implementation work. This page establishes no new behavior and claims no operational Core or completed MVP.
 
-## Proposed sequence and completion boundaries
+## Implementation sequence and completion boundaries
 
 | Slice | Scope and prerequisite specifications | Required completion evidence |
 | --- | --- | --- |
-| S0: Protocol/toolchain | Shared authored schema profile, locks and validation boundaries; #69 | Deterministic clean regeneration, independent valid/invalid fixtures, generated Go handler and TypeScript client with actual SQLite/files; the linked experiment records its tested limits |
+| S0: Protocol/toolchain, implemented | Shared authored schema profile, locks and validation boundaries; #94–#100, with #69 as prior art | [Foundation coverage](../../tests/contract/README.md) records deterministic clean regeneration, independent valid/invalid fixtures, generated Go handler and TypeScript client with actual SQLite/files, and the tested scope limits |
 | S1: Asset-to-Core Move To | TLS/bootstrap and Dataset/version boundary; enrollment, registration, report identity/process authority, basic ordered delivery, cancellation and actual outcomes; #63/#66/#71/#78/#79/#81/#82 | Real SDK/Core/direct-Protocol parity with simulated Asset, lost responses, offline issuance/cancellation, historical versus fresh reports, initial defaults, movement capture, no arrival or upload gate |
 | S2: Independent Object transfer | File-first durable publication, replayable producer, identity/digest, quota, deletion and protected hold seam; #70/#72 | Actual SQLite/filesystem kill barriers, interrupted/lost-response upload, concurrency/revocation/Reset races, exact downloaded bytes, download/delete ordering and no exposed partial Object |
 | S3: Independent Elevation Plugin | Manifest/capability validation, private dispatch ledger, local host lifetime and offline fixture; #64/#68/#76/#78/#79/#80 | Separately built Plugin container, accepted work survives caller loss, dispatch acknowledgement lost without re-execution, known elevation/reference, cancellation/stop/fault and retained Operation lookup |
@@ -40,7 +40,7 @@ The [endpoint map](../api-endpoints.md) currently specifies 53 method/path pairs
 | Plugin list/get | 2 | S3 discovery; S5 historical removed identity | [Plugins](../topics/plugins.md#plugin-capabilities-and-discovery) |
 | Plugin Operation submit/list/get/cancel | 4 | S3 capability invocation and retained outcomes; S6 broader consumers | [Operation dispatch](../topics/plugins.md#private-operation-dispatch-and-reconciliation) |
 | Full load, changed-since and WebSocket feed | 3 | S4 full picture, Core/local changed-since, status/query/feed helpers | [Synchronization](../topics/sdk.md#synchronization-wire-and-application-boundary) |
-| Health/readiness/docs/OpenAPI | 4 | S0 authored schema; S1 authenticated discovery/Core time/Asset challenge; S4 reconnect; S5 diagnostics | [Setup](../topics/dataset-lifecycle.md#offline-tls-and-first-time-setup), [Contact proof](../topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
+| Health/readiness/docs/OpenAPI | 4 | S1 operational schemas and authenticated discovery/Core time/Asset challenge; S4 reconnect; S5 diagnostics | [Setup](../topics/dataset-lifecycle.md#offline-tls-and-first-time-setup), [Contact proof](../topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
 
 Local Command Catalog lookup is a package function, not an extra HTTP route, and belongs to S0/S1. Connection, readiness, query, local subscription/history and Dataset-rebuild SDK methods belong to S4. The Asset client wraps registration, reports, assigned work, result uploads, queue adoption and reconnect/process recovery in S1/S6 without implementing the Asset OS.
 

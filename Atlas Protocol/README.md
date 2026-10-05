@@ -67,6 +67,8 @@ Ajv keeps strict schema checking except `strictRequired`, a compilation diagnost
 
 The SDK response adapter qualifies separately declared `application/json`, JSON suffix media such as `application/problem+json`, and binary alternatives at one response status. It selects the authored schema by the received media type, refuses colliding normalized JSON declarations and requires an explicit JSON response byte bound; [response coverage](../tests/contract/README-97.md) records the independent HTTP checks.
 
+Response status keys must be explicit three-digit HTTP codes from `100` through `599`. The SDK adapter rejects `default`, ranges such as `2XX` and malformed status keys during construction, including when an explicit status is also declared. Fallback and range matching remain unqualified.
+
 External references, recursive schemas, other composition profiles, nullable enum combinations, OpenAPI 3.1/3.2 features and custom endpoint templates remain unqualified. A new feature needs an independent fixture and executed check before adoption. Operational range, authority and cross-field decisions stay with their owning modules.
 
 ### Binding representation limits

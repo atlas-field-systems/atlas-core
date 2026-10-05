@@ -132,6 +132,9 @@ function declareResponses(document: ResponseContract) {
       const operation = item[method];
       if (!operation) continue;
       for (const [status, response] of Object.entries(operation.responses)) {
+        if (!/^[1-5][0-9]{2}$/u.test(status)) {
+          throw new Error("Response status declarations require explicit HTTP codes from 100 to 599");
+        }
         const location = `#/paths/${pointer(path)}/${method}/responses/${status}`;
         responses.set(`${method.toUpperCase()} ${path} ${status}`, declareResponse(document, ajv, location, response));
       }
