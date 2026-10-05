@@ -1,4 +1,4 @@
-import type { ValidateFunction } from "ajv";
+import type { Ajv, ValidateFunction } from "ajv";
 import type { Middleware } from "openapi-fetch";
 import { contractValidator, pointer, type ContractDocument } from "./schema.js";
 
@@ -40,135 +40,158 @@ interface ResponseContract extends ContractDocument {
   paths: Record<string, PathItem>;
 }
 
+interface DeclaredHeader {
+  name: string;
+  role: "dataset" | "version" | "other";
+  required: boolean;
+  validate: ValidateFunction;
+}
+interface DeclaredResponse {
+  media: Set<string>;
+  validators: Map<string, ValidateFunction>;
+  headers: DeclaredHeader[];
+}
+
 export function responseValidation(document: ResponseContract, context: { datasetId: string; protocolVersion: string },
   options: { maxJSONBytes: number }): Middleware {
   const maxJSONBytes = options.maxJSONBytes;
   if (!Number.isSafeInteger(maxJSONBytes) || maxJSONBytes <= 0) {
     throw new Error("Response JSON byte bound must be a positive safe integer");
   }
+  const responses = declareResponses(document);
+  return {
+    async onResponse({ response, schemaPath, request }) {
+      const operation = `${request.method} ${schemaPath}`;
+      const refuse = (reason: ResponseFailureReason) => {
+        // No caller receives a refused response. Stop its transport stream even
+        // when refusal happens before JSON reading, without waiting on a tee.
+        void response.body?.cancel().catch(() => {});
+        return new ResponseValidationError(reason, response.status, operation);
+      };
+      const declared = responses.get(`${operation} ${response.status}`);
+      if (!declared) throw refuse("status");
+      for (const header of declared.headers) {
+        const failure = header.role === "other" ? "header" : "context";
+        const value = response.headers.get(header.name);
+        if (value === null) {
+          if (header.required) throw refuse(failure);
+          continue;
+        }
+        if (!header.validate(value)) throw refuse(failure);
+        if (header.role === "dataset" && !sameDataset(value, context.datasetId)) throw refuse("context");
+        if (header.role === "version" && value !== context.protocolVersion) throw refuse("context");
+      }
+      const media = mediaType(response.headers.get("Content-Type") ?? "");
+      if (media === undefined) throw refuse("media_type");
+      const noBody = declared.media.size === 0;
+      if (noBody ? media !== "" : !declared.media.has(media)) throw refuse("media_type");
+      const validate = declared.validators.get(media);
+      // Raw JSON and binary representations are returned without reading them.
+      if (!validate && !noBody) return response;
+      const bytes = await readClone(response, noBody ? 0 : maxJSONBytes);
+      if (bytes === "overflow") throw refuse(noBody ? "body" : "body_size");
+      if (bytes === "unreadable") throw refuse(noBody ? "body" : "json");
+      // An empty reply was checked through a clone, retaining its original
+      // Response and readable body for the transport's chosen representation.
+      if (!validate) return response;
+      let body: unknown;
+      try {
+        // Fetch's JSON decoder replaces bad UTF-8 instead of rejecting it.
+        body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      } catch { throw refuse("json"); }
+      if (!validate(body)) throw refuse("schema");
+      if (typeof body === "object" && body !== null && "dataset_id" in body &&
+          (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))) {
+        throw refuse("context");
+      }
+      return response;
+    },
+  };
+}
+
+// Compile every declared response once, keyed by "METHOD path status".
+function declareResponses(document: ResponseContract) {
   const ajv = contractValidator(document);
-  const responses = new Map<string, { media: Set<string>; validators: Map<string, ValidateFunction>; headers: { name: string; required: boolean; validate: ValidateFunction }[] }>();
+  const responses = new Map<string, DeclaredResponse>();
   for (const [path, item] of Object.entries(document.paths)) {
     for (const method of methods) {
       const operation = item[method];
       if (!operation) continue;
       for (const [status, response] of Object.entries(operation.responses)) {
-        const mediaDeclarations = Object.keys(response.content ?? {}).map((authored) => {
-          const normalized = mediaType(authored);
-          if (!normalized) throw new Error("Response media type declaration has invalid syntax");
-          return { authored, normalized };
-        });
-        const media = new Set(mediaDeclarations.map(({ normalized }) => normalized));
-        const key = `${method.toUpperCase()} ${path} ${status}`;
         const location = `#/paths/${pointer(path)}/${method}/responses/${status}`;
-        const headers = Object.entries(response.headers ?? {}).map(([name, authored]) => {
-          let definition = authored;
-          let ref = `${location}/headers/${pointer(name)}`;
-          if (authored.$ref) {
-            const prefix = "#/components/headers/";
-            // URI fragment decoding precedes JSON Pointer token decoding.
-            const reference = authored.$ref.startsWith("#") ? decodeURIComponent(authored.$ref) : "";
-            if (!reference.startsWith(prefix)) throw new Error("Response headers require local component references");
-            const component = reference.slice(prefix.length).replaceAll("~1", "/").replaceAll("~0", "~");
-            const resolved = document.components.headers?.[component];
-            if (!resolved) throw new Error("Response header reference is unresolved");
-            definition = resolved;
-            ref = `${prefix}${pointer(component)}`;
-          }
-          if (!definition.schema) throw new Error("Response header requires an authored schema");
-          return { name, required: definition.required === true, validate: ajv.compile({ $ref: `atlas${ref}/schema` }) };
-        });
-        const validators = new Map<string, ValidateFunction>();
-        for (const { authored, normalized } of mediaDeclarations) {
-          if (normalized !== "application/json" && !normalized.endsWith("+json")) continue;
-          if (validators.has(normalized)) throw new Error("Response JSON media declarations have ambiguous normalized keys");
-          const ref = `atlas${location}/content/${pointer(authored)}/schema`;
-          validators.set(normalized, ajv.compile({ $ref: ref }));
-        }
-        responses.set(key, { media, headers, validators });
+        responses.set(`${method.toUpperCase()} ${path} ${status}`, declareResponse(document, ajv, location, response));
       }
     }
   }
-  return {
-    async onResponse({ response, schemaPath, request }) {
-      const operation = `${request.method} ${schemaPath}`;
-      const invalid = (reason: ResponseFailureReason): never => {
-        // No caller receives a refused response. Stop its transport stream even
-        // when refusal happens before JSON reading, without waiting on a tee.
-        void response.body?.cancel().catch(() => {});
-        throw new ResponseValidationError(reason, response.status, operation);
-      };
-      const declared = responses.get(`${operation} ${response.status}`);
-      if (!declared) return invalid("status");
-      for (const header of declared.headers) {
-        const value = response.headers.get(header.name);
-        const isContext = ["atlas-dataset-id", "atlas-protocol-version"].includes(header.name.toLowerCase());
-        if (value === null) {
-          if (header.required) invalid(isContext ? "context" : "header");
-          continue;
-        }
-        if (!header.validate(value)) invalid(isContext ? "context" : "header");
-        if (header.name.toLowerCase() === "atlas-dataset-id" && !sameDataset(value, context.datasetId) ||
-            header.name.toLowerCase() === "atlas-protocol-version" && value !== context.protocolVersion) invalid("context");
+  return responses;
+}
+
+function declareResponse(document: ResponseContract, ajv: Ajv, location: string, response: ResponseDefinition): DeclaredResponse {
+  const mediaDeclarations = Object.keys(response.content ?? {}).map((authored) => {
+    const normalized = mediaType(authored);
+    if (!normalized) throw new Error("Response media type declaration has invalid syntax");
+    return { authored, normalized };
+  });
+  const headers = Object.entries(response.headers ?? {}).map(([name, authored]) =>
+    declareHeader(document, ajv, `${location}/headers/${pointer(name)}`, name, authored));
+  const validators = new Map<string, ValidateFunction>();
+  for (const { authored, normalized } of mediaDeclarations) {
+    if (normalized !== "application/json" && !normalized.endsWith("+json")) continue;
+    if (validators.has(normalized)) throw new Error("Response JSON media declarations have ambiguous normalized keys");
+    validators.set(normalized, ajv.compile({ $ref: `atlas${location}/content/${pointer(authored)}/schema` }));
+  }
+  return { media: new Set(mediaDeclarations.map(({ normalized }) => normalized)), headers, validators };
+}
+
+function declareHeader(document: ResponseContract, ajv: Ajv, location: string, name: string, authored: HeaderDefinition): DeclaredHeader {
+  let definition = authored;
+  let ref = location;
+  if (authored.$ref) {
+    const prefix = "#/components/headers/";
+    // URI fragment decoding precedes JSON Pointer token decoding.
+    const reference = authored.$ref.startsWith("#") ? decodeURIComponent(authored.$ref) : "";
+    if (!reference.startsWith(prefix)) throw new Error("Response headers require local component references");
+    const component = reference.slice(prefix.length).replaceAll("~1", "/").replaceAll("~0", "~");
+    const resolved = document.components.headers?.[component];
+    if (!resolved) throw new Error("Response header reference is unresolved");
+    definition = resolved;
+    ref = `${prefix}${pointer(component)}`;
+  }
+  if (!definition.schema) throw new Error("Response header requires an authored schema");
+  const lower = name.toLowerCase();
+  const role = lower === "atlas-dataset-id" ? "dataset" : lower === "atlas-protocol-version" ? "version" : "other";
+  return { name, role, required: definition.required === true, validate: ajv.compile({ $ref: `atlas${ref}/schema` }) };
+}
+
+// Read a clone so the original Response keeps its readable body. Stops at the
+// first chunk that would exceed limit bytes.
+async function readClone(response: Response, limit: number): Promise<Uint8Array | "overflow" | "unreadable"> {
+  const reader = response.clone().body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      if (chunk.value.byteLength > limit - length) {
+        // A tee cancellation waits for the other branch. The caller cancels the
+        // original branch; neither cancellation is awaited, so a refused
+        // streaming supplier cannot block us.
+        void reader.cancel().catch(() => {});
+        return "overflow";
       }
-      const media = mediaType(response.headers.get("Content-Type") ?? "");
-      if (media === undefined) return invalid("media_type");
-      const noBody = declared.media.size === 0;
-      if (noBody ? media !== "" : !declared.media.has(media)) invalid("media_type");
-      const validate = declared.validators.get(media);
-      if (validate || noBody) {
-        const reader = response.clone().body?.getReader();
-        const chunks: Uint8Array[] = [];
-        let length = 0;
-        const cancel = () => {
-          // A tee cancellation waits for the other branch. Cancel both without
-          // awaiting either, so a refused streaming supplier cannot block us.
-          void reader?.cancel().catch(() => {});
-          void response.body?.cancel().catch(() => {});
-        };
-        if (reader) {
-          try {
-            for (;;) {
-              const chunk = await reader.read();
-              if (chunk.done) break;
-              if (chunk.value.byteLength === 0) continue;
-              if (noBody) {
-                cancel();
-                return invalid("body");
-              }
-              if (chunk.value.byteLength > maxJSONBytes - length) {
-                cancel();
-                return invalid("body_size");
-              }
-              length += chunk.value.byteLength;
-              chunks.push(chunk.value);
-            }
-          } catch (error) {
-            cancel();
-            if (error instanceof ResponseValidationError) throw error;
-            return invalid(noBody ? "body" : "json");
-          } finally { reader.releaseLock(); }
-        }
-        // An empty reply was checked through a clone, retaining its original
-        // Response and readable body for the transport's chosen representation.
-        if (!validate) return response;
-        const bytes = new Uint8Array(length);
-        let offset = 0;
-        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-        let body: unknown;
-        try {
-          // Fetch's JSON decoder replaces bad UTF-8 instead of rejecting it.
-          body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-        } catch { return invalid("json"); }
-        if (!validate(body)) invalid("schema");
-        if (typeof body === "object" && body !== null && "dataset_id" in body &&
-            (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))) {
-          invalid("context");
-        }
-      }
-      return response;
-    },
-  };
+      length += chunk.value.byteLength;
+      chunks.push(chunk.value);
+    }
+  } catch {
+    void reader.cancel().catch(() => {});
+    return "unreadable";
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
 }
 
 // The authored UUID schemas validate wire values first. Compare their identity
