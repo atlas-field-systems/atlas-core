@@ -27,6 +27,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Accepted tradeoffs and their rationale | [ADR index](docs/adr/README.md) |
 | Confirmed changes from the source system | [Modernization differences](docs/architecture/modernization-differences.md) |
 | Source evidence, technology alternatives and proposed experiments | [Research index](docs/research/atlas-reassessment/README.md) |
+| Proposed convention improvements from historical PR feedback | [Coding conventions retrospective](docs/research/pr-review-retrospective/README.md) |
 
 The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted. Slice 0 establishes shared contract tooling and an isolated fixture workflow; operational Core behavior remains unimplemented. The original isolated Protocol proof remains executable research evidence.
 

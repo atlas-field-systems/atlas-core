@@ -2,7 +2,7 @@
 
 Proposal only. These files suggest changes for the user's review. They do not establish requirements, change accepted Atlas behavior or replace the active [code conventions](../../agents/code-conventions.md).
 
-Collected on 5 October 2026 against checkout `e642fe43b98f96f8cabffa870e54eefe359d785c`. The corpus contains 23,034 records from 1,879 PRs across 68 repositories: 10,364 inline comments, 7,061 conversation comments and 5,609 formal reviews. Some review bodies are empty. [Coverage and method](coverage.md) distinguishes collection, screening and close reading.
+Collected on 5 October 2026 against checkout `e642fe43b98f96f8cabffa870e54eefe359d785c`. The corpus contains 23,034 records from 1,879 PRs across 68 repositories: 10,364 inline comments, 7,061 conversation comments and 5,609 formal reviews. Some review bodies are empty. The [query manifest](evidence/collection-manifest.json) and [frozen result summary](evidence/result-summary.json) retain collection inputs and recomputed counts. [Coverage and method](coverage.md) distinguishes collection, screening and close reading.
 
 The strongest finding is that Atlas already states most of the right principles. The recurring failures concern how agents apply those principles across middleware, asynchronous work, resource expansion and test evidence. Adding another general instruction would offer little benefit.
 
@@ -27,4 +27,4 @@ Keep `docs/agents/code-conventions.md` as the entry point. The proposed conditio
 
 Move rules when splitting files. Keep one authoritative copy and update incoming links. The evidence and rationale remain in this retrospective. The exact wording in each proposal is suitable for that future edit, but remains unaccepted here.
 
-No active instruction, convention, implementation, check or GitHub resource was changed for this retrospective.
+The retrospective leaves active instructions, conventions, implementation and checks unchanged.

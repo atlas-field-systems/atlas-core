@@ -64,7 +64,9 @@ Suggested implementation:
 3. Add independent construction refusals and real HTTP probes to the existing response-declaration scenarios.
 4. Derive the accepted profile from one definition and update its documentation. Preserve Protocol's authority and generation policy.
 
-Reuse the current adapter's declaration checks for normalized collisions and unsupported constructs. Avoid a second checker that independently restates its profile.
+The current adapter rejects normalized collisions only among JSON declarations. Non-JSON declarations bypass that check, and the final media set silently collapses equivalent binary declarations.
+
+Extend the adapter's existing declaration pass to check a shared normalized-key set before selecting JSON validators. Cover every declared media type, including differently cased or parameterized binary spellings. Add independent construction refusals for JSON and binary collisions, with distinct valid declarations still accepted. Then reuse that pass for the supported-profile checks; avoid a second checker that independently restates its profile.
 
 ## Completion
 

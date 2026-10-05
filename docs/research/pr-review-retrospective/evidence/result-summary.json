@@ -1,0 +1,1935 @@
+{
+  "schema_version": 1,
+  "collection_date": "2026-10-05",
+  "conventions_revision": "e642fe43b98f96f8cabffa870e54eefe359d785c",
+  "summary_provenance": "Recomputed from the original saved collection during PR #110 review. Git history freezes these results; raw source snapshots are not published.",
+  "totals": {
+    "inventory_repositories": 108,
+    "additional_repositories_with_prs": 3,
+    "pull_requests": 1879,
+    "repositories_with_prs": 68,
+    "repositories_with_records": 62,
+    "inline": 10364,
+    "root_inline": 7627,
+    "conversation": 7061,
+    "reviews": 5609,
+    "nonempty_reviews": 2377,
+    "records": 23034,
+    "account_authored_records": 7117,
+    "unique_pr_identities": 1879,
+    "unique_record_identities": 23034,
+    "record_date_range": [
+      "2025-09-18T13:43:47Z",
+      "2026-10-05T18:36:53Z"
+    ],
+    "unresolved_collection_errors": 0,
+    "private_repositories_with_prs": 35
+  },
+  "search_completeness": {
+    "initial_involvement": {
+      "reported": 1792,
+      "retrieved": 1000,
+      "used_as_complete": false
+    },
+    "complete_involvement": [
+      {
+        "query": "is:pr involves:the-Drunken-coder created:<2026-01-01",
+        "pages": 7,
+        "reported": 608,
+        "retrieved": 608,
+        "incomplete_results": false
+      },
+      {
+        "query": "is:pr involves:the-Drunken-coder created:2026-01-01..2026-06-30",
+        "pages": 7,
+        "reported": 694,
+        "retrieved": 694,
+        "incomplete_results": false
+      },
+      {
+        "query": "is:pr involves:the-Drunken-coder created:2026-07-01..2026-07-31",
+        "pages": 2,
+        "reported": 145,
+        "retrieved": 145,
+        "incomplete_results": false
+      },
+      {
+        "query": "is:pr involves:the-Drunken-coder created:2026-08-01..2026-08-31",
+        "pages": 2,
+        "reported": 132,
+        "retrieved": 132,
+        "incomplete_results": false
+      },
+      {
+        "query": "is:pr involves:the-Drunken-coder created:2026-09-01..2026-09-30",
+        "pages": 2,
+        "reported": 189,
+        "retrieved": 189,
+        "incomplete_results": false
+      },
+      {
+        "query": "is:pr involves:the-Drunken-coder created:>=2026-10-01",
+        "pages": 1,
+        "reported": 24,
+        "retrieved": 24,
+        "incomplete_results": false
+      }
+    ],
+    "reviewed_by": {
+      "reported": 221,
+      "retrieved": 221,
+      "pages": 3,
+      "incomplete_results": false,
+      "all_in_corpus": true
+    },
+    "extra_prs_fetched": 5,
+    "initial_review_batches_retried": 5
+  },
+  "source_snapshots": [
+    {
+      "original_snapshot": "repositories.json",
+      "bytes": 670480,
+      "sha256": "db766b51de1f7cb03ff54c1fc0277248a7d3594e90c8bdeaa384c44dbb95999a"
+    },
+    {
+      "original_snapshot": "pulls.json",
+      "bytes": 40668798,
+      "sha256": "910e602bcabe5f7bf0d15f6575efcba8640e44edff9270323cc7ff9eb1c156c1"
+    },
+    {
+      "original_snapshot": "all-comments.json",
+      "bytes": 50241086,
+      "sha256": "6132cb6c1f96497b641835429f6ecab80e3f6c83e04d58fff5ad4236acdc90d5"
+    },
+    {
+      "original_snapshot": "reviews.json",
+      "bytes": 16182389,
+      "sha256": "4976972c7015e636cd0e2b15888e09160adf4d491d3f65575608c5bea48e89bf"
+    },
+    {
+      "original_snapshot": "involved-prs.json",
+      "bytes": 6843690,
+      "sha256": "5a3e478c477960e1d3d1536cf1be26737c4f285c1a73637c80103156e94683cf"
+    },
+    {
+      "original_snapshot": "involvement-search-complete.json",
+      "bytes": 10475911,
+      "sha256": "ad058f93b5655e9a543c42f7b440720e3d9088e62d0803ee61b9d34aaa2808d0"
+    },
+    {
+      "original_snapshot": "reviewed-by-search.json",
+      "bytes": 1657407,
+      "sha256": "b14899e06478179d8bf65a9661c23640cca60683b59105ee608473ccf3b5f13d"
+    },
+    {
+      "original_snapshot": "missing-involved-prs.json",
+      "bytes": 500,
+      "sha256": "c56ca0b279e53a57132713853095d1265559e2427547ab1609e19a107aef4bc5"
+    },
+    {
+      "original_snapshot": "collection-errors.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "original_snapshot": "review-errors-initial.json",
+      "bytes": 458,
+      "sha256": "1ce5649b9bf6eba9abebe3511092db3699d6a2699db0f992f8827d3e8d3d45fa"
+    },
+    {
+      "original_snapshot": "review-errors.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ],
+  "repository_summary": [
+    {
+      "repository": "almendili/skills",
+      "private": false,
+      "group": "other",
+      "pull_requests": 18,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 0,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 0,
+      "record_identity_and_body_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "repository": "atlas-field-systems/atlas-core",
+      "private": false,
+      "group": "atlas_core",
+      "pull_requests": 37,
+      "inline": 407,
+      "root_inline": 291,
+      "conversation": 177,
+      "reviews": 222,
+      "nonempty_reviews": 106,
+      "records": 806,
+      "record_identity_and_body_sha256": "6624e02ca3879210157122eba55051cf7569b9330adb516126ba8512ad3243fa"
+    },
+    {
+      "repository": "giftedu04-glitch/SAGA",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 0,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 0,
+      "record_identity_and_body_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "repository": "gnarzilla/deadmesh",
+      "private": false,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 0,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 0,
+      "record_identity_and_body_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "repository": "private_001",
+      "private": true,
+      "group": "other",
+      "pull_requests": 9,
+      "inline": 18,
+      "root_inline": 11,
+      "conversation": 17,
+      "reviews": 18,
+      "nonempty_reviews": 5,
+      "records": 53,
+      "record_identity_and_body_sha256": "921c15ebe30c92479133e3b203ed36f22df5dd7c3cb1ce81981af929586b8d3d"
+    },
+    {
+      "repository": "private_002",
+      "private": true,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 6,
+      "root_inline": 3,
+      "conversation": 2,
+      "reviews": 4,
+      "nonempty_reviews": 1,
+      "records": 12,
+      "record_identity_and_body_sha256": "3ce4f2180cfb133a5ab8892701a11fbdb4349fdab7e52342e88ea3c25534fd8b"
+    },
+    {
+      "repository": "private_003",
+      "private": true,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 0,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 0,
+      "record_identity_and_body_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "repository": "private_004",
+      "private": true,
+      "group": "other",
+      "pull_requests": 9,
+      "inline": 2,
+      "root_inline": 2,
+      "conversation": 10,
+      "reviews": 3,
+      "nonempty_reviews": 3,
+      "records": 15,
+      "record_identity_and_body_sha256": "fdaf20446bf4395d9c812a116d0ce1dbb331b814290ff5946c22bc3a5f925335"
+    },
+    {
+      "repository": "private_005",
+      "private": true,
+      "group": "other",
+      "pull_requests": 7,
+      "inline": 42,
+      "root_inline": 42,
+      "conversation": 11,
+      "reviews": 2,
+      "nonempty_reviews": 2,
+      "records": 55,
+      "record_identity_and_body_sha256": "f9c4053f647ce31c81822f757abb3a7eb26ab03ab7375411b2a4b9f3a7698025"
+    },
+    {
+      "repository": "private_006",
+      "private": true,
+      "group": "atlas_retired",
+      "pull_requests": 820,
+      "inline": 1887,
+      "root_inline": 1618,
+      "conversation": 1408,
+      "reviews": 706,
+      "nonempty_reviews": 414,
+      "records": 4001,
+      "record_identity_and_body_sha256": "c7e41242e1b240a1eef9d1e835c98c1f307f2dad9fe914581a5b6855b0454bfc"
+    },
+    {
+      "repository": "the-Drunken-coder/ATLAS2-retired",
+      "private": false,
+      "group": "other",
+      "pull_requests": 73,
+      "inline": 688,
+      "root_inline": 686,
+      "conversation": 537,
+      "reviews": 258,
+      "nonempty_reviews": 232,
+      "records": 1483,
+      "record_identity_and_body_sha256": "d6c8f6f7e8fb1c4c42a6e81443ee1fce044661722184d6b9938825bdc7a7bc05"
+    },
+    {
+      "repository": "the-Drunken-coder/Atlas-FieldLink",
+      "private": false,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 197,
+      "root_inline": 117,
+      "conversation": 48,
+      "reviews": 120,
+      "nonempty_reviews": 37,
+      "records": 365,
+      "record_identity_and_body_sha256": "4a27f2a40f6bdc67921e469df8eeb7f3eef232de135767d4063c947332b64ab2"
+    },
+    {
+      "repository": "private_007",
+      "private": true,
+      "group": "other",
+      "pull_requests": 2,
+      "inline": 177,
+      "root_inline": 172,
+      "conversation": 195,
+      "reviews": 102,
+      "nonempty_reviews": 72,
+      "records": 474,
+      "record_identity_and_body_sha256": "a1f02c6e83f70186b6ec5696a497a55e7760133ad2ec0bb93fa96032b1c75a21"
+    },
+    {
+      "repository": "the-Drunken-coder/Atlas-Modernization",
+      "private": false,
+      "group": "atlas_modernization",
+      "pull_requests": 423,
+      "inline": 3637,
+      "root_inline": 2217,
+      "conversation": 3266,
+      "reviews": 2431,
+      "nonempty_reviews": 752,
+      "records": 9334,
+      "record_identity_and_body_sha256": "bfe9865f2f1fdac0a5f3e00c15407a458eecda6b47edb7b56a0a4c0e2cbde787"
+    },
+    {
+      "repository": "private_008",
+      "private": true,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 0,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 0,
+      "record_identity_and_body_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "repository": "the-Drunken-coder/Autobex-2",
+      "private": false,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 47,
+      "root_inline": 32,
+      "conversation": 7,
+      "reviews": 19,
+      "nonempty_reviews": 4,
+      "records": 73,
+      "record_identity_and_body_sha256": "a1e52b4c0577229a2c462a3e9c6030fa9dc7c9dd12b64ff1ef5e1b311c0a5e32"
+    },
+    {
+      "repository": "private_009",
+      "private": true,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 3,
+      "root_inline": 3,
+      "conversation": 8,
+      "reviews": 3,
+      "nonempty_reviews": 3,
+      "records": 14,
+      "record_identity_and_body_sha256": "53f0c3f64684e3c9667eb79be3799aa13fe737f2f5b7e0e5fcf5f964dc2adafc"
+    },
+    {
+      "repository": "private_010",
+      "private": true,
+      "group": "other",
+      "pull_requests": 7,
+      "inline": 1,
+      "root_inline": 1,
+      "conversation": 5,
+      "reviews": 1,
+      "nonempty_reviews": 1,
+      "records": 7,
+      "record_identity_and_body_sha256": "b9fe6ce17d9a2c1d428f46f377f42b64bf8f2614d49b50a54c62cf85822d0236"
+    },
+    {
+      "repository": "the-Drunken-coder/DCS",
+      "private": false,
+      "group": "other",
+      "pull_requests": 11,
+      "inline": 200,
+      "root_inline": 81,
+      "conversation": 77,
+      "reviews": 159,
+      "nonempty_reviews": 30,
+      "records": 436,
+      "record_identity_and_body_sha256": "32e62f496bdfcf7015575e0286eef2f565f1b22cb1e0a3e7ecc22ab5b63f918c"
+    },
+    {
+      "repository": "private_011",
+      "private": true,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 0,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 0,
+      "record_identity_and_body_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "repository": "private_012",
+      "private": true,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 4,
+      "root_inline": 2,
+      "conversation": 5,
+      "reviews": 4,
+      "nonempty_reviews": 2,
+      "records": 13,
+      "record_identity_and_body_sha256": "5540a7049e885372be718f1b00fef5fb89b2f728c572f0b52651d6c798aa2644"
+    },
+    {
+      "repository": "private_013",
+      "private": true,
+      "group": "other",
+      "pull_requests": 9,
+      "inline": 72,
+      "root_inline": 61,
+      "conversation": 24,
+      "reviews": 45,
+      "nonempty_reviews": 21,
+      "records": 141,
+      "record_identity_and_body_sha256": "ae1ea7b4ea06547c60bd1a6854d214bdf801b61229efdc1974010965a419a496"
+    },
+    {
+      "repository": "the-Drunken-coder/Meshtastic-WIFI-bridge",
+      "private": false,
+      "group": "other",
+      "pull_requests": 29,
+      "inline": 144,
+      "root_inline": 134,
+      "conversation": 38,
+      "reviews": 27,
+      "nonempty_reviews": 17,
+      "records": 209,
+      "record_identity_and_body_sha256": "991be168b9b243dc466c6795590ad2ed392b0f9983a2640278f907fb47df394a"
+    },
+    {
+      "repository": "the-Drunken-coder/Meshtastic-pinger",
+      "private": false,
+      "group": "other",
+      "pull_requests": 4,
+      "inline": 6,
+      "root_inline": 3,
+      "conversation": 1,
+      "reviews": 4,
+      "nonempty_reviews": 1,
+      "records": 11,
+      "record_identity_and_body_sha256": "0a9aac280db4a94dcfbd3c5ce5eb7582e89a5faa78a67c69e8bd8de927bd719c"
+    },
+    {
+      "repository": "private_014",
+      "private": true,
+      "group": "other",
+      "pull_requests": 44,
+      "inline": 29,
+      "root_inline": 14,
+      "conversation": 24,
+      "reviews": 30,
+      "nonempty_reviews": 15,
+      "records": 83,
+      "record_identity_and_body_sha256": "195313bfabfe4d4f73e8a662b9c02b810ff6fe069733b1ca819085a917e3e51e"
+    },
+    {
+      "repository": "private_015",
+      "private": true,
+      "group": "other",
+      "pull_requests": 4,
+      "inline": 2,
+      "root_inline": 2,
+      "conversation": 4,
+      "reviews": 2,
+      "nonempty_reviews": 2,
+      "records": 8,
+      "record_identity_and_body_sha256": "cc40737172bf02452ef3ecaae516d00f53be91230cd6a19abe1a7854bb57f60a"
+    },
+    {
+      "repository": "private_016",
+      "private": true,
+      "group": "other",
+      "pull_requests": 3,
+      "inline": 23,
+      "root_inline": 23,
+      "conversation": 3,
+      "reviews": 7,
+      "nonempty_reviews": 7,
+      "records": 33,
+      "record_identity_and_body_sha256": "726808b47f949f06a99cb6c1ea077d1da3ab0c09a3f57e97c77d15d5013f2cdd"
+    },
+    {
+      "repository": "private_017",
+      "private": true,
+      "group": "other",
+      "pull_requests": 37,
+      "inline": 137,
+      "root_inline": 63,
+      "conversation": 89,
+      "reviews": 107,
+      "nonempty_reviews": 33,
+      "records": 333,
+      "record_identity_and_body_sha256": "789fda434b09958ed36ab9e02856a97f9bcecde53b936463258fc6a7cef168e2"
+    },
+    {
+      "repository": "private_018",
+      "private": true,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 18,
+      "root_inline": 9,
+      "conversation": 1,
+      "reviews": 11,
+      "nonempty_reviews": 2,
+      "records": 30,
+      "record_identity_and_body_sha256": "21b97565b52b7ec75e7e1e8b2c3816d24eb16787e7f0dd1e1f121f2b88904536"
+    },
+    {
+      "repository": "private_019",
+      "private": true,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 1,
+      "root_inline": 1,
+      "conversation": 0,
+      "reviews": 1,
+      "nonempty_reviews": 1,
+      "records": 2,
+      "record_identity_and_body_sha256": "15917d88bfda7c6cfb83205303b5cf1f53d076ad590bcc76dc04c6b646fa49a4"
+    },
+    {
+      "repository": "the-Drunken-coder/TileMux",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 15,
+      "root_inline": 15,
+      "conversation": 3,
+      "reviews": 2,
+      "nonempty_reviews": 2,
+      "records": 20,
+      "record_identity_and_body_sha256": "75dc9dae281490a9cb532a48a38a2ab0a83fdd8d87f64b6ba5f274d6f93145ea"
+    },
+    {
+      "repository": "private_020",
+      "private": true,
+      "group": "other",
+      "pull_requests": 7,
+      "inline": 65,
+      "root_inline": 34,
+      "conversation": 12,
+      "reviews": 35,
+      "nonempty_reviews": 3,
+      "records": 112,
+      "record_identity_and_body_sha256": "e5f41f15b02cf520b484ef7c1006aaf04e3c300916dc137bc0db5d8619883a83"
+    },
+    {
+      "repository": "private_021",
+      "private": true,
+      "group": "other",
+      "pull_requests": 2,
+      "inline": 18,
+      "root_inline": 18,
+      "conversation": 4,
+      "reviews": 3,
+      "nonempty_reviews": 3,
+      "records": 25,
+      "record_identity_and_body_sha256": "dced61cbb9292c64c7728649abc9fecb7995471103282c4cddc85382a74d2825"
+    },
+    {
+      "repository": "the-Drunken-coder/atlas-c3-retired",
+      "private": false,
+      "group": "other",
+      "pull_requests": 16,
+      "inline": 233,
+      "root_inline": 233,
+      "conversation": 97,
+      "reviews": 71,
+      "nonempty_reviews": 70,
+      "records": 401,
+      "record_identity_and_body_sha256": "8f5a6bd14b486082db4818a0656df58dd423d6448c727cc362967fad3fa2e310"
+    },
+    {
+      "repository": "private_022",
+      "private": true,
+      "group": "other",
+      "pull_requests": 18,
+      "inline": 160,
+      "root_inline": 160,
+      "conversation": 62,
+      "reviews": 57,
+      "nonempty_reviews": 57,
+      "records": 279,
+      "record_identity_and_body_sha256": "1d6ae50e67f44f111f2c1ab19ee3cafbdfe6abe611aa5861f8240238faebbad3"
+    },
+    {
+      "repository": "private_023",
+      "private": true,
+      "group": "other",
+      "pull_requests": 6,
+      "inline": 35,
+      "root_inline": 35,
+      "conversation": 13,
+      "reviews": 14,
+      "nonempty_reviews": 14,
+      "records": 62,
+      "record_identity_and_body_sha256": "c3500c6b721c5623d05f84ce9da974a9d1cc4bf6be6595ed60cfe6750f876a2e"
+    },
+    {
+      "repository": "the-Drunken-coder/atlas-fusion-harness-retired",
+      "private": false,
+      "group": "other",
+      "pull_requests": 2,
+      "inline": 4,
+      "root_inline": 4,
+      "conversation": 4,
+      "reviews": 1,
+      "nonempty_reviews": 1,
+      "records": 9,
+      "record_identity_and_body_sha256": "7238ec769ccaac5dfce1e8fafad136e901af64dd008a555ce552dc0aa1987526"
+    },
+    {
+      "repository": "private_024",
+      "private": true,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 43,
+      "root_inline": 43,
+      "conversation": 14,
+      "reviews": 16,
+      "nonempty_reviews": 14,
+      "records": 73,
+      "record_identity_and_body_sha256": "919680f558fdffe6f29927153bd6099bcaf33d77201bb2193d554ab51383d13e"
+    },
+    {
+      "repository": "the-Drunken-coder/cvbench-benchmark",
+      "private": false,
+      "group": "other",
+      "pull_requests": 27,
+      "inline": 259,
+      "root_inline": 176,
+      "conversation": 149,
+      "reviews": 176,
+      "nonempty_reviews": 65,
+      "records": 584,
+      "record_identity_and_body_sha256": "581894bd18c5744d049a9f7cf689890a4f6b4159b779aff892949e7626f21c1d"
+    },
+    {
+      "repository": "the-Drunken-coder/cvbench-dataset",
+      "private": false,
+      "group": "other",
+      "pull_requests": 2,
+      "inline": 251,
+      "root_inline": 139,
+      "conversation": 70,
+      "reviews": 207,
+      "nonempty_reviews": 60,
+      "records": 528,
+      "record_identity_and_body_sha256": "a4cf0cb7ce74dd2c8f41f6025660c12c4ec9b3825351cc36d4943ddab0b8829f"
+    },
+    {
+      "repository": "the-Drunken-coder/cvbench-studio",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 134,
+      "root_inline": 66,
+      "conversation": 40,
+      "reviews": 89,
+      "nonempty_reviews": 32,
+      "records": 263,
+      "record_identity_and_body_sha256": "ae812329c4a86d2c8adfece16b3fe4119996c86d41baeaa456b2bc15196fa065"
+    },
+    {
+      "repository": "the-Drunken-coder/data-fusion-benchmarking-experiments",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 5,
+      "root_inline": 5,
+      "conversation": 1,
+      "reviews": 2,
+      "nonempty_reviews": 2,
+      "records": 8,
+      "record_identity_and_body_sha256": "08ff02018f3e13d9e09cd487e01e58a773f3b581a79c8ba31b2088619b337bc1"
+    },
+    {
+      "repository": "private_025",
+      "private": true,
+      "group": "other",
+      "pull_requests": 11,
+      "inline": 68,
+      "root_inline": 68,
+      "conversation": 26,
+      "reviews": 13,
+      "nonempty_reviews": 13,
+      "records": 107,
+      "record_identity_and_body_sha256": "a0ee492fa0fe38d6dd75eaad295e4c7c3a3af642232f4aa6ac85290fdb65c25c"
+    },
+    {
+      "repository": "private_026",
+      "private": true,
+      "group": "other",
+      "pull_requests": 2,
+      "inline": 20,
+      "root_inline": 9,
+      "conversation": 5,
+      "reviews": 14,
+      "nonempty_reviews": 3,
+      "records": 39,
+      "record_identity_and_body_sha256": "63afd62bc68c2775c57eecfacd00944a8136b4e589b5dc58a7bdd6e6b1ead3dc"
+    },
+    {
+      "repository": "the-Drunken-coder/easymanet",
+      "private": false,
+      "group": "other",
+      "pull_requests": 59,
+      "inline": 525,
+      "root_inline": 422,
+      "conversation": 267,
+      "reviews": 284,
+      "nonempty_reviews": 124,
+      "records": 1076,
+      "record_identity_and_body_sha256": "167c01f0b5e1af748e2e083a6a3913e85ac53fdf2afe1b8b88234121f0a9daa3"
+    },
+    {
+      "repository": "the-Drunken-coder/easymanet-cli",
+      "private": false,
+      "group": "other",
+      "pull_requests": 4,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 8,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 8,
+      "record_identity_and_body_sha256": "8fc52342d7cd1eb19f175e4dee83a1b769ede1c28b6f321f8a12e7c5027448a5"
+    },
+    {
+      "repository": "the-Drunken-coder/easymanet-desktop",
+      "private": false,
+      "group": "other",
+      "pull_requests": 3,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 6,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 6,
+      "record_identity_and_body_sha256": "d7fab35d87ef85ae06e89a38d9a62aae2f622cd52d592dd945f68967b769e942"
+    },
+    {
+      "repository": "the-Drunken-coder/easymanet-images",
+      "private": false,
+      "group": "other",
+      "pull_requests": 4,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 8,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 8,
+      "record_identity_and_body_sha256": "38a09f46df52dd0c90ec21317e6b27f48ba0471a3752fe723b65e635064fa6c8"
+    },
+    {
+      "repository": "the-Drunken-coder/fpvdroneai",
+      "private": false,
+      "group": "other",
+      "pull_requests": 13,
+      "inline": 89,
+      "root_inline": 89,
+      "conversation": 37,
+      "reviews": 18,
+      "nonempty_reviews": 18,
+      "records": 144,
+      "record_identity_and_body_sha256": "7d6cbaec564506afaf128ac4dee15a8ee5b2c4f7e2f2ed1e16c94ae533aa0a7e"
+    },
+    {
+      "repository": "private_027",
+      "private": true,
+      "group": "other",
+      "pull_requests": 7,
+      "inline": 18,
+      "root_inline": 18,
+      "conversation": 3,
+      "reviews": 3,
+      "nonempty_reviews": 3,
+      "records": 24,
+      "record_identity_and_body_sha256": "3ac4fde6ddf0db040c10825cdcd424073b4fe7dc0b5822f7d91e84064395555b"
+    },
+    {
+      "repository": "private_028",
+      "private": true,
+      "group": "other",
+      "pull_requests": 3,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 2,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 2,
+      "record_identity_and_body_sha256": "5664904b7aa3dd3e5e3424ae9f6fc5842a57b44ea60c92ee8c7b900f8777bb3e"
+    },
+    {
+      "repository": "private_029",
+      "private": true,
+      "group": "other",
+      "pull_requests": 22,
+      "inline": 13,
+      "root_inline": 7,
+      "conversation": 11,
+      "reviews": 13,
+      "nonempty_reviews": 7,
+      "records": 37,
+      "record_identity_and_body_sha256": "716b03992b83d32a1854a2b4a4fc37f0c2c3be8ad7bded991d1d6c2a25d084d7"
+    },
+    {
+      "repository": "the-Drunken-coder/mattpocock-skills-community",
+      "private": false,
+      "group": "other",
+      "pull_requests": 2,
+      "inline": 4,
+      "root_inline": 4,
+      "conversation": 2,
+      "reviews": 2,
+      "nonempty_reviews": 2,
+      "records": 8,
+      "record_identity_and_body_sha256": "aef387adc6eb924683a75291c4ef67d79f487c85e317a18966f99eaaaf8316b9"
+    },
+    {
+      "repository": "private_030",
+      "private": true,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 14,
+      "root_inline": 10,
+      "conversation": 6,
+      "reviews": 12,
+      "nonempty_reviews": 7,
+      "records": 32,
+      "record_identity_and_body_sha256": "096f571b1fc535fbc96d96eaf83ddffad3f428e4465185f6d1d02a0a6f2a70e4"
+    },
+    {
+      "repository": "the-Drunken-coder/meshtastic-firmware",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 1,
+      "root_inline": 1,
+      "conversation": 1,
+      "reviews": 1,
+      "nonempty_reviews": 1,
+      "records": 3,
+      "record_identity_and_body_sha256": "748f6b0468c9126d7ce3283bfd004046d9a2f9a99d05630dcf0dec0c6b459ab6"
+    },
+    {
+      "repository": "the-Drunken-coder/meshtastic-lab",
+      "private": false,
+      "group": "other",
+      "pull_requests": 3,
+      "inline": 244,
+      "root_inline": 116,
+      "conversation": 43,
+      "reviews": 155,
+      "nonempty_reviews": 27,
+      "records": 442,
+      "record_identity_and_body_sha256": "9f0efc939d31f1a55f1d3a0205319a1ad07ba45f04a7d452a4aff0d12aaadc25"
+    },
+    {
+      "repository": "the-Drunken-coder/meshtastic-protobufs",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 1,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 1,
+      "record_identity_and_body_sha256": "5ec6f3e3087a805866384c245f9576c565af37604fa961a57a7d965b269f4381"
+    },
+    {
+      "repository": "the-Drunken-coder/meshtastic-python",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 1,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 1,
+      "record_identity_and_body_sha256": "fecd8944c89f520b7ee00a78ed2b86d7df5fa9fc8c89e34484350a6ab7fc31d1"
+    },
+    {
+      "repository": "the-Drunken-coder/meshtastic-workspace",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 1,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 1,
+      "record_identity_and_body_sha256": "00d165b64a306f21edf4090c684c24d2750c88e71617956b3150bcb79b6a7604"
+    },
+    {
+      "repository": "private_031",
+      "private": true,
+      "group": "other",
+      "pull_requests": 20,
+      "inline": 35,
+      "root_inline": 35,
+      "conversation": 29,
+      "reviews": 10,
+      "nonempty_reviews": 10,
+      "records": 74,
+      "record_identity_and_body_sha256": "2c7aa622c5b0d697507fb899bc19594f1366c6b788790fffca198b071545dcef"
+    },
+    {
+      "repository": "private_032",
+      "private": true,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 2,
+      "root_inline": 2,
+      "conversation": 1,
+      "reviews": 1,
+      "nonempty_reviews": 1,
+      "records": 4,
+      "record_identity_and_body_sha256": "77a6a7ad498217c2ada6d872a6c38765a2c89ad36a881c3e41d971558c904d12"
+    },
+    {
+      "repository": "private_033",
+      "private": true,
+      "group": "other",
+      "pull_requests": 5,
+      "inline": 0,
+      "root_inline": 0,
+      "conversation": 9,
+      "reviews": 0,
+      "nonempty_reviews": 0,
+      "records": 9,
+      "record_identity_and_body_sha256": "8187a17c8e3a4e0a8501e025ddb52ee8f5e2427dc118dd70a0c22b5ce9744f06"
+    },
+    {
+      "repository": "the-Drunken-coder/rl-drone-hoops",
+      "private": false,
+      "group": "other",
+      "pull_requests": 8,
+      "inline": 47,
+      "root_inline": 47,
+      "conversation": 7,
+      "reviews": 3,
+      "nonempty_reviews": 3,
+      "records": 57,
+      "record_identity_and_body_sha256": "8a0a1f6780a8d8a01b2d765c0a40b2c5e105c80b3b39450b64ba7ccd7f46be26"
+    },
+    {
+      "repository": "private_034",
+      "private": true,
+      "group": "other",
+      "pull_requests": 4,
+      "inline": 168,
+      "root_inline": 168,
+      "conversation": 65,
+      "reviews": 43,
+      "nonempty_reviews": 43,
+      "records": 276,
+      "record_identity_and_body_sha256": "cb4fbf74be355f03b313cb4d7b3c9f4d1af7a69579cfa98df9a4fa5f017a2e2a"
+    },
+    {
+      "repository": "the-Drunken-coder/sidc-kit",
+      "private": false,
+      "group": "other",
+      "pull_requests": 24,
+      "inline": 38,
+      "root_inline": 38,
+      "conversation": 62,
+      "reviews": 24,
+      "nonempty_reviews": 9,
+      "records": 124,
+      "record_identity_and_body_sha256": "96e27e2ff772a753274a926757539385a318f895ffd992bd43b427866a4083ad"
+    },
+    {
+      "repository": "private_035",
+      "private": true,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 41,
+      "root_inline": 41,
+      "conversation": 8,
+      "reviews": 6,
+      "nonempty_reviews": 6,
+      "records": 55,
+      "record_identity_and_body_sha256": "4563a1282fd4b340f95bd4d0c3da9242c65a971c033c39bf1b7d2b530b4fe7bc"
+    },
+    {
+      "repository": "the-Drunken-coder/smarter-bug-fixing-experiments",
+      "private": false,
+      "group": "other",
+      "pull_requests": 1,
+      "inline": 12,
+      "root_inline": 12,
+      "conversation": 1,
+      "reviews": 3,
+      "nonempty_reviews": 3,
+      "records": 16,
+      "record_identity_and_body_sha256": "32afd2c36ec23df8d060ff7e32a2bb88f506eee2bb424bc35a763eb240f08912"
+    },
+    {
+      "repository": "the-Drunken-coder/tactical-mesh-radio",
+      "private": false,
+      "group": "other",
+      "pull_requests": 3,
+      "inline": 55,
+      "root_inline": 24,
+      "conversation": 25,
+      "reviews": 45,
+      "nonempty_reviews": 11,
+      "records": 125,
+      "record_identity_and_body_sha256": "a332ca43caf5709b8732303dfdfe50cc3470be2508dbef69c4d9ea7098144c98"
+    }
+  ],
+  "cited_records": [
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/1#discussion_r4065552804",
+      "kind": "inline",
+      "id": 4065552804,
+      "in_reply_to_id": null,
+      "body_sha256": "890972179ba3b01c69146b5362c840425249451c3af21ced65ff9080ba722025",
+      "used_in": [
+        {
+          "document": "review-and-navigation.md",
+          "label": "stale retention wording"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/1#discussion_r4065552840",
+      "kind": "inline",
+      "id": 4065552840,
+      "in_reply_to_id": null,
+      "body_sha256": "7f68703d9b089c37b9b9748398bedb55e71813059a6f64f6a9cd0c186448318c",
+      "used_in": [
+        {
+          "document": "review-and-navigation.md",
+          "label": "Task results confused with activity history"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/1#discussion_r4065552861",
+      "kind": "inline",
+      "id": 4065552861,
+      "in_reply_to_id": null,
+      "body_sha256": "0d9c97baf651dea1c8d5c0b3e0e19449efae1ddd3799fb890da3fcbb101af287",
+      "used_in": [
+        {
+          "document": "review-and-navigation.md",
+          "label": "undefined lifecycle terms"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/1#pullrequestreview-5270808121",
+      "kind": "review",
+      "id": 5270808121,
+      "in_reply_to_id": null,
+      "body_sha256": "a764bbf4a91772200bdde7a007ae6aff417d700e993473183a0c4186bfdc18b6",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "earliest Atlas review summary"
+        },
+        {
+          "document": "review-and-navigation.md",
+          "label": "review summary"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175233357",
+      "kind": "inline",
+      "id": 4175233357,
+      "in_reply_to_id": null,
+      "body_sha256": "78e015601dedd6759308c414859a4da6951a6b4102b0084947817a2a3acf80de",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175233366",
+      "kind": "inline",
+      "id": 4175233366,
+      "in_reply_to_id": null,
+      "body_sha256": "b186da02077191894943449c43fe068371de1929257d2a5a281c9474e11d3575",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175233368",
+      "kind": "inline",
+      "id": 4175233368,
+      "in_reply_to_id": null,
+      "body_sha256": "967bde4e280571cd717f73ddf21f3ea4b25e9a71cc1c77c9ea4e7d6687e2562d",
+      "used_in": [
+        {
+          "document": "automated-checks.md",
+          "label": "Atlas Core #101"
+        },
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175236055",
+      "kind": "inline",
+      "id": 4175236055,
+      "in_reply_to_id": null,
+      "body_sha256": "e5475b356027ae41a32c15ed7f5875ed64c78076582b1fbfeceef15353e44add",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175563459",
+      "kind": "inline",
+      "id": 4175563459,
+      "in_reply_to_id": null,
+      "body_sha256": "a16add978d6dc6ae18724ee2fb0fc9d49b73f1fbb92f64d5f38b07e3343c0830",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4175563460",
+      "kind": "inline",
+      "id": 4175563460,
+      "in_reply_to_id": null,
+      "body_sha256": "bf6332e9c8c7e2ce23bff396d0bddffdbd277415ff51b786828cddfd8e2f1821",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4178218763",
+      "kind": "inline",
+      "id": 4178218763,
+      "in_reply_to_id": null,
+      "body_sha256": "be0dbefc0443b7828f1b0308edde23d1136b292e4bc676ca9bb9ac7275e7e885",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4178226007",
+      "kind": "inline",
+      "id": 4178226007,
+      "in_reply_to_id": null,
+      "body_sha256": "6a94b22f42b615ce51d27963936b02631bbec81090d79d8df0d1ba4affc356e5",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4178226014",
+      "kind": "inline",
+      "id": 4178226014,
+      "in_reply_to_id": null,
+      "body_sha256": "a524ef7bb530622133dcd5ea2a9491e3441f6f8682af83b470cca3e098066a4c",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "Atlas Core #101"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4178564165",
+      "kind": "inline",
+      "id": 4178564165,
+      "in_reply_to_id": 4178531196,
+      "body_sha256": "ada919b6143f8a8688067b93033a9794e5f0c10ba572b2b6c2aa343f3ba5ab52",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "a later response"
+        },
+        {
+          "document": "coverage.md",
+          "label": "Evidence response"
+        },
+        {
+          "document": "review-and-navigation.md",
+          "label": "rebutted with pinned-runtime evidence"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/101#discussion_r4178565383",
+      "kind": "inline",
+      "id": 4178565383,
+      "in_reply_to_id": 4178531196,
+      "body_sha256": "cd3b9f4ff28e5333e7771764a4fb763908e371ee8cf08e9db3ca36dc6ef84f40",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "withdrawal"
+        },
+        {
+          "document": "review-and-navigation.md",
+          "label": "withdrawn by the reviewer"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/108#discussion_r4186881946",
+      "kind": "inline",
+      "id": 4186881946,
+      "in_reply_to_id": null,
+      "body_sha256": "85928b16056ee5a3569df353824173316e001e64499026caf345c74c07efc6e1",
+      "used_in": [
+        {
+          "document": "automated-checks.md",
+          "label": "PR #108"
+        },
+        {
+          "document": "boundary-validation.md",
+          "label": "PR #108's unresolved finding"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/56#discussion_r4117172097",
+      "kind": "inline",
+      "id": 4117172097,
+      "in_reply_to_id": null,
+      "body_sha256": "123b5c419cc817cd07228143cdd468686760cdf5d375fdea5102b375cfcbdc4c",
+      "used_in": [
+        {
+          "document": "review-and-navigation.md",
+          "label": "central testing plan"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/93#discussion_r4172124880",
+      "kind": "inline",
+      "id": 4172124880,
+      "in_reply_to_id": null,
+      "body_sha256": "298a25340fe5bc55830bb1e671e9127c0f4438d5ce8e508c9222ddaf10b82308",
+      "used_in": [
+        {
+          "document": "automated-checks.md",
+          "label": "CodeRabbit"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/93#discussion_r4172153077",
+      "kind": "inline",
+      "id": 4172153077,
+      "in_reply_to_id": null,
+      "body_sha256": "9a3c48cca53a77d57d33193529ad021813ffbb8a05804274265b791069f43ea1",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "Atlas Core #93"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/93#discussion_r4172153081",
+      "kind": "inline",
+      "id": 4172153081,
+      "in_reply_to_id": null,
+      "body_sha256": "d009c69b5f7117561739aee07257d66a2bc6ca1ba3d9628e7b310cc61ffc355c",
+      "used_in": [
+        {
+          "document": "automated-checks.md",
+          "label": "Codex"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/93#discussion_r4172153083",
+      "kind": "inline",
+      "id": 4172153083,
+      "in_reply_to_id": null,
+      "body_sha256": "ab545a693a79c21fa39a3bfdb38e58e1cde0af11ac33e59f1dac2a8595489c63",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "Atlas Core #93 cursors"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/93#discussion_r4172153086",
+      "kind": "inline",
+      "id": 4172153086,
+      "in_reply_to_id": null,
+      "body_sha256": "3b91100e27d2d56cdf6c5c34504117feb49676e4a45ea87e7b57b0300d565c27",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "headers"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/93#discussion_r4172153097",
+      "kind": "inline",
+      "id": 4172153097,
+      "in_reply_to_id": null,
+      "body_sha256": "344f61e9feed5daccbf825bde6308317078a72bc9a67a9e4e5d4e901b526d134",
+      "used_in": [
+        {
+          "document": "review-and-navigation.md",
+          "label": "comparison register"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/atlas-field-systems/atlas-core/pull/93#issuecomment-5966850834",
+      "kind": "conversation",
+      "id": 5966850834,
+      "in_reply_to_id": null,
+      "body_sha256": "16b3ecd64ce7969e59a04d7ce4ad446e9aca75a80049f69c6f1f2dfdc5b7e725",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "Atlas #93 response"
+        },
+        {
+          "document": "review-and-navigation.md",
+          "label": "PR #93 response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Mesh/pull/1#discussion_r3692748409",
+      "kind": "inline",
+      "id": 3692748409,
+      "in_reply_to_id": null,
+      "body_sha256": "85d147c7ef1efc3cf29ee581ff60e9f19111a414c4b875333eb72c9af6972bf4",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "Atlas-Mesh #1"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Mesh/pull/2#discussion_r3756840414",
+      "kind": "inline",
+      "id": 3756840414,
+      "in_reply_to_id": null,
+      "body_sha256": "6a9aa0809166d863e62eb8cdfb4713bd7a6cff57c27b2e4186c8adcba1b1b3ac",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "Finding"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Mesh/pull/2#discussion_r3756870439",
+      "kind": "inline",
+      "id": 3756870439,
+      "in_reply_to_id": 3756840414,
+      "body_sha256": "d25f529b48bfb144541fe02c09c5b1c2991c631c6527f672d91c71bee80094d0",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "rebuttal"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/196#discussion_r3707294163",
+      "kind": "inline",
+      "id": 3707294163,
+      "in_reply_to_id": null,
+      "body_sha256": "a859e739892d9ff31c0a16741838ceb07e01fd4dc94256b815a92254576fae44",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "Modernization #196"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/196#discussion_r3707571985",
+      "kind": "inline",
+      "id": 3707571985,
+      "in_reply_to_id": 3707294163,
+      "body_sha256": "f2700c5c74ad31f82d3c962244870ba31cef7e1c5420b2c237f50ce4b6569a3c",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "real-storage regression response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/224#discussion_r3818482349",
+      "kind": "inline",
+      "id": 3818482349,
+      "in_reply_to_id": null,
+      "body_sha256": "edd5ecfb2b6f7d41e0cc29732f0961a7fffc90b845d6d4acc2cb413913d45a31",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "Modernization #224"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/30#discussion_r3408549183",
+      "kind": "inline",
+      "id": 3408549183,
+      "in_reply_to_id": null,
+      "body_sha256": "fbbe6caeaa87fff3440ac196e44a90b736e00929ccaf60fd6da9dabece3e6a01",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "Modernization #30"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/30#discussion_r3408712751",
+      "kind": "inline",
+      "id": 3408712751,
+      "in_reply_to_id": 3408549183,
+      "body_sha256": "d4ac433e3fb3434737cfd78282b6811e138ce9991a398822b34327c16a8f1af3",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "removal response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/318#discussion_r3946627593",
+      "kind": "inline",
+      "id": 3946627593,
+      "in_reply_to_id": null,
+      "body_sha256": "4fdb4d428eee0f8389e34d830bd9fb7e70cbbbbdcb90561ac63cd88b5e3b47aa",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "Finding"
+        },
+        {
+          "document": "tests-and-evidence.md",
+          "label": "Modernization benchmark finding"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/318#discussion_r3947490209",
+      "kind": "inline",
+      "id": 3947490209,
+      "in_reply_to_id": 3946627593,
+      "body_sha256": "b0e1c5006f3535e42618678fede4adb77f1c284e0ad4049e3bc54f35cefde8f6",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "withdrawal"
+        },
+        {
+          "document": "tests-and-evidence.md",
+          "label": "withdrawn"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/413#discussion_r3998375151",
+      "kind": "inline",
+      "id": 3998375151,
+      "in_reply_to_id": null,
+      "body_sha256": "e7e651640c57bc02ccc00ca514d19892d4dd6a25aa81f37b508c2d599c44fd55",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "Modernization #413"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/413#discussion_r3998408419",
+      "kind": "inline",
+      "id": 3998408419,
+      "in_reply_to_id": 3998375151,
+      "body_sha256": "474c2542e613045954eabfab02bb0c7875edb988cb3ed8d63689c9ed8568fa17",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "instrumented regression response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/428#discussion_r4014075021",
+      "kind": "inline",
+      "id": 4014075021,
+      "in_reply_to_id": null,
+      "body_sha256": "5131d148d61af6e2f24dd4c48c76f3fc315e2f318410302bdff8ee054c65319e",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "Modernization #428"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/428#discussion_r4014902029",
+      "kind": "inline",
+      "id": 4014902029,
+      "in_reply_to_id": null,
+      "body_sha256": "045ae1b3be195ca321b7ef7a74a70ff51171942624b37a5e9ca25bcdd7360564",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "Modernization #428"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/428#discussion_r4016475361",
+      "kind": "inline",
+      "id": 4016475361,
+      "in_reply_to_id": 4014075021,
+      "body_sha256": "0292ae309cbe1dff1f4870ca2be6f62b89fa1c757ca9ce5f7254e3148ee4bd02",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "confirmed response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/439#discussion_r4030422073",
+      "kind": "inline",
+      "id": 4030422073,
+      "in_reply_to_id": null,
+      "body_sha256": "ae458a12cb48c31a1b857bc2a15df1cf0e1e555d2ddd0697700694de9b51462a",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "Modernization #439"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Atlas-Modernization/pull/439#discussion_r4030450401",
+      "kind": "inline",
+      "id": 4030450401,
+      "in_reply_to_id": 4030422073,
+      "body_sha256": "37ac5dd2c6598d03bcb7f7ab893f4b4411e0b5905d101fe44b2846863be14711",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "confirmed response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/DCS/pull/1#discussion_r3772911288",
+      "kind": "inline",
+      "id": 3772911288,
+      "in_reply_to_id": null,
+      "body_sha256": "00d06eb785b5ef81f519307002b6ea425689ad5de4930fc2fd648c1b01e34585",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "DCS #1"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/DCS/pull/1#discussion_r3773212243",
+      "kind": "inline",
+      "id": 3773212243,
+      "in_reply_to_id": 3773180943,
+      "body_sha256": "98ea1ed5b82d0de20bcc72429553795deae15ba82ccf0ddab4bc7962ea957e6e",
+      "used_in": [
+        {
+          "document": "boundary-validation.md",
+          "label": "parser replacement"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/DCS/pull/1#discussion_r3773375550",
+      "kind": "inline",
+      "id": 3773375550,
+      "in_reply_to_id": null,
+      "body_sha256": "158f6824c5f58d785c9c3bf6242f926f905d7a45e85392cd807cd65cdab2a3be",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "DCS #1"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/DCS/pull/1#discussion_r3773396870",
+      "kind": "inline",
+      "id": 3773396870,
+      "in_reply_to_id": 3773375550,
+      "body_sha256": "5c7e026edc37a64d0c469ab7e09c5631c1e146440d393a816b9bef104529b94b",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "negative-fixture response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/DCS/pull/3#discussion_r3777478955",
+      "kind": "inline",
+      "id": 3777478955,
+      "in_reply_to_id": null,
+      "body_sha256": "ff9309b7853ab648f1c1e2b51e9a82ec85a8d74983bff2f95c0d43afda504132",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "Finding"
+        },
+        {
+          "document": "review-and-navigation.md",
+          "label": "challenged"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/DCS/pull/3#discussion_r3777484727",
+      "kind": "inline",
+      "id": 3777484727,
+      "in_reply_to_id": 3777478955,
+      "body_sha256": "56b2d848f6d0a5c764c5c4d76f07be16e382f65eccb0bd56f25a83c456290ef6",
+      "used_in": [
+        {
+          "document": "coverage.md",
+          "label": "rebuttal"
+        },
+        {
+          "document": "review-and-navigation.md",
+          "label": "rebutted against the normative contract"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Ridgeline/pull/102#discussion_r4187454710",
+      "kind": "inline",
+      "id": 4187454710,
+      "in_reply_to_id": null,
+      "body_sha256": "782a43b49922ee18e585f9be1c220e945962d9517d5fd39bb49264c9059b2f36",
+      "used_in": [
+        {
+          "document": "automated-checks.md",
+          "label": "Ridgeline #102"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Ridgeline/pull/31#discussion_r4127675574",
+      "kind": "inline",
+      "id": 4127675574,
+      "in_reply_to_id": null,
+      "body_sha256": "98b06a48f7cbe18f3a2ece0ff20e9455276651b4b9506370f111b540d0f789ee",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "Ridgeline #31"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Ridgeline/pull/31#discussion_r4127706155",
+      "kind": "inline",
+      "id": 4127706155,
+      "in_reply_to_id": 4127675574,
+      "body_sha256": "88d5827b88a67add95bc384eaa29bc7242032ede8058f17dce52333d82c68631",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "confirmed response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Ridgeline/pull/37#discussion_r4129876842",
+      "kind": "inline",
+      "id": 4129876842,
+      "in_reply_to_id": null,
+      "body_sha256": "a4e21058daa61a3cad2594a0d3ee0c07004d7e665d9a2a48617afcce0e58d0bc",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "Ridgeline #37"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Ridgeline/pull/37#discussion_r4129968031",
+      "kind": "inline",
+      "id": 4129968031,
+      "in_reply_to_id": 4129876842,
+      "body_sha256": "e5e345792a70ccf0a7ab3e10b85b0df7924d1f476caf951f7356141962145037",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "confirmed process regression"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Ridgeline/pull/92#discussion_r4180678801",
+      "kind": "inline",
+      "id": 4180678801,
+      "in_reply_to_id": null,
+      "body_sha256": "b3704f677e9ba524c26148bb8f8b6be74c5fa7ace8d92208ba11ed7af00e2bf1",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "Ridgeline #92"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/Ridgeline/pull/92#discussion_r4181213595",
+      "kind": "inline",
+      "id": 4181213595,
+      "in_reply_to_id": 4180678801,
+      "body_sha256": "19cab516490812541df11f46d3072fcbf6b95cf624d07c8cf0809942a5542946",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "confirmed response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/cvbench-dataset/pull/1#discussion_r3771192648",
+      "kind": "inline",
+      "id": 3771192648,
+      "in_reply_to_id": null,
+      "body_sha256": "cb68d05ea362b095e0da000e9d3d7ef822432dd486b4f9c964045a92309b6997",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "cvbench-dataset #1"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/cvbench-dataset/pull/1#discussion_r3771259156",
+      "kind": "inline",
+      "id": 3771259156,
+      "in_reply_to_id": 3771192648,
+      "body_sha256": "f963dfe7394e5d18c85759b7b86b3ef4587d793473472403b5f0a012ea8f557d",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "confirmed response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/cvbench-studio/pull/1#discussion_r3772031529",
+      "kind": "inline",
+      "id": 3772031529,
+      "in_reply_to_id": null,
+      "body_sha256": "95c834e92b4e1e5509765fa00f78e2c4cb0c5f2934e1809056dfc947b327ae4b",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "cvbench-studio #1"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/cvbench-studio/pull/1#discussion_r3772057493",
+      "kind": "inline",
+      "id": 3772057493,
+      "in_reply_to_id": 3772031529,
+      "body_sha256": "58a8b69d35490791f8998bac8f978f5d0f9620f274d22ee7836741c4de12b72e",
+      "used_in": [
+        {
+          "document": "tests-and-evidence.md",
+          "label": "verified-byte response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/easymanet/pull/58#discussion_r3778441141",
+      "kind": "inline",
+      "id": 3778441141,
+      "in_reply_to_id": null,
+      "body_sha256": "69037b9a6d9835d602f5cfbb8099ff54df8d3533d6492362e0ab4a4d21c3f4fd",
+      "used_in": [
+        {
+          "document": "automated-checks.md",
+          "label": "easymanet finding"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/easymanet/pull/58#discussion_r3785947416",
+      "kind": "inline",
+      "id": 3785947416,
+      "in_reply_to_id": null,
+      "body_sha256": "248a089ac00322b3255de2197d6b675cce30b2a4deeb419b918764e8bf66171c",
+      "used_in": [
+        {
+          "document": "automated-checks.md",
+          "label": "easymanet #58"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/meshtastic-lab/pull/1#discussion_r3921403275",
+      "kind": "inline",
+      "id": 3921403275,
+      "in_reply_to_id": null,
+      "body_sha256": "e7bcc1092f7bc4f32f4ae9784c94a8dfcde8cdd7035250c138ebfce2667582cb",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "meshtastic-lab #1"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/meshtastic-lab/pull/1#discussion_r3921540653",
+      "kind": "inline",
+      "id": 3921540653,
+      "in_reply_to_id": 3921403275,
+      "body_sha256": "dd0477366349e42f21771259bd2a97e1fa6f76195d3863d449140c90c2e92277",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "confirmed response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/meshtastic-lab/pull/1#discussion_r3922219292",
+      "kind": "inline",
+      "id": 3922219292,
+      "in_reply_to_id": null,
+      "body_sha256": "77e254b9299fb883ed92ccba572f45002322985a03e92e41db01143c3cbac5f3",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "meshtastic-lab #1"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/meshtastic-lab/pull/1#discussion_r3922273136",
+      "kind": "inline",
+      "id": 3922273136,
+      "in_reply_to_id": 3922219292,
+      "body_sha256": "ca3e8f11f610895ecf366175bee14b3dbb2664632642c76fce79eaef52af3ac0",
+      "used_in": [
+        {
+          "document": "state-and-lifetimes.md",
+          "label": "confirmed response"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/meshtastic-lab/pull/3#discussion_r3938169584",
+      "kind": "inline",
+      "id": 3938169584,
+      "in_reply_to_id": null,
+      "body_sha256": "5f17c3c975759aae54628885fea60536c9072bdacdbe641ef0bb47852b11119e",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "meshtastic-lab #3"
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/the-Drunken-coder/meshtastic-lab/pull/3#discussion_r3938279914",
+      "kind": "inline",
+      "id": 3938279914,
+      "in_reply_to_id": 3938169584,
+      "body_sha256": "858dd3040bc18599d86e6a6359eda4537459a950625f2b120f8987b2d0ac9d6d",
+      "used_in": [
+        {
+          "document": "resource-limits.md",
+          "label": "confirmed response"
+        }
+      ]
+    }
+  ]
+}

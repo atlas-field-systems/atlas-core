@@ -6,6 +6,8 @@ This is a dated evidence record for the [proposal bundle](README.md). It establi
 
 GitHub was accessed read-only through the authenticated `gh` account `the-Drunken-coder`. Collection completed on 5 October 2026. Repository conventions were compared against checkout `e642fe43b98f96f8cabffa870e54eefe359d785c`.
 
+The [query manifest](evidence/collection-manifest.json) preserves the recovered endpoint templates, search partitions, pagination and deduplication rules. The [frozen result summary](evidence/result-summary.json) was recomputed from the original saved collection. It includes per-repository counts, source snapshot hashes, search completeness and the cited record identities and body hashes. These files preserve this collection's results; a new query can return different results as repositories and comments change.
+
 | Measure | Result |
 | --- | ---: |
 | Repositories returned by the owner/collaborator/organization-member inventory | 108 |
@@ -53,6 +55,8 @@ All 7,627 root inline comments were screened through headings and keyword famili
 
 This is broad screening followed by close reading of selected evidence. It is not a claim that a human-style reading of every body or every PR diff occurred.
 
+The result summary records which primary sources each proposal cites, including the linked rebuttals and withdrawals. The original keyword lists and every individual screening decision were not retained. The surviving evidence therefore supports the cited incidents and collection counts, without establishing an independently replayable exhaustive screening process.
+
 For each candidate:
 
 1. Identify the concrete failure and its observable consequence.
@@ -85,8 +89,8 @@ The primary evidence did not establish a standing tool-economy or information-ac
 
 The active conventions, domain authority guide, glossary, testing strategy, applicable architecture/topics/ADRs, CI workflow, verifier, structural lint/probes, Ruff configuration and representative current adapters/fixture cleanup were inspected.
 
-This task changed only the proposal bundle. Local links/anchors, GitHub evidence URLs against the fetched corpus, aggregate counts, proposal status and whitespace were checked. All eight files passed, including 42 local references and 77 GitHub evidence references.
+Initial verification covered the eight proposal documents. Local links/anchors, GitHub evidence URLs against the fetched corpus, aggregate counts, proposal status and whitespace passed, including 42 local references and 77 GitHub evidence references. The review follow-up also added repository navigation and the committed evidence files, and recomputed collection counts and cited-record hashes from the saved inputs.
 
 The existing manual command `python3 -O scripts/verify.py --toolchain-self-test` passed, demonstrating checksum refusal before extraction and wrong-version refusal under optimization. Application tests and the full foundation verifier were not rerun for documentation-only suggestions. A read-only TypeScript lint probe was unavailable because installed SDK dependencies were absent.
 
-Raw fetched records remain outside the repository. Durable evidence is provided by the original GitHub links and this aggregate account of collection; the proposal files do not depend on temporary paths.
+Raw fetched records remain outside the repository because the corpus includes private repositories and comment bodies. The result summary replaces private repository identities with anonymous keys and omits raw bodies. Its counts and hashes do not grant access to those sources or reproduce their omitted contents. GitHub links retain the selected primary evidence; the committed manifest and summary retain collection provenance without depending on temporary paths.
