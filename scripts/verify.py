@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from generate import OUTPUTS, generate
 from toolchain import LOCK, ROOT, prepare, run
 from toolchain_checks import check_toolchain_refusals
+from verification_checks import check_fresh_go_tests
 
 
 def snapshot():
@@ -26,6 +27,11 @@ def check(passed, name):
     """Record `name` in the evidence report only after its block succeeds."""
     yield
     passed.append(name)
+
+
+def _test_go(go, env, *, cwd, capture=False):
+    # Shared fixture inputs outside the Go module are not covered by its result cache.
+    return run([go, "test", "-count=1", "./..."], env, cwd=cwd, capture=capture)
 
 
 def verify(bootstrap):
@@ -52,13 +58,15 @@ def verify(bootstrap):
         if snapshot() != first:
             raise RuntimeError("two clean generations changed output")
         print(f"PASS clean deterministic generation: {len(first)} files match byte for byte", flush=True)
+    with check(passed, "fresh Go execution after external corpus changes"):
+        check_fresh_go_tests(go, env, _test_go)
     with check(passed, "Go format/build/test/vet"):
         formatted = run([go.parent / "gofmt", "-l", *sorted(core.rglob("*.go"))], env, capture=True)
         if formatted:
             raise RuntimeError(f"Go formatting mismatch: {formatted}")
-        # Shared JSON fixtures live outside the Go module and escape test-cache tracking.
-        for arguments in [[go, "build", "./..."], [go, "test", "-count=1", "./..."], [go, "vet", "./..."]]:
-            run(arguments, env, cwd=core)
+        run([go, "build", "./..."], env, cwd=core)
+        _test_go(go, env, cwd=core)
+        run([go, "vet", "./..."], env, cwd=core)
         run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=core)
     with check(passed, "TypeScript structural lint and independent rule probes"):
         run(["npm", "run", "lint"], env, cwd=sdk)
