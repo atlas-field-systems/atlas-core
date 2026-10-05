@@ -12,6 +12,8 @@ python3 scripts/verify.py --bootstrap
 
 The entry point checks exact versions, downloads checksum-pinned Go/sqlc/Ruff when absent, installs npm dependencies locally, verifies both Go module graphs, and regenerates from absent outputs twice. It then runs Go formatting/build/test/vet, Prettier formatting of handwritten TypeScript/JavaScript, Ruff formatting and lint of repository Python, strict TypeScript checking, SDK compilation, and real contract workflows. No global generator or npm package installation is needed. `ATLAS_TOOLS` selects another user-owned cache; the default is `$XDG_CACHE_HOME/atlas-protocol-tools` or `~/.cache/atlas-protocol-tools`. Fresh downloaded archives are checked before extraction; cached executables must still report their locked versions. `python3 -O scripts/verify.py --toolchain-self-test` also executes the deliberately wrong checksum/version checks.
 
+Go tests execute freshly on every verification run while compilation and dependency caches remain available; a real external-corpus regression checks that execution policy.
+
 Apply the checked formatting (Prettier, then Ruff import order and formatting) after a bootstrap run. The shared settings live in `.prettierrc.json` and `ruff.toml` at the repository root:
 
 ```sh
@@ -65,9 +67,9 @@ Position always supplies both latitude and longitude. Each coordinate explicitly
 
 Ajv keeps strict schema checking except `strictRequired`, a compilation diagnostic that treats a field required by one `allOf` member as undeclared when another member defines it. Runtime `required` validation remains enabled. An independent profile check confirms the composed mutation context rejects an absent commit cursor. This is a supported adapter configuration, not another declaration of that field.
 
-The SDK response adapter qualifies separately declared `application/json`, JSON suffix media such as `application/problem+json`, and binary alternatives at one response status. It selects the authored schema by the received media type, refuses colliding normalized JSON declarations and requires an explicit JSON response byte bound; [response coverage](../tests/contract/README-97.md) records the independent HTTP checks.
+The SDK response adapter qualifies explicit three-digit HTTP status codes from `100` through `599` with inline Response Objects and local Header Object references. Construction rejects `default`, status ranges such as `2XX` and other malformed status keys, including mixed exact/fallback declarations, before requests. Fallback and range matching remain unqualified. Response Object `$ref` resolution remains unqualified; local Header references do not establish general reference resolution.
 
-Response status keys must be explicit three-digit HTTP codes from `100` through `599`. The SDK adapter rejects `default`, ranges such as `2XX` and malformed status keys during construction, including when an explicit status is also declared. Fallback and range matching remain unqualified.
+At each exact status, the adapter qualifies separately declared `application/json`, JSON suffix media such as `application/problem+json`, and binary alternatives. It selects the authored schema by the received media type, refuses colliding normalized JSON declarations and requires an explicit JSON response byte bound; [response coverage](../tests/contract/README-97.md) records the independent HTTP checks.
 
 External references, recursive schemas, other composition profiles, nullable enum combinations, OpenAPI 3.1/3.2 features and custom endpoint templates remain unqualified. A new feature needs an independent fixture and executed check before adoption. Operational range, authority and cross-field decisions stay with their owning modules.
 

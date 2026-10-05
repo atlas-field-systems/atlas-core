@@ -128,7 +128,7 @@ await withLoopbackServer(
       () => client.PUT("/__fixture/value", { params: { header: headers }, body: { value: "committed", count: "1" } }),
       isRefusal("body_size"),
     );
-    assert.equal(mutations, 1, "response refusal makes no claim that a mutation did not commit");
+    assert.equal(mutations, 1, "response refusal does not establish absence of a server-side effect");
     const binaryDocument = {
       ...document,
       paths: {
@@ -154,7 +154,7 @@ await withLoopbackServer(
     assert(result.data !== undefined);
     assert.deepEqual(new Uint8Array(result.data), wire);
     console.log(
-      "PASS JSON refusal preserves unknown mutation outcome and the selected binary representation bypasses the JSON bound",
+      "PASS oversized PUT response refusal follows a supplier effect and selected binary bypasses the JSON bound",
     );
   },
 );

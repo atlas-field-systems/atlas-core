@@ -94,7 +94,8 @@ export function responseValidation(
       const noBody = declared.media.size === 0;
       if (noBody ? media !== "" : !declared.media.has(media)) throw refuse("media_type");
       const validate = declared.validators.get(media);
-      // Raw JSON and binary representations are returned without reading them.
+      // Binary content bypasses JSON reading. All declared JSON, including raw
+      // documents, is validated through a bounded clone below.
       if (!validate && !noBody) return response;
       const bytes = await readClone(response, noBody ? 0 : maxJSONBytes);
       if (bytes === "overflow") throw refuse(noBody ? "body" : "body_size");
@@ -133,7 +134,9 @@ function declareResponses(document: ResponseContract) {
       if (!operation) continue;
       for (const [status, response] of Object.entries(operation.responses)) {
         if (!/^[1-5][0-9]{2}$/u.test(status)) {
-          throw new Error("Response status declarations require explicit HTTP codes from 100 to 599");
+          throw new Error(
+            `Unsupported response status declaration "${status}" for ${method.toUpperCase()} ${path}; use exact status codes`,
+          );
         }
         const location = `#/paths/${pointer(path)}/${method}/responses/${status}`;
         responses.set(`${method.toUpperCase()} ${path} ${status}`, declareResponse(document, ajv, location, response));
