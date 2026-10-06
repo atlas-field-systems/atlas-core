@@ -1,0 +1,1698 @@
+<!doctype html>
+<!-- THROWAWAY RESEARCH. Keep on a prototype branch, outside production. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atlas review: three state models</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+        color: #202c34;
+        background: #faf9f5;
+      }
+      body {
+        max-width: 1240px;
+        margin: auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 26px;
+        margin: 8px 0;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 22px 0 10px;
+      }
+      p {
+        line-height: 1.5;
+        max-width: 100ch;
+      }
+      button,
+      select {
+        font: inherit;
+      }
+      button {
+        border: 1px solid #9ba6aa;
+        background: white;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+      button:hover {
+        background: #e6eeed;
+      }
+      button:focus-visible,
+      select:focus-visible {
+        outline: 3px solid #267c76;
+        outline-offset: 2px;
+      }
+      button[aria-selected="true"],
+      button[aria-pressed="true"],
+      button.next {
+        background: #155e59;
+        color: white;
+        border-color: #155e59;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      a {
+        color: #155e59;
+      }
+      nav,
+      .buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      nav {
+        border-bottom: 1px solid #bbc3c3;
+        padding-bottom: 14px;
+        margin: 22px 0;
+      }
+      .warning {
+        color: #863b1a;
+      }
+      .intro {
+        border-left: 3px solid #155e59;
+        padding-left: 14px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr);
+        gap: 30px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 7px 8px;
+        border-bottom: 1px solid #d5d9d7;
+        overflow-wrap: anywhere;
+        white-space: pre-line;
+      }
+      th {
+        width: 34%;
+        font-weight: 600;
+      }
+      caption {
+        text-align: left;
+        font-weight: 650;
+        margin: 16px 0 6px;
+      }
+      #notice {
+        background: #e6eeed;
+        padding: 12px;
+        min-height: 24px;
+      }
+      #checks {
+        padding-left: 20px;
+        line-height: 1.6;
+      }
+      .scenario-tabs button {
+        font-size: 13px;
+      }
+      #steps {
+        padding-left: 28px;
+      }
+      #steps li {
+        margin: 12px 0;
+      }
+      #steps button {
+        width: 100%;
+        text-align: left;
+      }
+      #steps small {
+        display: block;
+        margin: 5px 0 0;
+        line-height: 1.5;
+      }
+      #trace {
+        padding-left: 22px;
+        font-size: 13px;
+        line-height: 1.6;
+        max-height: 260px;
+        overflow: auto;
+      }
+      details {
+        margin-top: 20px;
+        border-top: 1px solid #bbc3c3;
+        padding-top: 12px;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      footer {
+        border-top: 1px solid #bbc3c3;
+        margin-top: 30px;
+        font-size: 13px;
+      }
+      @media (max-width: 850px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        body {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong class="warning">Throwaway prototype. Proposals, not accepted contract changes.</strong>
+      <h1>Atlas review: three state models</h1>
+      <p>
+        Can Atlas move catch-up into Core, consolidate Reset records, and reduce Plugin bookkeeping while keeping the
+        guarantees in the review? Open this file directly. Nothing to install.
+      </p>
+      <p>
+        All state is in memory. "Durable" means it survives the simulated crash buttons, not a browser reload. This
+        explores ordering and ownership; it does not qualify SQLite, files, Docker, transport, security or capacity.
+      </p>
+    </header>
+    <nav id="models" aria-label="State models"></nav>
+    <section class="intro">
+      <h2 id="title"></h2>
+      <p id="question"></p>
+      <p id="policy"></p>
+    </section>
+    <div class="layout">
+      <main>
+        <h2>Current state</h2>
+        <p id="notice" role="status" aria-live="polite"></p>
+        <div id="state"></div>
+        <ul id="checks"></ul>
+        <h2>Free play</h2>
+        <p>Try actions in any order. Refused transitions explain which fact is missing.</p>
+        <div class="buttons" id="actions"></div>
+        <p><button id="reset">Reset this model</button></p>
+      </main>
+      <aside>
+        <h2>Guided walkthroughs</h2>
+        <div class="buttons scenario-tabs" id="scenarios" role="tablist" aria-label="Failure scenarios"></div>
+        <p id="scenario-description"></p>
+        <ol id="steps"></ol>
+        <p id="scenario-verdict"></p>
+        <h2>Recent actions</h2>
+        <ol id="trace"></ol>
+      </aside>
+    </div>
+    <details>
+      <summary>What the prototype establishes and what remains open</summary>
+      <div id="findings"></div>
+      <p>
+        Small counters and labels such as “Dataset 1” are display conveniences. They select no UUID, timestamp, cursor
+        or numeric wire representation. Toy limits explore refusal paths and are not deployment settings.
+      </p>
+      <p>
+        These models are independent. An integrated implementation must still exercise the cross-module failure cases
+        through real SDK, Core, SQLite, files and Plugin containers.
+      </p>
+    </details>
+    <footer>
+      <p>
+        Repository baseline: c5f9416. The supplied consolidated review is the proposal source. Current authority:
+        <a
+          href="https://github.com/atlas-field-systems/atlas-core/blob/c5f9416/docs/topics/sdk.md#synchronization-wire-and-application-boundary"
+          >SDK synchronization</a
+        >,
+        <a
+          href="https://github.com/atlas-field-systems/atlas-core/blob/c5f9416/docs/topics/dataset-lifecycle.md#reset-execution"
+          >Reset</a
+        >,
+        <a
+          href="https://github.com/atlas-field-systems/atlas-core/blob/c5f9416/docs/topics/plugins.md#private-operation-dispatch-and-reconciliation"
+          >Plugin dispatch</a
+        >,
+        <a href="https://github.com/atlas-field-systems/atlas-core/blob/c5f9416/docs/testing-strategy.md"
+          >required real-boundary evidence</a
+        >.
+      </p>
+    </footer>
+
+    <script id="state-models">
+      // Pure state models. No DOM, timers, network or persistent storage.
+      const refuse = (state, message) => {
+        state.notice = `Refused. ${message}`;
+        return state;
+      };
+      const showList = (items) => (items.length ? items.join("\n") : "None");
+      const cursorLabel = (dataset, position) => `${dataset} / complete commit ${position}`;
+      const resourceLabel = (resources) => showList(Object.entries(resources).map(([id, value]) => `${id}: ${value}`));
+      const applyChanges = (resources, changes) => {
+        const next = { ...resources };
+        for (const [id, value] of Object.entries(changes)) {
+          if (value === null) delete next[id];
+          else next[id] = value;
+        }
+        return next;
+      };
+      const syncLimits = { pendingCommits: 3, localBatches: 2, snapshotPageSize: 2 };
+      const syncInitial = () => ({
+        core: { dataset: "Dataset 1", head: 0, floor: 0, resources: { Asset: 0, Task: 0, Track: 0 }, log: [] },
+        client: {
+          dataset: "Dataset 1",
+          generation: 0,
+          connected: false,
+          ready: false,
+          cursor: null,
+          picture: {},
+          snapshot: null,
+          journal: [],
+          journalHead: 0,
+          journalFloor: 0,
+          savedCursor: null,
+          notifications: [],
+          lastFrame: null,
+        },
+        notice: "Open the stream to capture a consistent snapshot and its continuation boundary.",
+        query: "No local query yet.",
+        writeResult: "None",
+      });
+      function invalidatePicture(client) {
+        client.generation += 1;
+        client.ready = false;
+        client.cursor = null;
+        client.picture = {};
+        client.snapshot = null;
+        client.journal = [];
+        client.journalHead = 0;
+        client.journalFloor = 0;
+        client.notifications = [];
+      }
+      function syncReduce(previous, action) {
+        const s = structuredClone(previous),
+          c = s.client,
+          core = s.core;
+        switch (action) {
+          case "open": {
+            if (c.connected) return refuse(s, "The stream is already open.");
+            if (c.dataset !== core.dataset) {
+              invalidatePicture(c);
+              c.dataset = core.dataset;
+            }
+            c.connected = true;
+            if (c.ready && c.cursor >= core.floor) {
+              s.notice =
+                "Core resumes from the last applied complete commit. Catch-up and live delivery use the same stream.";
+            } else {
+              invalidatePicture(c);
+              c.snapshot = { baseline: core.head, entries: Object.entries(core.resources), offset: 0, staged: {} };
+              s.notice =
+                "Core captured a frozen snapshot and continuation boundary together. Pages stay private until complete.";
+            }
+            break;
+          }
+          case "page": {
+            if (!c.connected || !c.snapshot) return refuse(s, "Open a snapshot stream first.");
+            if (c.snapshot.baseline < core.floor || core.head - c.snapshot.baseline > syncLimits.pendingCommits) {
+              invalidatePicture(c);
+              c.connected = false;
+              s.notice =
+                "Snapshot continuation is no longer covered. Discard staging and open a new snapshot; never publish partial coverage.";
+              break;
+            }
+            const snapshot = c.snapshot;
+            for (const [id, value] of snapshot.entries.slice(
+              snapshot.offset,
+              snapshot.offset + syncLimits.snapshotPageSize,
+            ))
+              snapshot.staged[id] = value;
+            snapshot.offset += syncLimits.snapshotPageSize;
+            if (snapshot.offset >= snapshot.entries.length) {
+              c.picture = snapshot.staged;
+              c.cursor = snapshot.baseline;
+              c.snapshot = null;
+              c.ready = true;
+              c.notifications.push("Ready: complete snapshot");
+              s.notice = "Publish the whole snapshot at its baseline. Subsequent commits remain ordered behind it.";
+            } else s.notice = "One snapshot page arrived. Application reads still return picture_not_ready.";
+            break;
+          }
+          case "update":
+          case "delete":
+          case "create": {
+            if (action === "delete" && !("Track" in core.resources)) return refuse(s, "Track is already absent.");
+            if (action === "create" && "Track" in core.resources)
+              return refuse(s, "Delete Track before recreating it.");
+            core.head += 1;
+            const changes =
+              action === "update"
+                ? { Asset: core.head, Task: core.head }
+                : { Track: action === "delete" ? null : core.head };
+            core.resources = applyChanges(core.resources, changes);
+            core.log.push({ dataset: core.dataset, commit: core.head, changes });
+            s.notice = `Core committed ${core.head}. ${action === "update" ? "Asset and Task change together." : action === "delete" ? "Track deletion is replayable." : "Track has a newer committed image."} The SDK picture has not changed.`;
+            break;
+          }
+          case "deliver": {
+            if (!c.connected || !c.ready || c.snapshot)
+              return refuse(s, "Finish the snapshot or reconnect before delivering commits.");
+            if (c.cursor < core.floor || core.head - c.cursor > syncLimits.pendingCommits) {
+              c.connected = false;
+              s.notice =
+                "Explicit gap: history expired or this reader exceeded the toy pending bound. The complete old picture is stale. Reconnect to replay or rebuild.";
+              break;
+            }
+            const frame = core.log.find((entry) => entry.commit === c.cursor + 1);
+            if (!frame) {
+              s.notice = "Caught up. The same stream now waits for live commits; no client handoff action is needed.";
+              break;
+            }
+            c.picture = applyChanges(c.picture, frame.changes);
+            c.cursor = frame.commit;
+            c.lastFrame = frame;
+            c.journalHead += 1;
+            c.journal.push({ position: c.journalHead, commit: frame.commit, changes: frame.changes });
+            c.notifications.push(`Applied commit ${frame.commit}: ${Object.keys(frame.changes).join(", ")}`);
+            if (c.journal.length > syncLimits.localBatches) c.journalFloor = c.journal.shift().position;
+            s.notice = `One whole commit became visible, then its local journal batch and notification. Recovery advances to ${frame.commit}.`;
+            break;
+          }
+          case "duplicate": {
+            if (!c.lastFrame) return refuse(s, "Deliver a commit first.");
+            if (c.lastFrame.dataset !== c.dataset || c.lastFrame.commit <= c.cursor)
+              s.notice = "Old or duplicate frame ignored. No second journal batch, notification or resurrection.";
+            break;
+          }
+          case "disconnect":
+            c.connected = false;
+            c.snapshot = null;
+            s.notice =
+              "Connection lost. Complete picture remains visibly stale; incomplete snapshot staging is discarded.";
+            break;
+          case "prune":
+            core.floor = core.head;
+            core.log = [];
+            s.notice = `Core pruned whole commits. Recovery now requires a cursor at least ${core.floor}.`;
+            break;
+          case "saveCursor":
+            if (!c.ready) return refuse(s, "Local cursors require complete picture coverage.");
+            c.savedCursor = { dataset: c.dataset, generation: c.generation, position: c.journalHead };
+            s.notice = "Saved a local journal cursor. It is separate from the Core recovery cursor.";
+            break;
+          case "query": {
+            const token = c.savedCursor;
+            if (!token) {
+              s.query = "cursor_required";
+              break;
+            }
+            if (token.dataset !== c.dataset) s.query = "dataset_invalidated";
+            else if (token.generation !== c.generation) s.query = "cursor_invalid: picture rebuilt";
+            else if (!c.ready) s.query = "picture_not_ready";
+            else if (token.position < c.journalFloor) s.query = "cursor_expired: local history was pruned";
+            else
+              s.query = showList(
+                c.journal
+                  .filter((batch) => batch.position > token.position)
+                  .map(
+                    (batch) =>
+                      `Commit ${batch.commit}: ${Object.entries(batch.changes)
+                        .map(([id, value]) => `${id} ${value === null ? "deleted" : `= ${value}`}`)
+                        .join(", ")}`,
+                  ),
+              );
+            s.notice =
+              "Local changed-since reads the same applied journal as notifications. It makes no HTTP resource request.";
+            break;
+          }
+          case "writeResponse":
+            s.writeResult = `Confirmed ${cursorLabel(core.dataset, core.head)}: ${resourceLabel(core.resources)}`;
+            s.notice =
+              "The caller receives a confirmed write result. It changes no picture state, history, notification or recovery cursor.";
+            break;
+          case "datasetReset": {
+            const lastFrame = c.lastFrame;
+            core.dataset = `Dataset ${Number(core.dataset.split(" ")[1]) + 1}`;
+            core.head = 0;
+            core.floor = 0;
+            core.resources = {};
+            core.log = [];
+            invalidatePicture(c);
+            c.dataset = core.dataset;
+            c.lastFrame = lastFrame;
+            c.connected = false;
+            s.notice =
+              "Reset was detected. Discard the old picture and local history; invalidate old cursors. Open a new snapshot. No old write is resubmitted.";
+            break;
+          }
+          default:
+            return refuse(s, "Unknown action.");
+        }
+        return s;
+      }
+      const syncModel = {
+        name: "Synchronization",
+        question:
+          "Can Core deliver a frozen snapshot, missed commits and live commits through one ordered stream, while the SDK keeps its local read guarantees?",
+        policy:
+          "Proposal: a consistent snapshot with a cursor, followed by one complete commit per frame. Current Atlas specifies moving pages, HTTP replay and fragmented commits. This model retains atomic visibility, explicit gaps, local history, cursor invalidation and write-response separation.",
+        initial: syncInitial,
+        reduce: syncReduce,
+        actions: [
+          ["open", "Open / reconnect stream"],
+          ["page", "Read snapshot page"],
+          ["update", "Commit Asset + Task"],
+          ["delete", "Delete Track"],
+          ["create", "Recreate Track"],
+          ["deliver", "Deliver next whole commit"],
+          ["duplicate", "Repeat last frame"],
+          ["disconnect", "Disconnect"],
+          ["prune", "Expire Core history"],
+          ["saveCursor", "Save local query cursor"],
+          ["query", "Read local changed-since"],
+          ["writeResponse", "Receive write result"],
+          ["datasetReset", "Detect Dataset Reset"],
+        ],
+        describe(s) {
+          const c = s.client,
+            snapshot = c.snapshot;
+          return [
+            [
+              "Core",
+              [
+                ["Dataset", s.core.dataset],
+                ["Committed boundary", s.core.head],
+                ["Earliest resumable boundary", s.core.floor],
+                ["Resources", resourceLabel(s.core.resources)],
+                ["Retained commits", showList(s.core.log.map((f) => `${f.commit}: ${JSON.stringify(f.changes)}`))],
+              ],
+            ],
+            [
+              "SDK picture and stream",
+              [
+                ["Dataset / picture generation", `${c.dataset} / ${c.generation}`],
+                ["Connection", c.connected ? "Open" : "Disconnected"],
+                [
+                  "Read status",
+                  !c.ready
+                    ? "picture_not_ready"
+                    : !c.connected || c.cursor < s.core.head
+                      ? "Complete, stale / catching up"
+                      : "Complete, synchronized",
+                ],
+                ["Last applied Core cursor", c.cursor === null ? "None" : cursorLabel(c.dataset, c.cursor)],
+                ["Visible resources", c.ready ? resourceLabel(c.picture) : "Unavailable"],
+                [
+                  "Snapshot staging",
+                  snapshot
+                    ? `Baseline ${snapshot.baseline}; ${Math.min(snapshot.offset, snapshot.entries.length)} / ${snapshot.entries.length} records\nFrozen: ${resourceLabel(Object.fromEntries(snapshot.entries))}\nStaged: ${resourceLabel(snapshot.staged)}`
+                    : "None",
+                ],
+                [
+                  "Last frame",
+                  c.lastFrame
+                    ? `${c.lastFrame.dataset} / ${c.lastFrame.commit}: ${JSON.stringify(c.lastFrame.changes)}`
+                    : "None",
+                ],
+              ],
+            ],
+            [
+              "Local reads and notifications",
+              [
+                [
+                  "Journal floor / head",
+                  `${c.journalFloor} / ${c.journalHead}; toy retention ${syncLimits.localBatches} batches`,
+                ],
+                [
+                  "Retained journal",
+                  showList(c.journal.map((b) => `Local ${b.position}: Core ${b.commit}, ${JSON.stringify(b.changes)}`)),
+                ],
+                [
+                  "Saved local cursor",
+                  c.savedCursor
+                    ? `${c.savedCursor.dataset} / generation ${c.savedCursor.generation} / local ${c.savedCursor.position}`
+                    : "None",
+                ],
+                ["Changed-since result", s.query],
+                ["Notifications", showList(c.notifications)],
+                ["Caller write result", s.writeResult],
+                [
+                  "Toy pending limit",
+                  `${syncLimits.pendingCommits} whole commits; snapshot pages ${syncLimits.snapshotPageSize} records`,
+                ],
+              ],
+            ],
+          ];
+        },
+        checks(s) {
+          return [
+            [s.client.picture.Asset === s.client.picture.Task, "Asset and Task are visible at the same commit."],
+            [!s.client.snapshot || !s.client.ready, "Snapshot staging is private."],
+            [s.client.dataset === s.core.dataset, "No readable picture from another Dataset."],
+          ];
+        },
+        findings: [
+          "Catch-up can move to Core without removing local changed-since or notifications. The SDK still owns atomic application, local cursors and readiness.",
+          "A frozen snapshot requires a consistent capture and a covered continuation. Slow loading and expired history must restart explicitly.",
+          "One commit per frame needs a maximum commit bound and producer admission policy. Snapshot storage, pinned history, backpressure and real memory use remain unqualified.",
+        ],
+        scenarios: [
+          {
+            name: "Snapshot race",
+            description:
+              "Changes happen between snapshot pages. Frozen pages stay at the baseline, then complete commits catch up in order.",
+            steps: [
+              ["open", "Capture snapshot at commit 0."],
+              ["page", "Only two records staged; reads unavailable."],
+              ["update", "Commit Asset and Task at 1."],
+              ["delete", "Commit Track deletion at 2."],
+              ["page", "Publish complete baseline 0, including old Track."],
+              ["deliver", "Asset and Task both become 1."],
+              ["deliver", "Track disappears at 2."],
+              ["deliver", "Already live; no SDK handoff."],
+            ],
+            verdict: "Consistent snapshot plus continuation closes the race without client HTTP replay coordination.",
+          },
+          {
+            name: "Reconnect deletion",
+            description: "Recover a missed deletion and suppress duplicate input.",
+            steps: [
+              ["open", "Start."],
+              ["page", "Stage."],
+              ["page", "Complete baseline."],
+              ["saveCursor", "Save local cursor before changes."],
+              ["disconnect", "Lose connection."],
+              ["delete", "Delete Track while away."],
+              ["open", "Resume complete cursor 0."],
+              ["deliver", "Apply deletion once."],
+              ["duplicate", "Ignore same frame."],
+              ["query", "One deletion in local history."],
+            ],
+            verdict: "Reconnect and live delivery share ordering; local history still owns deletions.",
+          },
+          {
+            name: "Slow reader",
+            description: "Four commits exceed the toy limit of three. No silent drop or false synchronized state.",
+            steps: [
+              ["open", "Start."],
+              ["page", "Stage."],
+              ["page", "Complete."],
+              ["update", "Commit 1."],
+              ["update", "Commit 2."],
+              ["update", "Commit 3."],
+              ["update", "Commit 4."],
+              ["deliver", "Signal gap and disconnect."],
+              ["prune", "Expire the missing history."],
+              ["open", "Rebuild with new generation."],
+              ["page", "Stage."],
+              ["page", "Complete latest snapshot."],
+            ],
+            verdict: "Resource bounds require an explicit recovery path, even when Core owns the stream.",
+          },
+          {
+            name: "Snapshot expires",
+            description: "History disappears before snapshot loading completes.",
+            steps: [
+              ["open", "Capture baseline 0."],
+              ["page", "Stage two records."],
+              ["update", "Commit 1 while loading."],
+              ["prune", "Baseline is no longer resumable."],
+              ["page", "Reject partial snapshot and disconnect."],
+              ["open", "Capture a new snapshot."],
+              ["page", "Stage."],
+              ["page", "Publish new baseline."],
+            ],
+            verdict: "A consistent capture alone is insufficient; continuation must remain covered.",
+          },
+          {
+            name: "Local expiry + writes",
+            description:
+              "Write confirmation does not update the picture, and pruning local history does not hide an expired query.",
+            steps: [
+              ["open", "Start."],
+              ["page", "Stage."],
+              ["page", "Complete."],
+              ["saveCursor", "Save local cursor 0."],
+              ["update", "Core commits 1."],
+              ["writeResponse", "Caller sees commit 1; picture stays at 0."],
+              ["deliver", "Picture and journal apply 1."],
+              ["update", "Commit 2."],
+              ["deliver", "Apply 2."],
+              ["update", "Commit 3."],
+              ["deliver", "Apply 3, prune local batch 1."],
+              ["query", "Return cursor_expired."],
+            ],
+            verdict: "The transport simplification preserves local-read limits and write-result separation.",
+          },
+          {
+            name: "Dataset boundary",
+            description: "Old frames and old local cursors cannot cross Dataset identity.",
+            steps: [
+              ["open", "Start."],
+              ["page", "Stage."],
+              ["page", "Complete."],
+              ["update", "Create frame in old Dataset."],
+              ["deliver", "Remember it."],
+              ["saveCursor", "Save old local cursor."],
+              ["datasetReset", "Discard old picture."],
+              ["duplicate", "Reject delayed old frame."],
+              ["open", "Capture empty new Dataset."],
+              ["page", "Publish empty complete snapshot."],
+              ["query", "Old cursor is dataset_invalidated."],
+            ],
+            verdict: "Dataset replacement invalidates both transport and local read state.",
+          },
+          {
+            name: "Reset mid-load",
+            description: "Reset interrupts a partially staged snapshot. No old page may finish it.",
+            steps: [
+              ["open", "Capture old snapshot."],
+              ["page", "Keep partial staging private."],
+              ["update", "Commit while loading."],
+              ["datasetReset", "Invalidate the entire load."],
+              ["page", "Refuse obsolete continuation."],
+              ["open", "Capture new Dataset."],
+              ["page", "Publish complete empty snapshot."],
+            ],
+            verdict: "An interrupted initial load cannot relabel old staging as the new Dataset.",
+          },
+        ],
+      };
+
+      const resetTargets = ["Plugin A work", "Plugin B work", "Diagnostic logs", "Pending activity journal"];
+      const resetInitial = () => ({
+        action: null,
+        db: { dataset: "Dataset 1", establishedReset: null, rows: ["old operational record"], freshCommits: 0 },
+        artifacts: [
+          { kind: "Object content", dataset: "Dataset 0", name: "older orphan" },
+          { kind: "Object content", dataset: "Dataset 1", name: "old Object" },
+          ...resetTargets.map((kind) => ({ kind, dataset: "Dataset 1", name: "old content" })),
+        ],
+        managerAlive: true,
+        core: "serving",
+        plugins: { A: "running", B: "running" },
+        setup: ["Operator profiles", "credentials", "Plugin settings", "reference data"],
+        unrelated: ["unrelated host file", "unrelated container"],
+        lostNewWork: 0,
+        notice:
+          "One proposed host action record carries intent and progress. Core separately owns establishment proof.",
+      });
+      function resetReduce(previous, action) {
+        const s = structuredClone(previous),
+          record = s.action;
+        const established = record !== null && s.db.establishedReset === record.resetId;
+        if (action !== "crashManager" && action !== "newWork" && !s.managerAlive)
+          return refuse(s, "Recover the manager before executing its actions.");
+        switch (action) {
+          case "request":
+            if (record && record.phase !== "complete") return refuse(s, "An exclusive Reset action is already active.");
+            s.action = {
+              actionId: `Action ${s.db.freshCommits + 1}`,
+              resetId: `Reset ${s.db.freshCommits + 1}`,
+              phase: "requested",
+              cleaned: [],
+              startup: {},
+              error: null,
+            };
+            s.notice = "Durable host intent recorded before stopping. Concurrent lifecycle actions cannot bypass it.";
+            break;
+          case "stop":
+            if (!record || established) return refuse(s, "Stopping for pre-cleanup requires an unestablished Reset.");
+            s.core = "stopped";
+            s.plugins = { A: "stopped", B: "stopped" };
+            record.phase = "cleaning";
+            record.error = null;
+            s.notice = "All owned writers have confirmed exit. Cleanup may begin.";
+            break;
+          case "unverifiedStop":
+            if (!record || established) return refuse(s, "Request an unestablished Reset first.");
+            s.core = "stopped";
+            s.plugins = { A: "stopped", B: "exit unverified" };
+            record.phase = "stop incomplete";
+            s.notice = "Plugin B exit is unverified. Cleanup and fresh establishment remain blocked.";
+            break;
+          case "clean": {
+            if (!record || established) return refuse(s, "Established Reset never repeats Plugin/log/journal cleanup.");
+            if (s.core !== "stopped" || Object.values(s.plugins).some((state) => state !== "stopped"))
+              return refuse(s, "Verify every writer's exit first.");
+            const target = resetTargets.find((kind) => !record.cleaned.includes(kind));
+            if (!target) {
+              s.notice = "All required pre-establishment cleanup is already verified.";
+              break;
+            }
+            s.artifacts = s.artifacts.filter((item) => item.kind !== target);
+            record.cleaned.push(target);
+            record.phase = "cleaning";
+            record.error = null;
+            s.notice = `${target} removed and verified durable in the model. Dataset is still not established.`;
+            break;
+          }
+          case "failCleanup":
+            if (!record || established) return refuse(s, "An unestablished cleanup must be pending.");
+            record.error = "Owned target cannot be removed";
+            s.notice = "Cleanup failed. Retain the action, report incomplete, and keep fresh establishment blocked.";
+            break;
+          case "establish":
+            if (!record || established)
+              return refuse(s, "Core has already established this Reset, or no action exists.");
+            if (
+              s.core !== "stopped" ||
+              Object.values(s.plugins).some((state) => state !== "stopped") ||
+              record.cleaned.length !== resetTargets.length ||
+              record.error
+            )
+              return refuse(s, "All pre-cleanup must finish with verified stopped writers.");
+            s.db.dataset = `Dataset ${Number(s.db.dataset.split(" ")[1]) + 1}`;
+            s.db.rows = [];
+            s.db.establishedReset = record.resetId;
+            s.db.freshCommits += 1;
+            s.core = "maintenance";
+            record.phase = "awaiting fresh reply";
+            s.notice =
+              "Core atomically clears Dataset rows and records the new Dataset and Reset ID. Simulate a lost reply by crashing now: host phase has not advanced.";
+            break;
+          case "objects": {
+            if (!established) return refuse(s, "Objects cleanup follows Core establishment.");
+            const old = s.artifacts.find((item) => item.kind === "Object content" && item.dataset !== s.db.dataset);
+            if (!old) {
+              s.notice = "No Object content from any earlier Dataset remains.";
+              break;
+            }
+            s.artifacts.splice(s.artifacts.indexOf(old), 1);
+            record.phase = "opening modules";
+            s.notice = `Objects removed ${old.name} from ${old.dataset}. New-Dataset artifacts are untouched.`;
+            break;
+          }
+          case "serve":
+            if (!established || s.artifacts.some((item) => item.dataset !== s.db.dataset))
+              return refuse(s, "Every module must be ready and every old owned artifact cleared.");
+            s.core = "serving";
+            // A lost host reply can leave phase stale even though Core becomes ready.
+            s.notice =
+              "Every module is ready. Core serves the new Dataset; host bookkeeping may still await its reply.";
+            break;
+          case "startA":
+          case "faultB": {
+            if (!established || s.core !== "serving")
+              return refuse(s, "Core must serve the established Dataset before Plugin startup.");
+            const id = action === "startA" ? "A" : "B";
+            if (record.startup[id])
+              return refuse(s, "A recorded startup outcome is not an instruction to start again.");
+            record.startup[id] = id === "A" ? "ready" : "faulted";
+            s.plugins[id] = id === "A" ? "running" : "faulted";
+            s.notice =
+              id === "A"
+                ? "Plugin A is ready; its startup outcome is durable."
+                : "Plugin B startup fault recorded durably. Reset may finish without automatically restarting B.";
+            break;
+          }
+          case "newWork":
+            if (!established || s.core !== "serving")
+              return refuse(s, "This action creates post-Reset work only after establishment and readiness.");
+            s.db.rows.push("new operational record");
+            s.artifacts.push({ kind: "Diagnostic logs", dataset: s.db.dataset, name: "new log" });
+            if (s.plugins.A === "running")
+              s.artifacts.push({ kind: "Plugin A work", dataset: s.db.dataset, name: "new Plugin work" });
+            s.notice =
+              "Work was created in the established Dataset. Recovery must preserve it, even before the host action finishes.";
+            break;
+          case "crashManager":
+            s.managerAlive = false;
+            s.notice =
+              "Manager crashed. Durable action and Core proof survive; Core and Plugin A can continue new work.";
+            break;
+          case "recover":
+            break;
+          case "unsafeRecover": {
+            if (!record) return refuse(s, "Request a Reset first.");
+            if (record.phase !== "complete") {
+              s.lostNewWork += s.db.rows.filter((row) => row === "new operational record").length;
+              s.artifacts = s.artifacts.filter((item) => item.kind === "Object content");
+              s.db.rows = [];
+              record.cleaned = [...resetTargets];
+              record.startup = {};
+              s.core = "stopped";
+              s.plugins = { A: "stopped", B: "stopped" };
+              s.notice =
+                "UNSAFE comparison: host phase was treated as authority. Repeated cleanup erased post-Reset work despite the database proof.";
+            }
+            break;
+          }
+          case "finish":
+            if (!established || s.core !== "serving" || !record.startup.A || !record.startup.B)
+              return refuse(s, "Account for both enabled Plugins as ready or durably faulted first.");
+            record.phase = "complete";
+            record.error = null;
+            s.notice =
+              "Reset complete. One host action record remains as history; the database proof prevents destructive repetition.";
+            break;
+          default:
+            return refuse(s, "Unknown action.");
+        }
+        return s;
+      }
+      // Recovery reads establishment via Core; it never directly opens SQLite.
+      function recoverReset(previous, action) {
+        if (action !== "recover") return resetReduce(previous, action);
+        const s = structuredClone(previous);
+        s.managerAlive = true;
+        if (!s.action) {
+          s.notice = "No pending Reset intent. Ordinary retained Start is separate.";
+          return s;
+        }
+        if (s.db.establishedReset === s.action.resetId) {
+          if (s.action.phase !== "complete") s.action.phase = "accounting startup";
+          s.notice =
+            "Core reports matching Reset proof. Preserve the running Dataset and finish readiness/startup accounting. A later Core Start must open retained. Never repeat fresh opening or pre-cleanup.";
+        } else
+          s.notice =
+            "No matching establishment proof. Resume stopping and cleanup; no serving or new Plugin work until establishment.";
+        return s;
+      }
+      const resetSetup = [
+        ["request", "Record durable intent."],
+        ["stop", "Confirm writers stopped."],
+        ["clean", "Clear Plugin A work."],
+        ["clean", "Clear Plugin B work."],
+        ["clean", "Clear diagnostic logs."],
+        ["clean", "Clear pending journal."],
+      ];
+      const resetOpen = [
+        ["establish", "Fresh commit; host reply remains uncertain."],
+        ["objects", "Remove content from Dataset 0."],
+        ["objects", "Remove content from Dataset 1."],
+        ["serve", "All modules ready."],
+        ["startA", "Plugin A starts."],
+      ];
+      const resetModel = {
+        name: "Reset recovery",
+        question:
+          "Can one durable host action record replace the separate Reset directive while Core's establishment proof prevents cleanup from erasing new work?",
+        policy:
+          "Proposal: consolidate host intent and progress in one action record. Keep the independent SQLite establishment proof and strict physical cleanup barriers. Current Atlas requires a separate directive. Asynchronous cleanup and weaker host supervision are not adopted by this model.",
+        initial: resetInitial,
+        reduce: recoverReset,
+        actions: [
+          ["request", "Request Reset"],
+          ["stop", "Confirm all writers stopped"],
+          ["unverifiedStop", "Fail to verify Plugin exit"],
+          ["clean", "Clean next required target"],
+          ["failCleanup", "Fail cleanup"],
+          ["establish", "Commit fresh Dataset / lose reply"],
+          ["objects", "Remove next old Object"],
+          ["serve", "Mark all modules ready"],
+          ["startA", "Start Plugin A"],
+          ["faultB", "Fault Plugin B startup"],
+          ["newWork", "Create new work"],
+          ["crashManager", "Crash manager"],
+          ["recover", "Recover using Core proof"],
+          ["finish", "Complete action"],
+          ["unsafeRecover", "Unsafe: trust host phase"],
+        ],
+        describe(s) {
+          const record = s.action;
+          return [
+            [
+              "Durable host action",
+              [
+                ["Action / Reset identity", record ? `${record.actionId} / ${record.resetId}` : "None"],
+                ["Recorded phase", record?.phase ?? "None"],
+                ["Verified cleanup", showList(record?.cleaned ?? [])],
+                [
+                  "Startup outcomes",
+                  record
+                    ? showList(Object.entries(record.startup).map(([id, value]) => `Plugin ${id}: ${value}`))
+                    : "None",
+                ],
+                ["Last cleanup error", record?.error ?? "None"],
+              ],
+            ],
+            [
+              "Core-owned database",
+              [
+                ["Dataset", s.db.dataset],
+                ["Established Reset proof", s.db.establishedReset ?? "None"],
+                ["Fresh transactions", s.db.freshCommits],
+                ["Operational rows", showList(s.db.rows)],
+                ["Retained setup", showList(s.setup)],
+              ],
+            ],
+            [
+              "Artifacts and runtimes",
+              [
+                ["Owned files", showList(s.artifacts.map((item) => `${item.dataset} / ${item.kind}: ${item.name}`))],
+                ["Unrelated resources", showList(s.unrelated)],
+                ["Manager", s.managerAlive ? "Alive" : "Crashed"],
+                ["Core", s.core],
+                ["Plugins", `A: ${s.plugins.A}; B: ${s.plugins.B}`],
+                ["New rows lost by unsafe recovery", s.lostNewWork],
+              ],
+            ],
+          ];
+        },
+        checks(s) {
+          return [
+            [s.lostNewWork === 0, "Established-Dataset work has not been erased."],
+            [
+              s.core !== "serving" ||
+                !s.action ||
+                s.db.establishedReset === s.action.resetId ||
+                s.action.phase === "requested",
+              "No partial cleanup is served.",
+            ],
+            [s.setup.length === 4 && s.unrelated.length === 2, "Installation setup and unrelated resources remain."],
+          ];
+        },
+        findings: [
+          "One host action record can carry intent and progress, but it cannot replace Core's independent establishment fact.",
+          "A stale host phase after a lost reply is not evidence that fresh opening failed. Recovery must query Core before destructive work.",
+          "Dataset-scoped Object cleanup removes all prior Datasets. Merely hiding old files does not satisfy physical cleanup. Real durable writes, writer-exit verification and module opening remain unqualified.",
+        ],
+        scenarios: [
+          {
+            name: "Crash before stop",
+            description: "Intent must survive the initiating manager's death.",
+            steps: [
+              ["request", "Persist intent first."],
+              ["crashManager", "Manager dies before stopping."],
+              ["recover", "Recover pending intent."],
+              ["serve", "Refuse serving without establishment."],
+              ...resetSetup.slice(1),
+              ...resetOpen,
+              ["faultB", "Record startup fault."],
+              ["finish", "Account for startup and finish."],
+            ],
+            verdict: "Recoverable intent survives before any destructive step.",
+          },
+          {
+            name: "Writer not stopped",
+            description: "A namespace or an attempted stop cannot stand in for confirmed writer exit.",
+            steps: [
+              ["request", "Record intent."],
+              ["unverifiedStop", "Plugin B may still write."],
+              ["clean", "Refuse cleanup."],
+              ["establish", "Refuse fresh opening."],
+              ["stop", "Confirm every exit."],
+              ...resetSetup.slice(2),
+              ...resetOpen,
+              ["faultB", "Record B outcome."],
+              ["finish", "Complete."],
+            ],
+            verdict: "The strict pre-establishment barrier stays intact.",
+          },
+          {
+            name: "Partial cleanup",
+            description: "Cleanup failure keeps the old Dataset unestablished and the action pending.",
+            steps: [
+              ...resetSetup.slice(0, 3),
+              ["failCleanup", "Second cleanup fails."],
+              ["establish", "Refuse incomplete cleanup."],
+              ["crashManager", "Crash with old artifacts left."],
+              ["recover", "Resume same action."],
+              ...resetSetup.slice(3),
+              ...resetOpen,
+              ["faultB", "Record B fault."],
+              ["finish", "Complete."],
+            ],
+            verdict: "An interrupted cleanup resumes without serving partial state.",
+          },
+          {
+            name: "Lost fresh reply",
+            description:
+              "The database committed, but the host still awaits a reply. Content exists from two older Datasets.",
+            steps: [
+              ...resetSetup,
+              ["establish", "Atomically establish new Dataset."],
+              ["crashManager", "Lose the reply."],
+              ["recover", "Read the matching proof through Core."],
+              ["clean", "Refuse repeated Plugin cleanup."],
+              ["establish", "Refuse repeated fresh commit."],
+              ...resetOpen.slice(1),
+              ["faultB", "Account for B."],
+              ["finish", "Complete."],
+            ],
+            verdict: "Exactly one fresh commit; all earlier Object content removed by ownership.",
+          },
+          {
+            name: "New work + crash",
+            description: "Core and Plugin A create work before startup accounting is complete.",
+            steps: [
+              ...resetSetup,
+              ...resetOpen,
+              ["newWork", "Create rows and Plugin files."],
+              ["crashManager", "Host dies before B startup."],
+              ["newWork", "Core and A continue working."],
+              ["recover", "Read proof; preserve all new work."],
+              ["clean", "Refuse a second cleanup."],
+              ["faultB", "Account for B startup fault."],
+              ["finish", "Complete action."],
+            ],
+            verdict:
+              "Manager recovery preserves new work without repeating fresh opening or cleanup. Core-loss retained opening is not modeled here.",
+          },
+          {
+            name: "Fault already recorded",
+            description: "A durable startup fault finishes accounting; it does not make Reset pending again.",
+            steps: [
+              ...resetSetup,
+              ...resetOpen,
+              ["newWork", "Create new work."],
+              ["faultB", "Durably fault B."],
+              ["crashManager", "Manager dies before completion."],
+              ["recover", "Recover startup accounting."],
+              ["faultB", "Refuse automatic second attempt."],
+              ["finish", "Complete despite B fault."],
+            ],
+            verdict: "A separate explicit recovery action is required to start faulted B.",
+          },
+          {
+            name: "Unsafe phase trust",
+            description: "Deliberately remove the database-proof guard to reveal the failure.",
+            steps: [
+              ...resetSetup,
+              ...resetOpen,
+              ["newWork", "Create post-Reset work."],
+              ["crashManager", "Host action is still incomplete."],
+              ["recover", "Recover manager and observe proof."],
+              ["unsafeRecover", "Ignore proof and repeat cleanup."],
+            ],
+            verdict:
+              "Counterexample: treating any incomplete host action as permission for cleanup destroys new work despite establishment proof.",
+          },
+        ],
+      };
+
+      const pluginInitial = () => ({
+        coreRun: 1,
+        runtime: 1,
+        alive: true,
+        connected: true,
+        reconciling: false,
+        operation: null,
+        seen: [],
+        durable: null,
+        delayedDispatch: null,
+        actualEffects: 0,
+        executions: 0,
+        coreKnownEffects: 0,
+        evidenceRevision: 0,
+        coreEvidenceRevision: 0,
+        unsafeDropSeen: false,
+        notice:
+          "Live duplicate receipts replace durable acceptance only in this candidate. Runtime fencing and Core exposure records stay in place.",
+      });
+      const pluginTerminal = (status) => ["Completed", "Failed", "Cancelled", "Interrupted"].includes(status);
+      function pluginReduce(previous, action) {
+        const s = structuredClone(previous),
+          op = s.operation;
+        const reportEvidence = () => {
+          if (s.durable) {
+            s.coreKnownEffects = Math.max(s.coreKnownEffects, s.durable.knownEffects);
+            s.coreEvidenceRevision = s.durable.revision;
+          }
+        };
+        switch (action) {
+          case "submit":
+            if (op) {
+              s.notice = `Submission retry returns the original Operation: ${op.status}. No new execution.`;
+              break;
+            }
+            s.operation = {
+              id: "Operation 1",
+              digest: "input A",
+              status: "Pending",
+              exposed: false,
+              runtime: null,
+              coreRun: s.coreRun,
+            };
+            s.notice = "Core durably accepts the Operation before dispatch. Caller lifetime does not own this work.";
+            break;
+          case "rerun":
+            if (!op || !pluginTerminal(op.status))
+              return refuse(s, "An explicit rerun requires a terminal original Operation.");
+            s.notice =
+              "An explicit rerun needs a NEW Operation identity. This single-Operation model leaves the original immutable; it does not execute the rerun.";
+            break;
+          case "expose":
+            if (!op || pluginTerminal(op.status) || op.exposed || !s.alive || !s.connected || s.reconciling)
+              return refuse(s, "Only unexposed current-run pending work can be dispatched to a live runtime.");
+            op.exposed = true;
+            op.runtime = s.runtime;
+            s.delayedDispatch = { id: op.id, digest: op.digest, runtime: s.runtime, coreRun: s.coreRun };
+            s.notice =
+              "Core commits exposure BEFORE transport sends bytes. Lost acknowledgment cannot prove nonexecution.";
+            break;
+          case "deliver":
+          case "changedDigest": {
+            const frame = s.delayedDispatch;
+            if (!frame || !s.alive || !s.connected)
+              return refuse(s, "Delivery requires an exposed frame and a connected live runtime.");
+            if (frame.runtime !== s.runtime || frame.coreRun !== s.coreRun)
+              return refuse(s, "Old runtime/Core-run dispatch is fenced. Missing live memory never authorizes rerun.");
+            const digest = action === "changedDigest" ? "input B" : frame.digest;
+            if (digest !== op.digest) return refuse(s, "Same Operation with changed original input conflicts.");
+            if (s.seen.includes(frame.id)) {
+              s.notice =
+                "Live receipt suppresses duplicate dispatch. No second execution, even after durable outcome cleanup.";
+              break;
+            }
+            // The unsafe comparison intentionally clears this receipt on acknowledgment.
+            s.seen.push(frame.id);
+            s.executions += 1;
+            if (op.status === "Pending") op.status = "In progress";
+            s.notice =
+              "This live runtime accepted once in memory. Proposed receipt acknowledgment means live acceptance, unlike today's durable dispatch_ack.";
+            break;
+          }
+          case "effect":
+            if (!s.alive || !op || !s.seen.includes(op.id) || s.actualEffects >= s.executions)
+              return refuse(s, "There is no new live execution to perform an effect.");
+            s.actualEffects += 1;
+            s.notice =
+              "External effect happened. Core does not yet know it; effect and evidence persistence are separate boundaries.";
+            break;
+          case "evidence":
+            if (!s.alive || !op || !s.seen.includes(op.id) || !s.actualEffects)
+              return refuse(s, "A live execution must produce evidence first.");
+            s.durable = {
+              revision: ++s.evidenceRevision,
+              operationId: op.id,
+              coreRun: op.coreRun,
+              runtime: op.runtime,
+              knownEffects: s.actualEffects,
+              outcome: s.durable?.outcome ?? null,
+            };
+            s.notice =
+              "Known-effect evidence persisted in Plugin work until Core acknowledges it. Actual effects remain a separate truth.";
+            break;
+          case "persistOutcome":
+            if (!s.alive || !op || !s.seen.includes(op.id) || s.actualEffects < s.executions)
+              return refuse(s, "Complete the live execution before persisting its outcome.");
+            s.durable = {
+              revision: ++s.evidenceRevision,
+              operationId: op.id,
+              coreRun: op.coreRun,
+              runtime: op.runtime,
+              knownEffects: s.actualEffects,
+              outcome: "Completed",
+            };
+            s.notice =
+              "Stable terminal report and known effects are durable before sending. No external transaction is claimed.";
+            break;
+          case "report":
+            if (
+              !s.alive ||
+              !s.connected ||
+              !s.durable ||
+              s.durable.coreRun !== s.coreRun ||
+              s.durable.runtime !== s.runtime
+            )
+              return refuse(s, "Reporting requires durable evidence and the original authenticated live binding.");
+            if (!s.durable.outcome)
+              s.notice = "Core records known effects without changing Operation status or cancellation intent.";
+            else if (op.status === "Interrupted")
+              s.notice = "Late known evidence attaches, but Interrupted is terminal and cannot become Completed.";
+            else if (pluginTerminal(op.status) && op.status !== s.durable.outcome)
+              return refuse(s, "terminal_conflict: preserve the recorded outcome.");
+            else {
+              op.status = s.durable.outcome;
+              s.notice =
+                "Core durably records Completed and known effects. Repeating this report changes no outcome or effect.";
+            }
+            reportEvidence();
+            break;
+          case "ack":
+            if (!op || !s.durable || s.coreEvidenceRevision !== s.durable.revision || !s.connected || !s.alive)
+              return refuse(
+                s,
+                "Core must acknowledge the exact committed evidence revision, including late evidence on Interrupted.",
+              );
+            s.durable = null;
+            if (s.unsafeDropSeen) s.seen = [];
+            s.notice = s.unsafeDropSeen
+              ? "UNSAFE: acknowledgment deleted durable evidence AND the live receipt. A delayed dispatch can execute again."
+              : "Acknowledgment clears committed durable evidence without changing Operation status. Keep any live duplicate receipt until its runtime ends.";
+            break;
+          case "conflictingOutcome":
+            if (!op || !pluginTerminal(op.status)) return refuse(s, "Record a terminal outcome first.");
+            s.notice = "terminal_conflict: a conflicting Failed report cannot rewrite the terminal outcome.";
+            break;
+          case "cancel":
+            if (!op || pluginTerminal(op.status))
+              return refuse(s, "Only a nonterminal Operation can receive cancellation intent.");
+            op.status = op.exposed ? "Cancellation requested" : "Cancelled";
+            s.notice = op.exposed
+              ? "Exposure committed. Cancellation remains requested; missing acknowledgment proves nothing about execution."
+              : "Cancellation committed before exposure and disables future dispatch. Zero execution.";
+            break;
+          case "disconnect":
+            s.connected = false;
+            s.notice =
+              "Channel lost, live runtime unchanged. Its receipt memory survives; the disconnect does not prove effects stopped.";
+            break;
+          case "reconnect":
+            if (!s.alive) return refuse(s, "A dead runtime requires manual replacement, not reconnect.");
+            s.connected = true;
+            s.notice = "Same live process reconnects with the same authority and duplicate receipts.";
+            break;
+          case "crash":
+            s.alive = false;
+            s.connected = false;
+            s.seen = [];
+            s.notice =
+              "Plugin process died. Live receipts vanish; persisted known effects/outcome survive. Unrecorded effects remain unknown to Core.";
+            break;
+          case "reconcile":
+            if (!s.alive || !s.connected || !s.reconciling)
+              return refuse(
+                s,
+                "An authenticated replacement must read its own retained files and report readiness evidence first.",
+              );
+            reportEvidence();
+            if (op && !pluginTerminal(op.status) && op.exposed) op.status = s.durable?.outcome ?? "Interrupted";
+            s.reconciling = false;
+            s.notice =
+              "Replacement reports retained evidence through authenticated readiness; Core never reads Plugin files. Preserve known outcomes, then classify unresolved exposed work Interrupted. Already terminal Interrupted only receives evidence.";
+            break;
+          case "classify":
+            if (s.alive) return refuse(s, "Classify runtime loss only after the process is lost.");
+            if (op && op.exposed && !pluginTerminal(op.status)) op.status = "Interrupted";
+            s.notice =
+              "Core has no confirmed outcome and records Interrupted for exposed work. Private files are unreadable by Core. Later evidence cannot reopen the Operation.";
+            break;
+          case "replace":
+            if (s.alive) return refuse(s, "Stop or lose the old runtime before replacing it.");
+            s.runtime += 1;
+            s.alive = true;
+            s.connected = true;
+            s.seen = [];
+            s.reconciling = true;
+            s.notice =
+              "Manual replacement has new authority and starts behind a readiness gate. It reads its own retained evidence but executes no old work. Complete readiness reconciliation before admitting first dispatches.";
+            break;
+          case "coreRestart":
+            s.coreRun += 1;
+            s.alive = false;
+            s.connected = false;
+            s.seen = [];
+            if (op && !pluginTerminal(op.status)) op.status = "Interrupted";
+            s.notice =
+              "Whole-Core Restart retains confirmed outcomes and Core-known effects; every unfinished old-run Operation becomes Interrupted before Plugin admission. No automatic rerun.";
+            break;
+          case "unsafeToggle":
+            if (op) return refuse(s, "Select this unsafe comparison before submission, or reset the model.");
+            s.unsafeDropSeen = !s.unsafeDropSeen;
+            s.notice = s.unsafeDropSeen
+              ? "UNSAFE comparison enabled: Core acknowledgment will also clear live receipts."
+              : "Candidate restored: live receipts survive acknowledgment.";
+            break;
+          default:
+            return refuse(s, "Unknown action.");
+        }
+        return s;
+      }
+      const pluginRun = [
+        ["submit", "Accept once."],
+        ["expose", "Record exposure before send."],
+        ["deliver", "Live receipt and one execution."],
+        ["effect", "One external effect."],
+        ["persistOutcome", "Persist terminal evidence."],
+        ["report", "Core commits Completed."],
+      ];
+      const pluginModel = {
+        name: "Plugin execution",
+        question:
+          "Can live duplicate detection plus durable unacknowledged outcomes and effect evidence replace a durable acceptance ledger without automatic reruns?",
+        policy:
+          "Proposal: acceptance receipts live in process memory; known effects and terminal reports persist until acknowledgment. Current Atlas requires durable acceptance/inspection too. Keep exposure-before-send, immutable outcomes, runtime fencing and host supervision. Missing evidence means unknown, never proof of nonexecution.",
+        initial: pluginInitial,
+        reduce: pluginReduce,
+        actions: [
+          ["submit", "Submit / retry original"],
+          ["expose", "Expose dispatch before send"],
+          ["deliver", "Deliver / repeat dispatch"],
+          ["changedDigest", "Deliver changed input"],
+          ["effect", "Perform external effect"],
+          ["evidence", "Persist known-effect evidence"],
+          ["persistOutcome", "Persist Completed outcome"],
+          ["report", "Send / repeat evidence or outcome"],
+          ["ack", "Deliver Core acknowledgment"],
+          ["conflictingOutcome", "Send conflicting Failed"],
+          ["cancel", "Request cancellation"],
+          ["disconnect", "Lose channel / acknowledgment"],
+          ["reconnect", "Reconnect same runtime"],
+          ["crash", "Crash Plugin process"],
+          ["classify", "Classify lost runtime Interrupted"],
+          ["reconcile", "Report replacement readiness evidence"],
+          ["replace", "Manually replace runtime"],
+          ["coreRestart", "Restart Core"],
+          ["rerun", "Inspect explicit rerun rule"],
+          ["unsafeToggle", "Toggle unsafe receipt cleanup"],
+        ],
+        describe(s) {
+          const op = s.operation;
+          return [
+            [
+              "Core durable facts",
+              [
+                ["Dataset / Core run", `Dataset 1 / run ${s.coreRun}`],
+                ["Operation", op ? `${op.id}: ${op.status}` : "None"],
+                ["Original input", op?.digest ?? "None"],
+                [
+                  "Exposure / original binding",
+                  op
+                    ? `${op.exposed ? "Exposed" : "Not exposed"}; run ${op.coreRun}, runtime ${op.runtime ?? "unassigned"}`
+                    : "None",
+                ],
+                ["Core-known effects", s.coreKnownEffects],
+                ["Committed evidence revision", s.coreEvidenceRevision],
+                ["Latest authored evidence revision", s.evidenceRevision],
+              ],
+            ],
+            [
+              "Plugin memory and durable work",
+              [
+                [
+                  "Runtime",
+                  `${s.runtime}: ${s.alive ? "alive" : "dead"}; ${s.connected ? "connected" : "disconnected"}`,
+                ],
+                ["Readiness", s.reconciling ? "Reconciliation required; admission closed" : "Ready when alive"],
+                ["Live duplicate receipts", showList(s.seen)],
+                [
+                  "Receipt count",
+                  `${s.seen.length}; retention required for the live runtime, capacity policy unresolved`,
+                ],
+                [
+                  "Durable evidence",
+                  s.durable
+                    ? `${s.durable.operationId}; revision ${s.durable.revision}; run ${s.durable.coreRun}, runtime ${s.durable.runtime}\nKnown effects: ${s.durable.knownEffects}; outcome: ${s.durable.outcome ?? "not established"}`
+                    : "None",
+                ],
+                [
+                  "Delayed dispatch",
+                  s.delayedDispatch
+                    ? `${s.delayedDispatch.id}, ${s.delayedDispatch.digest}, run ${s.delayedDispatch.coreRun}, runtime ${s.delayedDispatch.runtime}`
+                    : "None",
+                ],
+                ["Unsafe cleanup", s.unsafeDropSeen ? "ENABLED: clear live receipts after ack" : "Off"],
+              ],
+            ],
+            [
+              "Independent external truth",
+              [
+                ["Executions started", s.executions],
+                ["Actual effects", s.actualEffects],
+                ["Effects unknown to Core", Math.max(0, s.actualEffects - s.coreKnownEffects)],
+                ["Caller connection ownership", "Caller disconnection does not cancel accepted work."],
+              ],
+            ],
+          ];
+        },
+        checks(s) {
+          return [
+            [s.executions <= 1, "Original Operation has at most one execution."],
+            [s.coreKnownEffects <= s.actualEffects, "Known evidence does not invent external effects."],
+            [
+              !s.operation || s.operation.runtime === null || s.operation.runtime <= s.runtime,
+              "Replacement has a separate runtime identity.",
+            ],
+          ];
+        },
+        findings: [
+          "Durable acceptance can be explored separately from durable outcome/effect evidence. Core still needs exposure-before-send and replacement fencing.",
+          "Acknowledgment may clear durable evidence only after Core records it. It must not also clear the live duplicate receipt; the delayed-dispatch walkthrough demonstrates a second execution.",
+          "Keeping completed live receipts grows memory for the runtime lifetime. An in-flight Operation limit does not bound that set. A proven rejection/retention policy remains open.",
+          "An external effect can occur before evidence is recorded. Interrupted must preserve that uncertainty; this model proves no exactly-once external-effect or instantaneous-stop guarantee.",
+        ],
+        scenarios: [
+          {
+            name: "Lost dispatch ack",
+            description: "An unchanged live runtime sees the same dispatch twice after reconnect.",
+            steps: [
+              ...pluginRun.slice(0, 3),
+              ["disconnect", "Lose acknowledgment."],
+              ["reconnect", "Reconnect same process."],
+              ["deliver", "Suppress duplicate."],
+              ["changedDigest", "Reject changed input."],
+              ...pluginRun.slice(3),
+            ],
+            verdict: "Live receipt suffices for this runtime; acceptance is not durable in the candidate.",
+          },
+          {
+            name: "Cancellation race",
+            description: "Compare exposure-first cancellation with an undispatched cancellation in free play.",
+            steps: [
+              ["submit", "Accept."],
+              ["expose", "Expose before send."],
+              ["disconnect", "Lose channel."],
+              ["cancel", "Keep Cancellation requested."],
+              ["reconnect", "Reconnect."],
+              ["deliver", "Live receipt keeps Cancellation requested."],
+              ["effect", "Effect can happen."],
+              ["persistOutcome", "Record definitive completion."],
+              ["report", "Completed wins by confirmed evidence."],
+            ],
+            verdict: "Missing acknowledgment never authorizes the undispatched cancellation shortcut.",
+          },
+          {
+            name: "Crash before evidence",
+            description: "Separate real effects from Core's knowledge.",
+            steps: [
+              ...pluginRun.slice(0, 4),
+              ["crash", "Crash before persistence."],
+              ["classify", "Interrupted; no known effects."],
+              ["replace", "Manual replacement."],
+              ["reconcile", "Readiness finds no retained evidence."],
+              ["deliver", "Reject old runtime frame."],
+              ["submit", "Original submission returns Interrupted."],
+            ],
+            verdict: "Actual effect = 1, Core-known effects = 0. Uncertainty is preserved without rerun.",
+          },
+          {
+            name: "Known effect survives",
+            description: "Persist known output before crashing, without a terminal outcome.",
+            steps: [
+              ...pluginRun.slice(0, 4),
+              ["evidence", "Persist effect evidence."],
+              ["crash", "Lose live runtime."],
+              ["replace", "Replace manually."],
+              ["reconcile", "Report effect through readiness; mark unresolved work Interrupted."],
+              ["ack", "Acknowledge committed effect evidence; clear private record."],
+              ["deliver", "Reject old dispatch."],
+              ["conflictingOutcome", "Do not rewrite terminal Interrupted."],
+            ],
+            verdict: "Known effects survive even when the Operation's final success cannot be established.",
+          },
+          {
+            name: "Lost outcome ack",
+            description: "Core records the outcome, but the Plugin retains its report until acknowledgment arrives.",
+            steps: [
+              ...pluginRun,
+              ["disconnect", "Lose Core acknowledgment."],
+              ["reconnect", "Same runtime."],
+              ["report", "Repeat identical outcome."],
+              ["conflictingOutcome", "Reject conflicting terminal outcome."],
+              ["ack", "Clear durable evidence, keep live receipt."],
+              ["deliver", "Ignore delayed dispatch."],
+              ["effect", "No new execution, no second effect."],
+            ],
+            verdict: "Report retry and dispatch retry cause no repeated effect.",
+          },
+          {
+            name: "Replacement boundary",
+            description:
+              "A durable terminal outcome can be recovered, but its old dispatch cannot run in a replacement.",
+            steps: [
+              ...pluginRun.slice(0, 5),
+              ["crash", "Outcome persisted but not sent."],
+              ["replace", "Issue new runtime identity."],
+              ["reconcile", "Report retained Completed through authenticated readiness."],
+              ["ack", "Acknowledge retained outcome without execution."],
+              ["deliver", "Reject old dispatch."],
+              ["submit", "Return original Completed."],
+            ],
+            verdict: "Reliable retained outcomes are preserved before unresolved work is classified.",
+          },
+          {
+            name: "Late terminal evidence",
+            description: "Core already committed Interrupted before a replacement can report a persisted outcome.",
+            steps: [
+              ...pluginRun.slice(0, 5),
+              ["crash", "Persisted outcome remains private."],
+              ["classify", "Core commits terminal Interrupted."],
+              ["replace", "Manual replacement; admission closed."],
+              ["reconcile", "Attach known evidence without reopening Interrupted."],
+              ["ack", "Clear exactly the evidence Core acknowledged."],
+              ["submit", "Original still returns Interrupted."],
+            ],
+            verdict: "Evidence acknowledgment is separate from changing a terminal Operation status.",
+          },
+          {
+            name: "Unexposed replacement",
+            description: "A Plugin replacement in the same Core run may first-dispatch work that was never exposed.",
+            steps: [
+              ["submit", "Core accepts before any dispatch."],
+              ["crash", "Old process dies without exposure."],
+              ["replace", "Manual replacement."],
+              ["expose", "Refuse admission before readiness."],
+              ["reconcile", "No old execution evidence; Pending remains eligible."],
+              ...pluginRun.slice(1),
+            ],
+            verdict: "Never-exposed first dispatch is distinct from replaying previously exposed work.",
+          },
+          {
+            name: "Cancel before exposure",
+            description: "Unexposed cancellation can be confirmed without guessing whether a Plugin executed.",
+            steps: [
+              ["submit", "Accept."],
+              ["cancel", "Atomically cancel and disable dispatch."],
+              ["expose", "Reject exposure of terminal Cancelled."],
+              ["submit", "Retry returns original Cancelled."],
+            ],
+            verdict: "Exposure-before-send separates safe undispatched cancellation from uncertain execution.",
+          },
+          {
+            name: "Core Restart",
+            description:
+              "A whole-Core interruption makes retained unfinished work Interrupted, including work never exposed.",
+            steps: [
+              ["submit", "Accept, do not expose."],
+              ["coreRestart", "Restart Core."],
+              ["replace", "Start a new Plugin runtime."],
+              ["reconcile", "Readiness preserves terminal Interrupted."],
+              ["expose", "Refuse old-run dispatch."],
+              ["submit", "Return original Interrupted."],
+              ["rerun", "Only a new identity could rerun."],
+            ],
+            verdict: "Starting Plugins is separate from rerunning Operations.",
+          },
+          {
+            name: "Unsafe ack cleanup",
+            description:
+              "Deliberately discard the live receipt after acknowledgment. Core's terminal record alone cannot stop an already-delayed Plugin message.",
+            steps: [
+              ["unsafeToggle", "Enable unsafe comparison."],
+              ...pluginRun,
+              ["ack", "Discard durable report and live receipt."],
+              ["deliver", "Delayed dispatch starts again."],
+              ["effect", "Second external effect."],
+            ],
+            verdict: "Counterexample: Completed in Core does not itself prevent repeated external execution.",
+          },
+        ],
+      };
+      const models = [syncModel, resetModel, pluginModel];
+    </script>
+    <script>
+      // Thin throwaway page shell. State transitions above have no DOM dependency.
+      let selectedModel = 0,
+        selectedScenario = 0,
+        nextStep = 0,
+        trace = [],
+        freePlay = false;
+      let state = models[selectedModel].initial();
+      const element = (tag, text) => {
+        const node = document.createElement(tag);
+        node.textContent = String(text);
+        return node;
+      };
+      const byId = (id) => document.getElementById(id);
+      function button(label, onClick) {
+        const node = element("button", label);
+        node.type = "button";
+        node.onclick = onClick;
+        return node;
+      }
+      function startScenario(index) {
+        selectedScenario = index;
+        state = models[selectedModel].initial();
+        nextStep = 0;
+        trace = [];
+        freePlay = false;
+        render();
+      }
+      function dispatch(action, guided = false) {
+        const model = models[selectedModel];
+        state = model.reduce(state, action);
+        trace.push(`${model.actions.find(([id]) => id === action)[1]}: ${state.notice}`);
+        if (trace.length > 40) trace.shift();
+        if (guided) nextStep += 1;
+        else freePlay = true;
+        render();
+      }
+      function render() {
+        const model = models[selectedModel],
+          scenario = model.scenarios[selectedScenario];
+        byId("models").replaceChildren(
+          ...models.map((entry, index) => {
+            const node = button(entry.name, () => {
+              selectedModel = index;
+              startScenario(0);
+            });
+            node.setAttribute("aria-pressed", String(index === selectedModel));
+            return node;
+          }),
+        );
+        byId("title").textContent = model.name;
+        byId("question").textContent = model.question;
+        byId("policy").textContent = model.policy;
+        byId("notice").textContent = state.notice;
+        byId("state").replaceChildren(
+          ...model.describe(state).map(([title, rows]) => {
+            const table = document.createElement("table");
+            table.append(element("caption", title));
+            const body = document.createElement("tbody");
+            for (const [label, value] of rows) {
+              const row = document.createElement("tr"),
+                heading = element("th", label);
+              heading.scope = "row";
+              row.append(heading, element("td", value));
+              body.append(row);
+            }
+            table.append(body);
+            return table;
+          }),
+        );
+        byId("checks").replaceChildren(
+          ...model.checks(state).map(([ok, label]) => {
+            const item = element("li", `${ok ? "Holds" : "BROKEN"}: ${label}`);
+            if (!ok) item.className = "warning";
+            return item;
+          }),
+        );
+        byId("actions").replaceChildren(
+          ...model.actions.map(([action, label]) => button(label, () => dispatch(action))),
+        );
+        byId("scenarios").replaceChildren(
+          ...model.scenarios.map((entry, index) => {
+            const node = button(entry.name, () => startScenario(index));
+            node.setAttribute("role", "tab");
+            node.setAttribute("aria-selected", String(index === selectedScenario));
+            return node;
+          }),
+        );
+        byId("scenario-description").textContent =
+          scenario.description +
+          (freePlay
+            ? " Free play changed this walkthrough. Select its tab to restart."
+            : " Selecting a tab starts from a known state.");
+        byId("steps").replaceChildren(
+          ...scenario.steps.map(([action, expectation], index) => {
+            const item = document.createElement("li"),
+              node = button(model.actions.find(([id]) => id === action)[1], () => dispatch(action, true));
+            node.disabled = freePlay || index !== nextStep;
+            if (index === nextStep) node.className = "next";
+            item.append(node, element("small", `${index < nextStep ? "Done. " : ""}${expectation}`));
+            return item;
+          }),
+        );
+        byId("scenario-verdict").textContent =
+          !freePlay && nextStep === scenario.steps.length ? `Model finding: ${scenario.verdict}` : "";
+        byId("trace").replaceChildren(...trace.map((entry) => element("li", entry)));
+        byId("findings").replaceChildren(...model.findings.map((finding) => element("p", finding)));
+      }
+      byId("reset").onclick = () => startScenario(selectedScenario);
+      render();
+    </script>
+  </body>
+</html>
