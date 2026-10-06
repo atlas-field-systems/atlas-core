@@ -16,7 +16,7 @@ Proposal only. Priority: high. Existing rules need a concrete review procedure.
 
 ## Existing coverage
 
-[Protocol and generation](../../agents/code-conventions.md#protocol-and-generation) already gives Protocol ownership of shared facts. The [review paragraph](../../agents/code-conventions.md#review-and-maintenance) explicitly calls for adapter/wrapper checks, parser agreement and writes that commit before response rejection. [Public wire conventions](../../architecture/system-design.md#public-wire-conventions) owns Atlas representations and typed errors.
+[Protocol and generation](../../../CODING_STANDARDS.md#protocol-and-generation) already gives Protocol ownership of shared facts. The [review paragraph](../../../CODING_STANDARDS.md#review-and-maintenance) explicitly calls for adapter/wrapper checks, parser agreement and writes that commit before response rejection. [Public wire conventions](../../architecture/system-design.md#public-wire-conventions) owns Atlas representations and typed errors.
 
 The proposed change makes that paragraph executable as a review procedure. It adds no blanket requirement for stricter input acceptance.
 

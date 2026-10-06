@@ -17,7 +17,7 @@ Proposal only. Priority: high. These procedures apply existing ownership, commit
 
 ## Existing coverage
 
-[Structure and interfaces](../../agents/code-conventions.md#structure-and-interfaces) already requires explicit transaction and lifetime ownership. [State/error conventions](../../agents/code-conventions.md#state-errors-and-background-work) requires honest outcomes and recovery. The review paragraph already requires a surviving cleanup owner, and the recurring-defect section requires preserving both failures.
+[Structure and interfaces](../../../CODING_STANDARDS.md#structure-and-interfaces) already requires explicit transaction and lifetime ownership. [State/error conventions](../../../CODING_STANDARDS.md#state-errors-and-background-work) requires honest outcomes and recovery. The review paragraph already requires a surviving cleanup owner, and the recurring-defect section requires preserving both failures.
 
 [Write commits](../../architecture/system-design.md#write-commits), [retry identity](../../architecture/system-design.md#retry-identity), [Dataset lifecycle](../../topics/dataset-lifecycle.md) and [SDK mutation outcomes](../../topics/sdk.md#mutation-outcomes-and-retries) define the Atlas behavior. Historical fixes are not alternate implementations of those contracts.
 

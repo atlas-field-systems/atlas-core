@@ -2,7 +2,7 @@
 
 Implementers and reviewers assess every section against the affected behavior, including indirect effects outside the edited files. Check conventions separately from the requested behavior. For substantial changes, record a compact mapping from requirements to implementation and validation, with reasons for material exclusions. Cite the convention and concrete consequence when reporting a violation; distinguish defects from suggestions.
 
-These conventions govern code quality. The [system design](../architecture/system-design.md), [ADRs](../adr/) and [topic pages](../topics/README.md) govern behavior and ownership. Follow the [documentation guide](domain.md) when changing those decisions. This checkout includes design and a bounded [Slice 0 foundation](../../tests/contract/README.md); paths and reference implementations should be added only after the corresponding code exists.
+These conventions govern code quality. The [system design](docs/architecture/system-design.md), [ADRs](docs/adr/) and [topic pages](docs/topics/README.md) govern behavior and ownership. Follow the [documentation guide](docs/agents/domain.md) when changing those decisions. This checkout includes design and a bounded [Slice 0 foundation](tests/contract/README.md); paths and reference implementations should be added only after the corresponding code exists.
 
 ## Structure and interfaces
 
@@ -23,15 +23,15 @@ These conventions govern code quality. The [system design](../architecture/syste
 - In Go, use typed inputs and results for known shapes. Return errors with useful operation context while preserving their cause. Handle errors explicitly, including failures in background work.
 - Keep optional, absent and null values distinct wherever the contract distinguishes them. Do not erase those differences for implementation convenience.
 - Name handwritten TypeScript identifiers and SDK-authored object members in camelCase, including acronyms written as in `maxJSONBytes`. Values that mirror Protocol, such as generated types, wire bodies and copied Protocol metadata, keep Protocol's snake_case names; do not mix the two styles among an object's own members.
-- Use [domain vocabulary](../../GLOSSARY.md) in public interfaces, tests and messages. Comments explain intent, constraints or non-obvious behavior; update them with the code they describe.
+- Use [domain vocabulary](GLOSSARY.md) in public interfaces, tests and messages. Comments explain intent, constraints or non-obvious behavior; update them with the code they describe.
 
 ## Protocol and generation
 
-- Protocol owns shared external contract facts. Private storage schemas and queries own storage representation. Keep business implementations separate from generated interfaces and types.
+- Protocol owns shared external contract facts. Author them in Protocol and regenerate their representations. Never hand-edit or post-process generated files. Private storage schemas and queries own storage representation. Keep business implementations separate from generated interfaces and types.
 - Use supported generator output with small configuration. Avoid endpoint-specific templates, duplicate wrapper APIs and patches that recreate the maintenance removed by generation.
-- When a required case does not fit, simplify the contract's representation while preserving accepted behavior, reconsider the tool choice under the accepted stack decision, or keep that binding handwritten. Changes to accepted behavior or tooling follow [decision authority](domain.md#decision-authority). Explain the tradeoff before expanding generator machinery.
+- When a required case does not fit, simplify the contract's representation while preserving accepted behavior, reconsider the tool choice under the accepted stack decision, or keep that binding handwritten. Changes to accepted behavior or tooling follow [decision authority](docs/agents/domain.md#decision-authority). Explain the tradeoff before expanding generator machinery.
 - Keep SDK conveniences separate from generated bindings. Helpers may compose supported operations for an actual consumer workflow; they must preserve the contract and Core's authority.
-- Regeneration must be deterministic. Validate wire examples and public behavior independently of generated output; matching generated snapshots alone does not establish correctness. See [generation and testing](../architecture/system-design.md#generation-and-testing).
+- Regeneration must be deterministic. Validate wire examples and public behavior independently of generated output; matching generated snapshots alone does not establish correctness. See [generation and testing](docs/architecture/system-design.md#generation-and-testing).
 
 ## State, errors and background work
 
@@ -39,11 +39,11 @@ These conventions govern code quality. The [system design](../architecture/syste
 - Keep resource use bounded where work can accumulate: queues, retries, buffers and concurrent work. Make cancellation, shutdown and failure reporting part of the component's interface.
 - Distinguish a rejected operation, an unknown outcome and a confirmed result. Preserve that distinction through errors and retries.
 - Keep credentials and other secrets out of logs and test artifacts. Include enough nonsecret context to diagnose the failed operation.
-- Follow [Dataset lifecycle](../topics/dataset-lifecycle.md) for retention and cleanup. Storage and recovery changes must preserve those guarantees.
+- Follow [Dataset lifecycle](docs/topics/dataset-lifecycle.md) for retention and cleanup. Storage and recovery changes must preserve those guarantees.
 
 ## Tests
 
-- Default to end-to-end workflows under the [testing strategy's workflow-first policy](../testing-strategy.md#end-to-end-workflows-first). It owns test selection, required scenarios, fault coverage and completion evidence.
+- Default to end-to-end workflows under the [testing strategy's workflow-first policy](docs/testing-strategy.md#end-to-end-workflows-first). It owns test selection, required scenarios, fault coverage and completion evidence.
 - Test deep modules through their small public interfaces, exercising observable behavior rather than internal implementation details. Justify focused integration or unit tests using that policy.
 - Author expected outcomes independently of the implementation and generator. Tests that merely repeat implementation logic provide little evidence.
 - Execute behavior instead of reading source text to infer correctness. Structural rules that tooling can enforce belong in lint or build checks.
@@ -71,10 +71,10 @@ These patterns were found and corrected in this codebase. Each instance looks lo
 
 - Check the requested behavior against its issue or specification and the applicable accepted documents. Passing conventions does not prove that the right behavior was implemented.
 - Check interface ownership, unnecessary complexity, type safety, failure handling and the quality of test evidence. Explain findings using the affected behavior or maintenance cost, rather than personal style preference.
-- For validation changes, assess the reusable adapter alone and with its wrappers, agreement between validation and the consuming parser, and writes that may commit before response rejection. For background-work changes, identify the surviving cleanup owner when callers, workers or observers stop, including nested fixtures. A passing fixture proves only its exercised combinations. Use focused public-interface probes for relevant untested cases and report the combinations exercised under the [testing strategy](../testing-strategy.md#real-boundaries-and-independent-expectations).
+- For validation changes, assess the reusable adapter alone and with its wrappers, agreement between validation and the consuming parser, and writes that may commit before response rejection. For background-work changes, identify the surviving cleanup owner when callers, workers or observers stop, including nested fixtures. A passing fixture proves only its exercised combinations. Use focused public-interface probes for relevant untested cases and report the combinations exercised under the [testing strategy](docs/testing-strategy.md#real-boundaries-and-independent-expectations).
 - Check safety and progress separately: prevent incorrect transitions, but also examine how a legitimate workflow can finish when a participant never returns. Challenge a requirement that creates an avoidable dead end before adding coordination machinery; never resolve uncertainty by fabricating an outcome.
 - Enforce mechanical rules with the repository's automated checks. As implementation introduces rules that tooling can reliably decide, add the corresponding required checks. Report missing or failing enforcement; manual review does not substitute for a required check.
-- Preserve the guarantees enforced by checks. Do not disable checks, suppress failures, exclude failing cases or weaken assertions or thresholds to make an implementation pass. Justify changed expectations against the governing specification or an authorized requirement change; replacement checks must preserve required coverage. Follow the [test evidence rules](../testing-strategy.md#continuous-integration-and-completion-evidence) for test changes.
-- Before declaring implementation complete, run the applicable required build, type, lint, formatting and other checks against the final changes, and satisfy the [testing strategy's completion criteria](../testing-strategy.md#continuous-integration-and-completion-evidence). Report commands, outcomes and missing evidence. Failed, skipped or unavailable required checks leave the work unverified and must not be reported as complete. After further edits, rerun checks whose evidence those edits invalidate.
+- Preserve the guarantees enforced by checks. Do not disable checks, suppress failures, exclude failing cases or weaken assertions or thresholds to make an implementation pass. Justify changed expectations against the governing specification or an authorized requirement change; replacement checks must preserve required coverage. Follow the [test evidence rules](docs/testing-strategy.md#continuous-integration-and-completion-evidence) for test changes.
+- Before declaring implementation complete, run the applicable required build, type, lint, formatting and other checks against the final changes, and satisfy the [testing strategy's completion criteria](docs/testing-strategy.md#continuous-integration-and-completion-evidence). Report commands, outcomes and missing evidence. Failed, skipped or unavailable required checks leave the work unverified and must not be reported as complete. After further edits, rerun checks whose evidence those edits invalidate.
 - Support claims that a failure is pre-existing or unrelated with evidence, such as reproducing it on the unchanged base under equivalent conditions. If that evidence is unavailable, report the cause as unresolved. Explaining a failure does not turn a required failing check into a pass.
 - Update a convention when an accepted change makes it obsolete. Keep each rule in one authoritative home and link to detailed policy rather than repeating it in `AGENTS.md`.

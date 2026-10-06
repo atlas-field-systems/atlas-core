@@ -10,7 +10,7 @@ Build the dedicated responsibilities in the [Core system outline](system-outline
 
 Storage connections, transactions, API serving, configuration and logging can share concrete utilities. Shared facilities do not establish separate services or a reusable module framework.
 
-Apply the [deep-module criteria](../agents/code-conventions.md#structure-and-interfaces) to callers and internal collaborators together. Keep required workflow coordination behind its owner rather than exporting the mechanism to make that owner's implementation smaller. Separating internal facts or helpers does not by itself justify another public interface, service or framework.
+Apply the [deep-module criteria](../../CODING_STANDARDS.md#structure-and-interfaces) to callers and internal collaborators together. Keep required workflow coordination behind its owner rather than exporting the mechanism to make that owner's implementation smaller. Separating internal facts or helpers does not by itself justify another public interface, service or framework.
 
 [Protocol](../adr/0011-generate-shared-contracts-with-minimal-customization.md) owns shared external contracts. Core implements their guarantees; SDK exposes consumer access. Public wire types may be used directly where they fit, with a small explicit conversion where internal meaning differs.
 
