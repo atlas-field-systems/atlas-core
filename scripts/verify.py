@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One clean verification entry point for the Slice 0 foundation."""
+"""Verify the contract foundation and focused Plugin bookkeeping component."""
 
 import argparse
 import hashlib
@@ -68,6 +68,13 @@ def verify(bootstrap):
         _test_go(go, env, cwd=core)
         run([go, "vet", "./..."], env, cwd=core)
         run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=core)
+    with check(passed, "Plugin bookkeeping race and real-process recovery workflows"):
+        run(
+            [go, "test", "-race", "-count=1", "./plugins/...", "./pluginruntime/...", "./plugindispatch/..."],
+            env,
+            cwd=core,
+            timeout=300,
+        )
     with check(passed, "TypeScript structural lint and independent rule probes"):
         run(["npm", "run", "lint"], env, cwd=sdk)
     with check(passed, "TypeScript/JavaScript formatting"):
@@ -109,7 +116,7 @@ def verify(bootstrap):
         )
         + "\n"
     )
-    print(f"PASS Slice 0 foundation at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
+    print(f"PASS foundation and Plugin component at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://atlas.invalid/plugin-dispatch/1",
+  "title": "Atlas private Plugin execution dispatch contract 1",
+  "x-dispatch-contract-version": 1,
+  "x-limits": {
+    "message_bytes": 131072,
+    "input_bytes": 32768,
+    "result_bytes": 32768,
+    "max_report_revisions": 128,
+    "max_receipts": 4096,
+    "max_effects": 64,
+    "max_outputs": 64
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plugin_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "principal_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "dataset_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "core_run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "runtime_generation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "plugin_id",
+        "principal_id",
+        "dataset_id",
+        "core_run_id",
+        "runtime_generation"
+      ]
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "package_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "image_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "package_id",
+        "version",
+        "image_digest"
+      ]
+    },
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "release": {
+          "$ref": "#/$defs/release"
+        },
+        "capability_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "input_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "input": {},
+        "input_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "binding",
+        "operation_id",
+        "release",
+        "capability_id",
+        "input_version",
+        "input",
+        "input_digest"
+      ]
+    },
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512
+        }
+      },
+      "required": [
+        "id",
+        "description"
+      ]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "object",
+            "entity",
+            "task"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ]
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "result": {},
+        "error": {}
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "execution": {
+          "$ref": "#/$defs/dispatch"
+        },
+        "sequence": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,19}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "progress": {},
+        "effects": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/effect"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/output"
+          }
+        }
+      },
+      "required": [
+        "execution",
+        "sequence",
+        "revision"
+      ]
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "execution": {
+          "$ref": "#/$defs/dispatch"
+        }
+      },
+      "required": [
+        "execution"
+      ]
+    },
+    "ready": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "release": {
+          "$ref": "#/$defs/release"
+        },
+        "configuration_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "contract_version": {
+          "const": 1
+        },
+        "capability_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "receipts_retained": {
+          "type": "boolean"
+        },
+        "receipts": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "$ref": "#/$defs/receipt"
+          }
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "live_witness": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "release",
+        "configuration_revision",
+        "contract_version",
+        "capability_ids",
+        "receipts_retained",
+        "receipts",
+        "complete",
+        "live_witness"
+      ]
+    },
+    "cancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "cancellation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "operation_id",
+        "cancellation_id"
+      ]
+    },
+    "ack": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sequence": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,19}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "operation_id",
+        "sequence",
+        "revision"
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "next",
+            "dispatch_ack",
+            "evidence",
+            "drained"
+          ]
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "token": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 512
+        },
+        "ready": {
+          "$ref": "#/$defs/ready"
+        },
+        "receipt": {
+          "$ref": "#/$defs/receipt"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "required": [
+        "kind",
+        "binding",
+        "token"
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "idle",
+            "dispatch",
+            "cancel",
+            "ack",
+            "accepted",
+            "drain",
+            "error"
+          ]
+        },
+        "dispatch": {
+          "$ref": "#/$defs/dispatch"
+        },
+        "cancel": {
+          "$ref": "#/$defs/cancel"
+        },
+        "ack": {
+          "$ref": "#/$defs/ack"
+        },
+        "error": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format_version",
+        "evidence"
+      ],
+      "properties": {
+        "format_version": {
+          "const": 1
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    },
+    {
+      "$ref": "#/$defs/record"
+    }
+  ]
+}
