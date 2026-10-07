@@ -47,6 +47,7 @@ var (
 	ErrTerminalConflict = errors.New("terminal_conflict")
 	ErrNotFound         = errors.New("not_found")
 	ErrDataset          = errors.New("dataset_mismatch")
+	ErrUnsupported      = errors.New("unsupported_capability")
 )
 
 type Submission struct {
@@ -85,13 +86,21 @@ type RuntimeBinding struct {
 	ReceiptCapacity        int
 	Release                plugindispatch.Release
 	ConfigurationRevision  string
-	CapabilityIDs          []string
+	Capabilities           []plugindispatch.CapabilityIdentity
+}
+
+// PluginRelease supplies immutable capability schemas for one installation and
+// one exact release. Retained Operations keep their recorded original schemas.
+type PluginRelease struct {
+	PluginID     string
+	Release      plugindispatch.Release
+	Capabilities []plugindispatch.Capability
 }
 type Config struct {
 	MaxRuntimeBindings                              int
 	DatabasePath, DatasetID, CoreRunID, CoreRelease string
 	Contract                                        *plugindispatch.Contract
-	Capabilities                                    []plugindispatch.Capability
+	Releases                                        []PluginRelease
 	MaxOperations                                   int
 	ValidateOutput                                  func(context.Context, plugindispatch.Output) error
 }
@@ -100,6 +109,8 @@ type capability struct {
 	input      *jsonschema.Schema
 }
 type capabilityKey struct {
+	pluginID         string
+	release          plugindispatch.Release
 	id, inputVersion string
 }
 type resultSchemaKey struct {
@@ -155,27 +166,53 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	if cfg.MaxOperations < 1 {
 		return nil, ErrLimit
 	}
-	cfg.Capabilities = slices.Clone(cfg.Capabilities)
-	for i := range cfg.Capabilities {
-		definition := &cfg.Capabilities[i]
-		definition.InputSchema = bytes.Clone(definition.InputSchema)
-		definition.OutputSchema = bytes.Clone(definition.OutputSchema)
-		definition.ErrorSchema = bytes.Clone(definition.ErrorSchema)
+	if len(cfg.Releases) > cfg.MaxRuntimeBindings {
+		return nil, ErrLimit
 	}
-	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[capabilityKey]capability), resultSchemas: make(map[resultSchemaKey]resultSchemas), schemaLimit: int64(len(cfg.Capabilities)), runtimes: make(map[string]*runtime)}
-	for _, definition := range cfg.Capabilities {
-		key := capabilityKey{definition.ID, definition.InputVersion}
-		if _, exists := m.capabilities[key]; exists {
-			return nil, errors.New("duplicate capability")
+	cfg.Releases = slices.Clone(cfg.Releases)
+	var definitionCount int64
+	for i := range cfg.Releases {
+		registration := &cfg.Releases[i]
+		if _, err := uuid.Parse(registration.PluginID); err != nil {
+			return nil, ErrAuthority
 		}
-		input, err := plugindispatch.CompileSchema(definition.InputSchema)
-		if err != nil {
-			return nil, fmt.Errorf("compile capability input: %w", err)
+		if len(registration.Capabilities) == 0 || len(registration.Capabilities) > cfg.Contract.Limits.MaxCapabilities {
+			return nil, ErrLimit
 		}
-		if err := m.prepareResultSchemas(definition.OutputSchema, definition.ErrorSchema); err != nil {
+		identities := make([]plugindispatch.CapabilityIdentity, 0, len(registration.Capabilities))
+		for _, definition := range registration.Capabilities {
+			identities = append(identities, plugindispatch.CapabilityIdentity{ID: definition.ID, InputVersion: definition.InputVersion})
+		}
+		declaration := plugindispatch.Ready{Release: registration.Release, ConfigurationRevision: "declaration", ContractVersion: cfg.Contract.Version, Capabilities: identities, Receipts: []plugindispatch.Receipt{}, LiveWitness: uuid.NewString()}
+		binding := plugindispatch.Binding{PluginID: registration.PluginID, PrincipalID: registration.PluginID, DatasetID: cfg.DatasetID, CoreRunID: cfg.CoreRunID, RuntimeGeneration: "declaration"}
+		if _, err := cfg.Contract.Encode(plugindispatch.Request{Kind: "ready", Binding: binding, Token: "local-declaration", Ready: &declaration}); err != nil {
 			return nil, err
 		}
-		m.capabilities[key] = capability{definition: definition, input: input}
+		registration.Capabilities = slices.Clone(registration.Capabilities)
+		for j := range registration.Capabilities {
+			definition := &registration.Capabilities[j]
+			definition.InputSchema = bytes.Clone(definition.InputSchema)
+			definition.OutputSchema = bytes.Clone(definition.OutputSchema)
+			definition.ErrorSchema = bytes.Clone(definition.ErrorSchema)
+		}
+		definitionCount += int64(len(registration.Capabilities))
+	}
+	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[capabilityKey]capability), resultSchemas: make(map[resultSchemaKey]resultSchemas), schemaLimit: definitionCount, runtimes: make(map[string]*runtime)}
+	for _, registration := range cfg.Releases {
+		for _, definition := range registration.Capabilities {
+			key := capabilityKey{registration.PluginID, registration.Release, definition.ID, definition.InputVersion}
+			if _, exists := m.capabilities[key]; exists {
+				return nil, errors.New("duplicate capability")
+			}
+			input, err := plugindispatch.CompileSchema(definition.InputSchema)
+			if err != nil {
+				return nil, fmt.Errorf("compile capability input: %w", err)
+			}
+			if err := m.prepareResultSchemas(definition.OutputSchema, definition.ErrorSchema); err != nil {
+				return nil, err
+			}
+			m.capabilities[key] = capability{definition: definition, input: input}
+		}
 	}
 	db, err := sql.Open("sqlite", "file:"+url.PathEscape(cfg.DatabasePath)+"?_txlock=immediate")
 	if err != nil {
@@ -418,9 +455,10 @@ func (m *Module) Submit(ctx context.Context, submission Submission) (operation O
 		if len(active.reserved) >= active.host.ReceiptCapacity {
 			return ErrLimit
 		}
-		definition, ok := m.capabilities[capabilityKey{submission.CapabilityID, submission.InputVersion}]
-		if !ok || !slices.Contains(active.host.CapabilityIDs, submission.CapabilityID) {
-			return errors.New("unsupported_capability")
+		identity := plugindispatch.CapabilityIdentity{ID: submission.CapabilityID, InputVersion: submission.InputVersion}
+		definition, ok := m.capabilities[capabilityKey{submission.PluginID, active.host.Release, identity.ID, identity.InputVersion}]
+		if !ok || !slices.Contains(active.host.Capabilities, identity) {
+			return ErrUnsupported
 		}
 		if err := plugindispatch.ValidateJSON(definition.input, input, m.cfg.Contract.Limits.InputBytes); err != nil {
 			return err
@@ -494,7 +532,7 @@ func (m *Module) BindRuntime(ctx context.Context, host RuntimeBinding) error {
 	if b.DatasetID != m.cfg.DatasetID || b.CoreRunID != m.cfg.CoreRunID || b.PluginID == "" || b.PrincipalID == "" || b.RuntimeGeneration == "" || len(host.Token) < 16 || host.VerifiedProcess == "" {
 		return ErrAuthority
 	}
-	if host.ReceiptCapacity < 1 || host.ReceiptCapacity > m.cfg.Contract.Limits.MaxReceipts || len(host.CapabilityIDs) == 0 {
+	if host.ReceiptCapacity < 1 || host.ReceiptCapacity > m.cfg.Contract.Limits.MaxReceipts || len(host.Capabilities) == 0 {
 		return ErrLimit
 	}
 	if previous := m.runtimes[b.PluginID]; previous != nil {
@@ -507,18 +545,24 @@ func (m *Module) BindRuntime(ctx context.Context, host RuntimeBinding) error {
 	if len(m.issuedBindings) >= m.cfg.MaxRuntimeBindings {
 		return ErrLimit
 	}
-	ready := plugindispatch.Ready{Release: host.Release, ConfigurationRevision: host.ConfigurationRevision, ContractVersion: m.cfg.Contract.Version, CapabilityIDs: host.CapabilityIDs, Receipts: []plugindispatch.Receipt{}, ReceiptsRetained: true, LiveWitness: uuid.NewString()}
+	for _, identity := range host.Capabilities {
+		if _, ok := m.capabilities[capabilityKey{b.PluginID, host.Release, identity.ID, identity.InputVersion}]; !ok {
+			return ErrUnsupported
+		}
+	}
+	ready := plugindispatch.Ready{Release: host.Release, ConfigurationRevision: host.ConfigurationRevision, ContractVersion: m.cfg.Contract.Version, Capabilities: host.Capabilities, Receipts: []plugindispatch.Receipt{}, ReceiptsRetained: true, LiveWitness: uuid.NewString()}
 	if _, err := m.cfg.Contract.Encode(plugindispatch.Request{Kind: "ready", Binding: b, Token: host.Token, Ready: &ready}); err != nil {
 		return err
 	}
-	host.CapabilityIDs = slices.Clone(host.CapabilityIDs)
+	host.Capabilities = slices.Clone(host.Capabilities)
 	active := &runtime{host: host, reserved: make(map[string]bool), cancelSent: make(map[string]string)}
 	err := m.commit(ctx, func(q *storage.Queries) error {
 		return scan(ctx, q, func(operation operationRecord) error {
 			if operation.Original.PluginID != b.PluginID || terminal(operation.Status) || operation.Exposed || operation.Execution.Binding.CoreRunID != m.cfg.CoreRunID {
 				return nil
 			}
-			if operation.Execution.Release != host.Release || operation.Execution.Binding.PrincipalID != b.PrincipalID || !slices.Contains(host.CapabilityIDs, operation.Execution.CapabilityID) {
+			identity := plugindispatch.CapabilityIdentity{ID: operation.Execution.CapabilityID, InputVersion: operation.Execution.InputVersion}
+			if operation.Execution.Release != host.Release || operation.Execution.Binding.PrincipalID != b.PrincipalID || !slices.Contains(host.Capabilities, identity) {
 				return errors.New("pending_work_incompatible")
 			}
 			if len(active.reserved) >= host.ReceiptCapacity {

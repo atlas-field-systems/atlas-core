@@ -38,7 +38,11 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 			}
 			return nil
 		}
-		if len(operation.Reports) >= m.cfg.Contract.Limits.MaxReportRevisions {
+		limit := m.cfg.Contract.Limits.MaxReportRevisions
+		if evidence.Outcome == nil {
+			limit-- // A final outcome always has one remaining report slot.
+		}
+		if len(operation.Reports) >= limit {
 			return ErrLimit
 		}
 		if evidence.Outcome != nil {
@@ -47,27 +51,8 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 			if !exists {
 				return errors.New("missing_original_result_schema")
 			}
-			switch outcome.Status {
-			case string(Completed):
-				if len(outcome.Result) == 0 || len(outcome.Error) != 0 {
-					return errors.New("invalid_outcome")
-				}
-				if err := plugindispatch.ValidateJSON(schemas.output, outcome.Result, m.cfg.Contract.Limits.ResultBytes); err != nil {
-					return err
-				}
-			case string(Failed):
-				if len(outcome.Error) == 0 || len(outcome.Result) != 0 || schemas.failure == nil {
-					return errors.New("invalid_outcome")
-				}
-				if err := plugindispatch.ValidateJSON(schemas.failure, outcome.Error, m.cfg.Contract.Limits.ResultBytes); err != nil {
-					return err
-				}
-			case string(Cancelled):
-				if len(outcome.Result) != 0 || len(outcome.Error) != 0 {
-					return errors.New("invalid_outcome")
-				}
-			default:
-				return errors.New("invalid_outcome")
+			if err := plugindispatch.ValidateOutcome(*outcome, schemas.output, schemas.failure, m.cfg.Contract.Limits.ResultBytes); err != nil {
+				return err
 			}
 			retained := operation.Outcome
 			if operation.Status == Interrupted {

@@ -24,7 +24,7 @@ func TestCapabilityIDAndInputVersionRemainSeparate(t *testing.T) {
 		{ID: "a", InputVersion: "b/c", InputSchema: json.RawMessage(`{"const":2}`), OutputSchema: json.RawMessage(`{"const":22}`)},
 	}
 	root := t.TempDir()
-	core, err := plugins.Open(context.Background(), plugins.Config{DatabasePath: filepath.Join(root, "core.sqlite"), DatasetID: datasetID, CoreRunID: "run", CoreRelease: "fixture", Contract: contract, Capabilities: definitions})
+	core, err := plugins.Open(context.Background(), plugins.Config{DatabasePath: filepath.Join(root, "core.sqlite"), DatasetID: datasetID, CoreRunID: "run", CoreRelease: "fixture", Contract: contract, Releases: []plugins.PluginRelease{{PluginID: pluginID, Release: plugindispatch.Release{PackageID: "fixture", Version: "1.0.0", ImageDigest: "sha256:fixture"}, Capabilities: definitions}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestCapabilityIDAndInputVersionRemainSeparate(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	host := plugins.RuntimeBinding{Binding: plugindispatch.Binding{PluginID: pluginID, PrincipalID: principalID, DatasetID: datasetID, CoreRunID: "run", RuntimeGeneration: "runtime"}, Token: "private-capability-token", VerifiedProcess: "verified-fixture-process", ReceiptCapacity: 2, Release: plugindispatch.Release{PackageID: "fixture", Version: "1.0.0", ImageDigest: "sha256:fixture"}, ConfigurationRevision: "1", CapabilityIDs: []string{"a/b", "a"}}
+	host := plugins.RuntimeBinding{Binding: plugindispatch.Binding{PluginID: pluginID, PrincipalID: principalID, DatasetID: datasetID, CoreRunID: "run", RuntimeGeneration: "runtime"}, Token: "private-capability-token", VerifiedProcess: "verified-fixture-process", ReceiptCapacity: 2, Release: plugindispatch.Release{PackageID: "fixture", Version: "1.0.0", ImageDigest: "sha256:fixture"}, ConfigurationRevision: "1", Capabilities: []plugindispatch.CapabilityIdentity{{ID: "a/b", InputVersion: "c"}, {ID: "a", InputVersion: "b/c"}}}
 	if err := core.BindRuntime(context.Background(), host); err != nil {
 		t.Fatal(err)
 	}

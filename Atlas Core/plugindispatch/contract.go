@@ -31,6 +31,10 @@ type Capability struct {
 	ID, InputVersion                       string
 	InputSchema, OutputSchema, ErrorSchema json.RawMessage
 }
+type CapabilityIdentity struct {
+	ID           string `json:"capability_id"`
+	InputVersion string `json:"input_version"`
+}
 type Dispatch struct {
 	Binding      Binding         `json:"binding"`
 	OperationID  string          `json:"operation_id"`
@@ -66,14 +70,14 @@ type Evidence struct {
 	Outputs   []Output        `json:"outputs,omitempty"`
 }
 type Ready struct {
-	Release               Release   `json:"release"`
-	ConfigurationRevision string    `json:"configuration_revision"`
-	ContractVersion       int       `json:"contract_version"`
-	CapabilityIDs         []string  `json:"capability_ids"`
-	ReceiptsRetained      bool      `json:"receipts_retained"`
-	Receipts              []Receipt `json:"receipts"`
-	Complete              bool      `json:"complete"`
-	LiveWitness           string    `json:"live_witness"`
+	Release               Release              `json:"release"`
+	ConfigurationRevision string               `json:"configuration_revision"`
+	ContractVersion       int                  `json:"contract_version"`
+	Capabilities          []CapabilityIdentity `json:"capabilities"`
+	ReceiptsRetained      bool                 `json:"receipts_retained"`
+	Receipts              []Receipt            `json:"receipts"`
+	Complete              bool                 `json:"complete"`
+	LiveWitness           string               `json:"live_witness"`
 }
 type Cancel struct {
 	OperationID    string `json:"operation_id"`
@@ -100,13 +104,14 @@ type Response struct {
 	Error    string    `json:"error,omitempty"`
 }
 type Limits struct {
-	MaxEffects         int `json:"max_effects"`
-	MaxOutputs         int `json:"max_outputs"`
+	MaxEffects         int `json:"-"`
+	MaxOutputs         int `json:"-"`
+	MaxCapabilities    int `json:"-"`
 	MessageBytes       int `json:"message_bytes"`
 	InputBytes         int `json:"input_bytes"`
 	ResultBytes        int `json:"result_bytes"`
 	MaxReportRevisions int `json:"max_report_revisions"`
-	MaxReceipts        int `json:"max_receipts"`
+	MaxReceipts        int `json:"-"`
 }
 type Contract struct {
 	Limits  Limits
@@ -129,14 +134,58 @@ func Load(path string) (*Contract, error) {
 	if err := json.Unmarshal(encoded, &metadata); err != nil {
 		return nil, err
 	}
-	if metadata.Version != 1 || metadata.Limits.MessageBytes <= 0 || metadata.Limits.InputBytes <= 0 || metadata.Limits.ResultBytes <= 0 || metadata.Limits.MaxReportRevisions <= 0 || metadata.Limits.MaxReceipts <= 0 || metadata.Limits.MaxEffects <= 0 || metadata.Limits.MaxOutputs <= 0 {
+	if metadata.Version != 1 || metadata.Limits.MessageBytes <= 0 || metadata.Limits.InputBytes <= 0 || metadata.Limits.ResultBytes <= 0 || metadata.Limits.MaxReportRevisions <= 0 {
 		return nil, errors.New("unsupported private contract")
 	}
 	schema, err := CompileSchema(encoded)
 	if err != nil {
 		return nil, err
 	}
+	// These quotas are the same authored facts that validate private frames.
+	// Read the compiled schema rather than maintain another limit declaration.
+	if len(schema.OneOf) == 0 || schema.OneOf[0].Ref == nil {
+		return nil, errors.New("unsupported private contract")
+	}
+	request := schema.OneOf[0].Ref
+	for _, bound := range []struct {
+		message, property string
+		target            *int
+	}{{"evidence", "effects", &metadata.Limits.MaxEffects}, {"evidence", "outputs", &metadata.Limits.MaxOutputs}, {"ready", "receipts", &metadata.Limits.MaxReceipts}, {"ready", "capabilities", &metadata.Limits.MaxCapabilities}} {
+		message := request.Properties[bound.message]
+		if message == nil || message.Ref == nil {
+			return nil, errors.New("unsupported private contract")
+		}
+		array := message.Ref.Properties[bound.property]
+		if array == nil || array.MaxItems == nil || *array.MaxItems < 1 {
+			return nil, errors.New("unsupported private contract")
+		}
+		*bound.target = *array.MaxItems
+	}
 	return &Contract{Limits: metadata.Limits, Version: metadata.Version, schema: schema}, nil
+}
+
+// ValidateOutcome checks the terminal payload against the original capability
+// schemas. Core still owns the Operation transition and output resolution.
+func ValidateOutcome(outcome Outcome, output, failure *jsonschema.Schema, bound int) error {
+	switch outcome.Status {
+	case "completed":
+		if len(outcome.Result) == 0 || len(outcome.Error) != 0 || output == nil {
+			return errors.New("invalid_outcome")
+		}
+		return ValidateJSON(output, outcome.Result, bound)
+	case "failed":
+		if len(outcome.Error) == 0 || len(outcome.Result) != 0 || failure == nil {
+			return errors.New("invalid_outcome")
+		}
+		return ValidateJSON(failure, outcome.Error, bound)
+	case "cancelled":
+		if len(outcome.Result) != 0 || len(outcome.Error) != 0 {
+			return errors.New("invalid_outcome")
+		}
+		return nil
+	default:
+		return errors.New("invalid_outcome")
+	}
 }
 
 // CompileSchema accepts self-contained schemas only. No network lookup can

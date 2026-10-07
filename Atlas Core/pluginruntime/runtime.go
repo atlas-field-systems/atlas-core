@@ -5,6 +5,7 @@ package pluginruntime
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -212,27 +213,22 @@ func (r *Runtime) notify() {
 func (r *Runtime) Ready(complete bool) plugindispatch.Ready {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	capabilities := make([]string, 0, len(r.capabilities))
-	for _, capability := range r.capabilities {
-		if !contains(capabilities, capability.definition.Definition.ID) {
-			capabilities = append(capabilities, capability.definition.Definition.ID)
-		}
+	capabilities := make([]plugindispatch.CapabilityIdentity, 0, len(r.capabilities))
+	for key := range r.capabilities {
+		capabilities = append(capabilities, plugindispatch.CapabilityIdentity{ID: key.id, InputVersion: key.inputVersion})
 	}
-	sort.Strings(capabilities)
+	slices.SortFunc(capabilities, func(a, b plugindispatch.CapabilityIdentity) int {
+		if order := cmp.Compare(a.ID, b.ID); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.InputVersion, b.InputVersion)
+	})
 	receipts := make([]plugindispatch.Receipt, 0, len(r.receipts))
 	for _, receipt := range r.receipts {
 		receipts = append(receipts, plugindispatch.Receipt{Execution: plugindispatch.CloneDispatch(receipt.execution)})
 	}
 	sort.Slice(receipts, func(i, j int) bool { return receipts[i].Execution.OperationID < receipts[j].Execution.OperationID })
-	return plugindispatch.Ready{Release: r.cfg.Release, ConfigurationRevision: r.cfg.ConfigurationRevision, ContractVersion: r.cfg.Contract.Version, CapabilityIDs: capabilities, ReceiptsRetained: true, Receipts: receipts, Complete: complete, LiveWitness: r.witness}
-}
-func contains(values []string, value string) bool {
-	for _, item := range values {
-		if item == value {
-			return true
-		}
-	}
-	return false
+	return plugindispatch.Ready{Release: r.cfg.Release, ConfigurationRevision: r.cfg.ConfigurationRevision, ContractVersion: r.cfg.Contract.Version, Capabilities: capabilities, ReceiptsRetained: true, Receipts: receipts, Complete: complete, LiveWitness: r.witness}
 }
 func (r *Runtime) Retained() []plugindispatch.Evidence {
 	r.mu.Lock()
@@ -345,7 +341,11 @@ func (r *Runtime) Record(id string, update Update) (plugindispatch.Evidence, err
 	if receipt.completed {
 		return plugindispatch.Evidence{}, errors.New("terminal_conflict")
 	}
-	if receipt.sequence >= uint64(r.cfg.Contract.Limits.MaxReportRevisions) {
+	limit := r.cfg.Contract.Limits.MaxReportRevisions
+	if update.Outcome == nil {
+		limit-- // Keep a revision available for the final outcome.
+	}
+	if receipt.sequence >= uint64(limit) {
 		return plugindispatch.Evidence{}, ErrLimit
 	}
 	evidence := plugindispatch.CloneEvidence(plugindispatch.Evidence{Execution: plugindispatch.CloneDispatch(receipt.execution), Sequence: strconv.FormatUint(receipt.sequence+1, 10), Outcome: update.Outcome, Progress: update.Progress, Effects: update.Effects, Outputs: update.Outputs})
@@ -378,28 +378,8 @@ func (r *Runtime) Record(id string, update Update) (plugindispatch.Evidence, err
 	}
 	if update.Outcome != nil {
 		capability := r.capabilities[capabilityKey{receipt.execution.CapabilityID, receipt.execution.InputVersion}]
-		outcome := update.Outcome
-		switch outcome.Status {
-		case "completed":
-			if len(outcome.Error) != 0 {
-				return evidence, errors.New("invalid_outcome")
-			}
-			if err := plugindispatch.ValidateJSON(capability.output, outcome.Result, r.cfg.Contract.Limits.ResultBytes); err != nil {
-				return evidence, err
-			}
-		case "failed":
-			if len(outcome.Result) != 0 || capability.failure == nil {
-				return evidence, errors.New("invalid_outcome")
-			}
-			if err := plugindispatch.ValidateJSON(capability.failure, outcome.Error, r.cfg.Contract.Limits.ResultBytes); err != nil {
-				return evidence, err
-			}
-		case "cancelled":
-			if len(outcome.Error) != 0 || len(outcome.Result) != 0 {
-				return evidence, errors.New("invalid_outcome")
-			}
-		default:
-			return evidence, errors.New("invalid_outcome")
+		if err := plugindispatch.ValidateOutcome(*update.Outcome, capability.output, capability.failure, r.cfg.Contract.Limits.ResultBytes); err != nil {
+			return evidence, err
 		}
 	}
 	evidence.Revision = plugindispatch.Revision(evidence)

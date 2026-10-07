@@ -90,7 +90,7 @@ func newFixtureConfigured(t *testing.T, capacity int, configure func(*plugins.Co
 		t.Fatal(err)
 	}
 	capability := plugindispatch.Capability{ID: "double", InputVersion: "1", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["value"],"properties":{"value":{"type":"integer"},"padding":{"type":"string","maxLength":32700}}}`), OutputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["value"],"properties":{"value":{"type":"integer"}}}`), ErrorSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["code"],"properties":{"code":{"type":"string"}}}`)}
-	configuration := plugins.Config{DatabasePath: filepath.Join(root, "core.sqlite"), DatasetID: datasetID, CoreRunID: "run", CoreRelease: "fixture", Contract: contract, Capabilities: []plugindispatch.Capability{capability}}
+	configuration := plugins.Config{DatabasePath: filepath.Join(root, "core.sqlite"), DatasetID: datasetID, CoreRunID: "run", CoreRelease: "fixture", Contract: contract, Releases: []plugins.PluginRelease{{PluginID: pluginID, Release: plugindispatch.Release{PackageID: "fixture", Version: "1.0.0", ImageDigest: "sha256:fixture"}, Capabilities: []plugindispatch.Capability{capability}}}}
 	if configure != nil {
 		configure(&configuration)
 	}
@@ -99,7 +99,7 @@ func newFixtureConfigured(t *testing.T, capacity int, configure func(*plugins.Co
 		t.Fatal(err)
 	}
 	f := &fixture{maxFiles: 64, maxBytes: 1024 * 1024, core: core, config: configuration, contract: contract, root: root, socket: filepath.Join(root, "private.sock"), work: filepath.Join(root, "work"), effects: filepath.Join(root, "effects"), binary: filepath.Join(root, "plugin")}
-	f.binding = plugins.RuntimeBinding{Binding: plugindispatch.Binding{PluginID: pluginID, PrincipalID: principalID, DatasetID: datasetID, CoreRunID: "run", RuntimeGeneration: "runtime-1"}, Token: "private-fixture-token", VerifiedProcess: "host-observed-process-1", ReceiptCapacity: capacity, Release: plugindispatch.Release{PackageID: "fixture", Version: "1.0.0", ImageDigest: "sha256:fixture"}, ConfigurationRevision: "1", CapabilityIDs: []string{"double"}}
+	f.binding = plugins.RuntimeBinding{Binding: plugindispatch.Binding{PluginID: pluginID, PrincipalID: principalID, DatasetID: datasetID, CoreRunID: "run", RuntimeGeneration: "runtime-1"}, Token: "private-fixture-token", VerifiedProcess: "host-observed-process-1", ReceiptCapacity: capacity, Release: plugindispatch.Release{PackageID: "fixture", Version: "1.0.0", ImageDigest: "sha256:fixture"}, ConfigurationRevision: "1", Capabilities: []plugindispatch.CapabilityIdentity{{ID: "double", InputVersion: "1"}}}
 	if err := core.BindRuntime(context.Background(), f.binding); err != nil {
 		t.Fatal(err)
 	}
@@ -586,13 +586,11 @@ func TestCoreProcessCrashRetainsConfirmedAndRecoversOriginalRunEvidence(t *testi
 	if err := f.core.BindRuntime(context.Background(), f.binding); !errors.Is(err, plugins.ErrAuthority) {
 		t.Fatalf("old Core-run binding: %v", err)
 	}
-	if err := os.Remove(f.socket); err != nil && !errors.Is(err, os.ErrNotExist) {
-		t.Fatal(err)
-	}
-	f.server, err = f.core.Listen(f.socket)
+	server, err := f.core.Listen(f.socket)
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.server = server
 	f.binding.Binding.CoreRunID = "run-2"
 	f.replace(t, "runtime-2")
 	replacement := f.start(t, "normal")

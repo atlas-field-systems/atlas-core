@@ -28,12 +28,12 @@ func runCore(cfg configuration) (result error) {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	core, err := plugins.Open(ctx, plugins.Config{DatabasePath: filepath.Join(filepath.Dir(cfg.Work), "core.sqlite"), DatasetID: cfg.Binding.DatasetID, CoreRunID: cfg.Binding.CoreRunID, CoreRelease: "fixture", Contract: contract, Capabilities: []plugindispatch.Capability{fixtureDefinition()}})
+	core, err := plugins.Open(ctx, plugins.Config{DatabasePath: filepath.Join(filepath.Dir(cfg.Work), "core.sqlite"), DatasetID: cfg.Binding.DatasetID, CoreRunID: cfg.Binding.CoreRunID, CoreRelease: "fixture", Contract: contract, Releases: []plugins.PluginRelease{{PluginID: cfg.Binding.PluginID, Release: cfg.Release, Capabilities: []plugindispatch.Capability{fixtureDefinition()}}}})
 	if err != nil {
 		return err
 	}
 	defer func() { result = errors.Join(result, core.Close()) }()
-	if err := core.BindRuntime(ctx, plugins.RuntimeBinding{Binding: cfg.Binding, Token: cfg.Token, VerifiedProcess: "fixture-host-observed-process", ReceiptCapacity: cfg.Capacity, Release: cfg.Release, ConfigurationRevision: "1", CapabilityIDs: []string{"double"}}); err != nil {
+	if err := core.BindRuntime(ctx, plugins.RuntimeBinding{Binding: cfg.Binding, Token: cfg.Token, VerifiedProcess: "fixture-host-observed-process", ReceiptCapacity: cfg.Capacity, Release: cfg.Release, ConfigurationRevision: "1", Capabilities: []plugindispatch.CapabilityIdentity{{ID: "double", InputVersion: "1"}}}); err != nil {
 		return err
 	}
 	server, err := core.Listen(cfg.Socket)

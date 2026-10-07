@@ -7,10 +7,7 @@
     "message_bytes": 131072,
     "input_bytes": 32768,
     "result_bytes": 32768,
-    "max_report_revisions": 128,
-    "max_receipts": 4096,
-    "max_effects": 64,
-    "max_outputs": 64
+    "max_report_revisions": 128
   },
   "$defs": {
     "binding": {
@@ -73,6 +70,23 @@
         "version",
         "image_digest"
       ]
+    },
+    "capability_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capability_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "input_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": ["capability_id", "input_version"]
     },
     "dispatch": {
       "type": "object",
@@ -241,14 +255,12 @@
         "contract_version": {
           "const": 1
         },
-        "capability_ids": {
+        "capabilities": {
           "type": "array",
           "maxItems": 64,
           "uniqueItems": true,
           "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
+            "$ref": "#/$defs/capability_identity"
           }
         },
         "receipts_retained": {
@@ -273,7 +285,7 @@
         "release",
         "configuration_revision",
         "contract_version",
-        "capability_ids",
+        "capabilities",
         "receipts_retained",
         "receipts",
         "complete",

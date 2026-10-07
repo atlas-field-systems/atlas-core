@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	goruntime "runtime"
 	"strings"
 	"sync"
@@ -20,6 +22,44 @@ import (
 
 // These focused socket probes cover malformed combinations without inventing
 // capability execution. They still exercise the production private adapter.
+func TestHostAndReadinessRequireExactInstalledCapabilityVersion(t *testing.T) {
+	f := newFixture(t, 1)
+	if err := f.core.ConfirmLoss(context.Background(), f.binding.Binding); err != nil {
+		t.Fatal(err)
+	}
+	f.binding.Binding.RuntimeGeneration = "replacement"
+	f.binding.Token = "replacement-private-token"
+	f.binding.VerifiedProcess = "replacement-verified-process"
+	wrong := f.binding
+	wrong.Capabilities = []plugindispatch.CapabilityIdentity{{ID: "double", InputVersion: "2"}}
+	if err := f.core.BindRuntime(context.Background(), wrong); !errors.Is(err, plugins.ErrUnsupported) {
+		t.Fatal("host advertised a version absent from its release", err)
+	}
+	wrong = f.binding
+	wrong.Release.Version = "unregistered-release"
+	if err := f.core.BindRuntime(context.Background(), wrong); !errors.Is(err, plugins.ErrUnsupported) {
+		t.Fatal("host borrowed another release's schemas", err)
+	}
+	wrong = f.binding
+	wrong.Binding.PluginID = uuid.NewString()
+	if err := f.core.BindRuntime(context.Background(), wrong); !errors.Is(err, plugins.ErrUnsupported) {
+		t.Fatal("host borrowed another installation's schemas", err)
+	}
+	if err := f.core.BindRuntime(context.Background(), f.binding); err != nil {
+		t.Fatal("rejected declarations consumed runtime authority", err)
+	}
+	ready := plugindispatch.Ready{Release: f.binding.Release, ConfigurationRevision: f.binding.ConfigurationRevision, ContractVersion: f.contract.Version, Capabilities: []plugindispatch.CapabilityIdentity{{ID: "double", InputVersion: "2"}}, ReceiptsRetained: true, Receipts: []plugindispatch.Receipt{}, Complete: true, LiveWitness: uuid.NewString()}
+	response := privateRequest(t, f, plugindispatch.Request{Kind: "ready", Binding: f.binding.Binding, Token: f.binding.Token, Ready: &ready})
+	if response.Kind != "error" || response.Error != "readiness_mismatch" || f.core.Available(pluginID) {
+		t.Fatal("readiness dropped the input-version binding", response)
+	}
+	child := f.start(t, "normal")
+	child.event(t, "ready")
+	if _, err := f.core.Submit(context.Background(), request("valid", `{"value":7}`)); err != nil {
+		t.Fatal("a rejected readiness poisoned a supported channel", err)
+	}
+}
+
 func TestPrivateBoundaryRejectsStaleAuthorityAndMalformedMessages(t *testing.T) {
 	f := newFixture(t, 1)
 	for _, field := range []string{"token", "dataset", "core_run", "runtime", "principal", "installation"} {
@@ -160,6 +200,15 @@ func TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin(t *testing.T) {
 				t.Fatal("uncooperative owner incorrectly joined", err)
 			}
 			if !cooperative {
+				unexpected, err := f.core.Listen(f.socket)
+				if err == nil {
+					t.Error("incomplete close released socket ownership while its report writer remained")
+					finish, cancel := context.WithTimeout(context.Background(), time.Second)
+					if err := unexpected.Close(finish); err != nil {
+						t.Error(err)
+					}
+					cancel()
+				}
 				before := goruntime.NumGoroutine()
 				expired, expire := context.WithCancel(context.Background())
 				expire()
@@ -185,5 +234,53 @@ func TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin(t *testing.T) {
 			}
 			assertEffects(t, f, 1)
 		})
+	}
+}
+
+func TestSocketOwnershipProtectsLiveAndUnrelatedEntries(t *testing.T) {
+	f := newFixture(t, 1)
+	if unexpected, err := f.core.Listen(f.socket); err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		unexpected.Close(ctx)
+		t.Fatal("competing listener replaced live Core")
+	}
+	foreignPath := filepath.Join(f.root, "foreign.sock")
+	foreign, err := net.Listen("unix", foreignPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer foreign.Close()
+	if unexpected, err := f.core.Listen(foreignPath); err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		unexpected.Close(ctx)
+		t.Fatal("listener replaced live nonparticipating owner")
+	}
+	connection, err := net.DialTimeout("unix", foreignPath, time.Second)
+	if err != nil {
+		t.Fatal("foreign listener no longer reachable", err)
+	}
+	connection.Close()
+	file := filepath.Join(f.root, "unrelated")
+	if err := os.WriteFile(file, []byte("retain"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{file, file + ".symlink"} {
+		if path != file {
+			if err := os.Symlink(file, path); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if unexpected, err := f.core.Listen(path); err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			unexpected.Close(ctx)
+			cancel()
+			t.Fatal("listener replaced unrelated entry", path)
+		}
+	}
+	content, err := os.ReadFile(file)
+	if err != nil || string(content) != "retain" {
+		t.Fatal("listener changed unrelated file", string(content), err)
 	}
 }

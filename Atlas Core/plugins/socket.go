@@ -1,12 +1,12 @@
 package plugins
 
 import (
+	"cmp"
 	"context"
 	"crypto/subtle"
 	"errors"
 	"io"
 	"net"
-	"os"
 	"slices"
 	"sync"
 	"time"
@@ -21,7 +21,7 @@ type Server struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	module      *Module
-	listener    net.Listener
+	listener    *ownedListener
 	mu          sync.Mutex
 	connections map[net.Conn]bool
 	done        chan struct{}
@@ -36,12 +36,9 @@ const privateConnections = 16
 const socketDeadline = 5 * time.Second
 
 func (m *Module) Listen(path string) (*Server, error) {
-	listener, err := net.Listen("unix", path)
+	listener, err := listenOwned(path)
 	if err != nil {
 		return nil, err
-	}
-	if err := os.Chmod(path, 0o600); err != nil {
-		return nil, errors.Join(err, listener.Close())
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{ctx: ctx, cancel: cancel, module: m, listener: listener, connections: make(map[net.Conn]bool), done: make(chan struct{}), slots: make(chan struct{}, privateConnections)}
@@ -89,7 +86,13 @@ func (s *Server) Close(ctx context.Context) error {
 		}
 		close(s.done)
 		s.joined = make(chan struct{})
-		go func() { s.wg.Wait(); close(s.joined) }()
+		go func() {
+			s.wg.Wait()
+			s.mu.Lock()
+			s.result = errors.Join(s.result, s.listener.release())
+			s.mu.Unlock()
+			close(s.joined)
+		}()
 	}
 	joined := s.joined
 	s.mu.Unlock()
@@ -178,10 +181,16 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 		if ready == nil || ready.ContractVersion != m.cfg.Contract.Version || ready.Release != active.host.Release || ready.ConfigurationRevision != active.host.ConfigurationRevision {
 			return fail(errors.New("readiness_mismatch"))
 		}
-		wanted := slices.Clone(active.host.CapabilityIDs)
-		got := slices.Clone(ready.CapabilityIDs)
-		slices.Sort(wanted)
-		slices.Sort(got)
+		wanted := slices.Clone(active.host.Capabilities)
+		got := slices.Clone(ready.Capabilities)
+		compare := func(a, b plugindispatch.CapabilityIdentity) int {
+			if order := cmp.Compare(a.ID, b.ID); order != 0 {
+				return order
+			}
+			return cmp.Compare(a.InputVersion, b.InputVersion)
+		}
+		slices.SortFunc(wanted, compare)
+		slices.SortFunc(got, compare)
 		if !slices.Equal(wanted, got) {
 			return fail(errors.New("readiness_mismatch"))
 		}

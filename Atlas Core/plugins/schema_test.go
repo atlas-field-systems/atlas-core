@@ -17,10 +17,10 @@ func TestOriginalResultSchemasSurviveCallerMutationAndRetainedOpen(t *testing.T)
 			f := newFixture(t, 1)
 			// The caller reuses its buffer for the next release. Already opened
 			// definitions and accepted Operations must retain their schema.
-			schema := f.config.Capabilities[0].OutputSchema
+			schema := f.config.Releases[0].Capabilities[0].OutputSchema
 			oldType, newType, mode := "integer", "boolean", "normal"
 			if status == "failed" {
-				schema = f.config.Capabilities[0].ErrorSchema
+				schema = f.config.Releases[0].Capabilities[0].ErrorSchema
 				oldType, newType, mode = "string", "number", "hold"
 			}
 			index := bytes.Index(schema, []byte(oldType))
@@ -56,6 +56,8 @@ func TestOriginalResultSchemasSurviveCallerMutationAndRetainedOpen(t *testing.T)
 				t.Fatal(err)
 			}
 			f.config.CoreRunID = "run-2"
+			f.config.Releases[0].Release.Version = "2.0.0"
+			f.config.Releases[0].Release.ImageDigest = "sha256:fixture-2"
 			core, err := plugins.Open(context.Background(), f.config)
 			if err != nil {
 				t.Fatal(err)

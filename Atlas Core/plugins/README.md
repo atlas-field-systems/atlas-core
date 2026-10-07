@@ -6,7 +6,7 @@
 
 | Component | Owns | Caller supplies |
 | --- | --- | --- |
-| Core `plugins.Module` | SQLite acceptance, reservations, exposure, cancellation, report commits and Operation reads | Current Dataset/Core run/writing release, validated capability schemas and host runtime authority |
+| Core `plugins.Module` | SQLite acceptance, reservations, exposure, cancellation, report commits and Operation reads | Current Dataset/Core run/writing release, installed Plugin/release capability declarations and host runtime authority |
 | Plugin `pluginruntime.Runtime` | Process-lifetime duplicate receipts, capability execution and durable unacknowledged evidence | Private socket, runtime credentials, managed working directory, capability implementation and explicit resource bounds |
 | Shared `plugindispatch` | Bounded private framing, canonical schema validation and concrete wire binding | The private Protocol artifact installed with the release |
 | Host boundary | Verified process identity, confirmed loss, process actions and lifetime enforcement | Existing host-supervision implementation, outside this delivery |
@@ -15,7 +15,11 @@ Use `plugins.Open` before binding a runtime. `Submit`, `Read`, `List` and `Cance
 
 `Drain` requests the existing protected stopping policy; `Drained` reports its exact-runtime confirmation to the host owner. A request or loss of availability alone is not stop permission.
 
+The listener holds an exclusive claim on its managed socket path until its writers have joined, including after a caller's shutdown deadline expires. A Core crash releases the kernel claim so the next owner can recover the stale socket. Existing live listeners, unrelated files and symlinks are refused.
+
 A runtime binding belongs to one installation/principal/Dataset/Core run/generation. Verification must come from the host's unchanged-process check. The live witness and retained receipt proof protect reconnection from a fresh runtime presenting old credentials; they do not implement the host supervisor. Starting a replacement requires new authority. Saved evidence preserves its original execution binding while its reporting envelope uses current authenticated authority.
+
+Capability declarations belong to a selected Plugin installation and release. Readiness advertises exact capability ID/input-version pairs. Core rejects an unsupported target/version or invalid input before creating an Operation; independent Plugins may use the same pair with different schemas. Retained Operations keep their original schemas for result validation and recovered evidence.
 
 Plugin consumers call `pluginruntime.Open` and `Run`. The execution callback owns the meaning of external effects. Its context receives cancellation independently of the original Operation submitter. The Plugin persists evidence in its own directory; Core uses the private messages and never reads that directory.
 
@@ -33,7 +37,11 @@ The separate [private Protocol artifact](../../Atlas%20Protocol/plugin-dispatch.
 
 Core uses SQLite WAL with synchronous FULL. Plugin evidence uses synced temporary files, atomic replacement and directory sync, and exact revision acknowledgement. Process-kill tests qualify their exercised cut points on the test filesystem. They do not establish healthy-storage power-loss guarantees or deployment-wide qualification.
 
+Array quotas come from the canonical schema's `maxItems` constraints. The contract loader derives receipt, capability, effect and output limits from those constraints so admission and wire validation use the same authored bounds. Core and Plugin validate terminal payloads through the same validator, using the original capability's schemas.
+
 Ordinary Plugin progress stays in memory. Reports carrying known effects, output references or a terminal outcome are saved before reporting and can be recovered after process replacement.
+
+The bounded report budget reserves its final revision for Completed, Failed or Cancelled. Once the nonterminal budget is exhausted, further progress or evidence updates fail explicitly while the terminal report remains eligible. Evidence file and byte quotas still apply.
 
 The post-rename fault hook schedules a directory-sync failure after the real file replacement. It is test fault injection, disabled during ordinary use, and qualifies preservation on that ambiguous-publication path.
 
@@ -64,6 +72,10 @@ The [workflow source](workflow_test.go) records the deterministic schedules. The
 | Faulted retained evidence and rejected stale or malformed messages | Plugin-owned startup validation and private boundary validation | `TestCorruptRetainedEvidenceFaultsReadiness`, [boundary tests](boundary_test.go) |
 | Owned, bounded shutdown and detached snapshots | Server/runtime `Close` and copied receipt/evidence values | `TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin`, [Runtime boundary tests](../pluginruntime/runtime_test.go), process fixture cleanup |
 | Distinct capability identities and immutable original result schemas | Structured capability keys and construction-time schema cache | [Capability-pair workflow](capability_test.go), [original-schema recovery workflows](schema_test.go) |
+| Target Plugin/release and supported input version checked before acceptance | Scoped release declarations and exact readiness pairs | [Independent Plugin workflow](installation_test.go), `TestHostAndReadinessRequireExactInstalledCapabilityVersion` |
+| Progress cannot consume the terminal report revision | Reserved final revision at Core and Plugin boundaries | [Completed, Failed and Cancelled workflows with confirmed drain](revision_test.go) |
+| Core crash restores its channel without unlinking a live owner | Exclusive listener claim retained until writer join | `TestCoreProcessCrashRetainsConfirmedAndRecoversOriginalRunEvidence`, `TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin`, `TestSocketOwnershipProtectsLiveAndUnrelatedEntries` |
+| Wire validation and admission share array quotas | Limits derived from the compiled canonical schema | [Schema-bound frame validation](../plugindispatch/limits_test.go) |
 | Cleanup after hard worker death, command deadline or owner interruption | Surviving verifier process/storage owner | `check_plugin_fixture_lifetime` in [executable cleanup checks](../../scripts/plugin_checks.py) |
 
 ## Remaining qualification

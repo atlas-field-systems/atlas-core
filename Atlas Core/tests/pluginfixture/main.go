@@ -73,15 +73,23 @@ func run() (result error) {
 	var releaseOnce sync.Once
 	var syncFault atomic.Bool
 	definition := fixtureDefinition()
+	if cfg.Mode == "run-lookup-v1" || cfg.Mode == "run-lookup-v2" {
+		definition.ID = "lookup"
+		definition.InputVersion = strings.TrimPrefix(cfg.Mode, "run-lookup-v")
+	}
+	if cfg.Mode == "run-lookup-alternate" {
+		definition.ID = "lookup"
+		definition.OutputSchema = json.RawMessage(`{"const":{"value":99}}`)
+	}
 	runtime, err := pluginruntime.Open(pluginruntime.Config{AfterEvidenceRename: func() error {
 		if syncFault.Load() {
 			return errors.New("injected_directory_sync_failure")
 		}
 		return nil
 	}, Contract: contract, Binding: cfg.Binding, Token: cfg.Token, Release: cfg.Release, ConfigurationRevision: "1", WorkDirectory: cfg.Work, ReceiptCapacity: cfg.Capacity, MaxEvidenceFiles: cfg.MaxFiles, MaxEvidenceBytes: cfg.MaxBytes, Capabilities: []pluginruntime.Capability{{Definition: definition, Execute: func(work context.Context, invocation *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
-		if cfg.Mode == "hold" || cfg.Mode == "ignore-cancel" || cfg.Mode == "run-hold" || cfg.Mode == "sync-failure" || cfg.Mode == "lost-ack-hold" {
+		if cfg.Mode == "hold" || cfg.Mode == "hold-failed" || cfg.Mode == "ignore-cancel" || cfg.Mode == "run-hold" || cfg.Mode == "sync-failure" || cfg.Mode == "lost-ack-hold" {
 			emit(event{Event: "started"})
-			if cfg.Mode == "hold" || cfg.Mode == "run-hold" {
+			if cfg.Mode == "hold" || cfg.Mode == "hold-failed" || cfg.Mode == "run-hold" {
 				select {
 				case <-release:
 				case <-work.Done():
@@ -94,6 +102,9 @@ func run() (result error) {
 					return plugindispatch.Outcome{}, ctx.Err()
 				}
 			}
+		}
+		if cfg.Mode == "hold-failed" {
+			return plugindispatch.Outcome{Status: "failed", Error: json.RawMessage(`{"code":"fixture_failure"}`)}, nil
 		}
 		effect, err := os.OpenFile(cfg.Effects, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
@@ -120,9 +131,13 @@ func run() (result error) {
 		if err := json.Unmarshal(invocation.Dispatch.Input, &input); err != nil {
 			return plugindispatch.Outcome{}, err
 		}
+		value := input.Value * 2
+		if cfg.Mode == "run-lookup-alternate" {
+			value = 99
+		}
 		result, err := json.Marshal(struct {
 			Value int `json:"value"`
-		}{Value: input.Value * 2})
+		}{Value: value})
 		return plugindispatch.Outcome{Status: "completed", Result: result}, err
 	}}}})
 	if err != nil {
