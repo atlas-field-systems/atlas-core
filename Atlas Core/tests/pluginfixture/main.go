@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,6 +12,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -21,7 +21,6 @@ import (
 	"github.com/atlas-field-systems/atlas-core/plugindispatch"
 	"github.com/atlas-field-systems/atlas-core/pluginruntime"
 	"github.com/atlas-field-systems/atlas-core/plugins"
-	"strings"
 )
 
 type configuration struct {
@@ -211,19 +210,7 @@ func run() (result error) {
 		emit(event{Event: "fault", Error: err.Error()})
 		return err
 	}
-	commands := make(chan string)
-	scanErrors := make(chan error, 1)
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			select {
-			case commands <- scanner.Text():
-			case <-ctx.Done():
-				return
-			}
-		}
-		scanErrors <- scanner.Err()
-	}()
+	commands, scanErrors := readCommands(ctx)
 	var original *plugindispatch.Dispatch
 	var saved *plugindispatch.Evidence
 	waitEvidence := func() error {

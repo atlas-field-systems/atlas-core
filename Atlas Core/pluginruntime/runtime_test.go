@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	goruntime "runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -90,6 +92,8 @@ func TestReceiptAndEvidenceSnapshotsCannotRewriteRetainedFacts(t *testing.T) {
 func TestIncompleteCloseRefusesNewWorkAndCanFinishAfterCallbackStops(t *testing.T) {
 	releaseCallback := make(chan struct{})
 	started := make(chan struct{})
+	var releaseOnce sync.Once
+	defer releaseOnce.Do(func() { close(releaseCallback) })
 	runtime := runtimeFixture(t, func(context.Context, *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
 		close(started)
 		<-releaseCallback
@@ -104,6 +108,17 @@ func TestIncompleteCloseRefusesNewWorkAndCanFinishAfterCallbackStops(t *testing.
 	if err := runtime.Close(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatal("uncooperative worker incorrectly declared stopped", err)
 	}
+	before := goruntime.NumGoroutine()
+	expired, expire := context.WithCancel(context.Background())
+	expire()
+	for range 64 {
+		if err := runtime.Close(expired); !errors.Is(err, context.Canceled) {
+			t.Fatal("incomplete repeated close lost its deadline", err)
+		}
+	}
+	if growth := goruntime.NumGoroutine() - before; growth > 4 {
+		t.Errorf("repeated incomplete close accumulated %d goroutines", growth)
+	}
 	fresh := dispatch()
 	fresh.OperationID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
 	if _, err := runtime.Accept(context.Background(), fresh); err == nil {
@@ -112,7 +127,7 @@ func TestIncompleteCloseRefusesNewWorkAndCanFinishAfterCallbackStops(t *testing.
 	if err := runtime.Run(context.Background(), "unused"); err == nil {
 		t.Fatal("closed runtime opened a session")
 	}
-	close(releaseCallback)
+	releaseOnce.Do(func() { close(releaseCallback) })
 	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second)
 	defer cancel2()
 	if err := runtime.Close(ctx2); err != nil {

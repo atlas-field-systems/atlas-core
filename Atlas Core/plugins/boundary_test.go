@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	goruntime "runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -157,6 +158,19 @@ func TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin(t *testing.T) {
 			}
 			if !cooperative && !errors.Is(err, context.DeadlineExceeded) {
 				t.Fatal("uncooperative owner incorrectly joined", err)
+			}
+			if !cooperative {
+				before := goruntime.NumGoroutine()
+				expired, expire := context.WithCancel(context.Background())
+				expire()
+				for range 64 {
+					if err := f.server.Close(expired); !errors.Is(err, context.Canceled) {
+						t.Fatal("incomplete repeated close lost its deadline", err)
+					}
+				}
+				if growth := goruntime.NumGoroutine() - before; growth > 4 {
+					t.Errorf("repeated incomplete close accumulated %d goroutines", growth)
+				}
 			}
 			once.Do(func() { close(release) })
 			finish, cancelFinish := context.WithTimeout(context.Background(), time.Second)

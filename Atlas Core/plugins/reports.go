@@ -43,27 +43,23 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 		}
 		if evidence.Outcome != nil {
 			outcome := evidence.Outcome
+			schemas, exists := m.resultSchemas[resultSchemaKey{string(operation.OutputSchema), string(operation.ErrorSchema)}]
+			if !exists {
+				return errors.New("missing_original_result_schema")
+			}
 			switch outcome.Status {
 			case string(Completed):
 				if len(outcome.Result) == 0 || len(outcome.Error) != 0 {
 					return errors.New("invalid_outcome")
 				}
-				output, err := plugindispatch.CompileSchema(operation.OutputSchema)
-				if err != nil {
-					return err
-				}
-				if err := plugindispatch.ValidateJSON(output, outcome.Result, m.cfg.Contract.Limits.ResultBytes); err != nil {
+				if err := plugindispatch.ValidateJSON(schemas.output, outcome.Result, m.cfg.Contract.Limits.ResultBytes); err != nil {
 					return err
 				}
 			case string(Failed):
-				if len(outcome.Error) == 0 || len(outcome.Result) != 0 || len(operation.ErrorSchema) == 0 {
+				if len(outcome.Error) == 0 || len(outcome.Result) != 0 || schemas.failure == nil {
 					return errors.New("invalid_outcome")
 				}
-				failure, err := plugindispatch.CompileSchema(operation.ErrorSchema)
-				if err != nil {
-					return err
-				}
-				if err := plugindispatch.ValidateJSON(failure, outcome.Error, m.cfg.Contract.Limits.ResultBytes); err != nil {
+				if err := plugindispatch.ValidateJSON(schemas.failure, outcome.Error, m.cfg.Contract.Limits.ResultBytes); err != nil {
 					return err
 				}
 			case string(Cancelled):

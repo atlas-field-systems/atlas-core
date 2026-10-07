@@ -1,30 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
-	"os"
 	"time"
 
-	"encoding/json"
 	"github.com/atlas-field-systems/atlas-core/pluginruntime"
 )
 
 func runChannel(ctx context.Context, runtime *pluginruntime.Runtime, cfg configuration, release func()) error {
-	commands := make(chan string)
-	scanErrors := make(chan error, 1)
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			select {
-			case commands <- scanner.Text():
-			case <-ctx.Done():
-				return
-			}
-		}
-		scanErrors <- scanner.Err()
-	}()
+	commands, scanErrors := readCommands(ctx)
 	var cancel context.CancelFunc
 	var done chan error
 	start := func() {

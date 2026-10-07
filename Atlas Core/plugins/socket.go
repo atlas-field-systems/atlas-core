@@ -25,6 +25,7 @@ type Server struct {
 	mu          sync.Mutex
 	connections map[net.Conn]bool
 	done        chan struct{}
+	joined      chan struct{}
 	wg          sync.WaitGroup
 	closed      bool
 	result      error
@@ -87,10 +88,11 @@ func (s *Server) Close(ctx context.Context) error {
 			connection.Close()
 		}
 		close(s.done)
+		s.joined = make(chan struct{})
+		go func() { s.wg.Wait(); close(s.joined) }()
 	}
+	joined := s.joined
 	s.mu.Unlock()
-	joined := make(chan struct{})
-	go func() { s.wg.Wait(); close(joined) }()
 	select {
 	case <-joined:
 	case <-ctx.Done():

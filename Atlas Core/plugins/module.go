@@ -99,6 +99,15 @@ type capability struct {
 	definition plugindispatch.Capability
 	input      *jsonschema.Schema
 }
+type capabilityKey struct {
+	id, inputVersion string
+}
+type resultSchemaKey struct {
+	output, failure string
+}
+type resultSchemas struct {
+	output, failure *jsonschema.Schema
+}
 type runtime struct {
 	drainConfirmed                                             bool
 	stagedReceipts                                             map[string]plugindispatch.Dispatch
@@ -117,7 +126,9 @@ type Module struct {
 	db             *sql.DB
 	queries        *storage.Queries
 	cfg            Config
-	capabilities   map[string]capability
+	capabilities   map[capabilityKey]capability
+	resultSchemas  map[resultSchemaKey]resultSchemas
+	schemaLimit    int64
 	runtimes       map[string]*runtime
 	closed         bool
 	changed        chan struct{}
@@ -144,9 +155,16 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	if cfg.MaxOperations < 1 {
 		return nil, ErrLimit
 	}
-	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[string]capability), runtimes: make(map[string]*runtime)}
+	cfg.Capabilities = slices.Clone(cfg.Capabilities)
+	for i := range cfg.Capabilities {
+		definition := &cfg.Capabilities[i]
+		definition.InputSchema = bytes.Clone(definition.InputSchema)
+		definition.OutputSchema = bytes.Clone(definition.OutputSchema)
+		definition.ErrorSchema = bytes.Clone(definition.ErrorSchema)
+	}
+	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[capabilityKey]capability), resultSchemas: make(map[resultSchemaKey]resultSchemas), schemaLimit: int64(len(cfg.Capabilities)), runtimes: make(map[string]*runtime)}
 	for _, definition := range cfg.Capabilities {
-		key := definition.ID + "/" + definition.InputVersion
+		key := capabilityKey{definition.ID, definition.InputVersion}
 		if _, exists := m.capabilities[key]; exists {
 			return nil, errors.New("duplicate capability")
 		}
@@ -154,13 +172,8 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 		if err != nil {
 			return nil, fmt.Errorf("compile capability input: %w", err)
 		}
-		if _, err := plugindispatch.CompileSchema(definition.OutputSchema); err != nil {
-			return nil, fmt.Errorf("compile capability output: %w", err)
-		}
-		if len(definition.ErrorSchema) > 0 {
-			if _, err := plugindispatch.CompileSchema(definition.ErrorSchema); err != nil {
-				return nil, fmt.Errorf("compile capability error: %w", err)
-			}
+		if err := m.prepareResultSchemas(definition.OutputSchema, definition.ErrorSchema); err != nil {
+			return nil, err
 		}
 		m.capabilities[key] = capability{definition: definition, input: input}
 	}
@@ -178,6 +191,18 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	}()
 	if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;"+schema); err != nil {
 		return nil, fmt.Errorf("initialize Plugins SQLite: %w", err)
+	}
+	count, err := m.queries.CountOperations(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Construction is the only cache-writing phase. Each entry must belong to
+	// a configured capability or a retained Operation; reports cannot add any.
+	m.schemaLimit += count
+	if err := scan(ctx, m.queries, func(operation operationRecord) error {
+		return m.prepareResultSchemas(operation.OutputSchema, operation.ErrorSchema)
+	}); err != nil {
+		return nil, fmt.Errorf("compile retained result schemas: %w", err)
 	}
 	err = m.commit(ctx, func(q *storage.Queries) error {
 		metadata, err := q.ReadMetadata(ctx)
@@ -203,6 +228,43 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	}
 	return m, nil
 }
+
+func (m *Module) prepareResultSchemas(output, failure json.RawMessage) error {
+	// Use the same RawMessage representation as the stored Operation: compact
+	// JSON with HTML escaping, without changing schema numbers or field order.
+	encodedOutput, err := json.Marshal(output)
+	if err != nil {
+		return err
+	}
+	var encodedFailure []byte
+	if len(failure) > 0 {
+		encodedFailure, err = json.Marshal(failure)
+		if err != nil {
+			return err
+		}
+	}
+	key := resultSchemaKey{string(encodedOutput), string(encodedFailure)}
+	if _, exists := m.resultSchemas[key]; exists {
+		return nil
+	}
+	if int64(len(m.resultSchemas)) >= m.schemaLimit {
+		return ErrLimit
+	}
+	compiled, err := plugindispatch.CompileSchema(output)
+	if err != nil {
+		return fmt.Errorf("compile capability output: %w", err)
+	}
+	prepared := resultSchemas{output: compiled}
+	if len(failure) > 0 {
+		prepared.failure, err = plugindispatch.CompileSchema(failure)
+		if err != nil {
+			return fmt.Errorf("compile capability error: %w", err)
+		}
+	}
+	m.resultSchemas[key] = prepared
+	return nil
+}
+
 func (m *Module) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -356,7 +418,7 @@ func (m *Module) Submit(ctx context.Context, submission Submission) (operation O
 		if len(active.reserved) >= active.host.ReceiptCapacity {
 			return ErrLimit
 		}
-		definition, ok := m.capabilities[submission.CapabilityID+"/"+submission.InputVersion]
+		definition, ok := m.capabilities[capabilityKey{submission.CapabilityID, submission.InputVersion}]
 		if !ok || !slices.Contains(active.host.CapabilityIDs, submission.CapabilityID) {
 			return errors.New("unsupported_capability")
 		}

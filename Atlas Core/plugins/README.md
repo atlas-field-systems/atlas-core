@@ -47,6 +47,8 @@ python3 scripts/verify.py --bootstrap
 
 The verifier records passing checks in `.artifacts/verification.json` only after execution, includes clean deterministic Plugin SQL generation and runs the real-process component workflows with the Go race detector. The fixture Plugin is separately built and uses private temporary storage; tests observe Operations and external fixture effects rather than inspecting Core tables.
 
+The [Go test owner](../../scripts/go_test_supervisor.py) survives the test worker, owns its process group and temporary root, and uses the [Linux child-subreaper interface](https://man7.org/linux/man-pages/man2/PR_SET_CHILD_SUBREAPER.2const.html) to reap orphaned Plugin children. The required [cleanup check](../../scripts/plugin_checks.py) kills a real workflow worker, reaches a command deadline and interrupts the owner with SIGINT/SIGTERM. Each schedule verifies process exit/reaping and storage removal. Forced SIGKILL of the surviving owner remains outside this qualification.
+
 The [workflow source](workflow_test.go) records the deterministic schedules. The full verifier also retains the existing foundation checks. Test capacities and byte bounds are qualification inputs, not measured field sizing.
 
 | Requirement | Implementation | Reproducible validation |
@@ -61,6 +63,8 @@ The [workflow source](workflow_test.go) records the deterministic schedules. The
 | Bounded messages, inputs, retained files and readiness | Canonical private contract, evidence quotas and paged readiness | `TestInputByteBoundPrecedesCanonicalizationAndPreservesReservations`, `TestLargeAcknowledgedReceiptInventoryReconnectsInBoundedPages`, `TestEvidenceQuotaRetainsPreviouslySavedOutcome`, `TestByteQuotaRefusesReplacementWithoutErasingUnacknowledgedEvidence` |
 | Faulted retained evidence and rejected stale or malformed messages | Plugin-owned startup validation and private boundary validation | `TestCorruptRetainedEvidenceFaultsReadiness`, [boundary tests](boundary_test.go) |
 | Owned, bounded shutdown and detached snapshots | Server/runtime `Close` and copied receipt/evidence values | `TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin`, [Runtime boundary tests](../pluginruntime/runtime_test.go), process fixture cleanup |
+| Distinct capability identities and immutable original result schemas | Structured capability keys and construction-time schema cache | [Capability-pair workflow](capability_test.go), [original-schema recovery workflows](schema_test.go) |
+| Cleanup after hard worker death, command deadline or owner interruption | Surviving verifier process/storage owner | `check_plugin_fixture_lifetime` in [executable cleanup checks](../../scripts/plugin_checks.py) |
 
 ## Remaining qualification
 

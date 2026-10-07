@@ -4,6 +4,7 @@
 package pluginruntime
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -60,6 +62,9 @@ type compiledCapability struct {
 	definition             Capability
 	input, output, failure *jsonschema.Schema
 }
+type capabilityKey struct {
+	id, inputVersion string
+}
 type record struct {
 	Format   int                     `json:"format_version"`
 	Evidence plugindispatch.Evidence `json:"evidence"`
@@ -72,10 +77,11 @@ type Runtime struct {
 	endLifetime   context.CancelFunc
 	sessionCancel context.CancelFunc
 	sessionDone   chan struct{}
+	joined        chan struct{}
 	closed        bool
 	mu            sync.Mutex
 	cfg           Config
-	capabilities  map[string]compiledCapability
+	capabilities  map[capabilityKey]compiledCapability
 	receipts      map[string]*receipt
 	evidence      map[string]plugindispatch.Evidence
 	evidenceBytes int64
@@ -103,7 +109,14 @@ func Open(cfg Config) (*Runtime, error) {
 	if cfg.Contract == nil || cfg.WorkDirectory == "" || len(cfg.Token) < 16 || cfg.ReceiptCapacity < 1 || cfg.ReceiptCapacity > cfg.Contract.Limits.MaxReceipts || cfg.MaxEvidenceFiles < 1 || cfg.MaxEvidenceBytes < 1 {
 		return nil, errors.New("incomplete Plugin runtime configuration")
 	}
-	r := &Runtime{cfg: cfg, capabilities: make(map[string]compiledCapability), receipts: make(map[string]*receipt), evidence: make(map[string]plugindispatch.Evidence), pending: make(map[string]plugindispatch.Evidence), pendingCancel: make(map[string]bool), witness: uuid.NewString(), changes: make(chan struct{}, 1), failures: make(chan error, 1)}
+	cfg.Capabilities = slices.Clone(cfg.Capabilities)
+	for i := range cfg.Capabilities {
+		definition := &cfg.Capabilities[i].Definition
+		definition.InputSchema = bytes.Clone(definition.InputSchema)
+		definition.OutputSchema = bytes.Clone(definition.OutputSchema)
+		definition.ErrorSchema = bytes.Clone(definition.ErrorSchema)
+	}
+	r := &Runtime{cfg: cfg, capabilities: make(map[capabilityKey]compiledCapability), receipts: make(map[string]*receipt), evidence: make(map[string]plugindispatch.Evidence), pending: make(map[string]plugindispatch.Evidence), pendingCancel: make(map[string]bool), witness: uuid.NewString(), changes: make(chan struct{}, 1), failures: make(chan error, 1)}
 	r.lifetime, r.endLifetime = context.WithCancel(context.Background())
 	for _, capability := range cfg.Capabilities {
 		input, err := plugindispatch.CompileSchema(capability.Definition.InputSchema)
@@ -124,7 +137,7 @@ func Open(cfg Config) (*Runtime, error) {
 		if capability.Execute == nil {
 			return nil, errors.New("capability execution missing")
 		}
-		key := capability.Definition.ID + "/" + capability.Definition.InputVersion
+		key := capabilityKey{capability.Definition.ID, capability.Definition.InputVersion}
 		if _, exists := r.capabilities[key]; exists {
 			return nil, errors.New("duplicate capability")
 		}
@@ -266,7 +279,7 @@ func (r *Runtime) Accept(ctx context.Context, dispatch plugindispatch.Dispatch) 
 	if len(r.receipts) >= r.cfg.ReceiptCapacity {
 		return false, ErrLimit
 	}
-	capability, exists := r.capabilities[dispatch.CapabilityID+"/"+dispatch.InputVersion]
+	capability, exists := r.capabilities[capabilityKey{dispatch.CapabilityID, dispatch.InputVersion}]
 	if !exists {
 		return false, errors.New("unsupported_capability")
 	}
@@ -364,7 +377,7 @@ func (r *Runtime) Record(id string, update Update) (plugindispatch.Evidence, err
 		}
 	}
 	if update.Outcome != nil {
-		capability := r.capabilities[receipt.execution.CapabilityID+"/"+receipt.execution.InputVersion]
+		capability := r.capabilities[capabilityKey{receipt.execution.CapabilityID, receipt.execution.InputVersion}]
 		outcome := update.Outcome
 		switch outcome.Status {
 		case "completed":
@@ -504,27 +517,29 @@ func (r *Runtime) Acknowledge(ack plugindispatch.Ack) error {
 // its process boundary rather than claiming writers have stopped.
 func (r *Runtime) Close(ctx context.Context) error {
 	r.mu.Lock()
-	r.closed = true
-	r.endLifetime()
-	if r.sessionCancel != nil {
-		r.sessionCancel()
-	}
-	session := r.sessionDone
-	r.mu.Unlock()
-	if session != nil {
-		select {
-		case <-session:
-		case <-ctx.Done():
-			return ctx.Err()
+	if !r.closed {
+		r.closed = true
+		r.endLifetime()
+		if r.sessionCancel != nil {
+			r.sessionCancel()
 		}
+		session := r.sessionDone
+		r.joined = make(chan struct{})
+		go func() {
+			if session != nil {
+				<-session
+			}
+			r.workers.Wait()
+			r.mu.Lock()
+			r.stopped = true
+			r.mu.Unlock()
+			close(r.joined)
+		}()
 	}
-	done := make(chan struct{})
-	go func() { r.workers.Wait(); close(done) }()
+	joined := r.joined
+	r.mu.Unlock()
 	select {
-	case <-done:
-		r.mu.Lock()
-		r.stopped = true
-		r.mu.Unlock()
+	case <-joined:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

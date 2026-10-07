@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -47,19 +46,7 @@ func runCore(cfg configuration) (result error) {
 		result = errors.Join(result, server.Close(shutdown))
 	}()
 	emit(event{Event: "ready"})
-	commands := make(chan string)
-	scanErrors := make(chan error, 1)
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			select {
-			case commands <- scanner.Text():
-			case <-ctx.Done():
-				return
-			}
-		}
-		scanErrors <- scanner.Err()
-	}()
+	commands, scanErrors := readCommands(ctx)
 	for {
 		select {
 		case <-ctx.Done():
