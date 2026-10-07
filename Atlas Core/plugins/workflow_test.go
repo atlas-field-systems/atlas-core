@@ -26,6 +26,45 @@ const (
 	principalID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
 )
 
+var pluginBuild struct {
+	sync.Once
+	root string
+	err  error
+}
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if pluginBuild.root != "" {
+		if err := os.RemoveAll(pluginBuild.root); err != nil {
+			fmt.Fprintf(os.Stderr, "remove Plugin build directory: %v\n", err)
+			code = 1
+		}
+	}
+	os.Exit(code)
+}
+
+func fixturePlugin(t *testing.T) string {
+	t.Helper()
+	pluginBuild.Do(func() {
+		pluginBuild.root, pluginBuild.err = os.MkdirTemp("", "atlas-plugin-build-")
+		if pluginBuild.err != nil {
+			return
+		}
+		arguments := []string{"build"}
+		if pluginRace {
+			arguments = append(arguments, "-race")
+		}
+		arguments = append(arguments, "-o", filepath.Join(pluginBuild.root, "plugin"), "../tests/pluginfixture")
+		if output, err := exec.Command("go", arguments...).CombinedOutput(); err != nil {
+			pluginBuild.err = fmt.Errorf("build Plugin: %s: %w", output, err)
+		}
+	})
+	if pluginBuild.err != nil {
+		t.Fatal(pluginBuild.err)
+	}
+	return filepath.Join(pluginBuild.root, "plugin")
+}
+
 func TestAcceptedWorkOutlivesCallerAndRetriesOnce(t *testing.T) {
 	f := newFixture(t, 4)
 	child := f.start(t, "normal")
@@ -129,14 +168,10 @@ func newFixtureConfigured(t *testing.T, capacity int, configure func(*plugins.Co
 			t.Error(err)
 		}
 	})
-	arguments := []string{"build"}
-	if pluginRace {
-		arguments = append(arguments, "-race")
-	}
-	arguments = append(arguments, "-o", f.binary, "../tests/pluginfixture")
-	build := exec.Command("go", arguments...)
-	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build plugin: %s %v", output, err)
+	// Share only immutable executable bytes; every fixture retains its own
+	// process path and working storage under the surviving test owner's root.
+	if err := os.Link(fixturePlugin(t), f.binary); err != nil {
+		t.Fatal(err)
 	}
 	return f
 }

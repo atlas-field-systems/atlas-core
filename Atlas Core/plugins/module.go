@@ -149,15 +149,15 @@ type resultSchemas struct {
 	output, failure *jsonschema.Schema
 }
 type runtime struct {
-	drainConfirmed                                             bool
-	stagedReceipts                                             map[string]plugindispatch.Dispatch
-	host                                                       RuntimeBinding
-	connected, started, reconnectVerified, draining, inSession bool
-	witness                                                    string
-	session                                                    uint64
-	reserved                                                   map[string]bool
-	cancelSent                                                 map[string]string
-	cursor                                                     int
+	drainConfirmed                                    bool
+	stagedReceipts                                    map[string]plugindispatch.Dispatch
+	host                                              RuntimeBinding
+	connected, reconnectVerified, draining, inSession bool
+	witness                                           string
+	session                                           uint64
+	reserved                                          map[string]bool
+	cancelSent                                        map[string]string
+	cursor                                            int
 }
 type Module struct {
 	issuedBindings map[plugindispatch.Binding]bool
@@ -168,7 +168,6 @@ type Module struct {
 	cfg            Config
 	capabilities   map[capabilityKey]capability
 	resultSchemas  map[string]resultSchemas
-	schemaLimit    int64
 	runtimes       map[string]*runtime
 	closed         bool
 	recordsReady   bool
@@ -200,7 +199,6 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 		return nil, ErrLimit
 	}
 	cfg.Releases = slices.Clone(cfg.Releases)
-	var definitionCount int64
 	for i := range cfg.Releases {
 		registration := &cfg.Releases[i]
 		if _, err := uuid.Parse(registration.PluginID); err != nil {
@@ -223,9 +221,8 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 			definition := &registration.Capabilities[j]
 			*definition = plugindispatch.CloneCapability(*definition)
 		}
-		definitionCount += int64(len(registration.Capabilities))
 	}
-	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[capabilityKey]capability), resultSchemas: make(map[string]resultSchemas), schemaLimit: definitionCount, runtimes: make(map[string]*runtime)}
+	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[capabilityKey]capability), resultSchemas: make(map[string]resultSchemas), runtimes: make(map[string]*runtime)}
 	for _, registration := range cfg.Releases {
 		for _, definition := range registration.Capabilities {
 			key := capabilityKey{registration.PluginID, registration.Release, definition.ID, definition.InputVersion}
@@ -263,7 +260,6 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	}
 	// Construction is the only cache-writing phase. Each entry must belong to
 	// a configured capability or a retained Operation; reports cannot add any.
-	m.schemaLimit += count
 	if err := m.scan(ctx, m.queries, func(operation operationRecord) error {
 		if err := m.prepareResultSchemas(operation.resultSchemaSource); err != nil {
 			return fmt.Errorf("%w: original result schema: %w", ErrIntegrity, err)
@@ -308,9 +304,6 @@ func (m *Module) prepareResultSchemas(source resultSchemaSource) error {
 	}
 	if _, exists := m.resultSchemas[key]; exists {
 		return nil
-	}
-	if int64(len(m.resultSchemas)) >= m.schemaLimit {
-		return ErrLimit
 	}
 	compiled, err := plugindispatch.CompileCapabilitySchema(source.OutputSchema, source.SchemaResources, source.OutputSchemaPath)
 	if err != nil {

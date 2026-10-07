@@ -161,15 +161,6 @@ func (r *Runtime) Run(ctx context.Context, socket string) (result error) {
 					drainConfirmed = true
 				}
 			}
-			timer := time.NewTimer(10 * time.Millisecond)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return ctx.Err()
-			case <-r.changes:
-				timer.Stop()
-			case <-timer.C:
-			}
 		default:
 			return errors.New("unexpected_private_response")
 		}

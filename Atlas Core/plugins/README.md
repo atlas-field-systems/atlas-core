@@ -13,11 +13,9 @@
 
 Use `plugins.Open` before binding a runtime. `Submit`, `Read`, `List` and `Cancel` form the component's consumer seam. `BindRuntime`, `VerifyReconnect` and `ConfirmLoss` accept trusted host facts, not caller or Plugin claims. `Listen` owns the private Unix listener and its connections. Its `Close(ctx)` cancels owned work and joins it within the supplied deadline. If it reports incomplete shutdown, retain storage for the process owner; close Core storage only after server work has joined.
 
-`Drain` requests the existing protected stopping policy; `Drained` reports its exact-runtime confirmation to the host owner. Repeating the request preserves that runtime's confirmation; a replacement starts unconfirmed. A request or loss of availability alone is not stop permission.
+`Drain` requests the [protected stopping policy](../../docs/topics/plugins.md#protecting-active-work); `Drained` reports confirmation for the current runtime to the host owner.
 
-The listener holds an exclusive claim on its managed socket path until its writers have joined, including after a caller's shutdown deadline expires. A Core crash releases the kernel claim so the next owner can recover the stale socket. Existing live listeners, unrelated files and symlinks are refused.
-
-Temporary descriptor exhaustion retries acceptance with capped backoff until resources recover or `Close` interrupts it. `Server.Faults()` promptly reports a permanent listener failure; observing that notification does not remove the failure from `Close` or establish writer shutdown. The owner must still join the server before releasing storage.
+The listener owns an exclusive socket-path claim until its writers join. It recovers a stale socket after Core process death, retries temporary descriptor pressure and reports permanent failures through `Server.Faults()` and `Close`. A fault notification does not establish writer shutdown.
 
 A runtime binding belongs to one installation/principal/Dataset/Core run/generation. Verification must come from the host's unchanged-process check. The live witness and retained receipt proof protect reconnection from a fresh runtime presenting old credentials; they do not implement the host supervisor. Starting a replacement requires new authority. Saved evidence preserves its original execution binding while its reporting envelope uses current authenticated authority.
 
@@ -27,7 +25,7 @@ Plugin consumers call `pluginruntime.Open` and `Run`. The execution callback own
 
 Stopping a channel session preserves accepted workers. `Close(ctx)` closes runtime admission, cancels workers and joins the owned session and execution within the supplied deadline. If shutdown is incomplete, the owner must retain working storage and use its process shutdown boundary before deleting it.
 
-The Runtime retains its first worker failure independently of bounded public `Faults()` notifications. Observing a notification cannot hide that failure from `Run`. A failed Runtime refuses fresh work and reconnection; accepted workers retain their evidence and explicit `Close` still owns cancellation and joining.
+`Runtime.Faults()` reports bounded notifications while `Run` retains the first worker failure. Fault observation does not take over `Close`'s cancellation and joining responsibility.
 
 Supply an exclusively owned evidence directory within the Plugin's managed working storage. Other capability work, such as private SQLite state or staging files, belongs in separate Plugin-owned locations under that working storage.
 
@@ -41,27 +39,11 @@ The separate [private Protocol artifact](../../Atlas%20Protocol/plugin-dispatch.
 
 Core uses SQLite WAL with synchronous FULL. Plugin evidence uses synced temporary files, atomic replacement and directory sync, and exact revision acknowledgement. Process-kill tests qualify their exercised cut points on the test filesystem. They do not establish healthy-storage power-loss guarantees or deployment-wide qualification.
 
-Retained opening validates stored Operation records before reconciliation. Missing fields, invalid statuses or inconsistent facts report an integrity failure rather than silently repairing the record. Missing Dataset/writing-release metadata also faults when Operations remain, preserving the retained release boundary. Dispatch polling uses an indexed query for the current runtime's unfinished work instead of decoding retained history on every poll.
+Core validates retained records before reconciliation, including their Dataset and writing-release metadata. Dispatch polling queries the current runtime's unfinished work through an index. Original capability schemas and local resources are compiled during opening and retained for result validation.
 
-Core may accumulate known facts from several bounded reports. Retained validation checks their individual shape, aggregate counts and unique identities; their combined inventory need not fit one wire frame.
+The canonical private schema supplies array quotas shared by admission and wire validation. Core validates accumulated facts separately from individual messages, so an inventory assembled from bounded reports need not fit one frame. The terminal revision remains reserved when the nonterminal report budget is exhausted.
 
-Array quotas come from the canonical schema's `maxItems` constraints. The contract loader derives receipt, capability, effect and output limits from those constraints so admission and wire validation use the same authored bounds. Core and Plugin validate terminal payloads through the same validator, using the original capability's schemas.
-
-A capability may report Failed without declaring an additional error schema. Its error must be present, valid JSON and within the canonical result bound, without a result body. A declared error schema adds its own constraints to that private contract.
-
-Bearer tokens cannot be reused across Plugin installations or previously issued runtime bindings in the same Core run. Planned draining can redeliver exposed unacknowledged work only to its verified original runtime. It does not first-expose pending work; explicit cancellation can finish that never-exposed work.
-
-The Runtime rejects conflicting effect identities before changing a receipt or saving evidence. Identical repeated facts persist once. Retained evidence entries must be regular files; a FIFO or other incompatible entry faults startup before reading it.
-
-Ordinary Plugin progress stays in memory. Reports carrying known effects, output references or a terminal outcome are saved before reporting and can be recovered after process replacement.
-
-The bounded report budget reserves its final revision for Completed, Failed or Cancelled. Once the nonterminal budget is exhausted, further progress or evidence updates fail explicitly while the terminal report remains eligible. Evidence file and byte quotas still apply.
-
-An exact committed report retry remains acknowledgeable after newer reports. A previously unseen report must advance the sequence before Core records its outcome, effects or outputs. New output references pass the supplied resource validator; previously recorded references retain their attribution after resource deletion.
-
-Completed, Failed and Cancelled reject unsupported new report identities without changing recorded attribution. Exact committed retries remain acknowledgeable; Interrupted retains its separate recovered-evidence path.
-
-Verified same-runtime reconnection requires live receipts for executions proven by dispatch acknowledgement or committed report evidence. Admission stays closed until the receipt inventory is complete.
+The [private dispatch and execution-evidence rules](../../docs/topics/plugins.md#private-operation-dispatch-and-reconciliation) own receipts, report ordering, cancellation, exact acknowledgements, runtime fencing and recovered outcomes. Their implementation separates transient progress from durable evidence and keeps Core out of Plugin-private storage.
 
 The post-rename fault hook schedules a directory-sync failure after the real file replacement. It is test fault injection, disabled during ordinary use, and qualifies preservation on that ambiguous-publication path.
 
@@ -73,46 +55,21 @@ Run all required checks from the repository root:
 python3 scripts/verify.py --bootstrap
 ```
 
-The verifier records passing checks in `.artifacts/verification.json` only after execution, includes clean deterministic Plugin SQL generation and runs the real-process component workflows with the Go race detector. The fixture Plugin is separately built and uses private temporary storage; tests observe Operations and external fixture effects rather than inspecting Core tables. Retained-opening tests use SQL only to inject and restore deliberate corruption while Core is closed; `Open` and `Read` supply their business-state assertions.
+The verifier records passing checks in `.artifacts/verification.json` only after execution, includes clean deterministic Plugin SQL generation and runs the real-process component workflows with the Go race detector. Each test process builds the fixture Plugin once in its own normal or race mode, then links that immutable executable into otherwise independent fixtures. Tests use separate processes and private temporary storage, observing Operations and external effects rather than inspecting Core tables. Retained-opening tests use SQL only to inject and restore deliberate corruption while Core is closed; `Open` and `Read` supply their business-state assertions.
 
 The [Go test owner](../../scripts/go_test_supervisor.py) survives the test worker, owns its process group and temporary root, and uses the [Linux child-subreaper interface](https://man7.org/linux/man-pages/man2/PR_SET_CHILD_SUBREAPER.2const.html) to reap orphaned Plugin children. The required [cleanup check](../../scripts/plugin_checks.py) kills a real workflow worker, reaches a command deadline and interrupts the owner with SIGINT/SIGTERM. Each schedule verifies process exit/reaping and storage removal. Forced SIGKILL of the surviving owner remains outside this qualification.
 
 The [workflow source](workflow_test.go) records the deterministic schedules. The full verifier also retains the existing foundation checks. Test capacities and byte bounds are qualification inputs, not measured field sizing.
 
-| Requirement | Implementation | Reproducible validation |
-| --- | --- | --- |
-| Durable acceptance, matching retries and bounded reservations | `Module.Submit` and private SQLite transactions | `TestAcceptedWorkOutlivesCallerAndRetriesOnce`, `TestConcurrentIdenticalSubmissionRetriesCreateOneExecution`, `TestConcurrentReservationsAndNeverExposedCancellation` |
-| Same-runtime duplicate suppression after acknowledgement | `Runtime.Accept` and retained live receipts | `TestLiveReceiptSurvivesLostAcknowledgementsAndCapacity` |
-| Cancellation before and after exposure | `Module.Cancel` and runtime-owned execution context | `TestExposedCancellationSurvivesReceiptAndProgress`, `TestCancellationAfterExposureAndLostReceiptIsNeverUndispatched` |
-| Verified reconnect, replacement fencing and protected drain | Runtime bindings, private readiness and `Module.Drain` | `TestDisconnectedRuntimeRequiresVerifiedReconnectAndRetainedReceipts`, `TestVerifiedProcessCannotReconnectAfterLosingLiveWitness`, `TestManualReplacementRebuildsNeverExposedReservations`, `TestActualRuntimeChannelPreservesWorkAcrossSessionCancellationAndDrains` |
-| Immutable interruption with authenticated recovered evidence | Core report commit and Plugin evidence persistence | `TestConfirmedDeathRecoversSavedOutcomeWithoutReopening`, `TestCoreProcessCrashRetainsConfirmedAndRecoversOriginalRunEvidence`, `TestDurableKnownEffectArrivesThroughReplacementReadiness` |
-| Exact acknowledgement and honest uncertainty around effects | Revision-bound cleanup and storage-fault fencing | `TestDelayedEvidenceAcknowledgementKeepsNewerRevisionAfterDeath`, `TestAmbiguousFilePublicationFencesOldAckAndRecoversNewEvidence`, `TestRealEffectBeforePersistenceRemainsUnknownAndNeverReruns` |
-| Ordinary progress remains transient | Runtime pending reports, separate from durable evidence | `TestUnreportedOrdinaryProgressLeavesReplacementReadinessEmpty`, `TestTransientProgressKeepsNewerPendingRevisionAndNeverBecomesRetained` |
-| Bounded messages, inputs, retained files and readiness | Canonical private contract, evidence quotas and paged readiness | `TestInputByteBoundPrecedesCanonicalizationAndPreservesReservations`, `TestLargeAcknowledgedReceiptInventoryReconnectsInBoundedPages`, `TestEvidenceQuotaRetainsPreviouslySavedOutcome`, `TestByteQuotaRefusesReplacementWithoutErasingUnacknowledgedEvidence` |
-| Faulted retained evidence and rejected stale or malformed messages | Plugin-owned startup validation and private boundary validation | `TestCorruptRetainedEvidenceFaultsReadiness`, [boundary tests](boundary_test.go) |
-| Owned, bounded shutdown and detached snapshots | Server/runtime `Close` and copied receipt/evidence values | `TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin`, [Runtime boundary tests](../pluginruntime/runtime_test.go), process fixture cleanup |
-| Distinct capability identities and immutable original result schemas | Structured capability keys and construction-time schema cache | [Capability-pair workflow](capability_test.go), [original-schema recovery workflows](schema_test.go) |
-| Target Plugin/release and supported input version checked before acceptance | Scoped release declarations and exact readiness pairs | [Independent Plugin workflow](installation_test.go), `TestHostAndReadinessRequireExactInstalledCapabilityVersion` |
-| Progress cannot consume the terminal report revision | Reserved final revision at Core and Plugin boundaries | [Completed, Failed and Cancelled workflows with confirmed drain](revision_test.go) |
-| Core crash restores its channel without unlinking a live owner | Exclusive listener claim retained until writer join | `TestCoreProcessCrashRetainsConfirmedAndRecoversOriginalRunEvidence`, `TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin`, `TestSocketOwnershipProtectsLiveAndUnrelatedEntries` |
-| Listener recovers from descriptor pressure and reports permanent failures before shutdown | Capped cancellable accept retry, bounded fault notification and retained failure cause | [Separate-process exhaustion and shutdown workflows](listener_test.go), [permanent-failure notification probe](listener_fault_test.go) |
-| Repeated protected drain requests preserve only the current runtime's confirmation | Idempotent `Module.Drain` and fresh replacement binding | `TestRepeatedDrainPreservesConfirmationOnlyForCurrentRuntime` |
-| Wire validation and admission share array quotas | Limits derived from the compiled canonical schema | [Schema-bound frame validation](../plugindispatch/limits_test.go) |
-| Unseen reports advance sequence while exact retries preserve recorded facts | Core report commit ordering | [Stale-report and exact-retry workflow](evidence_test.go) |
-| Deleted known outputs retain attribution and allow terminal reporting | Validation of newly introduced references | [Cumulative-output deletion workflow](evidence_test.go) |
-| Same-runtime evidence requires a retained receipt even with a lost dispatch acknowledgement | Report acceptance and readiness inventory | [Lost-acknowledgement readiness workflow](evidence_test.go) |
-| Definitive outcomes reject new reports while exact retries remain acknowledgeable | Terminal report guard after recorded-identity lookup | [Completed, Failed and Cancelled evidence workflow](evidence_test.go) |
-| Malformed retained records fail before reconciliation | Stored shape, identity and state validation | [Retained-opening fault and restoration workflow](integrity_test.go) |
-| Missing retained writing metadata cannot adopt another release | Initial metadata creation requires an empty Operation store | [Missing-marker fault and restoration workflow](integrity_test.go) |
-| Incremental reports retain a valid inventory larger than one wire frame | Separate stored-inventory and message validation | [Incremental effect read and retained-opening workflow](evidence_test.go) |
-| Retained history does not block current runtime dispatch | Indexed query for the exact binding's unfinished work | [Polling and completion with cancelled history](polling_test.go) |
-| Fault observers cannot consume the session's worker failure | Private failure signal and retained original cause | [Fault observation and surviving-worker tests](../pluginruntime/runtime_test.go) |
-| Supplied local schema resources retain their original release context without external retrieval | Immutable capability resources and resource-aware retained schema cache | [Bundle process and retained-opening workflow](schema_test.go), [external-retrieval refusal](../plugindispatch/schema_test.go), [Runtime input/result/error probes](../pluginruntime/runtime_test.go) |
-| Manifest-compliant capabilities can report definitive failure without an additional error schema | Canonical bounded JSON fallback at both outcome boundaries | `TestCapabilityWithoutErrorSchemaCanFailAndDrain` |
-| Receipt capacity agrees before admission and bearer tokens remain installation-specific | Exact readiness capacity comparison and Core-run token history | [Authority and capacity workflows](authority_test.go) |
-| Drain delivers lost exposure only to its original runtime | Exposed-only redelivery while draining, preserving cancellation and replacement fences | [Lost-response and replacement drain workflows](drain_test.go) |
-| Conflicting effect batches and non-regular evidence files fail before retention | Runtime record validation and regular-file startup check | [Effect and FIFO regressions](../pluginruntime/runtime_test.go) |
-| Cleanup after hard worker death, command deadline or owner interruption | Surviving verifier process/storage owner | `check_plugin_fixture_lifetime` in [executable cleanup checks](../../scripts/plugin_checks.py) |
+| Coverage | Reproducible validation |
+| --- | --- |
+| Durable acceptance, submission retries, cancellation, duplicate dispatch, capacity, interruption and exact evidence acknowledgement | [Real-process workflows](workflow_test.go) |
+| Runtime identity, partial readiness, cancellation retries, replacement fencing and protected drain | [Authority workflows](authority_test.go), [reconnection workflows](reconnect_test.go), [drain workflows](drain_test.go), [real-process recovery](workflow_test.go) |
+| Report ordering, terminal immutability, output attribution and reserved final revision | [Evidence workflows](evidence_test.go), [revision workflows](revision_test.go) |
+| Plugin/release capability ownership, original schemas and local bundle resources | [Installation](installation_test.go), [capability](capability_test.go) and [schema workflows](schema_test.go), [schema boundary tests](../plugindispatch/schema_test.go) |
+| Retained integrity, bounded frames/files/bytes, transient progress, worker failures and detached snapshots | [Integrity workflows](integrity_test.go), [private boundary tests](boundary_test.go), [Runtime boundary tests](../pluginruntime/runtime_test.go), [schema-derived limits](../plugindispatch/limits_test.go) |
+| Indexed dispatch with retained history, socket ownership, descriptor pressure and bounded shutdown | [Polling workflow](polling_test.go), [listener workflows](listener_test.go), [listener fault notification](listener_fault_test.go), [shutdown workflows](workflow_test.go) |
+| Process exit/reaping and storage removal after worker death, deadline or owner interruption | [Executable cleanup checks](../../scripts/plugin_checks.py) |
 
 ## Remaining qualification
 

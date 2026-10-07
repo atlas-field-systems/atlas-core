@@ -218,7 +218,18 @@ func run() (result error) {
 	if err := connect(); err != nil {
 		return err
 	}
-	if err := ready(); err != nil {
+	initialReady := ready
+	if cfg.Mode == "partial-ready" {
+		initialReady = func() error {
+			value := runtime.Ready(false)
+			_, err := exchange(plugindispatch.Request{Kind: "ready", Ready: &value})
+			if err == nil {
+				emit(event{Event: "readiness_started"})
+			}
+			return err
+		}
+	}
+	if err := initialReady(); err != nil {
 		emit(event{Event: "fault", Error: err.Error()})
 		return err
 	}

@@ -89,7 +89,6 @@ type Runtime struct {
 	witness       string
 	running       bool
 	workers       sync.WaitGroup
-	changes       chan struct{}
 	failed        chan struct{}
 	workerFault   error
 	failures      chan error
@@ -115,7 +114,7 @@ func Open(cfg Config) (*Runtime, error) {
 	for i := range cfg.Capabilities {
 		cfg.Capabilities[i].Definition = plugindispatch.CloneCapability(cfg.Capabilities[i].Definition)
 	}
-	r := &Runtime{cfg: cfg, capabilities: make(map[capabilityKey]compiledCapability), receipts: make(map[string]*receipt), evidence: make(map[string]plugindispatch.Evidence), pending: make(map[string]plugindispatch.Evidence), pendingCancel: make(map[string]bool), witness: uuid.NewString(), changes: make(chan struct{}, 1), failed: make(chan struct{}), failures: make(chan error, 1)}
+	r := &Runtime{cfg: cfg, capabilities: make(map[capabilityKey]compiledCapability), receipts: make(map[string]*receipt), evidence: make(map[string]plugindispatch.Evidence), pending: make(map[string]plugindispatch.Evidence), pendingCancel: make(map[string]bool), witness: uuid.NewString(), failed: make(chan struct{}), failures: make(chan error, 1)}
 	r.lifetime, r.endLifetime = context.WithCancel(context.Background())
 	for _, capability := range cfg.Capabilities {
 		input, err := plugindispatch.CompileCapabilitySchema(capability.Definition.InputSchema, capability.Definition.SchemaResources, capability.Definition.InputSchemaPath)
@@ -193,9 +192,6 @@ func Open(cfg Config) (*Runtime, error) {
 			if retained.Format != cfg.Contract.Version || evidence.Revision != plugindispatch.Revision(evidence) || b.PluginID != cfg.Binding.PluginID || b.PrincipalID != cfg.Binding.PrincipalID || b.DatasetID != cfg.Binding.DatasetID || entry.Name() != evidence.Execution.OperationID+".evidence.json" {
 				return nil, errors.New("incompatible_retained_evidence")
 			}
-			if _, exists := r.evidence[evidence.Execution.OperationID]; exists {
-				return nil, errors.New("duplicate_retained_evidence")
-			}
 			r.evidence[evidence.Execution.OperationID] = evidence
 			r.evidenceBytes += int64(len(encoded))
 		}
@@ -204,12 +200,6 @@ func Open(cfg Config) (*Runtime, error) {
 		}
 	}
 	return r, nil
-}
-func (r *Runtime) notify() {
-	select {
-	case r.changes <- struct{}{}:
-	default:
-	}
 }
 func (r *Runtime) Ready(complete bool) plugindispatch.Ready {
 	r.mu.Lock()
@@ -330,6 +320,9 @@ func (r *Runtime) Cancel(cancel plugindispatch.Cancel) error {
 		receipt.cancel()
 		return nil
 	}
+	if r.pendingCancel[cancel.OperationID] {
+		return nil
+	}
 	if len(r.pendingCancel) >= r.cfg.ReceiptCapacity {
 		return ErrLimit
 	}
@@ -440,7 +433,6 @@ func (r *Runtime) Record(id string, update Update) (plugindispatch.Evidence, err
 	receipt.outputs = append([]plugindispatch.Output(nil), evidence.Outputs...)
 	receipt.sequence++
 	receipt.completed = update.Outcome != nil
-	r.notify()
 	return plugindispatch.CloneEvidence(evidence), nil
 }
 func (r *Runtime) persist(id string, encoded []byte) (result error) {

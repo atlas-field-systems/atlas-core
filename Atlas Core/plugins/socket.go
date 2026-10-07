@@ -26,7 +26,6 @@ type Server struct {
 	listener    *ownedListener
 	mu          sync.Mutex
 	connections map[net.Conn]bool
-	done        chan struct{}
 	joined      chan struct{}
 	wg          sync.WaitGroup
 	closed      bool
@@ -46,7 +45,7 @@ func (m *Module) Listen(path string) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &Server{ctx: ctx, cancel: cancel, module: m, listener: listener, connections: make(map[net.Conn]bool), done: make(chan struct{}), slots: make(chan struct{}, privateConnections), faults: make(chan error, 1)}
+	s := &Server{ctx: ctx, cancel: cancel, module: m, listener: listener, connections: make(map[net.Conn]bool), slots: make(chan struct{}, privateConnections), faults: make(chan error, 1)}
 	s.wg.Add(1)
 	go s.accept()
 	return s, nil
@@ -116,7 +115,6 @@ func (s *Server) Close(ctx context.Context) error {
 		for connection := range s.connections {
 			connection.Close()
 		}
-		close(s.done)
 		s.joined = make(chan struct{})
 		go func() {
 			s.wg.Wait()
@@ -168,13 +166,15 @@ func (s *Server) serve(connection net.Conn) {
 		}
 		changed := s.module.changeChannel()
 		response := s.module.handle(s.ctx, request, &state)
-		if request.Kind == "next" && response.Kind == "idle" {
+		// Core owns the bounded wait for both idle and draining sessions. This
+		// also leaves the Runtime regular opportunities to report local progress.
+		if request.Kind == "next" && (response.Kind == "idle" || response.Kind == "drain") {
 			timer := time.NewTimer(250 * time.Millisecond)
 			select {
 			case <-changed:
 				response = s.module.handle(s.ctx, request, &state)
 			case <-timer.C:
-			case <-s.done:
+			case <-s.ctx.Done():
 				timer.Stop()
 				return
 			}
@@ -227,13 +227,13 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 			return fail(errors.New("readiness_mismatch"))
 		}
 		if state.number == 0 {
-			if active.inSession || active.started && !active.reconnectVerified {
+			if active.inSession || active.session != 0 && !active.reconnectVerified {
 				return fail(ErrAuthority)
 			}
-			if active.started && (ready.LiveWitness != active.witness || !ready.ReceiptsRetained) {
+			if active.session != 0 && (ready.LiveWitness != active.witness || !ready.ReceiptsRetained) {
 				return fail(errors.New("live_receipts_lost"))
 			}
-			if !active.started {
+			if active.session == 0 {
 				active.witness = ready.LiveWitness
 			}
 			active.session++
@@ -280,7 +280,6 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 				return fail(err)
 			}
 			active.connected = true
-			active.started = true
 			active.reconnectVerified = false
 			active.cancelSent = make(map[string]string)
 			m.signal()
