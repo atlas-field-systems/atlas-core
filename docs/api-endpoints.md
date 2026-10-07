@@ -165,7 +165,7 @@ The public API exposes Plugin discovery/status and durable Operations; Plugin ma
 | `GET /plugins/{plugin_id}` | Consumers inspect a Plugin | Plugin ID → release, capabilities, availability and fault status | None; no configuration secrets or management controls | New |
 | `POST /plugins/{plugin_id}/operations` | Consumers invoke a declared capability | Capability identifier, input, dataset-scoped submission identity → accepted Operation and outcome URL | Record durable Operation; declared processing may publish operational resources | Adapt: replace request-bound capability invocation |
 | `GET /plugins/{plugin_id}/operations` | Consumers list Operations | Filters, pagination → Operation page | None | New |
-| `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one Operation | Core-owned Operation ID → status, progress, known outputs and outcome | None | New |
+| `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one Operation | Core-owned Operation ID → status, progress, known outputs, outcome and any separate [Recovered outcome](topics/plugins.md#recovered-outcomes) | None | New |
 | `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` | Consumers request cancellation | Operation ID → Operation | Record cancellation request; final outcome requires confirmation | New |
 
 Submission, retries, cancellation, the [Operation transitions](topics/plugins.md#operation-transitions) and retention are specified in [Plugins](topics/plugins.md#operations), including the `202 Accepted` submission response.
