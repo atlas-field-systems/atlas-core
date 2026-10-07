@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"slices"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/atlas-field-systems/atlas-core/plugindispatch"
 	"github.com/atlas-field-systems/atlas-core/plugins/generated/storage"
+	"golang.org/x/sys/unix"
 )
 
 // Server owns its listener and accepted connections. Close interrupts and joins
@@ -30,10 +32,13 @@ type Server struct {
 	closed      bool
 	result      error
 	slots       chan struct{}
+	faults      chan error
 }
 
 const privateConnections = 16
 const socketDeadline = 5 * time.Second
+const acceptRetryMinimum = 5 * time.Millisecond
+const acceptRetryMaximum = 250 * time.Millisecond
 
 func (m *Module) Listen(path string) (*Server, error) {
 	listener, err := listenOwned(path)
@@ -41,23 +46,44 @@ func (m *Module) Listen(path string) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &Server{ctx: ctx, cancel: cancel, module: m, listener: listener, connections: make(map[net.Conn]bool), done: make(chan struct{}), slots: make(chan struct{}, privateConnections)}
+	s := &Server{ctx: ctx, cancel: cancel, module: m, listener: listener, connections: make(map[net.Conn]bool), done: make(chan struct{}), slots: make(chan struct{}, privateConnections), faults: make(chan error, 1)}
 	s.wg.Add(1)
 	go s.accept()
 	return s, nil
 }
 func (s *Server) accept() {
 	defer s.wg.Done()
+	var retry time.Duration
 	for {
 		connection, err := s.listener.Accept()
 		if err != nil {
-			if !errors.Is(err, net.ErrClosed) {
-				s.mu.Lock()
-				s.result = errors.Join(s.result, err)
-				s.mu.Unlock()
+			if s.ctx.Err() != nil {
+				return
 			}
+			// Descriptor pressure can recover without replacing the listener or
+			// changing runtime authority. Bound retry frequency and allow Close
+			// to interrupt the wait even while pressure persists.
+			if errors.Is(err, unix.EMFILE) || errors.Is(err, unix.ENFILE) {
+				retry = min(max(retry*2, acceptRetryMinimum), acceptRetryMaximum)
+				timer := time.NewTimer(retry)
+				select {
+				case <-s.ctx.Done():
+					timer.Stop()
+					return
+				case <-timer.C:
+				}
+				continue
+			}
+			s.mu.Lock()
+			if !s.closed {
+				fault := fmt.Errorf("accept Plugin connection: %w", err)
+				s.result = errors.Join(s.result, fault)
+				s.faults <- fault
+			}
+			s.mu.Unlock()
 			return
 		}
+		retry = 0
 		s.mu.Lock()
 		if s.closed {
 			s.mu.Unlock()
@@ -75,6 +101,12 @@ func (s *Server) accept() {
 		s.mu.Unlock()
 	}
 }
+
+// Faults reports the listener's first permanent failure without waiting for
+// Close. The notification does not establish writer shutdown; the owner must
+// still call Close before releasing storage. Close retains the original cause.
+func (s *Server) Faults() <-chan error { return s.faults }
+
 func (s *Server) Close(ctx context.Context) error {
 	s.mu.Lock()
 	if !s.closed {

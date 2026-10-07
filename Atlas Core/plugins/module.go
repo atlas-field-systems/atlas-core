@@ -670,8 +670,8 @@ func (m *Module) Drain(binding plugindispatch.Binding) error {
 	if active == nil || active.host.Binding != binding {
 		return ErrAuthority
 	}
+	// Retrying the same runtime's drain retains its authenticated confirmation.
 	active.draining = true
-	active.drainConfirmed = false
 	return nil
 }
 func (m *Module) Available(plugin string) bool {

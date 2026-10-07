@@ -45,6 +45,8 @@ func runCore(cfg configuration) (result error) {
 		defer cancel()
 		result = errors.Join(result, server.Close(shutdown))
 	}()
+	var descriptors descriptorExhaustion
+	defer func() { result = errors.Join(result, descriptors.restore()) }()
 	emit(event{Event: "ready"})
 	commands, scanErrors := readCommands(ctx)
 	for {
@@ -53,6 +55,8 @@ func runCore(cfg configuration) (result error) {
 			return nil
 		case err := <-scanErrors:
 			return err
+		case err := <-server.Faults():
+			emit(event{Event: "listener_fault", Error: err.Error()})
 		case command := <-commands:
 			if strings.HasPrefix(command, "submit ") {
 				var request plugins.Submission
@@ -65,10 +69,31 @@ func runCore(cfg configuration) (result error) {
 				} else {
 					emit(event{Event: "accepted", Operation: &operation})
 				}
-			} else if command == "stop" {
-				return nil
 			} else {
-				emit(event{Event: "error", Error: "unknown command"})
+				switch command {
+				case "exhaust-descriptors":
+					if err := descriptors.exhaust(); err != nil {
+						return err
+					}
+					emit(event{Event: "descriptors_exhausted"})
+				case "restore-descriptors":
+					if err := descriptors.restore(); err != nil {
+						return err
+					}
+					emit(event{Event: "descriptors_restored"})
+				case "close-listener":
+					shutdown, cancel := context.WithTimeout(ctx, time.Second)
+					err := server.Close(shutdown)
+					cancel()
+					if err != nil {
+						return err
+					}
+					emit(event{Event: "listener_closed"})
+				case "stop":
+					return nil
+				default:
+					emit(event{Event: "error", Error: "unknown command"})
+				}
 			}
 		}
 	}

@@ -13,9 +13,11 @@
 
 Use `plugins.Open` before binding a runtime. `Submit`, `Read`, `List` and `Cancel` form the component's consumer seam. `BindRuntime`, `VerifyReconnect` and `ConfirmLoss` accept trusted host facts, not caller or Plugin claims. `Listen` owns the private Unix listener and its connections. Its `Close(ctx)` cancels owned work and joins it within the supplied deadline. If it reports incomplete shutdown, retain storage for the process owner; close Core storage only after server work has joined.
 
-`Drain` requests the existing protected stopping policy; `Drained` reports its exact-runtime confirmation to the host owner. A request or loss of availability alone is not stop permission.
+`Drain` requests the existing protected stopping policy; `Drained` reports its exact-runtime confirmation to the host owner. Repeating the request preserves that runtime's confirmation; a replacement starts unconfirmed. A request or loss of availability alone is not stop permission.
 
 The listener holds an exclusive claim on its managed socket path until its writers have joined, including after a caller's shutdown deadline expires. A Core crash releases the kernel claim so the next owner can recover the stale socket. Existing live listeners, unrelated files and symlinks are refused.
+
+Temporary descriptor exhaustion retries acceptance with capped backoff until resources recover or `Close` interrupts it. `Server.Faults()` promptly reports a permanent listener failure; observing that notification does not remove the failure from `Close` or establish writer shutdown. The owner must still join the server before releasing storage.
 
 A runtime binding belongs to one installation/principal/Dataset/Core run/generation. Verification must come from the host's unchanged-process check. The live witness and retained receipt proof protect reconnection from a fresh runtime presenting old credentials; they do not implement the host supervisor. Starting a replacement requires new authority. Saved evidence preserves its original execution binding while its reporting envelope uses current authenticated authority.
 
@@ -93,6 +95,8 @@ The [workflow source](workflow_test.go) records the deterministic schedules. The
 | Target Plugin/release and supported input version checked before acceptance | Scoped release declarations and exact readiness pairs | [Independent Plugin workflow](installation_test.go), `TestHostAndReadinessRequireExactInstalledCapabilityVersion` |
 | Progress cannot consume the terminal report revision | Reserved final revision at Core and Plugin boundaries | [Completed, Failed and Cancelled workflows with confirmed drain](revision_test.go) |
 | Core crash restores its channel without unlinking a live owner | Exclusive listener claim retained until writer join | `TestCoreProcessCrashRetainsConfirmedAndRecoversOriginalRunEvidence`, `TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin`, `TestSocketOwnershipProtectsLiveAndUnrelatedEntries` |
+| Listener recovers from descriptor pressure and reports permanent failures before shutdown | Capped cancellable accept retry, bounded fault notification and retained failure cause | [Separate-process exhaustion and shutdown workflows](listener_test.go), [permanent-failure notification probe](listener_fault_test.go) |
+| Repeated protected drain requests preserve only the current runtime's confirmation | Idempotent `Module.Drain` and fresh replacement binding | `TestRepeatedDrainPreservesConfirmationOnlyForCurrentRuntime` |
 | Wire validation and admission share array quotas | Limits derived from the compiled canonical schema | [Schema-bound frame validation](../plugindispatch/limits_test.go) |
 | Unseen reports advance sequence while exact retries preserve recorded facts | Core report commit ordering | [Stale-report and exact-retry workflow](evidence_test.go) |
 | Deleted known outputs retain attribution and allow terminal reporting | Validation of newly introduced references | [Cumulative-output deletion workflow](evidence_test.go) |
