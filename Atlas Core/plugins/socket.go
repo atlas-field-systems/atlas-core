@@ -228,14 +228,14 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 					return fail(ErrLimit)
 				}
 			}
-			operation, err := load(ctx, m.queries, dispatch.OperationID)
+			operation, err := m.load(ctx, m.queries, dispatch.OperationID)
 			if err != nil || !operation.Exposed || !plugindispatch.SameDispatch(operation.Execution, dispatch) {
 				return fail(ErrAuthority)
 			}
 			receipts[dispatch.OperationID] = dispatch
 		}
 		if ready.Complete {
-			err := scan(ctx, m.queries, func(operation operationRecord) error {
+			err := m.scan(ctx, m.queries, func(operation operationRecord) error {
 				if operation.Execution.Binding == active.host.Binding && operation.Acknowledged {
 					retained, ok := receipts[operation.ID]
 					if !ok || !plugindispatch.SameDispatch(retained, operation.Execution) {
@@ -265,7 +265,7 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 		}
 		dispatch := request.Receipt.Execution
 		err := m.commit(ctx, func(q *storage.Queries) error {
-			operation, err := load(ctx, q, dispatch.OperationID)
+			operation, err := m.load(ctx, q, dispatch.OperationID)
 			if err != nil {
 				return err
 			}
@@ -296,21 +296,18 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 		}
 		var candidates []operationRecord
 		var cancellation *plugindispatch.Cancel
-		err := scan(ctx, m.queries, func(operation operationRecord) error {
-			if operation.Execution.Binding != active.host.Binding || terminal(operation.Status) {
-				return nil
-			}
+		work, err := m.runtimeWork(ctx, active)
+		if err != nil {
+			return fail(err)
+		}
+		for _, operation := range work {
 			if operation.CancellationID != "" && active.cancelSent[operation.ID] != operation.CancellationID {
 				cancellation = &plugindispatch.Cancel{OperationID: operation.ID, CancellationID: operation.CancellationID}
-				return nil
+				continue
 			}
 			if !operation.Acknowledged && active.reserved[operation.ID] {
 				candidates = append(candidates, operation)
 			}
-			return nil
-		})
-		if err != nil {
-			return fail(err)
 		}
 		if cancellation != nil {
 			active.cancelSent[cancellation.OperationID] = cancellation.CancellationID
@@ -335,17 +332,11 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 		if !active.draining {
 			return fail(errors.New("not_draining"))
 		}
-		unfinished := false
-		err := scan(ctx, m.queries, func(operation operationRecord) error {
-			if operation.Execution.Binding == active.host.Binding && !terminal(operation.Status) {
-				unfinished = true
-			}
-			return nil
-		})
+		work, err := m.runtimeWork(ctx, active)
 		if err != nil {
 			return fail(err)
 		}
-		if unfinished {
+		if len(work) > 0 {
 			return fail(errors.New("active_work"))
 		}
 		active.drainConfirmed = true

@@ -11,3 +11,9 @@ CREATE TABLE IF NOT EXISTS plugin_operations (
  value TEXT NOT NULL,
  UNIQUE(dataset_id, plugin_id, request_id)
 );
+CREATE INDEX IF NOT EXISTS plugin_runtime_work ON plugin_operations (
+ dataset_id, plugin_id,
+ json_extract(value, '$.Execution.binding.core_run_id'),
+ json_extract(value, '$.Execution.binding.principal_id'),
+ json_extract(value, '$.Execution.binding.runtime_generation')
+) WHERE json_extract(value, '$.Status') IN ('pending', 'in_progress', 'cancellation_requested');

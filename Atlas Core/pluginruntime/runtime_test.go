@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net"
+	"path/filepath"
 	goruntime "runtime"
 	"sync"
 	"testing"
@@ -166,5 +170,232 @@ func TestTransientProgressKeepsNewerPendingRevisionAndNeverBecomesRetained(t *te
 	}
 	if len(runtime.Pending()) != 0 {
 		t.Fatal("exact progress ACK did not finish pending report")
+	}
+}
+
+// The private channel and worker are real. Holding the dispatch acknowledgement
+// makes the external Faults observer the only reader at the failure boundary.
+// A process fixture cannot deterministically choose between two Go readers.
+func TestFaultObserverCannotConsumeSessionFailure(t *testing.T) {
+	workerFailure := errors.New("fixture worker failed")
+	failWorker := make(chan struct{})
+	runtime := runtimeFixture(t, func(ctx context.Context, _ *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		select {
+		case <-failWorker:
+			return plugindispatch.Outcome{}, workerFailure
+		case <-ctx.Done():
+			return plugindispatch.Outcome{}, ctx.Err()
+		}
+	})
+	contract, err := plugindispatch.Load("../../Atlas Protocol/plugin-dispatch.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	socket := filepath.Join(t.TempDir(), "private.sock")
+	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: socket, Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	acknowledged := make(chan struct{})
+	peerDone := make(chan struct{})
+	var peerError error
+	go func() {
+		defer close(peerDone)
+		connection, err := listener.AcceptUnix()
+		if err != nil {
+			peerError = err
+			return
+		}
+		defer connection.Close()
+		deadline, _ := ctx.Deadline()
+		if err := connection.SetDeadline(deadline); err != nil {
+			peerError = err
+			return
+		}
+		for {
+			var request plugindispatch.Request
+			if err := contract.Receive(connection, &request); err != nil {
+				peerError = err
+				return
+			}
+			if request.Kind != "ready" || request.Ready == nil {
+				peerError = errors.New("runtime skipped readiness")
+				return
+			}
+			if err := contract.Send(connection, plugindispatch.Response{Kind: "ready"}); err != nil {
+				peerError = err
+				return
+			}
+			if request.Ready.Complete {
+				break
+			}
+		}
+		var request plugindispatch.Request
+		if err := contract.Receive(connection, &request); err != nil {
+			peerError = err
+			return
+		}
+		if request.Kind != "next" {
+			peerError = errors.New("runtime did not request dispatch")
+			return
+		}
+		execution := dispatch()
+		if err := contract.Send(connection, plugindispatch.Response{Kind: "dispatch", Dispatch: &execution}); err != nil {
+			peerError = err
+			return
+		}
+		if err := contract.Receive(connection, &request); err != nil {
+			peerError = err
+			return
+		}
+		if request.Kind != "dispatch_ack" {
+			peerError = errors.New("runtime did not acknowledge dispatch")
+			return
+		}
+		close(acknowledged)
+		// Hold the reply while checking that the runtime closes its owned socket.
+		var next plugindispatch.Request
+		if err := contract.Receive(connection, &next); !errors.Is(err, io.EOF) {
+			peerError = fmt.Errorf("faulted runtime did not close its channel: %w", err)
+		}
+	}()
+	runDone := make(chan struct{})
+	var runError error
+	go func() {
+		runError = runtime.Run(ctx, socket)
+		close(runDone)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := listener.Close(); err != nil {
+			t.Error(err)
+		}
+		select {
+		case <-runDone:
+		case <-time.After(time.Second):
+			t.Error("runtime session did not join")
+		}
+		select {
+		case <-peerDone:
+		case <-time.After(3 * time.Second):
+			t.Error("private channel peer did not join")
+		}
+	})
+	select {
+	case <-acknowledged:
+	case <-peerDone:
+		t.Fatal("private channel peer failed before dispatch", peerError)
+	case <-ctx.Done():
+		t.Fatal("runtime did not acknowledge dispatch", ctx.Err())
+	}
+	close(failWorker)
+	select {
+	case observed := <-runtime.Faults():
+		if !errors.Is(observed, workerFailure) {
+			t.Fatal("observer lost worker failure cause", observed)
+		}
+	case <-ctx.Done():
+		t.Fatal("worker fault was not observable", ctx.Err())
+	}
+	select {
+	case <-runDone:
+		if !errors.Is(runError, workerFailure) {
+			t.Fatal("session lost observed worker failure", runError)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("observing the worker fault left the runtime session open")
+	}
+	select {
+	case <-peerDone:
+		if peerError != nil {
+			t.Fatal(peerError)
+		}
+	case <-ctx.Done():
+		t.Fatal("faulted runtime did not close its private channel", ctx.Err())
+	}
+	if len(runtime.Retained()) != 0 || len(runtime.Pending()) != 0 {
+		t.Fatal("worker failure fabricated outcome evidence")
+	}
+	if err := runtime.Run(context.Background(), socket); !errors.Is(err, workerFailure) {
+		t.Fatal("reconnection forgot the observed worker failure", err)
+	}
+}
+
+func TestObservedWorkerFailurePreservesOtherAcceptedWorkUntilClose(t *testing.T) {
+	workerFailure := errors.New("fixture worker failed")
+	failWorker := make(chan struct{})
+	saveEffect := make(chan struct{})
+	workerStopped := make(chan struct{})
+	saved := make(chan error, 1)
+	original := dispatch()
+	surviving := dispatch()
+	surviving.OperationID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+	runtime := runtimeFixture(t, func(ctx context.Context, invocation *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		if invocation.Dispatch.OperationID == original.OperationID {
+			select {
+			case <-failWorker:
+				return plugindispatch.Outcome{}, workerFailure
+			case <-ctx.Done():
+				return plugindispatch.Outcome{}, ctx.Err()
+			}
+		}
+		defer close(workerStopped)
+		select {
+		case <-saveEffect:
+			_, err := invocation.Record(pluginruntime.Update{Effects: []plugindispatch.Effect{{ID: "effect", Description: "accepted worker saved evidence"}}})
+			saved <- err
+		case <-ctx.Done():
+			return plugindispatch.Outcome{}, ctx.Err()
+		}
+		<-ctx.Done()
+		return plugindispatch.Outcome{}, ctx.Err()
+	})
+	for _, execution := range []plugindispatch.Dispatch{original, surviving} {
+		if _, err := runtime.Accept(context.Background(), execution); err != nil {
+			t.Fatal(err)
+		}
+	}
+	close(failWorker)
+	select {
+	case observed := <-runtime.Faults():
+		if !errors.Is(observed, workerFailure) {
+			t.Fatal("observer lost worker failure cause", observed)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("worker fault was not observable")
+	}
+	if err := runtime.Run(context.Background(), "unused"); !errors.Is(err, workerFailure) {
+		t.Fatal("session forgot the observed worker failure", err)
+	}
+	fresh := dispatch()
+	fresh.OperationID = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+	if _, err := runtime.Accept(context.Background(), fresh); !errors.Is(err, workerFailure) {
+		t.Fatal("faulted runtime accepted new work", err)
+	}
+	close(saveEffect)
+	select {
+	case err := <-saved:
+		if err != nil {
+			t.Fatal("accepted worker could not save its evidence", err)
+		}
+	case <-workerStopped:
+		t.Fatal("worker failure stopped other accepted work")
+	case <-time.After(time.Second):
+		t.Fatal("accepted worker did not save its evidence")
+	}
+	retained := runtime.Retained()
+	if len(retained) != 1 || retained[0].Execution.OperationID != surviving.OperationID || len(retained[0].Effects) != 1 || retained[0].Effects[0].ID != "effect" || retained[0].Outcome != nil {
+		t.Fatal("worker failure rewrote surviving execution evidence", retained)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := runtime.Close(ctx); err != nil {
+		t.Fatal("explicit Close did not join surviving worker", err)
+	}
+	select {
+	case <-workerStopped:
+	default:
+		t.Fatal("Close returned before accepted worker stopped")
 	}
 }

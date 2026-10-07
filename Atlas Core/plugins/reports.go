@@ -21,7 +21,7 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 		return ack, err
 	}
 	err = m.commit(ctx, func(q *storage.Queries) error {
-		operation, err := load(ctx, q, evidence.Execution.OperationID)
+		operation, err := m.load(ctx, q, evidence.Execution.OperationID)
 		if err != nil {
 			return err
 		}
@@ -42,6 +42,9 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 				return save(ctx, q, operation)
 			}
 			return nil
+		}
+		if terminal(operation.Status) && operation.Status != Interrupted {
+			return ErrTerminalConflict
 		}
 		if sequence <= operation.LatestSequence {
 			return errors.New("stale_report")

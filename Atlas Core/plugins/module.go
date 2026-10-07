@@ -48,12 +48,24 @@ var (
 	ErrNotFound         = errors.New("not_found")
 	ErrDataset          = errors.New("dataset_mismatch")
 	ErrUnsupported      = errors.New("unsupported_capability")
+	ErrIntegrity        = errors.New("operation_integrity_fault")
 )
 
 type Submission struct {
 	DatasetID, PluginID, RequestID, CallerID, CapabilityID, InputVersion string
 	Input                                                                json.RawMessage
 }
+
+const maxSubmissionFieldBytes = 128
+
+func validSubmissionShape(submission Submission) bool {
+	// Capability/version support, including empty names, belongs to the
+	// installed release lookup rather than this request-shape check.
+	return submission.RequestID != "" && submission.PluginID != "" && submission.CallerID != "" &&
+		len(submission.RequestID) <= maxSubmissionFieldBytes && len(submission.CallerID) <= maxSubmissionFieldBytes &&
+		len(submission.CapabilityID) <= maxSubmissionFieldBytes && len(submission.InputVersion) <= maxSubmissionFieldBytes
+}
+
 type Operation struct {
 	ID               string
 	Original         Submission
@@ -142,6 +154,7 @@ type Module struct {
 	schemaLimit    int64
 	runtimes       map[string]*runtime
 	closed         bool
+	recordsReady   bool
 	changed        chan struct{}
 }
 
@@ -236,14 +249,21 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	// Construction is the only cache-writing phase. Each entry must belong to
 	// a configured capability or a retained Operation; reports cannot add any.
 	m.schemaLimit += count
-	if err := scan(ctx, m.queries, func(operation operationRecord) error {
-		return m.prepareResultSchemas(operation.OutputSchema, operation.ErrorSchema)
+	if err := m.scan(ctx, m.queries, func(operation operationRecord) error {
+		if err := m.prepareResultSchemas(operation.OutputSchema, operation.ErrorSchema); err != nil {
+			return fmt.Errorf("%w: original result schema: %w", ErrIntegrity, err)
+		}
+		return m.validateStoredOutcomes(operation)
 	}); err != nil {
 		return nil, fmt.Errorf("compile retained result schemas: %w", err)
 	}
+	m.recordsReady = true
 	err = m.commit(ctx, func(q *storage.Queries) error {
 		metadata, err := q.ReadMetadata(ctx)
 		if errors.Is(err, sql.ErrNoRows) {
+			if count != 0 {
+				return fmt.Errorf("%w: missing retained writing-release marker", ErrIntegrity)
+			}
 			if err = q.PutMetadata(ctx, storage.PutMetadataParams{DatasetID: cfg.DatasetID, CoreRelease: cfg.CoreRelease}); err != nil {
 				return err
 			}
@@ -252,7 +272,7 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 		} else if metadata.DatasetID != cfg.DatasetID || metadata.CoreRelease != cfg.CoreRelease {
 			return errors.New("retained Dataset or writing release mismatch")
 		}
-		return scan(ctx, q, func(operation operationRecord) error {
+		return m.scan(ctx, q, func(operation operationRecord) error {
 			if !terminal(operation.Status) {
 				operation.Status = Interrupted
 				return save(ctx, q, operation)
@@ -326,11 +346,6 @@ func (m *Module) commit(ctx context.Context, apply func(*storage.Queries) error)
 	}
 	return tx.Commit()
 }
-func decode(encoded string) (operationRecord, error) {
-	var operation operationRecord
-	err := json.Unmarshal([]byte(encoded), &operation)
-	return operation, err
-}
 func save(ctx context.Context, q *storage.Queries, value operationRecord) error {
 	encoded, err := json.Marshal(value)
 	if err != nil {
@@ -338,14 +353,14 @@ func save(ctx context.Context, q *storage.Queries, value operationRecord) error 
 	}
 	return q.UpdateOperation(ctx, storage.UpdateOperationParams{ID: value.ID, Value: string(encoded)})
 }
-func scan(ctx context.Context, q *storage.Queries, each func(operationRecord) error) error {
+func (m *Module) scan(ctx context.Context, q *storage.Queries, each func(operationRecord) error) error {
 	for offset := int64(0); ; offset += 64 {
 		rows, err := q.ScanOperations(ctx, storage.ScanOperationsParams{Limit: 64, Offset: offset})
 		if err != nil {
 			return err
 		}
 		for _, encoded := range rows {
-			value, err := decode(encoded)
+			value, err := m.decode(encoded)
 			if err != nil {
 				return err
 			}
@@ -358,7 +373,7 @@ func scan(ctx context.Context, q *storage.Queries, each func(operationRecord) er
 		}
 	}
 }
-func load(ctx context.Context, q *storage.Queries, id string) (operationRecord, error) {
+func (m *Module) load(ctx context.Context, q *storage.Queries, id string) (operationRecord, error) {
 	encoded, err := q.ReadOperation(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return operationRecord{}, ErrNotFound
@@ -366,15 +381,40 @@ func load(ctx context.Context, q *storage.Queries, id string) (operationRecord, 
 	if err != nil {
 		return operationRecord{}, err
 	}
-	return decode(encoded)
+	return m.decode(encoded)
 }
+
+func (m *Module) runtimeWork(ctx context.Context, active *runtime) ([]operationRecord, error) {
+	binding := active.host.Binding
+	rows, err := m.queries.RuntimeWork(ctx, storage.RuntimeWorkParams{
+		DatasetID: binding.DatasetID, PluginID: binding.PluginID, CoreRunID: binding.CoreRunID,
+		PrincipalID: binding.PrincipalID, RuntimeGeneration: binding.RuntimeGeneration,
+		Capacity: int64(active.host.ReceiptCapacity) + 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) > active.host.ReceiptCapacity {
+		return nil, fmt.Errorf("%w: unfinished work exceeds receipt capacity", ErrIntegrity)
+	}
+	work := make([]operationRecord, 0, len(rows))
+	for _, row := range rows {
+		operation, err := m.decode(row)
+		if err != nil {
+			return nil, err
+		}
+		work = append(work, operation)
+	}
+	return work, nil
+}
+
 func (m *Module) Read(ctx context.Context, dataset, plugin, id string) (Operation, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if dataset != m.cfg.DatasetID {
 		return Operation{}, ErrDataset
 	}
-	value, err := load(ctx, m.queries, id)
+	value, err := m.load(ctx, m.queries, id)
 	if err != nil {
 		return value.Operation, err
 	}
@@ -398,7 +438,7 @@ func (m *Module) List(ctx context.Context, dataset, plugin string, limit, offset
 	}
 	result := make([]Operation, 0, len(encoded))
 	for _, body := range encoded {
-		value, err := decode(body)
+		value, err := m.decode(body)
 		if err != nil {
 			return nil, err
 		}
@@ -420,7 +460,7 @@ func (m *Module) Submit(ctx context.Context, submission Submission) (operation O
 	if len(submission.Input) > m.cfg.Contract.Limits.InputBytes {
 		return operation, ErrLimit
 	}
-	if submission.RequestID == "" || submission.PluginID == "" || submission.CallerID == "" || len(submission.RequestID) > 128 || len(submission.CallerID) > 128 || len(submission.CapabilityID) > 128 || len(submission.InputVersion) > 128 {
+	if !validSubmissionShape(submission) {
 		return operation, errors.New("invalid_submission")
 	}
 	input, err := plugindispatch.CanonicalJSON(submission.Input)
@@ -434,7 +474,7 @@ func (m *Module) Submit(ctx context.Context, submission Submission) (operation O
 	err = m.commit(ctx, func(q *storage.Queries) error {
 		encoded, err := q.ReadSubmission(ctx, storage.ReadSubmissionParams{DatasetID: submission.DatasetID, PluginID: submission.PluginID, RequestID: submission.RequestID})
 		if err == nil {
-			record, err = decode(encoded)
+			record, err = m.decode(encoded)
 			if err != nil {
 				return err
 			}
@@ -495,7 +535,7 @@ func (m *Module) Cancel(ctx context.Context, dataset, plugin, id string) (operat
 		return operation, ErrDataset
 	}
 	result = m.commit(ctx, func(q *storage.Queries) error {
-		value, err := load(ctx, q, id)
+		value, err := m.load(ctx, q, id)
 		if err != nil {
 			return err
 		}
@@ -557,7 +597,7 @@ func (m *Module) BindRuntime(ctx context.Context, host RuntimeBinding) error {
 	host.Capabilities = slices.Clone(host.Capabilities)
 	active := &runtime{host: host, reserved: make(map[string]bool), cancelSent: make(map[string]string)}
 	err := m.commit(ctx, func(q *storage.Queries) error {
-		return scan(ctx, q, func(operation operationRecord) error {
+		return m.scan(ctx, q, func(operation operationRecord) error {
 			if operation.Original.PluginID != b.PluginID || terminal(operation.Status) || operation.Exposed || operation.Execution.Binding.CoreRunID != m.cfg.CoreRunID {
 				return nil
 			}
@@ -603,7 +643,7 @@ func (m *Module) ConfirmLoss(ctx context.Context, binding plugindispatch.Binding
 		return ErrAuthority
 	}
 	if err := m.commit(ctx, func(q *storage.Queries) error {
-		return scan(ctx, q, func(operation operationRecord) error {
+		return m.scan(ctx, q, func(operation operationRecord) error {
 			if operation.Execution.Binding == binding && operation.Exposed && !terminal(operation.Status) {
 				operation.Status = Interrupted
 				return save(ctx, q, operation)

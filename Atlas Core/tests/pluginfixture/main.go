@@ -106,15 +106,7 @@ func run() (result error) {
 		if cfg.Mode == "hold-failed" {
 			return plugindispatch.Outcome{Status: "failed", Error: json.RawMessage(`{"code":"fixture_failure"}`)}, nil
 		}
-		effect, err := os.OpenFile(cfg.Effects, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
-		if err != nil {
-			return plugindispatch.Outcome{}, err
-		}
-		if _, err := effect.WriteString("effect\n"); err != nil {
-			return plugindispatch.Outcome{}, errors.Join(err, effect.Close())
-		}
-		err = errors.Join(effect.Sync(), effect.Close())
-		if err != nil {
+		if err := appendEffects(cfg.Effects, 1); err != nil {
 			return plugindispatch.Outcome{}, err
 		}
 		emit(event{Event: "effect"})
@@ -344,12 +336,7 @@ func run() (result error) {
 				} else {
 					update := pluginruntime.Update{Progress: json.RawMessage(`{"percent":50}`)}
 					if command == "known-effect" || command == "known-effect-save" || command == "progress-retain" {
-						file, err := os.OpenFile(cfg.Effects, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-						if err != nil {
-							return err
-						}
-						_, writeErr := file.WriteString("effect\n")
-						if err := errors.Join(writeErr, file.Sync(), file.Close()); err != nil {
+						if err := appendEffects(cfg.Effects, 1); err != nil {
 							return err
 						}
 						update.Effects = []plugindispatch.Effect{{ID: "fixture-known", Description: "fixture effect evidence"}}
@@ -462,9 +449,17 @@ func run() (result error) {
 							emit(event{Event: "reported_update", Evidence: &evidence})
 						}
 					}
-				} else if strings.HasPrefix(command, "report-evidence ") {
+				} else if strings.HasPrefix(command, "report-evidence ") || strings.HasPrefix(command, "report-effect ") {
+					prefix := "report-evidence "
+					perform := strings.HasPrefix(command, "report-effect ")
+					if perform {
+						prefix = "report-effect "
+					}
 					var evidence plugindispatch.Evidence
-					commandErr = json.Unmarshal([]byte(strings.TrimPrefix(command, "report-evidence ")), &evidence)
+					commandErr = json.Unmarshal([]byte(strings.TrimPrefix(command, prefix)), &evidence)
+					if commandErr == nil && perform {
+						commandErr = appendEffects(cfg.Effects, len(evidence.Effects))
+					}
 					if commandErr == nil {
 						commandErr = report(evidence, false)
 					}
@@ -490,6 +485,16 @@ func run() (result error) {
 		}
 	}
 }
+
+func appendEffects(path string, count int) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	_, writeErr := file.WriteString(strings.Repeat("effect\n", count))
+	return errors.Join(writeErr, file.Sync(), file.Close())
+}
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

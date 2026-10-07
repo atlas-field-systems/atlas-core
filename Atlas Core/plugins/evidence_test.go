@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -235,4 +238,155 @@ func nextEvidenceReply(t *testing.T, child *child) childEvent {
 		t.Fatal("evidence reply timed out")
 	}
 	return childEvent{}
+}
+
+func TestDefinitiveOutcomeRejectsNewEvidenceAndKeepsExactRetry(t *testing.T) {
+	for _, status := range []plugins.Status{plugins.Completed, plugins.Failed, plugins.Cancelled} {
+		t.Run(string(status), func(t *testing.T) {
+			outputPath := filepath.Join(t.TempDir(), "published-output")
+			if err := os.WriteFile(outputPath, []byte("optional output"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			f := newFixtureConfigured(t, 1, func(cfg *plugins.Config) {
+				cfg.ValidateOutput = func(context.Context, plugindispatch.Output) error {
+					_, err := os.Stat(outputPath)
+					return err
+				}
+			})
+			mode := "hold"
+			if status == plugins.Failed {
+				mode = "hold-failed"
+			}
+			child := f.start(t, mode)
+			child.event(t, "ready")
+			operation, err := f.core.Submit(context.Background(), request("immutable-terminal", `{"value":7}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			child.command(t, "next")
+			child.event(t, "received")
+			child.event(t, "started")
+			child.command(t, "known-effect")
+			child.event(t, "progress")
+			if status == plugins.Cancelled {
+				if _, err := f.core.Cancel(context.Background(), datasetID, pluginID, operation.ID); err != nil {
+					t.Fatal(err)
+				}
+				child.command(t, "next")
+				child.event(t, "cancel_received")
+			} else {
+				child.command(t, "release")
+				child.event(t, "released")
+			}
+			child.command(t, "saved")
+			final := *child.event(t, "saved").Evidence
+			child.command(t, "report")
+			child.event(t, "acknowledged")
+			before := f.wait(t, operation.ID, status)
+			for _, kind := range []string{"new-attribution", "new-sequence-same-outcome", "changed-outcome"} {
+				changed := plugindispatch.CloneEvidence(final)
+				changed.Sequence = "3"
+				switch kind {
+				case "new-attribution":
+					changed.Outcome = nil
+					changed.Progress = json.RawMessage(`{"percent":99}`)
+					changed.Effects = append(changed.Effects, plugindispatch.Effect{ID: "late-effect", Description: "new terminal attribution"})
+					changed.Outputs = []plugindispatch.Output{{Kind: "object", ID: "dddddddd-dddd-4ddd-8ddd-dddddddddddd"}}
+				case "changed-outcome":
+					changed.Outcome = &plugindispatch.Outcome{Status: "failed", Error: json.RawMessage(`{"code":"different_failure"}`)}
+				}
+				changed.Revision = plugindispatch.Revision(changed)
+				child.command(t, "report-evidence "+mustJSON(t, changed))
+				if reply := nextEvidenceReply(t, child); reply.Event != "error" || reply.Error != "terminal_conflict" {
+					t.Fatalf("%s revised definitive %s: %+v", kind, status, reply)
+				}
+			}
+			child.command(t, "report-evidence "+mustJSON(t, final))
+			child.event(t, "reported_evidence")
+			after := f.wait(t, operation.ID, status)
+			if mustJSON(t, after) != mustJSON(t, before) || len(after.KnownEffects) != 1 || len(after.KnownOutputs) != 0 {
+				t.Fatal("definitive outcome or attribution changed", after)
+			}
+			if err := f.core.Drain(f.binding.Binding); err != nil {
+				t.Fatal(err)
+			}
+			child.command(t, "drained")
+			child.event(t, "drained")
+			if status == plugins.Completed {
+				assertEffects(t, f, 2)
+			} else {
+				assertEffects(t, f, 1)
+			}
+		})
+	}
+}
+
+func TestIncrementalEffectInventorySurvivesReadAndRetainedOpen(t *testing.T) {
+	f := newFixture(t, 1)
+	child := f.start(t, "hold")
+	child.event(t, "ready")
+	operation, err := f.core.Submit(context.Background(), request("incremental-effects", `{"value":7}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	child.command(t, "next")
+	child.event(t, "received")
+	child.event(t, "started")
+	var expected []plugindispatch.Effect
+	for batch := range 2 {
+		var effects []plugindispatch.Effect
+		for index := range 32 {
+			effects = append(effects, plugindispatch.Effect{ID: fmt.Sprintf("effect-%d", batch*32+index), Description: strings.Repeat("\x00", 512)})
+		}
+		evidence := plugindispatch.Evidence{Execution: operation.Execution, Sequence: fmt.Sprint(batch + 1), Effects: effects}
+		evidence.Revision = plugindispatch.Revision(evidence)
+		child.command(t, "report-effect "+mustJSON(t, evidence))
+		child.event(t, "reported_evidence")
+		expected = append(expected, effects...)
+		value, err := f.core.Read(context.Background(), datasetID, pluginID, operation.ID)
+		if err != nil || value.Status != plugins.Pending || !slices.Equal(value.KnownEffects, expected) {
+			t.Fatalf("accepted incremental facts were unreadable: %+v %v", value, err)
+		}
+	}
+	child.command(t, "release")
+	child.event(t, "released")
+	child.command(t, "saved")
+	final := *child.event(t, "saved").Evidence
+	// The fixture's raw boundary sender owns these incremental report sequences;
+	// the worker still supplies the actual capability result and external effect.
+	final.Sequence = "3"
+	final.Revision = plugindispatch.Revision(final)
+	child.command(t, "report-evidence "+mustJSON(t, final))
+	child.event(t, "reported_evidence")
+	completed := f.wait(t, operation.ID, plugins.Completed)
+	if string(completed.Outcome.Result) != `{"value":14}` || !slices.Equal(completed.KnownEffects, expected) {
+		t.Fatal("terminal lost incremental facts", completed)
+	}
+	assertEffects(t, f, 65)
+	if err := child.stop(); err != nil {
+		t.Fatal(err)
+	}
+	shutdown, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := f.server.Close(shutdown); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.core.Close(); err != nil {
+		t.Fatal(err)
+	}
+	cfg := f.config
+	cfg.CoreRunID, cfg.Releases = "next-run", nil
+	opened, err := plugins.Open(context.Background(), cfg)
+	if err != nil {
+		t.Fatal("Core refused its own accepted incremental inventory", err)
+	}
+	defer func() {
+		if err := opened.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	retained, err := opened.Read(context.Background(), datasetID, pluginID, operation.ID)
+	if err != nil || mustJSON(t, retained) != mustJSON(t, completed) {
+		t.Fatalf("original outcome and attribution changed on retained open: %+v %v", retained, err)
+	}
 }

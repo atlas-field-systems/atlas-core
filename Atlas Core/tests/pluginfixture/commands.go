@@ -13,6 +13,7 @@ func readCommands(ctx context.Context) (<-chan string, <-chan error) {
 	errors := make(chan error, 1)
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Buffer(make([]byte, 4096), 256*1024)
 		for scanner.Scan() {
 			select {
 			case commands <- scanner.Text():

@@ -91,6 +91,8 @@ type Runtime struct {
 	running       bool
 	workers       sync.WaitGroup
 	changes       chan struct{}
+	failed        chan struct{}
+	workerFault   error
 	failures      chan error
 }
 
@@ -117,7 +119,7 @@ func Open(cfg Config) (*Runtime, error) {
 		definition.OutputSchema = bytes.Clone(definition.OutputSchema)
 		definition.ErrorSchema = bytes.Clone(definition.ErrorSchema)
 	}
-	r := &Runtime{cfg: cfg, capabilities: make(map[capabilityKey]compiledCapability), receipts: make(map[string]*receipt), evidence: make(map[string]plugindispatch.Evidence), pending: make(map[string]plugindispatch.Evidence), pendingCancel: make(map[string]bool), witness: uuid.NewString(), changes: make(chan struct{}, 1), failures: make(chan error, 1)}
+	r := &Runtime{cfg: cfg, capabilities: make(map[capabilityKey]compiledCapability), receipts: make(map[string]*receipt), evidence: make(map[string]plugindispatch.Evidence), pending: make(map[string]plugindispatch.Evidence), pendingCancel: make(map[string]bool), witness: uuid.NewString(), changes: make(chan struct{}, 1), failed: make(chan struct{}), failures: make(chan error, 1)}
 	r.lifetime, r.endLifetime = context.WithCancel(context.Background())
 	for _, capability := range cfg.Capabilities {
 		input, err := plugindispatch.CompileSchema(capability.Definition.InputSchema)
@@ -250,6 +252,9 @@ func (r *Runtime) Accept(ctx context.Context, dispatch plugindispatch.Dispatch) 
 	if r.closed {
 		return false, errors.New("runtime_closed")
 	}
+	if r.workerFault != nil {
+		return false, r.workerFault
+	}
 	if r.storageFault != nil {
 		return false, r.storageFault
 	}
@@ -298,13 +303,26 @@ func (r *Runtime) Accept(ctx context.Context, dispatch plugindispatch.Dispatch) 
 			_, err = r.Record(dispatch.OperationID, Update{Outcome: &outcome})
 		}
 		if err != nil {
-			select {
-			case r.failures <- fmt.Errorf("capability execution/evidence failed: %w", err):
-			default:
-			}
+			r.fail(fmt.Errorf("capability execution/evidence failed: %w", err))
 		}
 	}()
 	return false, nil
+}
+
+func (r *Runtime) fail(err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.workerFault != nil {
+		return
+	}
+	// Keep control failure independent of the bounded observer notification.
+	// Observing it cannot restore readiness or forget an unfinished receipt.
+	r.workerFault = err
+	close(r.failed)
+	select {
+	case r.failures <- err:
+	default:
+	}
 }
 func (r *Runtime) Cancel(cancel plugindispatch.Cancel) error {
 	r.mu.Lock()
@@ -525,6 +543,9 @@ func (r *Runtime) Close(ctx context.Context) error {
 		return ctx.Err()
 	}
 }
+
+// Faults reports the first fatal worker failure without consuming Run's control
+// signal. The owner still uses Close to cancel and join surviving workers.
 func (r *Runtime) Faults() <-chan error { return r.failures }
 func (r *Runtime) finiteFinished() bool {
 	r.mu.Lock()

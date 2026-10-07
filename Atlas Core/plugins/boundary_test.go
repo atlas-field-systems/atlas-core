@@ -55,6 +55,20 @@ func TestHostAndReadinessRequireExactInstalledCapabilityVersion(t *testing.T) {
 	}
 	child := f.start(t, "normal")
 	child.event(t, "ready")
+	for _, field := range []string{"capability", "version"} {
+		input := request("empty-"+field, `{"value":7}`)
+		if field == "capability" {
+			input.CapabilityID = ""
+		} else {
+			input.InputVersion = ""
+		}
+		if _, err := f.core.Submit(context.Background(), input); !errors.Is(err, plugins.ErrUnsupported) {
+			t.Fatalf("empty %s changed installed-capability rejection: %v", field, err)
+		}
+	}
+	if operations, err := f.core.List(context.Background(), datasetID, pluginID, 10, 0); err != nil || len(operations) != 0 {
+		t.Fatalf("unsupported empty capability/version created work: %+v %v", operations, err)
+	}
 	if _, err := f.core.Submit(context.Background(), request("valid", `{"value":7}`)); err != nil {
 		t.Fatal("a rejected readiness poisoned a supported channel", err)
 	}

@@ -12,12 +12,19 @@ import (
 // Run owns a single authenticated socket session. A transport failure returns
 // while live receipts and workers remain, allowing the host to verify and the
 // caller to reconnect this unchanged Runtime. Close ends its work explicitly.
+// A fatal worker failure closes the channel and remains a fault on reconnect;
+// other accepted workers retain their lifetime until Close.
 // No automatic connection retry, process restart or Operation rerun occurs.
 func (r *Runtime) Run(ctx context.Context, socket string) (result error) {
 	r.mu.Lock()
 	if r.closed {
 		r.mu.Unlock()
 		return errors.New("runtime_closed")
+	}
+	if r.workerFault != nil {
+		err := r.workerFault
+		r.mu.Unlock()
+		return err
 	}
 	if r.running {
 		r.mu.Unlock()
@@ -32,6 +39,9 @@ func (r *Runtime) Run(ctx context.Context, socket string) (result error) {
 	defer func() {
 		cancel()
 		r.mu.Lock()
+		if r.workerFault != nil {
+			result = errors.Join(r.workerFault, result)
+		}
 		r.running = false
 		r.sessionCancel = nil
 		close(done)
@@ -55,6 +65,8 @@ func (r *Runtime) Run(ctx context.Context, socket string) (result error) {
 		defer close(monitorDone)
 		select {
 		case <-ctx.Done():
+			connection.Close()
+		case <-r.failed:
 			connection.Close()
 		case <-stopped:
 		}
@@ -113,8 +125,6 @@ func (r *Runtime) Run(ctx context.Context, socket string) (result error) {
 			}
 		}
 		select {
-		case err := <-r.failures:
-			return err
 		case <-ctx.Done():
 			return ctx.Err()
 		default:

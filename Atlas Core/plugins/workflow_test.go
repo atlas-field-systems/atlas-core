@@ -176,6 +176,12 @@ func TestLiveReceiptSurvivesLostAcknowledgementsAndCapacity(t *testing.T) {
 	if e := child.event(t, "error"); e.Error != "dispatch_conflict" {
 		t.Fatalf("changed dispatch: %+v", e)
 	}
+	child.command(t, "saved")
+	child.event(t, "saved")
+	child.command(t, "invalid-result")
+	if e := child.event(t, "error"); e.Error != "invalid_schema" {
+		t.Fatalf("malformed outcome before completion: %+v", e)
+	}
 	child.command(t, "report-retain")
 	child.event(t, "committed")
 	child.command(t, "report-retain")
@@ -199,8 +205,8 @@ func TestLiveReceiptSurvivesLostAcknowledgementsAndCapacity(t *testing.T) {
 		t.Fatal(e)
 	}
 	child.command(t, "invalid-result")
-	if e := child.event(t, "error"); e.Error != "invalid_schema" {
-		t.Fatal(e)
+	if e := child.event(t, "error"); e.Error != "terminal_conflict" {
+		t.Fatalf("novel outcome after completion: %+v", e)
 	}
 	if _, err := f.core.Submit(context.Background(), request("fresh", `{"value":8}`)); !errors.Is(err, plugins.ErrLimit) {
 		t.Fatalf("completed receipt freed capacity: %v", err)

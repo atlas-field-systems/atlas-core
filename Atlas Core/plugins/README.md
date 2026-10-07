@@ -25,6 +25,8 @@ Plugin consumers call `pluginruntime.Open` and `Run`. The execution callback own
 
 Stopping a channel session preserves accepted workers. `Close(ctx)` closes runtime admission, cancels workers and joins the owned session and execution within the supplied deadline. If shutdown is incomplete, the owner must retain working storage and use its process shutdown boundary before deleting it.
 
+The Runtime retains its first worker failure independently of bounded public `Faults()` notifications. Observing a notification cannot hide that failure from `Run`. A failed Runtime refuses fresh work and reconnection; accepted workers retain their evidence and explicit `Close` still owns cancellation and joining.
+
 Supply an exclusively owned evidence directory within the Plugin's managed working storage. Other capability work, such as private SQLite state or staging files, belongs in separate Plugin-owned locations under that working storage.
 
 Public API/SDK adapters, installation/configuration management, Docker/systemd control, lifetime leases and full Reset cleanup remain integration work. Those adapters must preserve the separate recovered outcome and the topic's existing rules.
@@ -37,6 +39,10 @@ The separate [private Protocol artifact](../../Atlas%20Protocol/plugin-dispatch.
 
 Core uses SQLite WAL with synchronous FULL. Plugin evidence uses synced temporary files, atomic replacement and directory sync, and exact revision acknowledgement. Process-kill tests qualify their exercised cut points on the test filesystem. They do not establish healthy-storage power-loss guarantees or deployment-wide qualification.
 
+Retained opening validates stored Operation records before reconciliation. Missing fields, invalid statuses or inconsistent facts report an integrity failure rather than silently repairing the record. Missing Dataset/writing-release metadata also faults when Operations remain, preserving the retained release boundary. Dispatch polling uses an indexed query for the current runtime's unfinished work instead of decoding retained history on every poll.
+
+Core may accumulate known facts from several bounded reports. Retained validation checks their individual shape, aggregate counts and unique identities; their combined inventory need not fit one wire frame.
+
 Array quotas come from the canonical schema's `maxItems` constraints. The contract loader derives receipt, capability, effect and output limits from those constraints so admission and wire validation use the same authored bounds. Core and Plugin validate terminal payloads through the same validator, using the original capability's schemas.
 
 Ordinary Plugin progress stays in memory. Reports carrying known effects, output references or a terminal outcome are saved before reporting and can be recovered after process replacement.
@@ -44,6 +50,8 @@ Ordinary Plugin progress stays in memory. Reports carrying known effects, output
 The bounded report budget reserves its final revision for Completed, Failed or Cancelled. Once the nonterminal budget is exhausted, further progress or evidence updates fail explicitly while the terminal report remains eligible. Evidence file and byte quotas still apply.
 
 An exact committed report retry remains acknowledgeable after newer reports. A previously unseen report must advance the sequence before Core records its outcome, effects or outputs. New output references pass the supplied resource validator; previously recorded references retain their attribution after resource deletion.
+
+Completed, Failed and Cancelled reject unsupported new report identities without changing recorded attribution. Exact committed retries remain acknowledgeable; Interrupted retains its separate recovered-evidence path.
 
 Verified same-runtime reconnection requires live receipts for executions proven by dispatch acknowledgement or committed report evidence. Admission stays closed until the receipt inventory is complete.
 
@@ -57,7 +65,7 @@ Run all required checks from the repository root:
 python3 scripts/verify.py --bootstrap
 ```
 
-The verifier records passing checks in `.artifacts/verification.json` only after execution, includes clean deterministic Plugin SQL generation and runs the real-process component workflows with the Go race detector. The fixture Plugin is separately built and uses private temporary storage; tests observe Operations and external fixture effects rather than inspecting Core tables.
+The verifier records passing checks in `.artifacts/verification.json` only after execution, includes clean deterministic Plugin SQL generation and runs the real-process component workflows with the Go race detector. The fixture Plugin is separately built and uses private temporary storage; tests observe Operations and external fixture effects rather than inspecting Core tables. Retained-opening tests use SQL only to inject and restore deliberate corruption while Core is closed; `Open` and `Read` supply their business-state assertions.
 
 The [Go test owner](../../scripts/go_test_supervisor.py) survives the test worker, owns its process group and temporary root, and uses the [Linux child-subreaper interface](https://man7.org/linux/man-pages/man2/PR_SET_CHILD_SUBREAPER.2const.html) to reap orphaned Plugin children. The required [cleanup check](../../scripts/plugin_checks.py) kills a real workflow worker, reaches a command deadline and interrupts the owner with SIGINT/SIGTERM. Each schedule verifies process exit/reaping and storage removal. Forced SIGKILL of the surviving owner remains outside this qualification.
 
@@ -83,6 +91,12 @@ The [workflow source](workflow_test.go) records the deterministic schedules. The
 | Unseen reports advance sequence while exact retries preserve recorded facts | Core report commit ordering | [Stale-report and exact-retry workflow](evidence_test.go) |
 | Deleted known outputs retain attribution and allow terminal reporting | Validation of newly introduced references | [Cumulative-output deletion workflow](evidence_test.go) |
 | Same-runtime evidence requires a retained receipt even with a lost dispatch acknowledgement | Report acceptance and readiness inventory | [Lost-acknowledgement readiness workflow](evidence_test.go) |
+| Definitive outcomes reject new reports while exact retries remain acknowledgeable | Terminal report guard after recorded-identity lookup | [Completed, Failed and Cancelled evidence workflow](evidence_test.go) |
+| Malformed retained records fail before reconciliation | Stored shape, identity and state validation | [Retained-opening fault and restoration workflow](integrity_test.go) |
+| Missing retained writing metadata cannot adopt another release | Initial metadata creation requires an empty Operation store | [Missing-marker fault and restoration workflow](integrity_test.go) |
+| Incremental reports retain a valid inventory larger than one wire frame | Separate stored-inventory and message validation | [Incremental effect read and retained-opening workflow](evidence_test.go) |
+| Retained history does not block current runtime dispatch | Indexed query for the exact binding's unfinished work | [Polling and completion with cancelled history](polling_test.go) |
+| Fault observers cannot consume the session's worker failure | Private failure signal and retained original cause | [Fault observation and surviving-worker tests](../pluginruntime/runtime_test.go) |
 | Cleanup after hard worker death, command deadline or owner interruption | Surviving verifier process/storage owner | `check_plugin_fixture_lifetime` in [executable cleanup checks](../../scripts/plugin_checks.py) |
 
 ## Remaining qualification
