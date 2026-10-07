@@ -180,7 +180,9 @@ Activity is stored in one SQLite activity table through a shared recording helpe
 
 ## Change publication
 
-The module making a change supplies its final public resource image or deletion. The [write commit](#write-commits) appends every frame of that commit atomically with the mutation in SQLite. A private ordered change log includes resource versions, commit identity and fragment indices; both feed delivery and changed-since read it. Delivery emits fragments in order without inspecting private module tables. The SDK stages a whole commit before exposing it or advancing its cursor under [synchronization wire and application](../topics/sdk.md#synchronization-wire-and-application-boundary).
+The module making a change supplies its final public resource image or deletion. The [write commit](#write-commits) appends the complete public change batch atomically with the mutation in SQLite. Synchronization defines and checks the supported complete-message bound through this shared commit path before any producer commits effects. Owning modules still supply every change's meaning; admission does not inspect their private tables or split an atomic mutation to fit a message.
+
+A private ordered change log includes resource versions and commit identity; both feed delivery and HTTP changed-since read complete batches from it. Synchronization owns consistent snapshot capture with its continuation cursor and ordered catch-up-to-live delivery after a supplied complete cursor. One complete commit is one Protocol data message. The SDK owns validation and atomic picture application under [synchronization wire and application](../topics/sdk.md#synchronization-wire-and-application-boundary). Snapshot captures use bounded admission and normal replay retention under [snapshot lifetime and recovery](../topics/sdk.md#snapshot-lifetime-and-recovery); exact storage and real resource use remain unqualified.
 
 This keeps a useful shared delivery function small. It does not establish a general event bus or require every internal call to emit an event. Preserve consistency between resource changes and their published records within the current run.
 
@@ -190,7 +192,7 @@ Tasks supplies the public Task and assigned-queue changes needed by synchronized
 
 Core must not silently drop committed changes while allowing a consumer to treat its picture as current. When a slow consumer, expired replay history or another delivery gap prevents complete replay, make that condition detectable through the synchronization contract. The SDK's recovery follows [synchronization gaps and recovery](../topics/sdk.md#synchronization-gaps-and-recovery).
 
-Retain a bounded replay window and an explicit earliest recoverable boundary, updated atomically when pruning whole commits. Restart retains the remaining window; Reset creates a new Dataset. The [synchronization contract](../topics/sdk.md#synchronization-wire-and-application-boundary) fixes initial paging, subscribe/replay barriers, frames, explicit gaps and starting bounds. Dataset changes additionally follow [the Dataset boundary](../topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary).
+Retain a bounded replay window and an explicit earliest recoverable boundary, updated atomically when pruning whole commits. Restart retains the remaining window; Reset creates a new Dataset. The [synchronization contract](../topics/sdk.md#synchronization-wire-and-application-boundary) defines consistent snapshot continuation, ordered catch-up/live batches, explicit gaps and starting bounds. [Snapshot recovery](../topics/sdk.md#snapshot-lifetime-and-recovery) uses normal replay pruning without per-reader history pinning and pauses persistent capacity failure explicitly. Dataset changes additionally follow [the Dataset boundary](../topics/dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary).
 
 ## Basic operational protections
 

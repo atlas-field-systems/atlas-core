@@ -30,7 +30,7 @@ Core remains responsible for authentication, authorization, Task transitions, Ob
 
 Operational SDK methods own response-validation integration under [public wire conventions](../architecture/system-design.md#public-wire-conventions) and [mutation-outcome handling](#mutation-outcomes-and-retries). Slice 0 exposes configurable middleware for binding qualification; it does not select the future operational constructor or require consumers to manage that wiring themselves.
 
-Protocol describes event and resource shapes. Core owns committed state and the recovery log. The SDK owns the local projection, event ordering, connection recovery and reporting synchronization state. These are public behavioral contracts rather than dependencies on private implementation details.
+Protocol describes event and resource shapes. Core owns committed state, the recovery log and ordered catch-up-to-live delivery. The SDK owns connection recovery, validation, atomic local application and reporting synchronization state. These are public behavioral contracts rather than dependencies on private implementation details.
 
 ## Modes
 
@@ -104,29 +104,30 @@ Background synchronization is separate from application operations. The synchron
 
 | Endpoint | SDK responsibility |
 | --- | --- |
-| `GET /queries/full` | Load all initial pages of operational data and retain the supplied baseline version |
-| `GET /feed` | Subscribe to pushed create, update and delete events |
-| `GET /queries/changed-since` | Recover events missed during loading, disconnection or a detected gap |
+| `GET /queries/full` | Load all pages of one consistent operational snapshot and retain its continuation cursor |
+| `GET /feed` | Request ordered commits after the last complete cursor; Core delivers catch-up followed by live changes on the same subscription |
 
-Finish the initial paginated load, then recover changes since its baseline before treating the picture as current. The paginated read is not a frozen snapshot: keep its baseline stable across pages and separate from the versions on individual resources. Subscription acknowledgement and its continuation boundary close the handoff to live delivery. On feed reconnect or a version gap, recover through changed-since. If retained history no longer covers the requested version, Core returns an explicit cursor-expired response and the SDK makes a new initial load.
+Core captures the initial snapshot and its continuation cursor at the same committed boundary. Every page describes that snapshot, even while later writes occur. The SDK stages it privately and requests the feed strictly after its continuation cursor. Core owns catch-up and the transition to live delivery; the SDK does not coordinate a separate HTTP replay with buffered live events. `GET /queries/changed-since` remains a supported HTTP-mode query, and Full synchronization mode still answers application changed-since locally.
+
+Initial readiness requires coverage of the fixed subscription boundary and a completed handoff. A complete baseline snapshot alone does not make the picture readable. If Core cannot continue after the staged picture's last complete cursor, it reports expiry or a gap and the SDK rebuilds rather than publishing incomplete coverage. Valid interrupted loads resume under [snapshot lifetime and recovery](#snapshot-lifetime-and-recovery).
 
 Synchronization lifecycle:
 
-1. Load every initial page, keeping the server's baseline version.
-2. Establish the feed subscription and wait for confirmation that it is active. Buffer live events during catch-up.
-3. Drain changed-since from the baseline, then reconcile buffered events. Mark synchronization ready only after recovery covers the subscription boundary and the handoff is complete.
-4. Apply pushed changes to local state. Repeated application reads use that state without triggering HTTP reads.
-5. On a connection interruption or version gap, report degraded synchronization and recover from the last fully applied cursor. If the cursor has expired, rebuild from a full load and catch up again.
+1. Load every page of the consistent snapshot, keeping its continuation cursor.
+2. Establish the feed after that cursor and retain its fixed subscription boundary.
+3. Apply ordered catch-up commits from the same stream. Mark synchronization ready only after the subscription boundary is covered and the handoff is complete.
+4. Continue applying complete live commits from that stream. Repeated application reads use local state without triggering HTTP reads.
+5. On interruption, report degraded synchronization and reconnect from the last fully applied cursor. If complete replay is unavailable, rebuild from a new snapshot and continuation.
 
 ### Synchronization contract with Core
 
 Full synchronization couples Core and the SDK through a documented synchronization contract:
 
-- Feed and recovery expose the same committed changes and version ordering.
+- Feed catch-up, live delivery and HTTP changed-since expose the same complete committed changes and version ordering.
 - Events carry full resource data for creates and updates, and versioned deletion records for deletes. Object content is not sent through the feed.
 - Applying an old response or duplicate event cannot overwrite a newer resource or resurrect a deleted one.
 - A global recovery cursor advances only after all relevant changes through that boundary are applied. The version on a single resource or mutation response is not proof that unrelated changes have been consumed.
-- Subscription acknowledgement closes the gap between fetching state and listening for future changes.
+- Core closes the gap between snapshot continuation, catch-up and live changes within the ordered subscription.
 - Recovery history has a defined retention limit and an explicit expired-cursor response. Overloaded clients reconnect and recover rather than silently dropping changes and claiming to be current.
 
 ### Readiness and freshness
@@ -143,7 +144,7 @@ The [status contract](#query-and-status-contract) exposes initialization, synchr
 
 ### Synchronization gaps and recovery
 
-When a slow consumer, expired replay history or another delivery gap prevents complete replay, the SDK marks its picture stale and obtains a fresh snapshot with a consistent continuation point before treating it as current again. Core's side of this contract is under [Detectable synchronization gaps](../architecture/system-design.md#detectable-synchronization-gaps).
+When a slow consumer, expired replay history or another delivery gap prevents complete replay, the SDK marks its picture stale and obtains a fresh snapshot with a consistent continuation point before treating it as current again, subject to [bounded recovery and explicit capacity failure](#snapshot-lifetime-and-recovery). Core's side of this contract is under [Detectable synchronization gaps](../architecture/system-design.md#detectable-synchronization-gaps).
 
 ### Local feed, history and cursors
 
@@ -199,42 +200,74 @@ The Asset client uses the authenticated health exchange to estimate Core time an
 
 ## Synchronization wire and application boundary
 
-Protocol defines these shared structures once. The [publication mechanism](../architecture/system-design.md#change-publication) produces them; the SDK owns their application.
+Protocol defines these shared structures once. The [publication mechanism](../architecture/system-design.md#change-publication) produces them; the SDK owns their application. The accepted direction is a consistent snapshot with covered continuation, Core-owned catch-up-to-live ordering and one complete commit per Protocol data message. The [decision history](../planning-reconciliation.md#ordered-core-feed-direction-7-october-2026) records the user authorization. Snapshot and recovery rules follow below; numeric budgets, storage and exact encodings remain implementation work. These structures are the design contract, not delivered Protocol bindings.
 
 | Structure | Fields and meaning |
 | --- | --- |
 | Core recovery cursor | Opaque token binding `dataset_id` and a fully committed public-change sequence. Internal sequence numbers are decimal strings, never JSON floating-point counters. A cursor represents all changes through that commit, including deletions |
-| Resource change | `dataset_id`, decimal-string `commit_id`, zero-based `change_index`, `change_count`, `resource_kind`, `resource_id`, `resource_version`, `action` of `upsert` or `delete`; `resource` contains the full final public image only for `upsert` |
-| Replay page | `changes`, fixed `replay_through`, `applied_through` for the last whole commit in the page, and optional `next_page`. `next_page` is a paging handle, not applied progress |
-| Initial-load page | Resources with their versions, one stable `baseline_cursor`, per-kind continuation and the page's observed boundary. Initial pages may observe later state; baseline does not advance with them |
-| Feed messages | `hello` states Dataset and selected Protocol; `subscribe` requests the complete Entities/Tasks/ready-Objects feed; `subscribed` confirms the fixed recovery `boundary_cursor`; `change` carries a resource change; `gap` carries reason and last recoverable boundary |
+| Resource change | `resource_kind`, `resource_id`, `resource_version`, `action` of `upsert` or `delete`; `resource` contains the full final public image only for `upsert` |
+| Complete commit batch | Dataset, decimal-string commit identity, all final resource changes from that commit and its complete recovery cursor. The entire batch is one Protocol data message; no application-level commit fragments |
+| Replay page | Ordered complete commit batches, fixed `replay_through`, `applied_through` for the last whole commit in the page, and optional `next_page`. A page never splits a commit; `next_page` is a paging handle, not applied progress |
+| Initial-load page | Resources with their versions from one captured snapshot, one stable `baseline_cursor` and per-kind continuation bound to that snapshot. Every page has the same committed boundary |
+| Feed messages | `hello` states Dataset and selected Protocol; `subscribe` requests the complete Entities/Tasks/ready-Objects feed with an optional complete Core cursor; `subscribed` confirms the fixed `boundary_cursor`; data messages carry complete commit batches; `gap` carries reason and last recoverable boundary |
 
-A commit allocates one public-change sequence and emits at most one final image or deletion for each affected resource. An Asset report changing its Entity and Task therefore carries two changes with one commit identity. Resource versions increase on each change, including deletion, and survive Restart. Feed order is commit order and then `change_index`. A replay request starts strictly after its supplied complete cursor and fixes its inclusive upper boundary before reading the first page. Later commits belong to a later replay. Paging handles bind Dataset, original bounds and position; changing options with the handle is `cursor_invalid`.
+A commit allocates one public-change sequence and emits at most one final image or deletion for each affected resource. An Asset report changing its Entity and Task therefore carries both changes in one complete batch. Resource versions increase on each change, including deletion, and survive Restart. Feed batches follow commit order. An HTTP changed-since request starts strictly after its supplied complete cursor and fixes its inclusive upper boundary before reading the first page. Later commits belong to a later query. Paging handles bind Dataset, original bounds and position; changing options with the handle is `cursor_invalid`.
 
-Replay may split a commit across pages. Stage its fragments privately until every index through `change_count - 1` has arrived and validated. Only then expose all effective resource updates atomically, append one local journal batch and advance the Core cursor. A page continuation never authorizes progress over an incomplete commit. Duplicate equal fragments do nothing; conflicting fragments are a protocol error. A later commit arriving first waits within the bounded buffer while the synchronizer replays from its last complete cursor. It cannot fill a gap with a newer resource or write response.
+Validate an entire commit batch before applying it. Expose all effective resource updates atomically, append one local journal batch and only then advance the Core cursor. An interrupted or invalid data message supplies no applied progress. Duplicate equal batches do nothing; conflicting batches are a protocol error. A missing earlier commit cannot be filled by a later resource image or a write response. The SDK reconnects from its last completely applied cursor when ordered delivery cannot continue.
 
-Initial load uses ID keyset pages with a baseline captured before page one. Stage resources and versioned deletion markers privately. After loading every resource kind, subscribe and capture boundary H, buffer live commits greater than H, and replay every change from the baseline through H. Apply each replay image only if newer than the staged image or tombstone, but account for the entire commit before advancing recovery. This reconstructs coverage without calling the moving pages a frozen snapshot. Then drain complete buffered commits in order and atomically publish the ready picture. A create behind a page's keyset arrives in replay; a deletion after a loaded page removes the staged resource. A tombstone prevents a delayed older page or event resurrecting it. No staged state is readable as a ready Dataset.
+Initial load captures one consistent full snapshot at N together with the Core cursor after N. Stage every resource kind privately. Subscribe after N and capture fixed boundary H. Core sends every retained commit after N through H, then continues with later live commits on the same ordered stream. Apply complete batches in order, using versions and deletion markers to prevent stale overwrite or resurrection. After coverage reaches H and the handoff is complete, atomically publish the ready picture. A create or deletion after N arrives through the continuation; it never changes the captured pages. No partial snapshot is readable as a ready Dataset.
 
-The subscribe operation registers delivery and captures H under the same ordered publication boundary. Events strictly after H are queued for that subscription. The acknowledgement supplies H so replay closes the load-to-live gap. If disconnection loses the acknowledgement, discard that connection's buffer and subscribe/replay again from the last complete boundary. If the baseline or a replay handle expires during loading, discard the staged picture and start again. Reset invalidates the whole load rather than relabelling its pages.
+Core owns subscription registration, capture of H and ordered continuation across catch-up and live delivery. The acknowledgement supplies H as a fixed recovery target, not permission to advance the applied cursor. A lost acknowledgement or connection resumes from the last completely applied cursor of a complete private or published picture. A new subscription acknowledges its own fixed boundary H2; an unpublished picture waits for coverage through H2 and the new handoff. Later writes on that subscription do not move H2. Interrupted initial loading remains private and follows [snapshot lifetime and recovery](#snapshot-lifetime-and-recovery). Reset invalidates the whole load rather than relabelling its pages. Exact snapshot storage and bounded catch-up scheduling remain implementation and qualification work.
 
-Initial synchronization defaults bound the encoded picture payload to 512 MiB and 100,000 resources, inbound fragments to 4 MiB or 1,000 records, local history to 16 MiB or 10,000 commit batches, and a single commit to 4 MiB or 1,000 changes. Limits are configurable downward or upward within deployment-tested ranges. These are engineering starting values, not measured RAM or capacity promises; runtime object overhead must also be measured. Exhausting picture capacity yields `resource_limit` and incomplete coverage. Exhausting the inbound buffer closes the feed and recovers from the last complete cursor. No eviction of current resources is permitted to preserve a false ready state. Core keeps at most 4 MiB pending delivery per synchronization connection. Overflow emits a gap and closes the WebSocket with code 1013; if no gap frame can be sent, that closure still requires replay from the last complete boundary. Core replay retention is bounded by [Core configuration](dataset-lifecycle.md#core-configuration); expired replay returns `410 cursor_expired`. Local history prunes whole batches only.
+Initial synchronization defaults bound the encoded picture payload to 512 MiB and 100,000 resources, the aggregate inbound buffer to 4 MiB or 1,000 changes, local history to 16 MiB or 10,000 commit batches, and a single commit to 4 MiB or 1,000 changes. Limits are configurable downward or upward within deployment-tested ranges. These are engineering starting values, not measured RAM or capacity promises; runtime object overhead must also be measured. Every producer must fit its complete final public batch within the supported commit bound before committing any effect. Fragmenting a message or splitting an atomic domain mutation does not bypass that admission rule. Exhausting picture capacity yields `resource_limit` and incomplete coverage. Exhausting the inbound buffer closes the feed and recovers from the last complete cursor. No eviction of current resources is permitted to preserve a false ready state. Core keeps at most 4 MiB pending delivery per synchronization connection. Overflow emits a gap and closes the WebSocket with code 1013; if no gap message can be sent, that closure still requires replay from the last complete boundary. Core replay retention is bounded by [Core configuration](dataset-lifecycle.md#core-configuration); expired replay returns `410 cursor_expired`. Local history prunes whole batches only. Real message accounting, snapshot budgets and recovery progress require S4 evidence.
+
+### Snapshot lifetime and recovery
+
+Snapshot continuation uses Core's normal bounded replay retention. An admitted snapshot does not pin history for that reader. Its pages belong to a finite-lived capture with an advertised expiry; that lifetime does not extend the replay window. While pages are missing, expiry of the capture or loss of its continuation coverage makes Core report explicit expiry or a gap. The SDK discards that incomplete staging and captures a new snapshot. Snapshot validity alone is not proof that continuation is still covered.
+
+After every page is validated, the SDK has complete private coverage at N and no longer needs Core's captured image. It releases the capture and advances that private picture only through complete applied commits. If catch-up has reached C before readiness, reconnect starts after C when that cursor is covered. Pruning the original N or expiry of the released capture does not invalidate complete staging at C. Each acknowledged subscription has a fixed readiness target H, distinct from applied progress C; reconnect acknowledges a new fixed target without requiring the original captured image.
+
+Core bounds concurrent snapshots and their aggregate storage and memory. When capacity is exhausted, it refuses new snapshot admission explicitly rather than allowing a slow reader to hold back operational writes. Cancelling a load releases its capture when Core receives the cancellation; expiry bounds retention when a client disappears. Exact lifetime, admission budgets and storage mechanisms require measured S4 qualification, including refusal while ordinary operational writes continue.
+
+After a transport interruption while pages are missing, keep fully validated pages private and resume missing pages of the same capture while its handles and continuation remain valid. Pages from another capture cannot fill that staging area, even within the same Dataset. If either handle or continuation becomes unusable, discard incomplete staging and start a fresh capture at its own boundary. After all pages are validated, use the last complete staged cursor instead. Reset rejects old handles and discards old staging under the Dataset rule.
+
+Temporary snapshot captures expire when their Core process ends, including a same-release Restart. Core releases their storage and reports explicit expiry for their handles after reopening; an unfinished page load discards its incomplete staging and starts a new capture. This is a narrow exception to Core-token retention. Ordinary unexpired paging tokens, complete recovery cursors and retained replay keep their Restart guarantees, as do Dataset identity and operational state. A complete private or published picture resumes from its last fully applied Core cursor when that cursor is covered; it does not require the former captured image to survive.
+
+Recovery attempts use bounded work and backoff. If bounded attempts establish that resource capacity prevents maintaining the picture, report `resource_limited` with a safe cause and pause automatic rebuilding. A deliberate synchronization retry or an observed relevant capacity change re-enters the same recovery owner with bounded attempts. It never retries an accepted mutation. Ordinary transport loss alone retains automatic reconnect behavior; an outage alone does not establish a capacity failure.
+
+Pausing recovery does not make an incomplete picture readable. The [query and status contract](#query-and-status-contract) still permits complete last-known same-Dataset reads during recoverable interruption, and requires not-ready reads once a rebuild is required or coverage is incomplete. Status subscriptions continue to report recovery or capacity failure; partial resources produce no application notifications. Core and local history/cursor expiry remain distinct.
+
+Independent recovery fixtures, each starting from its stated boundary:
+
+| Scheduled event | Expected observable result |
+| --- | --- |
+| Snapshot at 100 finishes while subscription boundary is 105 | No application reads or resource notifications before complete catch-up through 105 and handoff; later writes do not move that fixed readiness target |
+| Connection drops after some pages of snapshot 100; handles and continuation remain valid | Resume missing pages from the same 100 capture, despite later Core writes; no mixed snapshot or partial reads |
+| Core restarts after some pages of snapshot 100 | Explicit snapshot-handle expiry and fresh capture in the same Dataset; no reuse of pages from the expired capture |
+| Core restarts after all snapshot pages are validated and private catch-up reaches 105; cursor 105 remains covered | Resume after 105 without recapturing; reads still wait for complete catch-up and handoff |
+| Some snapshot 100 pages are still missing; its continuation is pruned while the captured pages remain available | Explicit expiry/gap, discarded incomplete staging and a new capture; available pages alone do not establish continuation coverage |
+| All snapshot 100 pages are validated; private catch-up reaches 105 toward H=110; replay floor advances to 103, the connection drops and a new subscription acknowledges H2=112 | Resume strictly after 105; pruning 100 does not require rebuilding coherent private staging. Reads wait for 112 and the new handoff; later writes do not move 112 |
+| Snapshot admission budget is exhausted | Explicit refusal; existing valid loads retain their bounded resources and operational writes continue |
+| Bounded recovery attempts establish insufficient picture capacity | `resource_limited`, no unbounded rebuild cycle; deliberate retry or observed relevant capacity change can retry through the same owner |
+| Only the transport is unavailable | Ordinary reconnect backoff and accurate interruption status; no capacity failure inferred solely from the outage |
 
 ### Worked synchronization interleaving
 
-This fixture fixes expected outcomes independently of an implementation. A is an Asset, T its Task and X an unrelated Track; the baseline is Core commit 40. Core commits 41 with A/T changes, 42 deleting X and 43 creating U.
+This fixture fixes expected outcomes independently of an implementation. A is an Asset, T its Task and X an unrelated Track; the snapshot is Core commit 40. Core commits 41 with A/T changes, 42 deleting X and 43 creating U. It retains the current initial-readiness rule; a complete baseline alone is not readable.
 
 | Input or barrier | Expected staged or visible state | Safe Core cursor and local notification |
 | --- | --- | --- |
-| Initial pages load A at 40 and X at 40; a later page observes T at 41 | Private staging; application reads `picture_not_ready` | Baseline stays 40; no resource notifications |
-| Subscribe acknowledges H=42; commit 43 is buffered | Staging only | Replay fixed through 42; 43 cannot advance progress |
-| Replay page one has only A, index 0 of commit 41, count 2 | A/T commit remains private and incomplete | Complete cursor stays 40; `next_page` is not a recovery cursor |
+| Initial pages load A and X at 40; T's page arrives after commit 41 | T's page still describes 40; all resources remain private staging | Baseline stays 40; no resource notifications |
+| Subscribe after 40 acknowledges H=42; Core commits 43 | Staging only; Core schedules 43 after catch-up | Fixed catch-up target is 42; acknowledgement cannot advance applied progress |
 | A successful write response for commit 43 arrives | Caller receives U; staging and picture are unchanged | No journal or notification from the response |
-| Replay page two has T, index 1 of 41, then delete X at 42 | Finish 41 without overwriting newer T; delete X; load/replay coverage reaches H | Cursor 42; no partial initial notifications |
-| Buffered 43 is applied and picture is published | A/T reflect 41, X absent, U present | Cursor 43; one `ready` notification and fresh local cursor at journal position 0 |
+| Stream sends complete 41, then delete X at 42 | A/T update together; delete X; coverage reaches H | Cursor 42; no partial initial notifications |
+| Complete 43 arrives before the ready picture is published | A/T reflect 41, X absent, U present | Cursor 43; one `ready` notification and fresh local cursor at journal position 0 |
 | Duplicate 41 and an old page containing X arrive | No stale overwrite or resurrection | Cursor 43; no second journal batch |
-| Live 44 updates A/T, split across frames | Both remain at 41 until second frame; then both become 44 | One local batch and cursor 44 after whole application |
-| Feed is lost, 45 deletes U, and reconnection replays 45 twice | U absent after one complete application | One deletion notification; cursor 45 |
+| Live 44 updates A/T in one complete message | Both become 44 in one atomic application | One local batch and cursor 44 after whole application |
+| Feed is lost, 45 deletes U, and reconnection repeats complete 45 | U absent after one complete application | One deletion notification; cursor 45 |
 | Replay is expired or Dataset changes | Invalidate cursors and notify rebuild/Reset; retain no readable old-Dataset picture | New initial load; no accepted mutation is resubmitted |
+
+In a separate fault schedule, interrupt the data message for live commit 44 before complete validation. Both A and T remain at 41, the complete cursor stays 43, and no journal batch or notification appears. Reconnecting after 43 delivers complete 44 before any later commit. Interrupted initial loading remains unreadable and resumes its valid capture under the recovery rules above; a fresh capture cannot reuse an earlier boundary as though it occurred there.
 
 ## Query and status contract
 
@@ -246,7 +279,7 @@ Ordinary resource lists order by permanent resource ID ascending, compared by UT
 
 Assigned-Task pages order Immediate Tasks by immutable submission sequence, then Queued Tasks by requested queue order, with submission sequence and ID as tie-breakers. They include requested and confirmed revisions and the state supplied by the [queue contract](tasks.md#queue-revisions). Every page token pins that Asset's queue revision. If that queue changes between pages, both sources return `409 page_changed` and the caller restarts the list; telemetry for unrelated resources does not invalidate it. No traversal combines old requested order with new confirmed order. Started/suspended work remains identified separately from editable unstarted order.
 
-A malformed token, wrong query/options/source or another SDK instance's token yields `cursor_invalid`. A pruned Core/local history cursor or an elapsed 60-second ordinary page-token lifetime yields `cursor_expired`. Restart preserves unexpired Core tokens and retained replay; SDK restart or picture rebuild invalidates local tokens. Reset produces `dataset_invalidated` for every old-Dataset token. Application reads cannot use Core recovery cursors as local query cursors.
+A malformed token, wrong query/options/source or another SDK instance's token yields `cursor_invalid`. A pruned Core/local history cursor or an elapsed 60-second ordinary page-token lifetime yields `cursor_expired`. Restart preserves unexpired Core tokens and retained replay, except temporary snapshot handles under [snapshot lifetime and recovery](#snapshot-lifetime-and-recovery). SDK restart or picture rebuild invalidates local tokens. Reset produces `dataset_invalidated` for every old-Dataset token. Application reads cannot use Core recovery cursors as local query cursors.
 
 The SDK exposes `state`, `dataset_id`, `picture_generation`, `coverage`, `last_applied_core_cursor`, `last_synchronized_at` and optional safe `error`. `state` is `initializing`, `synchronized`, `recovering`, `disconnected`, `resource_limited`, `authorization_required` or `stopped`; coverage is `none` or `complete`. HTTP results have `source=http` and the response's Core boundary. Full-mode results have `source=local`, their local journal boundary and current status. A ready empty Dataset returns an empty list, while incomplete coverage returns `picture_not_ready`. During same-Dataset disconnection/recovery, complete last-known coverage remains readable with stale status. Knowing Reset or a required rebuild makes reads not ready immediately. A not-found answer is permitted only with complete coverage. Unsupported local filters fail validation locally, producing zero operational HTTP read requests.
 
@@ -258,7 +291,7 @@ Subscription without a cursor atomically captures the current local boundary and
 
 A subscription opened while initializing receives status only. On first readiness it receives `ready` with the new picture generation and local boundary; the consumer loads current state rather than interpreting it as a stream of individual creates. A rebuild sends `rebuilding`, invalidates previous cursors and emits no partial resources. Existing subscriptions remain attached to status and receive `ready` for the replacement picture, then subsequent complete batches. A cursor-based subscription cannot silently replay across that boundary. Reset sends `dataset_changed` with the new Dataset and follows the same not-ready/ready procedure.
 
-HTTP-mode subscriptions use the same whole-commit batch/status/gap event shapes. The HTTP adapter groups remote fragments before notifying the caller, but constructs no operational picture. With no cursor it starts strictly after its subscribed Core boundary; with a valid Core cursor it replays through that fixed boundary and then delivers live changes once. Its paging/history cursors are Core cursors. Full-mode subscriptions use local cursors instead, and their readiness/rebuild statuses concern the picture. The event envelope states the source and boundary so these cursors cannot be exchanged accidentally.
+HTTP-mode subscriptions use the same whole-commit batch/status/gap event shapes. The HTTP adapter validates complete remote batches before notifying the caller, but constructs no operational picture. With no cursor it starts strictly after its subscribed Core boundary without enumerating current resources; with a valid Core cursor, Core delivers ordered catch-up through that fixed boundary followed by live changes on the same subscription. Its paging/history cursors are Core cursors. Full-mode subscriptions use local cursors instead, and their readiness/rebuild statuses concern the picture. The event envelope states the source and boundary so these cursors cannot be exchanged accidentally.
 
 ### Independent query fixtures
 
@@ -407,19 +440,20 @@ The [source reference](../atlas-modernization-reference.md#earlier-sdk-design) r
 
 ## Routes
 
-- Synchronization: `GET /queries/full`, `GET /queries/changed-since` and `GET /feed` in the [Synchronization routes](../api-endpoints.md#synchronization), called by HTTP-mode operations or privately by the background synchronizer.
+- Synchronization: HTTP-mode operations use the [Synchronization routes](../api-endpoints.md#synchronization); Full synchronization mode privately uses `GET /queries/full` and `GET /feed` under [background synchronization](#background-synchronization), while its application changed-since remains local.
 - Current-Dataset discovery and health remain available across a Dataset change under [Dataset lifecycle](dataset-lifecycle.md#dataset-identity-and-the-dataset-boundary).
 - Each catalog operation's route is listed in the [Operations catalog](#operations-catalog) and owned by its topic page.
 
 ## Open questions
 
+- Exact complete-message encoding and byte accounting, pre-commit producer enforcement, finite snapshot lifetime and aggregate admission budgets, recovery attempt thresholds and snapshot storage. These are engineering choices within the accepted rules; the existing numeric bounds are provisional and measured qualification belongs to S4.
 - Radio transport and concrete trusted-gateway enrollment, process-authority and freshness messages under [ADR-0028](../adr/0028-trust-gateways-to-author-bound-asset-reports.md).
 - Consumer-specific freshness requirements beyond the accepted provisional field sizing profile.
 - Additional SDK languages and shared picture services are outside the initial SDK.
 
 ## Decisions
 
-- [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md): the general SDK serves IP participants without bandwidth limits through HTTP mode and Full synchronization mode; Asset hybrid and its Core machinery are deferred.
+- [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md): the general SDK serves IP participants without bandwidth limits through HTTP mode and Full synchronization mode; Asset hybrid is deferred, and Core owns ordered catch-up/live delivery with bounded temporary snapshots.
 - [ADR-0018](../adr/0018-confirm-writes-when-core-commits.md): writes are confirmed when Core commits, and write responses stay out of picture updates.
 - [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md): the SDK detects a Dataset change and discards old state rather than replaying old writes.
 - [ADR-0005](../adr/0005-allow-compatible-client-versions.md): compatible client versions within supported ranges.

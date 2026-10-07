@@ -173,17 +173,17 @@ Submission, retries, cancellation, the [Operation transitions](topics/plugins.md
 
 ## Synchronization
 
-HTTP-mode operations call these routes directly, and the SDK's background synchronizer calls them privately in Full synchronization mode; read sources, freshness and recovery follow [SDK](topics/sdk.md#modes).
+HTTP-mode operations call these routes directly. The Full synchronization mode background synchronizer privately uses the full snapshot and cursor-based feed; application changed-since remains local. Read sources, freshness and recovery follow [SDK](topics/sdk.md#modes).
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
-| `GET /queries/full` | SDK clients load the full operational dataset | Per-resource pagination → Entities, Tasks, ready Objects with resource versions, continuations and stable baseline cursor | None; private staged load reconciles baseline replay before ready | Retain |
-| `GET /queries/changed-since` | SDK clients recover missed changes | Baseline version and cursor → ordered change events and next recovery boundary | None | Retain |
-| `GET /feed` | SDK clients subscribe to live operational changes | WebSocket upgrade, caller authentication, complete-picture subscribe → hello, boundary acknowledgement and commit-framed changes | Maintain connection; no resource writes; no selective subscriptions | Retain |
+| `GET /queries/full` | SDK clients load the full operational dataset | Pages of one consistent snapshot → Entities, Tasks, ready Objects with versions and covered continuation cursor | None; initial picture readiness follows the SDK contract | Retain route; revise snapshot consistency |
+| `GET /queries/changed-since` | HTTP-mode clients query missed changes | Complete Core cursor → ordered whole-commit pages through a fixed recovery boundary | None; capability remains independently available | Retain |
+| `GET /feed` | SDK clients subscribe to ordered operational changes | Authenticated WebSocket, complete-picture subscribe with optional complete Core cursor → hello, boundary acknowledgement, catch-up then live complete commit messages | Maintain connection; no resource writes; no selective subscriptions; no-cursor application subscription is live-only | Retain route; revise catch-up ownership and framing |
 
 Asset-scoped synchronization is [deferred](topics/sdk.md#deferred-asset-hybrid-mode), and gateways use these routes like any other SDK client.
 
-When retained history no longer covers the requested version, `GET /queries/changed-since` returns an explicit cursor-expired response. The SDK's load and recovery procedure follows [background synchronization](topics/sdk.md#background-synchronization). Whole-commit retention bounds, complete-picture scope and continuation fields follow [synchronization wire](topics/sdk.md#synchronization-wire-and-application-boundary).
+Expired Core cursors fail explicitly through the [synchronization contract](topics/sdk.md#synchronization-wire-and-application-boundary), including HTTP changed-since. The SDK's load and recovery procedure follows [background synchronization](topics/sdk.md#background-synchronization) and [snapshot lifetime and recovery](topics/sdk.md#snapshot-lifetime-and-recovery). Exact snapshot lifetime, storage and measured budgets remain engineering work; route retention does not preserve the superseded SDK HTTP replay handoff.
 
 All reads, mutations, prepared uploads and recovery cursors follow Core's [Dataset wire boundary](topics/dataset-lifecycle.md#dataset-wire-boundary) and [SDK Dataset Reset handling](topics/sdk.md#dataset-reset-handling).
 

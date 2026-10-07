@@ -33,6 +33,14 @@ Decision history:
 - A Command that needs live data, such as Track updates, is not served by a one-time Task download, but its specialized radio delivery contract does not require a general partial replica in the SDK.
 - Gateways are relay integrations and not taskable Assets in the current scope. Future gateway taskability remains open under [ADR-0028](0028-trust-gateways-to-author-bound-asset-reports.md).
 
+## Ordered catch-up and live delivery
+
+On 7 October 2026 the user accepted a follow-up to the Core/SDK responsibility boundary: Core supplies one ordered catch-up/live subscription from a complete cursor, initialized from a consistent snapshot with covered continuation. One complete commit occupies one bounded Protocol data message, and producer admission precedes committed effects. The SDK retains connection recovery, validation, atomic picture application and its local journal. Detailed rules are in [SDK synchronization](../topics/sdk.md#synchronization-wire-and-application-boundary); the [design interview record](../planning-reconciliation.md#ordered-core-feed-direction-7-october-2026) preserves the authorization.
+
+This replaces the successor's moving initial pages, separate SDK HTTP replay/live coordination and commit fragment assembly. The simpler SDK requires Core to own consistent snapshot capture, ordered delivery and complete-batch admission. Existing read sources, changed-since, complete-commit visibility and write-response separation remain. Initial reads wait for a fixed catch-up boundary and completed handoff rather than exposing the older baseline early.
+
+The user chose bounded temporary captures with normal replay retention, explicit admission refusal and expiry, valid page resumption, and paused rebuilding after bounded attempts establish insufficient capacity. Per-reader history pinning would give longer recovery at the cost of reader-dependent retention; durable captured images would preserve unfinished loads across Restart at the cost of another retained-state obligation. Both were declined. Temporary captures expire when their Core process ends, while complete pictures and retained cursors keep the existing Restart recovery guarantees. [Snapshot lifetime and recovery](../topics/sdk.md#snapshot-lifetime-and-recovery) owns those rules. Numeric limits, storage, backpressure and real workload qualification remain S4 work; prototype review and closed specifications are not runtime acceptance.
+
 ## Consequences
 
 - The hybrid-only test requirements are deferred.
