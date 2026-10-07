@@ -301,3 +301,22 @@ During the focused plan-versus-implementation review, the user chose local admin
 The user confirmed the complete decision set before these documentation changes. [ADR-0027](adr/0027-administer-core-configuration-locally.md) and [Core configuration](topics/dataset-lifecycle.md#core-configuration) own local settings administration. [ADR-0028](adr/0028-trust-gateways-to-author-bound-asset-reports.md) and [report authority and relay](topics/asset-reporting.md#report-authority-and-relay) own the revised gateway trust boundary. Direct IP Asset proofs, downstream Asset identities and execution outcomes, obsolete-process rejection, report ordering, retry/Dataset boundaries and contact freshness remain required. A gateway restart does not imply its downstream Assets restarted.
 
 These are design decisions, not implemented operational behavior. Concrete radio messages and the gateway authority mechanism remain future engineering work. The other review alternatives, including synchronization, Reset and Plugin bookkeeping changes, remain proposals until separately decided.
+
+## Reset record consolidation round one, 7 October 2026
+
+The user said, "I agree with your recommendation," to Q1 in the Reset design interview. The accepted recommendation replaces the separate host Reset directive with the existing durable management action record while retaining Core's independent establishment proof and the existing cleanup and startup-accounting barriers. [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#host-reset-directive-consolidation) records the tradeoff; [Reset execution](topics/dataset-lifecycle.md#reset-execution) owns the current rules.
+
+Host progress, Reset establishment and physical cleanup completion remain distinct. Plugin work, logs and the pending activity journal are cleared durably before establishment. Objects removes every noncurrent Dataset's owned content before readiness. A lost fresh-commit reply cannot authorize repeated cleanup or fresh opening, and recorded Plugin startup faults do not authorize automatic restart.
+
+Completed-action retention and recovery from unreadable or conflicting authority were open at the end of this round and are resolved in [round two](#reset-record-consolidation-round-two-7-october-2026). This round accepts the record consolidation only, not asynchronous cleanup or runtime qualification. The [prototype at 6c31123](https://github.com/atlas-field-systems/atlas-core/blob/6c311233365f155f40d52a90d94973d12993313a/docs/architecture/atlas-review.prototype.html), based on c5f9416, remains a throwaway model. #67 and #68 are closed specifications, with real Reset recovery evidence still assigned to the [S1-S3 seams and S7 lifecycle work](architecture/implementation-sequence.md#local-actions-and-retained-state). No production implementation, pull request or merge is authorized by this interview.
+
+## Reset record consolidation round two, 7 October 2026
+
+The user said, "I agree with the recommendations," to Q2 and Q3 in the Reset design interview.
+
+| Decision | Accepted behavior | Current authority |
+| --- | --- | --- |
+| Completed Reset results | Keep the latest completed result through Stop/Start/Restart until another Reset is accepted. A completed record has no startup or cleanup authority; an expired result returns an explicit no-longer-retained outcome and never becomes another Reset | [Completed results](topics/dataset-lifecycle.md#completed-reset-results) |
+| Damaged pending recovery record | With Core stopped, refuse Start if the pending Reset record is unreadable or conflicts with the Installation identity. Preserve data and require explicit authenticated local repair using Core's private inspection interface | [Interrupted Reset](topics/dataset-lifecycle.md#interrupted-reset) |
+
+[ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#host-reset-directive-consolidation) records the tradeoffs. Unavailable Core proof still cannot authorize destructive repetition, and old Object cleanup after establishment still blocks readiness while preserving the new Dataset. These existing requirements were not reopened. The second round resolves the two choices left open in round one; runtime implementation and real recovery evidence remain future work. After reviewing the complete design summary, the user said, "Looks good to me." This confirms shared understanding and closes the assigned Reset record consolidation interview; it authorizes no production implementation, pull request or merge.

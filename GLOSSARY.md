@@ -72,6 +72,14 @@ _Avoid_: Reset
 Stopping Core, clearing its operational Dataset and Atlas-managed diagnostic logs, and starting Core with a new Dataset while retaining installation setup.
 _Avoid_: Restart, Hard Reset, backup restore
 
+**Reset establishment**:
+The point at which a Reset creates its replacement Dataset. Establishment can precede completion of cleanup and startup.
+_Avoid_: Reset completion
+
+**Reset completion**:
+The point at which required Reset cleanup is complete, Core is ready and every compatible enabled Plugin has a recorded startup outcome. A recorded startup fault does not leave Reset pending.
+_Avoid_: Reset establishment
+
 **Hard Reset**:
 A local CLI/TUI action that stops Core and its managed Plugins, removes all Atlas-managed operational state and installation setup, and returns Atlas to first-time setup. The Core software and unrelated host resources remain.
 _Avoid_: ordinary Reset, software uninstall

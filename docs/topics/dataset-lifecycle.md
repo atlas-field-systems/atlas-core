@@ -62,11 +62,11 @@ For a planned independent Plugin stop, the manager obeys Core's [protected stopp
 
 The default layout is one `/var/lib/atlas/<installation_id>` root with `core/core.sqlite`, `objects`, `staging`, `logs`, `setup`, and `plugins/<plugin_id>/{work,setup,reference,artifacts}`. Core alone receives its database/Object mounts. A Plugin receives writable `/var/lib/atlas-plugin/work`, read-only reference/artifacts, private settings/credential files and its own runtime socket directory; it receives no other Plugin's mount or Docker socket. In-container paths are stable even if host deployment paths change.
 
-The manager's recovery authority is outside that root at `/var/lib/atlas-manager/<installation_id>/actions`. Its JSON action record uses `record_format=1`, UUID `action_id`, `kind`, installation/target identity, action-specific `phase`, intended Core release/digest, optional Reset identity, completed cleanup targets and safe outcome/error. Write a same-directory temporary file, sync it, atomically rename it and sync the directory before performing the newly recorded phase. Destructive actions first sync their startup-blocking marker. In-memory acknowledgement or diagnostic logging is not durable authority. Core state changes are queried through its private interface after every uncertain response; a lost response never authorizes repeating a fresh opening blindly.
+The manager's recovery authority is outside that root at `/var/lib/atlas-manager/<installation_id>/actions`. Its JSON action record uses `record_format=1`, UUID `action_id`, `kind`, installation/target identity, action-specific `phase`, intended Core release/digest, optional Reset identity, completed cleanup targets and safe outcome/error. Write a same-directory temporary file, sync it, atomically rename it and sync the directory before performing the newly recorded phase. Destructive actions first sync their startup-blocking authority; for Reset this is the pending action record itself. In-memory acknowledgement or diagnostic logging is not durable authority. Core state changes are queried through its private interface after every uncertain response; a lost response never authorizes repeating a fresh opening blindly.
 
 Every resource has installation ownership recorded by the manager: exact root-relative paths, Compose project labels and container IDs. Cleanup rejects paths outside the installation root, symlinks escaping it and conflicting ownership. It stops and verifies every relevant writer first, then removes whole owned targets without parsing Plugin files. Docker log cleanup removes/recreates stopped owned containers or removes their owned logging resources through Docker; the manager does not truncate daemon-private log files. Core preserves its database mount across ordinary Reset. Shared images/networks and unrelated containers are not pruned. A required target is complete only after absence or the expected empty owned directory is verified and synced; permission/storage failure stays incomplete.
 
-Reset's directive and local activity journal retain their existing separate roles. Hard Reset retains only its external progress marker until required cleanup succeeds; it then removes that marker and enters fresh local setup. No old action archive is imported into the fresh installation.
+Reset uses its management action record as the directive under [Reset execution](#reset-execution); the local activity journal remains separate history under [Local actions](history.md#local-actions). Hard Reset retains only its external progress marker until required cleanup succeeds; it then removes that marker and enters fresh local setup. No old action archive is imported into the fresh installation.
 
 ### Recovery states
 
@@ -79,8 +79,8 @@ stateDiagram-v2
     Stopping --> Stopped: all owned writers exited
     Stopping --> StopIncomplete: exit not verified
     StopIncomplete --> Stopping: resume local action
-    Serving --> ResetPending: durable Reset directive
-    Stopped --> ResetPending: durable Reset directive
+    Serving --> ResetPending: durable Reset action record
+    Stopped --> ResetPending: durable Reset action record
     ResetPending --> ResetEstablished: cleanup then Core fresh commit
     ResetPending --> ResetPending: interrupted cleanup resumes
     ResetEstablished --> Serving: modules ready and enabled Plugins processed
@@ -99,22 +99,36 @@ These mechanisms use [systemd service supervision](https://github.com/systemd/sy
 
 Reset is Start with a fresh Dataset. An interruption at any point completes the Reset without serving a partially cleared Dataset or clearing it twice.
 
-1. The host coordinator records a fresh-Dataset directive with a Reset identity on the installation mount before stopping anything.
+The one durable host management action record is the Reset directive. It owns intent, progress, verified cleanup targets and Plugin startup outcomes in the external [recovery storage](#owned-storage-and-durable-actions); no separate installation-mounted directive is written. Core independently records Reset establishment in its database. Host progress, database establishment and physical cleanup completion remain distinct facts under [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md#host-reset-directive-consolidation).
+
+1. The host coordinator durably records Reset intent and its Reset identity in that action record before stopping anything.
 2. It stops managed Plugins and Core.
-3. With Core and all managed Plugin writers stopped, host management clears Atlas-managed diagnostic logs, the pending local activity journal and this installation's Plugin work directories. Plugin cleanup is made durable before the fresh-opening transaction can record the Reset identity; filesystem removal and the SQLite commit are separate operations.
+3. With Core and all managed Plugin writers stopped, host management clears Atlas-managed diagnostic logs, the pending local activity journal and this installation's Plugin work directories. This host cleanup is made durable before the fresh-opening transaction can record the Reset identity; filesystem removal and the SQLite commit are separate operations.
 4. Core opens every module fresh: one SQLite transaction clears all Dataset tables, establishes the new Dataset ID and records the Reset identity in Dataset metadata. Objects then removes, by ownership, content belonging to any Dataset other than the new one, so an interrupted and retried Reset cannot leave earlier content behind.
 5. Core serves operational requests after every module is ready.
-6. The host removes the directive after it accounts for every compatible enabled Plugin's startup outcome: confirmed ready or a durably recorded startup fault under [recovery states](#recovery-states). A fault does not leave the Reset pending or authorize automatic restart.
+6. The host durably completes the Reset action after it accounts for every compatible enabled Plugin's startup outcome: confirmed ready or a durably recorded startup fault under [recovery states](#recovery-states). A fault does not leave the Reset pending or authorize automatic restart. The completed record follows [completed Reset results](#completed-reset-results).
 
 The coordinator does not clear module tables itself. Each module's fresh opening follows [Opening a Dataset](../architecture/system-design.md#opening-a-dataset).
 
 ### Interrupted Reset
 
-If Plugin work-directory cleanup fails or is interrupted, the directive is retained and Reset is reported incomplete. The fresh Dataset is not established and no Plugin work starts until cleanup succeeds. The next Start resumes that cleanup while writers remain stopped.
+If Plugin work-directory cleanup fails or is interrupted, the pending action record is retained and Reset is reported incomplete. The fresh Dataset is not established and no Plugin work starts until cleanup succeeds. The next Start resumes that cleanup while writers remain stopped.
 
-If the next Start finds a directive whose Reset identity is not recorded, the host completes pending cleanup before Core opens fresh. Before establishment, repeated cleanup is safe because no Plugin has started new-Dataset work.
+If the next Start finds a pending Reset action whose Reset identity Core confirms is not recorded, the host completes pending cleanup before Core opens fresh. Before establishment, repeated cleanup is safe because no Plugin has started new-Dataset work.
 
-Once Core records the Reset identity, the directive is established. If the next Start finds a directive whose Reset identity is recorded, Core opens retained so post-Reset data survives, and the host accounts for remaining Plugin startup without clearing the Plugin work directories again. Previously recorded startup faults remain faulted rather than triggering another start attempt. This preserves work created by Plugins that already started in the new Dataset, even if management was interrupted before processing the remaining Plugins or removing the directive. The host uses Core's private coordination for the establishment decision, preserving Core's exclusive access to its SQLite database.
+Once Core records the Reset identity, that Reset is established even if the host phase still awaits a fresh-commit reply. If the next Start finds a pending Reset action whose Reset identity is recorded, Core opens retained so post-Reset data survives, and the host accounts for remaining Plugin startup without clearing the Plugin work directories, logs or journal again. Previously recorded startup faults remain faulted rather than triggering another start attempt. This preserves work created by Plugins that already started in the new Dataset, even if management was interrupted before processing the remaining Plugins or completing the action. The host uses Core's private coordination for the establishment decision, preserving Core's exclusive access to its SQLite database. Objects still completes cleanup of every noncurrent Dataset before readiness; establishment alone does not establish that old content is gone.
+
+If Core's establishment response is unavailable or unreadable, the host preserves the pending action and reports the unknown establishment outcome. That response cannot prove nonestablishment or authorize cleanup or fresh opening. Recovery obtains valid proof through Core's private interface before deciding which opening is required.
+
+When Core is stopped and its pending Reset action record is unreadable or conflicts with the Installation identity, Start refuses with the specific record problem until an explicit local repair resolves the action. Repair uses authenticated local management and Core's private inspection interface, including maintenance mode when needed. It preserves existing data and must resolve valid recovery authority before resuming the action; silently dropping the record or inferring completion is not repair. Writer-exit verification and Core's sole SQLite access still apply.
+
+### Completed Reset results
+
+The host retains only the latest completed Reset result through Stop, Start and Restart, until another Reset is accepted. It is a bounded, nonsecret result in the completed action record, with its action/Reset identity, resulting Dataset and known outcome. It is separate from Activity history and the local activity journal, which retain their own Reset rules; it does not retain pre-Reset logs or an archive of earlier Reset actions.
+
+Inspection or an identical retry returns that recorded result without executing lifecycle work. A completed record has no startup or cleanup authority and never enters pending-action recovery. Core's last established Reset identity may legitimately change after a later Reset; that mismatch cannot turn an earlier completed action into pending cleanup.
+
+Acceptance of a new Reset durably replaces the previous completed Reset result with the new pending action before any stopping or cleanup. A refused new request does not expire the previous result. Pending actions do not expire or get replaced by another Reset. Once a result is no longer retained, inspecting or retrying its action returns an explicit result-no-longer-retained outcome without effect. Retrying an action and requesting a new Reset are distinct local management intents; a missing retry result must never be interpreted as a new Reset request.
 
 ## Unfinished work after Stop or Restart
 
@@ -146,9 +160,9 @@ Ordinary Start requires an exact writing Core release and compatible recorded fo
 
 A local `update` action names the new Core image digest and confirms its Reset effect. With owned writers stopped, the target Core runs private validation/maintenance mode. It reads the stable bootstrap record, validates the retained profiles, identity bindings, denials, credential verifiers/creation claims and candidate Core settings, and determines whether every installation-format transition has a supplied converter. Installed Plugins are checked too; incompatibility retains the Plugin installed but disabled with a reason. Invalid Core settings or an unsupported retained format refuses the update before operational cleanup/establishment. Local management can edit a failed candidate or choose a release that supports the retained format while serving remains disabled. Hard Reset is an explicit destructive alternative, never an automatic repair.
 
-After successful preflight, the manager records its target image and Reset directive, performs the ordinary stopped-writer cleanup, then asks the target Core to establish fresh. One SQLite transaction applies the named installation-only converters, replaces Dataset tables from the target release's module schema manifest, establishes the target formats/fingerprints and new Dataset/Reset identity. It keeps permanent Operator/Asset IDs, credential identity/verifiers, creation claims and revoked/retired denial facts unchanged. A converter cannot relabel a retired Asset, revive a revoked credential, change a publisher's authority or reinterpret incompatible configuration. It may change private representation while preserving those facts. The new Core performs ordinary module readiness and Object ownership cleanup before serving.
+After successful preflight, the manager records its target image and Reset intent in the management action record, performs the ordinary stopped-writer cleanup, then asks the target Core to establish fresh. One SQLite transaction applies the named installation-only converters, replaces Dataset tables from the target release's module schema manifest, establishes the target formats/fingerprints and new Dataset/Reset identity. It keeps permanent Operator/Asset IDs, credential identity/verifiers, creation claims and revoked/retired denial facts unchanged. A converter cannot relabel a retired Asset, revive a revoked credential, change a publisher's authority or reinterpret incompatible configuration. It may change private representation while preserving those facts. The new Core performs ordinary module readiness and Object ownership cleanup before serving.
 
-A transaction interrupted before commit rolls back both the installation conversion and fresh Dataset. The durable directive names the same target image, so the next Start validates and retries that transition; it cannot start an old binary against half-converted state. After commit, the Core-established Reset identity is proof to open retained and finish startup without repeating cleanup or conversion. The manager removes the directive only after startup is accounted for. Repairing an invalid setting uses a versioned local settings action, not a database edit. Operational-data rollback, import and backup/restore remain outside this update mechanism.
+A transaction interrupted before commit rolls back both the installation conversion and fresh Dataset. The durable action record names the same target image, so the next Start validates and retries that transition; it cannot start an old binary against half-converted state. After commit, the Core-established Reset identity is proof to open retained and finish startup without repeating cleanup or conversion. The manager finishes the pending Reset action only after startup is accounted for. Repairing an invalid setting uses a versioned local settings action, not a database edit. Operational-data rollback, import and backup/restore remain outside this update mechanism.
 
 | Existing state and requested action | Selected behavior |
 | --- | --- |
@@ -158,7 +172,7 @@ A transaction interrupted before commit rolls back both the installation convers
 | New release, supported installation format and any old Dataset schema | Preflight then explicit update/Reset; replace operational schema, retain identities/profiles/denials |
 | New release requires installation format 2 and includes converter 1→2 | Execute that converter only during explicit fresh transaction; ordinary Start still refuses release mismatch |
 | Unknown installation format or unsupported Core setting | Serving disabled with actionable field/format error; correct through local management or use a compatible release |
-| Interrupted before fresh transaction commits | Directive remains unestablished; retry cleanup/open with target image |
+| Interrupted before fresh transaction commits | Reset action remains unestablished; retry cleanup/open with target image |
 | Interrupted after establishment, Plugin already produced new work | Retained open; no conversion or work-directory cleanup repeated |
 
 ## Core configuration
@@ -213,9 +227,15 @@ The following are independent expected scenarios for [#67](https://github.com/at
 | CLI exits; Core container crashes while Plugin runs | Host service detects loss, stops/inspects owned Plugin; uncertainty retained; no automatic Core/Plugin restart |
 | Lifecycle and local configuration actions race through CLI/TUI | One exclusive management action order; others get busy or serialize; no concurrent cleanup/write |
 | Stop cannot verify Plugin exit | Stop incomplete; startup/cleanup blocked until confirmed; no fabricated completion |
-| Reset interrupted before/partway through cleanup or before fresh commit | Unestablished directive persists; no serving/new Plugin work; next Start resumes cleanup |
+| Reset interrupted before/partway through cleanup or before fresh commit | Unestablished Reset action persists; no serving/new Plugin work; next Start resumes cleanup |
 | Reset interrupted after fresh commit and one Plugin creates new work | Establishment queried through Core; retained open preserves new work and settings; no second cleanup |
-| Compatible enabled Plugin fails ready handshake during Reset startup, then coordinator retries | Dataset stays established; durable Plugin fault visible; all startup outcomes accounted for and directive removed; no repeated start or cleanup; later explicit recovery does not rerun an Operation |
+| Fresh commit succeeds but its reply is lost and host progress still says opening is pending | Query Core's independent establishment proof; preserve the new Dataset, logs and Plugin work; no repeated fresh opening or pre-establishment cleanup |
+| Fresh commit succeeds but old Object content removal fails | Reset remains established and Core unready; retained recovery completes removal from every noncurrent Dataset while preserving current-Dataset content |
+| Core's establishment reply is unavailable or unreadable during pending Reset recovery | Unknown outcome remains explicit; no cleanup or fresh opening is authorized by the missing proof |
+| Core is stopped and its pending Reset record is unreadable or conflicts with the Installation identity | Start refuses with the record problem; existing data survives; explicit local repair resolves authority through Core's private inspection before resuming |
+| Reset completes but the final reply is lost, then Stop/Start/Restart occurs | The same action returns its retained completed result without another cleanup, fresh commit or Plugin start |
+| A later Reset is accepted, then a delayed caller retries the earlier completed Reset | Earlier result is no longer retained; retry has no effect on the later Dataset or pending action |
+| Compatible enabled Plugin fails ready handshake during Reset startup, then coordinator retries | Dataset stays established; durable Plugin fault visible; all startup outcomes accounted for and Reset action completed; no repeated start or cleanup; later explicit recovery does not rerun an Operation |
 | Hard Reset interrupted after Core exits, unrelated containers/files present | External marker blocks ordinary Start; resume clears only owned targets; unrelated resources/Core software survive |
 | New release replaces incompatible Dataset schema with valid setup | Explicit preflight/update retains Operator IDs, Asset bindings, retired denials, revoked verifiers and API-key creation identities |
 | Unsupported retained format or invalid saved settings at update/start | Refusal before fresh establishment; actionable safe error; local versioned repair while stopped |
