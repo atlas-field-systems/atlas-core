@@ -371,3 +371,5 @@ The five product choices in this bookkeeping design tree are resolved. Numeric b
 ## Plugin design handoff, 7 October 2026
 
 After the documentation interview, the user said, "Let's do that. Can you get me through all those steps?" in response to the proposed documentation PR, scoped implementation specification and implementation with required tests. This authorizes that delivery work for Plugin execution bookkeeping. It does not authorize merging or changes to the other design threads' responsibilities. The accepted behavior remains in [Plugins](topics/plugins.md); the implementation specification belongs in the issue tracker.
+
+The user then selected "Focused bookkeeping component first (Recommended)" rather than the full Plugin workflow. [Implementation spec #117](https://github.com/atlas-field-systems/atlas-core/issues/117) owns this bounded work. The agreed test seam is Core's Plugins module with a separate Plugin process over the private socket and real SQLite/Plugin-owned files. Component qualification does not complete S3 or waive its public API, SDK, container and host requirements.
