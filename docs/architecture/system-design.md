@@ -60,7 +60,7 @@ The target Core performs private preflight before opening, including installatio
 
 Reset uses this opening path under the host coordinator, which coordinates lifecycle actions while Core modules own Dataset cleanup and readiness; [Reset execution](../topics/dataset-lifecycle.md#reset-execution) states the action-record directive, Plugin cleanup ordering and interrupted-Reset recovery.
 
-Start, Restart and Reset share this one path, and each module keeps the locality of its own recovery and cleanup rules. The interface has an adapter in every stateful module, so it is a real seam rather than a hypothetical one.
+Start, Restart and Reset share this one path, and each module keeps the locality of its own recovery and cleanup rules. Each stateful module must provide its opening adapter when implemented; the delivered S0 foundation does not yet implement this operational path.
 
 ## Identity and access
 
