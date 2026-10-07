@@ -146,7 +146,7 @@ Plugins implements Operations separately from Tasks. [Plugins](../topics/plugins
 
 SDK helpers manage submission identity and outcome queries; the server remains responsible for acceptance and recorded outcomes. A separate Core-owned Operation record stores submission identity, Plugin/release/capability, input, state, progress and known outcomes. Submission retries use the shared [retry identity](#retry-identity) mechanism. See the [storage catalog](../data-components.md#core-support-records).
 
-Core marks dispatch as exposed before sending through the Plugin's private channel. The Plugin owns durable dispatch deduplication and execution evidence under [private dispatch and reconciliation](../topics/plugins.md#private-operation-dispatch-and-reconciliation). A lost acknowledgement can mean execution happened; restart never authorizes an automatic rerun.
+Core and the Plugin preserve exposure-before-send, live duplicate protection and durable unacknowledged execution evidence under [private dispatch and reconciliation](../topics/plugins.md#private-operation-dispatch-and-reconciliation).
 
 Host management owns each Plugin's [working storage](../topics/plugins.md#private-operational-storage) and clears it after stopping writers. Core does not parse Plugin-private storage or give Plugins access to its database or Docker socket. Host coordination supplies the per-Plugin Unix channel and runtime credentials. [ADR-0017](../adr/0017-deploy-core-and-plugins-as-docker-containers.md) selects a separate Docker container per installed Plugin.
 

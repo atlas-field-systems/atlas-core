@@ -274,8 +274,12 @@ One submitted invocation of a Plugin capability, with its own identity, lifecycl
 _Avoid_: Operation attempt, Plugin capability, Atlas Task, Asset Command, Datastream
 
 **Interrupted Operation**:
-An Operation whose outcome Core can no longer establish. It is terminal and records uncertainty, not proof that nothing happened.
-_Avoid_: Paused Task, suspended Task, Failed
+An Operation with a terminal record of uncertainty because Core could not establish completion or cancellation. Later evidence can supplement that record without changing its Interrupted outcome.
+_Avoid_: Paused Task, suspended Task, Failed, proof of nonexecution
+
+**Recovered outcome**:
+A Plugin-reported completion, failure or cancellation recovered after its Operation became Interrupted. It supplements the Operation's evidence without changing that terminal status.
+_Avoid_: recovered Operation, reopened Operation
 
 **External source**:
 A system outside Atlas from which a Plugin obtains data.

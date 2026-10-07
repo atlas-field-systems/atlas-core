@@ -405,7 +405,7 @@ Topic-specific helper rules:
 
 - Task lifecycle helpers, Pause and Resume, assigned-work reads, queue operations and recovery follow [Tasks](tasks.md#routes-and-sdk-operations). Helpers return Core's recorded Task state under [scan completion](tasks.md#scan-completion), independently of separate result declarations and uploads. Route-level Task status helpers remain for tasking clients, such as an operator requesting cancellation.
 - Upload retries, deleted-result retries and protected deletion helpers follow [Objects](objects.md#routes-and-sdk-operations).
-- Operation submission identity, retries, outcome queries and cancellation follow [Plugins](plugins.md#routes-and-sdk-operations).
+- Operation submission identity, retries, outcome queries and cancellation follow [Plugins](plugins.md#routes-and-sdk-operations); queries and outcome helpers preserve Interrupted separately from any [Recovered outcome](plugins.md#recovered-outcomes).
 - The SDK preserves an edit's original version precondition under [Concurrent descriptive edits](../architecture/system-design.md#concurrent-descriptive-edits).
 
 ## Asset client

@@ -344,3 +344,30 @@ Those answers did not settle frozen snapshot handles across Restart. In the fina
 After reviewing the settled design summary, the user answered "Looks good to me", confirming shared understanding and closing this design interview. The confirmation adds no production implementation, PR or merge authorization.
 
 The user subsequently accepted the proposed handoff and asked to be guided through it: a documentation-only PR, an S4 implementation specification and the eventual implementation/acceptance checks at their owning workflow boundary. This follow-up publishes the accepted design and specification and checks the delivered foundation; the existing operational prerequisites and explicit merge-authorization requirement remain in force.
+
+## Plugin execution bookkeeping, round one, 7 October 2026
+
+The user said, "I agree with your recommendations," accepting Q1 B and Q2 A in this topic's design interview.
+
+| Decision | Accepted choice | Current authority |
+| --- | --- | --- |
+| Plugin crash evidence | Live duplicate detection replaces mandatory durable accepted/running records and ledger inspection. Outcomes and known-effect evidence remain durable until Core acknowledges them; Core acceptance and exposure fencing remain | [Execution evidence](adr/0002-core-manages-installed-plugins.md#execution-evidence), [private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+| Classification timing | After confirmed runtime loss, promptly classify exposed unresolved work Interrupted using already-confirmed Core evidence. Do not wait for manual replacement. Later evidence can supplement the record without changing terminal status | [Private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+
+Receipt capacity/admission, private-channel loss while the runtime remains alive and the public use of recovered terminal evidence were open at the end of this round and are resolved in [round two](#plugin-execution-bookkeeping-round-two-7-october-2026). Host supervision and lifetime leases are unchanged. The pinned prototype remains historical research; its walkthroughs do not qualify the real workflow. This authorization covers design documentation only, with no production implementation, PR or merge.
+
+## Plugin execution bookkeeping, round two, 7 October 2026
+
+The user said, "I agree with recommendations," accepting Q3 A and the recommendations for Q4 and Q5.
+
+| Decision | Accepted choice | Current authority |
+| --- | --- | --- |
+| Full receipt capacity | Refuse fresh invocations before acceptance when bounded live receipt capacity is full. Existing work can finish; capacity recovery uses a manual protected Plugin restart. Do not queue newly accepted work waiting for that restart | [Private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+| Same-runtime channel loss | Pause new admission while existing Operations remain nonterminal solely for the channel loss. Reconnect only to the verified authenticated same runtime, preserving receipts and the existing supervision/lease rules | [Private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+| Recovered terminal evidence | Existing read/list APIs expose the Plugin-reported outcome and typed result/error separately from immutable Interrupted. SDK helpers preserve the distinction and do not return ordinary success | [Recovered outcomes](topics/plugins.md#recovered-outcomes), [SDK helpers](topics/sdk.md#helpers) |
+
+The five product choices in this bookkeeping design tree are resolved. Numeric budgets, schemas, concrete runtime-identity verification and real durability/transport/capacity qualification remain engineering work with S3 and S7. Other Plugin topics and host-supervision simplification are outside this interview. No production implementation, PR or merge is authorized or claimed.
+
+## Plugin design handoff, 7 October 2026
+
+After the documentation interview, the user said, "Let's do that. Can you get me through all those steps?" in response to the proposed documentation PR, scoped implementation specification and implementation with required tests. This authorizes that delivery work for Plugin execution bookkeeping. It does not authorize merging or changes to the other design threads' responsibilities. The accepted behavior remains in [Plugins](topics/plugins.md); the implementation specification belongs in the issue tracker.
