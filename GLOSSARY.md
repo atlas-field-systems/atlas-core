@@ -33,7 +33,7 @@ The Atlas SDK mode that maintains a Local operational picture of the whole Datas
 _Avoid_: full sync, hybrid mode, replica mode
 
 **Radio gateway**:
-Software connecting Atlas Core with bandwidth-limited Assets over a radio transport while preserving Asset identity and the meaning of their Tasks and reports. It has its own identity and relays only for its bound Assets.
+Software connecting Atlas Core with bandwidth-limited Assets over a radio transport, trusted to translate and submit reports for its bound Assets while preserving their identities and the meaning of their Tasks and reports. It has its own identity; gateway taskability is outside the current scope and remains open for the future.
 _Avoid_: Asset OS, Source Gateway, Core module
 
 **Core release**:
@@ -138,7 +138,7 @@ The administrative withdrawal of an Asset from participation while retaining its
 _Avoid_: Entity deletion, Operational status, Task cancellation, physical stop
 
 **Enrollment**:
-Giving an Asset an authenticated identity bound to its Asset ID. The binding belongs to the Installation and survives Reset.
+Giving an Asset an authenticated identity bound to its Asset ID, directly or through an authorized gateway. The binding belongs to the Installation and survives Reset.
 _Avoid_: Asset registration
 
 **Open enrollment**:

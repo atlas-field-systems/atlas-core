@@ -92,12 +92,12 @@ These are separate resource records, not Entity components or members of the ope
 | Authenticated identity | Stable principal ID and kind: operator client, Asset, managed Plugin or gateway; Asset identities carry their bound Asset ID. Permissions follow [callers and permissions](topics/identity-and-access.md#callers-and-permissions). |
 | API key / credential | Credential ID, principal association, descriptive metadata, verifier where applicable, and revocation state. Provisioning and revocation follow [credentials](topics/identity-and-access.md#credentials). |
 | Plugin | Release identity, installation/enablement/availability, declared configuration schema, saved/active settings, startup-validation state, management result |
-| Core settings | Explicitly supported server configuration fields and application requirements |
+| Core settings | Locally inspected and edited server configuration fields and application requirements under [Core configuration](topics/dataset-lifecycle.md#core-configuration); no public configuration resource |
 | Activity record | Stable action identity, authenticated actor ID/type and safe display context, action, target, time and known outcome, under [record contents and attribution](topics/history.md#record-contents-and-attribution) |
 
 What activity records cover and how they are recorded follow [Activity history](topics/history.md#activity-history).
 
-Their exact field inventory follows the approved endpoints and remains separate from this Entity-component schema. There are no role/permission records implied by these entries.
+Public records follow the approved endpoints; Core settings and private Plugin management records follow their local-management contracts. Their field inventories remain separate from this Entity-component schema. There are no role/permission records implied by these entries.
 
 ## Core support records
 

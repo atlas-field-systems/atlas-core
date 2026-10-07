@@ -16,6 +16,8 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Selected technology stack and generation tools | [Stack decision](docs/adr/0016-use-go-sqlite-and-openapi-tooling.md) |
 | Docker containers, Plugin separation and mounted storage | [Deployment decision](docs/adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
 | General SDK scope, IP-connected Assets and radio gateway placement | [Two-mode SDK decision](docs/adr/0020-limit-general-sdk-to-http-and-full-sync.md) |
+| Trusted gateway reporting and future gateway taskability | [Gateway trust decision](docs/adr/0028-trust-gateways-to-author-bound-asset-reports.md) |
+| Local-only Core configuration and retained remote health/readiness | [Configuration decision](docs/adr/0027-administer-core-configuration-locally.md) |
 | Start, Stop, Restart, Reset, Hard Reset, Dataset identity and release updates | [Dataset lifecycle](docs/topics/dataset-lifecycle.md) and [lifecycle decision](docs/adr/0015-separate-start-stop-restart-and-reset.md) |
 | Plugin Operations, lifecycle, configuration, private work storage and uninstall cleanup | [Plugins](docs/topics/plugins.md) and [storage decision](docs/adr/0021-manage-plugin-operational-storage-through-reset.md) |
 | Track publishers, corrections, observation age and deliberate combination | [Track publisher decision](docs/adr/0022-one-publisher-per-track.md) |
