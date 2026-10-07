@@ -14,7 +14,7 @@ The general Atlas SDK serves participants on IP links without bandwidth limits: 
 
 Remove Asset hybrid from the current SDK scope and defer Core's matching Asset-scoped snapshot, feed and replay contract, including automatic per-Asset dependency membership and Task dependency publication used solely for that coverage.
 
-The boundary is bandwidth, not whether the participant is an Asset. Bandwidth-limited Assets do not run the general SDK; their execution and constrained transport belong to the Asset OS and a radio gateway. Gateways use the general SDK, can obtain the full picture and select what crosses their radio link. Each gateway authenticates with its own gateway identity, which may read all operational data but may relay reports and assigned work only for the Assets bound to it.
+The boundary is bandwidth, not whether the participant is an Asset. Bandwidth-limited Assets do not run the general SDK; their execution and constrained transport belong to the Asset OS and a radio gateway. Gateways use the general SDK, can obtain the full picture and select what crosses their radio link. Each gateway authenticates with its own gateway identity, which may read all operational data but may submit reports and deliver assigned work only for the Assets bound to it. [ADR-0028](0028-trust-gateways-to-author-bound-asset-reports.md) subsequently made the gateway trusted to construct those Core-facing reports from Asset evidence without an originating Core-format signature.
 
 This removes a synchronization mechanism, not Task meaning. Assigned-work reads, requested and confirmed queue state, cancellations, terminal-record retention, typed Command references and required-result protection remain.
 
@@ -31,7 +31,7 @@ Decision history:
 - Reconsider specialized filtering only with a concrete consumer, rather than carrying it for a hypothetical constrained IP deployment. A future deployment with a constrained IP link may use a dedicated SDK designed for it; this decision does not add that deliverable to the current scope.
 - The extra traffic of the general SDK is acceptable for IP-connected Assets without bandwidth limits.
 - A Command that needs live data, such as Track updates, is not served by a one-time Task download, but its specialized radio delivery contract does not require a general partial replica in the SDK.
-- Making gateways Assets in their own right is a recorded future proposal, not an accepted direction.
+- Gateways are relay integrations and not taskable Assets in the current scope. Future gateway taskability remains open under [ADR-0028](0028-trust-gateways-to-author-bound-asset-reports.md).
 
 ## Consequences
 
@@ -40,5 +40,5 @@ Decision history:
 - [ADR-0024](0024-use-live-geofeature-geometry-in-tasks.md) also requires delivery of changing Geofeature geometry to existing Tasks. The full picture carries the committed Entity updates; the Asset client or gateway delivers them to execution, without restoring Core hybrid filtering.
 - An IP-connected Asset's software either uses TypeScript or runs the SDK in a companion process; another SDK language would be a separate decision.
 - Adequate IP bandwidth is a deployment assumption, not a throughput guarantee or a requirement for internet access; the ordinary offline operating model still applies when consumers can reach Core. Full-picture capacity, bounded recovery and the [real integration evidence](../testing-strategy.md) still need measurement and implementation.
-- Concrete relay proof and transport messages remain engineering work.
+- Concrete gateway authorization, evidence-to-report mapping, freshness and process-transfer proof fields and transport messages remain engineering work under ADR-0028; the radio grammar need not carry Core-format envelopes or signatures.
 - Earlier hybrid decisions remain historical context in the [decision log](../planning-reconciliation.md#sdk-and-gateway-decisions-28-september-2026).

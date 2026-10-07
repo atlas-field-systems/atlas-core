@@ -18,7 +18,7 @@ The general SDK assumes adequate IP bandwidth between its consumers and Core, in
 
 Gateways use HTTP mode or Full synchronization mode over their IP connection to Core, can obtain the full operational picture and select what crosses their radio link. No Core-side hybrid filtering is required. The constrained link is between the gateway and bandwidth-limited Assets; adequate gateway-to-Core bandwidth does not establish the capacity or behavior of that radio link. Gateway identity and relay limits follow [Radio gateways](identity-and-access.md#radio-gateways), and gateway translation of Asset reports follows the [relay rules](asset-reporting.md#report-authority-and-relay).
 
-HTTP/OpenAPI remains the selected Core interface. A gateway uses the general SDK on its Core-facing IP link and separate radio software for Asset messages. No radio packet format, compression algorithm, batching protocol or per-packet overhead guarantee is selected; radio delivery, including updates needed by a Command whose dependencies change during execution, remains future gateway work. Compact authenticated transport remains design work; any optimization must preserve the [caller identity](identity-and-access.md#callers-and-permissions) and [revocation](identity-and-access.md#credential-revocation) rules. A future radio gateway may translate operations compactly, but must preserve authenticated Asset origin, process authority, execution evidence, retry identity and Dataset semantics.
+HTTP/OpenAPI remains the selected Core interface. A gateway uses the general SDK on its Core-facing IP link and separate radio software for Asset messages. Core trusts that authenticated gateway to translate and construct reports for its bound Assets under [ADR-0028](../adr/0028-trust-gateways-to-author-bound-asset-reports.md). Radio messages need not carry Core-format envelopes or originating Asset signatures. No radio packet format, compression algorithm, batching protocol or per-packet overhead guarantee is selected; radio delivery, including updates needed by a Command whose dependencies change during execution, remains future gateway work. Translation preserves the reported Asset's identity, process authority, execution evidence, retry identity and Dataset semantics, together with [caller authorization](identity-and-access.md#callers-and-permissions) and [revocation](identity-and-access.md#credential-revocation). Gateways are relay integrations in the current scope; their possible future taskability remains open.
 
 Partial component updates, stable retry identities and bounded recovery remain because they preserve useful behavior without another read mode. A future deployment whose IP link is itself constrained may use a dedicated SDK or integration designed for it, without expanding this general SDK's scope.
 
@@ -72,7 +72,7 @@ The [query and status contract](#query-and-status-contract) defines readiness an
 
 ### Data outside the picture
 
-File bytes remain explicit downloads in both modes. Plugin discovery and status, Plugin Operations, Operator profiles, API keys and Core settings are outside the operational picture and use their supported API methods in every mode. Historical reads follow [Historical reads](#historical-reads). Plugin management is [local-only](plugins.md#local-administration) and has no SDK methods. Command Catalog lookup is local to the installed Protocol package in both modes under [Commands and the Command Catalog](tasks.md#commands-and-the-command-catalog).
+File bytes remain explicit downloads in both modes. Plugin discovery and status, Plugin Operations, Operator profiles and API keys are outside the operational picture and use their supported API methods in every mode. Historical reads follow [Historical reads](#historical-reads). Core configuration inspection and editing are [local-only](dataset-lifecycle.md#core-configuration), as is [Plugin management](plugins.md#local-administration); neither has SDK methods. Authenticated health and readiness remain remote operations. Command Catalog lookup is local to the installed Protocol package in both modes under [Commands and the Command Catalog](tasks.md#commands-and-the-command-catalog).
 
 ## Local operational picture
 
@@ -351,9 +351,11 @@ After an Asset process restart, the Asset OS supplies its onboard execution evid
 
 The SDK keeps no disk persistence. State that must survive a process restart, such as a pending registration identity, is prepared by the Asset client and handed to the Asset OS or deployment layer to retain before submission, following the [API-key creation](identity-and-access.md#api-keys) pattern.
 
-The Asset client does not implement the Asset OS or a radio protocol. Radio delivery, evidence transfer and authenticated relay delegation remain future work; a gateway identity can relay only for its bound Assets. The Asset client composes the [report wire contract](asset-reporting.md#shared-report-context) and the operations listed below; it adds no execution scheduler.
+The Asset client does not implement the Asset OS or a radio protocol. Radio delivery, evidence translation and the concrete gateway authority contract remain future work within the accepted [trusted relay boundary](asset-reporting.md#report-authority-and-relay). A gateway uses its own authenticated identity to submit reports only for its bound Assets. Its restart does not establish an Asset-process restart. The Asset client composes the [report wire contract](asset-reporting.md#shared-report-context) and the operations listed below; it adds no execution scheduler.
 
 ### Asset startup
+
+The steps below specify direct IP Asset startup. A radio gateway constructs Core-facing reports from its bound Asset's radio evidence under [trusted relay](asset-reporting.md#report-authority-and-relay); its radio-side enrollment and process-authority messages remain engineering work and need not reproduce these signature envelopes.
 
 1. The Asset client invokes registration with information supplied by the Asset OS or gateway. The SDK uses ordinary Entity creation, not a dedicated registration endpoint.
 2. [Enrollment](identity-and-access.md#enrollment) automatically binds an authenticated Asset identity, and Core validates the supplied initial data and creates the Asset with its [initial reporting values](asset-reporting.md#components-and-initial-values).
@@ -411,7 +413,7 @@ The [source reference](../atlas-modernization-reference.md#earlier-sdk-design) r
 
 ## Open questions
 
-- Radio transport, compact authenticated transport and gateway relay proof.
+- Radio transport and concrete trusted-gateway enrollment, process-authority and freshness messages under [ADR-0028](../adr/0028-trust-gateways-to-author-bound-asset-reports.md).
 - Consumer-specific freshness requirements beyond the accepted provisional field sizing profile.
 - Additional SDK languages and shared picture services are outside the initial SDK.
 

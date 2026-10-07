@@ -13,7 +13,7 @@ The [foundation-hardening spec #104](https://github.com/atlas-field-systems/atla
 | S2: Independent Object transfer | File-first durable publication, replayable producer, identity/digest, quota, deletion and protected hold seam; #70/#72 | Actual SQLite/filesystem kill barriers, interrupted/lost-response upload, concurrency/revocation/Reset races, exact downloaded bytes, download/delete ordering and no exposed partial Object |
 | S3: Independent Elevation Plugin | Manifest/capability validation, private dispatch ledger, local host lifetime and offline fixture; #64/#68/#76/#78/#79/#80 | Separately built Plugin container, accepted work survives caller loss, dispatch acknowledgement lost without re-execution, known elevation/reference, cancellation/stop/fault and retained Operation lookup |
 | S4: Both SDK modes and recovery | Complete-picture commit framing, initial-load/replay/live handoff, query/feed bounds, unknown outcomes; #65/#66/#71/#77 | Existing S1–S3 operational workflows in HTTP and Full synchronization modes plus independent direct Protocol fixtures; fragments, page races, late responses, deletions, expiry, Reset and zero hidden read fallback |
-| S5: Administrative/history completion | Operator/config/credentials/activity APIs, retirement, deletion and test-enrollment cleanup; #63/#67/#68/#71/#76/#79/#80/#82 | Real SDK and local-management workflows preserving identity/denials, revocation cutting off open feeds, protected work retained and attributed actions without secret disclosure |
+| S5: Administrative/history completion | Operator/credentials/activity APIs, retirement, deletion and test-enrollment cleanup; #63/#67/#68/#71/#76/#79/#82 | Real SDK and local-management workflows preserving identity/denials, revocation cutting off open feeds, protected work retained and attributed actions without secret disclosure |
 | S6: Broader tasking and observations | Queue edits, immediate/Pause/Resume, scan declarations, live geometry, Track publishers/corrections/freshness; #63/#66/#73/#74/#75/#76/#78/#81 | Independently authored packet tables through actual SDK/Core, immutable outcomes, reported active/suspended work, saved/applied geometry, declaration/upload races, per-quantity age and retained history |
 | S7: Full lifecycle and workload evidence | Installation-only format evolution, supervised Stop/Restart/Reset/Hard Reset, private Plugin cleanup, configuration and limits; #67/#68/#70/#72/#79/#80 | Real Linux management/Docker/storage/TLS fault injection after CLI exit, interruption at every action phase, retained identity through update, measured workload/resource/refusal results and no silently lost accepted work |
 | S8: External field/extension validation | Real Asset OS/hardware and an independently maintained removable Plugin; later radio gateway only when supplied | Real physical Command with contact loss/cancellation/process uncertainty; external Plugin installation/removal; radio transport and RF evidence when that integration exists |
@@ -29,12 +29,12 @@ Fixture body limits, fixed Dataset/context values and artificial `0.1.0`/`0.2.0`
 Later workflow owners retain the accepted obligations:
 
 - Operational SDK methods own validation wiring and [mutation outcomes and retries](../topics/sdk.md#mutation-outcomes-and-retries); the foundation's configurable response middleware does not implement those methods or their retained submission descriptors.
-- S1/S6 signed reports use [validated original facts](../topics/asset-reporting.md#shared-report-context), accounting for the generated Go [UUID/date-time normalization limit](../../Atlas%20Protocol/README.md#binding-representation-limits).
+- S1/S6 direct IP signed reports use [validated original facts](../topics/asset-reporting.md#shared-report-context), accounting for the generated Go [UUID/date-time normalization limit](../../Atlas%20Protocol/README.md#binding-representation-limits). Future radio integrations use the separately accepted [trusted gateway boundary](../adr/0028-trust-gateways-to-author-bound-asset-reports.md).
 - The binary fixture's private byte replacement is test behavior. S2 must preserve [Object content immutability](../topics/objects.md#what-an-object-is), [whole-file retry identity](../topics/objects.md#retries-after-a-lost-response) and [durable publication](../topics/objects.md#durability-and-publication-fixtures).
 
 ## Public API and SDK inventory
 
-The [endpoint map](../api-endpoints.md) specifies 53 future public method/path pairs; the shipped S0 public Protocol has no routes. This inventory groups all 53 and assigns their production schemas and behavior to the owning workflow. Every corresponding method in the [SDK operations catalog](../topics/sdk.md#operations-catalog) has the same owner. Administrative/history/content methods remain explicit HTTP operations in either SDK mode; operational picture reads use the selected mode's source.
+The [endpoint map](../api-endpoints.md) specifies 51 future public method/path pairs after the removal of public configuration inspection and editing under [ADR-0027](../adr/0027-administer-core-configuration-locally.md); the shipped S0 public Protocol has no routes. This inventory groups all 51 and assigns their production schemas and behavior to the owning workflow. Every corresponding method in the [SDK operations catalog](../topics/sdk.md#operations-catalog) has the same owner. Administrative/history/content methods remain explicit HTTP operations in either SDK mode; operational picture reads use the selected mode's source.
 
 | Accepted route group | Count | Owning slice and SDK operation coverage | Authority |
 | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ The [endpoint map](../api-endpoints.md) specifies 53 future public method/path p
 | Task result declaration | 1 | S6 Asset client append-only `POST /tasks/{task_id}/results` | [Results](../topics/tasks.md#result-declarations-and-execution-fixtures) |
 | Task associated-Object read | 1 | S2 ready associated Objects; S6 late declared output | [Objects](../topics/objects.md#routes-and-sdk-operations) |
 | Object list/upload/get/metadata patch/delete/download/view | 7 | S2 all Object methods and replayable producer; S6 protected result declarations | [Object transfer](../topics/objects.md#durability-and-publication-fixtures) |
-| Core config get/patch and resource diagnostics | 3 | S5 supported administrative SDK methods; S7 validation/application/overload | [Configuration](../topics/dataset-lifecycle.md#core-configuration) |
+| Core resource diagnostics | 1 | S5 administrative SDK diagnostics; S7 full resource/overload evidence | [Diagnostics](../api-endpoints.md#core-diagnostics) |
 | Activity read | 1 | S1 issuance/cancellation attribution; S5 complete historical-read method | [Activity history](../topics/history.md#activity-history) |
 | API-key list/create/revoke | 3 | S1 first-key bootstrap; S5 public management helpers | [API keys](../topics/identity-and-access.md#api-keys) |
 | Operator list/create/get/patch/delete | 5 | S5 profile/settings methods with retained attribution | [Operators](../topics/identity-and-access.md#operator-clients) |
@@ -67,7 +67,7 @@ Local Command Catalog lookup is a package function, not an extra HTTP route, and
 | Reset/Hard Reset and update-with-Reset | S1–S3 Reset seam, S7 full cleanup/update | New Dataset, completed/pending action distinction, installation-only conversion, all owned cleanup and unrelated resource preservation; [lifecycle](../topics/dataset-lifecycle.md) |
 | Plugin install/update/remove/enable/disable/start/stop/restart/configure | S3, S7 full faults | Active-work policy, independent process lifecycle, private working/setup separation, retained Operations and publisher proof; [Plugin administration](../topics/plugins.md#local-administration) |
 | Open enrollment switch and selected test identity cleanup | S5 | Retained provenance/warnings/denials, races and retry; [cleanup](../topics/identity-and-access.md#cleanup-after-testing) |
-| Core deferred config apply and invalid-setting repair | S7 | Desired/active revisions, startup gate, no automatic fallback/wipe; [configuration](../topics/dataset-lifecycle.md#core-configuration) |
+| Core configuration inspection/editing, live tuning, deployment apply and invalid-setting repair | S1 bootstrap, S7 complete settings/faults | Local CLI/TUI only, atomic validation, configured/effective state, startup gate and no automatic fallback/wipe; [configuration](../topics/dataset-lifecycle.md#core-configuration) |
 
 ## Required-scenario homes
 
@@ -76,6 +76,7 @@ Every row of the [required scenario table](../testing-strategy.md#required-scena
 | Required scenario group | Owning slice |
 | --- | --- |
 | Every public SDK operation | S1–S7 for the corresponding inventory owner; direct Protocol parity and both-mode assertions with each operational feature |
+| Local Core configuration | S1 bootstrap, S7 complete settings/application/fault evidence |
 | Open enrollment cleanup | S5 |
 | Asset identity and contact | S1, extended by S5/S6 |
 | Asset retirement | S5 |
@@ -125,7 +126,7 @@ The specification work in #63-84 is closed. These tickets specified the future c
 | [#77](https://github.com/atlas-field-systems/atlas-core/issues/77) | [Queries/cursors, local subscriptions and expected answer tables](../topics/sdk.md#query-and-status-contract) | S4 |
 | [#78](https://github.com/atlas-field-systems/atlas-core/issues/78) | [Shared spatial facts and independent offline MVP fixtures](../topics/spatial-data.md) | S1/S3 |
 | [#79](https://github.com/atlas-field-systems/atlas-core/issues/79) | [Offline trust/bootstrap and connection fixtures](../topics/dataset-lifecycle.md#offline-tls-and-first-time-setup) | S1/S3/S7 |
-| [#80](https://github.com/atlas-field-systems/atlas-core/issues/80) | [Supported fields, desired/active timing and recovery](../topics/dataset-lifecycle.md#core-configuration) | S5/S7 |
+| [#80](https://github.com/atlas-field-systems/atlas-core/issues/80) | [Local-only supported fields, live/deployment application and recovery](../topics/dataset-lifecycle.md#core-configuration), [ADR-0027](../adr/0027-administer-core-configuration-locally.md) | S1 bootstrap/S7 |
 | [#81](https://github.com/atlas-field-systems/atlas-core/issues/81) | [Mutation matrix](../topics/tracks-and-geofeatures.md#mutation-authority-matrix), [atomic class validation](../topics/asset-reporting.md#mutation-classes-and-atomic-validation) and [Descriptive edit permissions](../topics/identity-and-access.md#assets) | S1/S6 |
 | [#82](https://github.com/atlas-field-systems/atlas-core/issues/82) | [Initial temporal facts and independent registration fixtures](../topics/identity-and-access.md#initial-data-and-temporal-facts) | S1 |
 | [#83](https://github.com/atlas-field-systems/atlas-core/issues/83) | [Documentation authority and consolidated contracts](../agents/domain.md#where-information-belongs); [closure evidence from merged PR #62](https://github.com/atlas-field-systems/atlas-core/issues/83#issuecomment-5946244406) | Documentation consistency; runtime evidence remains with each owning slice |
