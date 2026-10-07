@@ -365,6 +365,38 @@ func TestClosePreservesFailedIngestionStop(t *testing.T) {
 	}
 }
 
+func TestClosePreservesWorkerAndIngestionFailures(t *testing.T) {
+	workerFailure := errors.New("capability failed before shutdown")
+	stopFailure := errors.New("ingestion writers not joined")
+	cfg := runtimeConfiguration(t, func(context.Context, *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		return plugindispatch.Outcome{}, workerFailure
+	})
+	cfg.StopIngestion = func(context.Context) error { return stopFailure }
+	runtime, err := pluginruntime.Open(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shutdown, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	defer runtime.Close(shutdown)
+	if _, err := runtime.Accept(context.Background(), dispatch()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-runtime.Faults():
+		if !errors.Is(err, workerFailure) {
+			t.Fatal("first capability failure was lost", err)
+		}
+	case <-shutdown.Done():
+		t.Fatal("capability did not report its failure")
+	}
+	for range 2 {
+		if err := runtime.Close(shutdown); !errors.Is(err, workerFailure) || !errors.Is(err, stopFailure) {
+			t.Fatal("shutdown lost a primary or ingestion cleanup failure", err)
+		}
+	}
+}
+
 func TestTransientProgressKeepsNewerPendingRevisionAndNeverBecomesRetained(t *testing.T) {
 	runtime := runtimeFixture(t, func(ctx context.Context, _ *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
 		<-ctx.Done()

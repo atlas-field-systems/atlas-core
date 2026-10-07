@@ -97,6 +97,7 @@ type Runtime struct {
 	workerFault   error
 	failures      chan error
 	ingestionDone chan struct{}
+	ingestionErr  error
 }
 
 // Invocation provides the original dispatch and durable progress/effect
@@ -548,7 +549,7 @@ func (r *Runtime) Close(ctx context.Context) error {
 		case <-r.ingestionDone:
 			return nil
 		default:
-			return fmt.Errorf("continuous ingestion shutdown incomplete: %w", r.workerFault)
+			return fmt.Errorf("continuous ingestion shutdown incomplete: %w", errors.Join(r.workerFault, r.ingestionErr))
 		}
 	case <-ctx.Done():
 		return ctx.Err()
@@ -574,6 +575,11 @@ func (r *Runtime) stopIngestionLocked() {
 	go func() {
 		defer r.workers.Done()
 		if err := r.cfg.StopIngestion(r.lifetime); err != nil {
+			// Cleanup must retain its cause even when another worker already
+			// owns the first fatal fault and its observer notification.
+			r.mu.Lock()
+			r.ingestionErr = err
+			r.mu.Unlock()
 			r.fail(fmt.Errorf("continuous ingestion stop failed: %w", err))
 			return
 		}
