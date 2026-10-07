@@ -70,10 +70,9 @@ def _worker_probe(command, env, core, deadline):
 
 
 def _signal_probe(command, env, core, number):
+    previous_subreaper = _subreaper()
     evidence = Path(tempfile.mkdtemp(prefix="atlas-plugin-owner-probe-"))
     manifest = evidence / "owner.json"
-    previous_subreaper = _subreaper()
-    _subreaper(1)
     previous_signals = {value: signal.getsignal(value) for value in (signal.SIGINT, signal.SIGTERM)}
     closing = False
 
@@ -83,9 +82,9 @@ def _signal_probe(command, env, core, number):
 
     owner = None
     state = None
-    primary = None
     errors = []
     try:
+        _subreaper(1)
         for value in previous_signals:
             signal.signal(value, interrupt)
         owner = subprocess.Popen(
@@ -114,9 +113,8 @@ def _signal_probe(command, env, core, number):
             raise RuntimeError(f"owner interruption returned {owner.returncode}: {diagnostic}")
         _assert_absent(plugin, root)
         _assert_absent(state["worker_pid"], root)
-    except BaseException as error:
-        primary = error
     finally:
+        primary = sys.exception()
         closing = True
         if owner is not None:
             try:
@@ -126,7 +124,7 @@ def _signal_probe(command, env, core, number):
                     _reap_group(state["worker_pid"])
                     if Path(state["root"]).exists():
                         shutil.rmtree(state["root"])
-            except BaseException as error:
+            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
                 errors.append(error)
         if not errors:
             try:
@@ -134,14 +132,18 @@ def _signal_probe(command, env, core, number):
             except OSError as error:
                 errors.append(error)
         for value, handler in previous_signals.items():
-            signal.signal(value, handler)
-        _subreaper(previous_subreaper)
-    if errors:
-        raise BaseExceptionGroup(
-            "Plugin interruption and observer cleanup errors", [primary, *errors] if primary else errors
-        )
-    if primary is not None:
-        raise primary
+            try:
+                signal.signal(value, handler)
+            except (OSError, ValueError) as error:
+                errors.append(error)
+        try:
+            _subreaper(previous_subreaper)
+        except OSError as error:
+            errors.append(error)
+        if errors:
+            raise BaseExceptionGroup(
+                "Plugin interruption and observer cleanup errors", [primary, *errors] if primary else errors
+            )
     print(f"PASS real Plugin cleanup after owner {signal.Signals(number).name}", flush=True)
 
 

@@ -81,7 +81,6 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
     arguments = list(map(str, arguments))
     print("+ " + " ".join(arguments), flush=True)
     previous_subreaper = _subreaper()
-    _subreaper(1)
     root = Path(tempfile.mkdtemp(prefix="atlas-go-tests-"))
     previous_signals = {number: signal.getsignal(number) for number in (signal.SIGINT, signal.SIGTERM)}
     closing = False
@@ -91,10 +90,10 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
             raise InterruptedError(number, "Go verification interrupted")
 
     process = None
-    primary = None
     cleanup_errors = []
     output = None
     try:
+        _subreaper(1)
         for number in previous_signals:
             signal.signal(number, interrupt)
         started = time.monotonic()
@@ -111,19 +110,21 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
             on_started(process, root)
         output, errors = process.communicate(timeout=max(0, timeout - (time.monotonic() - started)))
         if process.returncode != 0:
+            if capture:
+                print(output or "", end="")
+                print(errors or "", end="")
             raise subprocess.CalledProcessError(process.returncode, arguments, output, errors)
         if _group_exists(process.pid):
             raise RuntimeError("Go test worker left running or unreaped fixture processes")
-    except BaseException as error:
-        primary = error
     finally:
+        primary = sys.exception()
         closing = True
         stopped = process is None
         if process is not None:
             try:
                 _stop(process)
                 stopped = True
-            except BaseException as error:
+            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
                 cleanup_errors.append(error)
         if stopped:
             try:
@@ -133,17 +134,18 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
         else:
             cleanup_errors.append(RuntimeError(f"Go fixture shutdown incomplete; retained {root}"))
         for number, handler in previous_signals.items():
-            signal.signal(number, handler)
-        _subreaper(previous_subreaper)
-    if cleanup_errors:
-        raise BaseExceptionGroup(
-            "Go test failure and fixture cleanup errors", [primary, *cleanup_errors] if primary else cleanup_errors
-        )
-    if primary is not None:
-        if capture and isinstance(primary, subprocess.CalledProcessError):
-            print(primary.stdout or "", end="")
-            print(primary.stderr or "", end="")
-        raise primary
+            try:
+                signal.signal(number, handler)
+            except (OSError, ValueError) as error:
+                cleanup_errors.append(error)
+        try:
+            _subreaper(previous_subreaper)
+        except OSError as error:
+            cleanup_errors.append(error)
+        if cleanup_errors:
+            raise BaseExceptionGroup(
+                "Go test failure and fixture cleanup errors", [primary, *cleanup_errors] if primary else cleanup_errors
+            )
     return output.strip() if capture else None
 
 
@@ -164,7 +166,7 @@ def main():
     except InterruptedError as error:
         print(error, file=sys.stderr)
         return 128 + error.errno
-    except Exception as error:
+    except (OSError, RuntimeError, subprocess.SubprocessError, BaseExceptionGroup) as error:
         print(error, file=sys.stderr)
         return 1
     return 0
