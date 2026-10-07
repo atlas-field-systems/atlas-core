@@ -124,7 +124,7 @@ When Core is stopped and its pending Reset action record is unreadable or confli
 
 ### Completed Reset results
 
-The host retains only the latest completed Reset result through Stop, Start and Restart, until another Reset is accepted. It is a bounded, nonsecret result in the completed action record, with its action/Reset identity, resulting Dataset and known outcome. It is separate from Activity history and the local activity journal, which retain their own Reset rules; it does not retain pre-Reset logs or an archive of earlier Reset actions.
+The host retains only the latest completed Reset result through Stop, Start and Restart, until another Reset is accepted or [Hard Reset](#hard-reset) clears the installation. Hard Reset removes this completed action record from external recovery storage as part of its required cleanup before first-time setup; it cannot be retained or imported into the fresh installation. The result is bounded and nonsecret, with its action/Reset identity, resulting Dataset and known outcome. It is separate from Activity history and the local activity journal, which retain their own Reset rules; it does not retain pre-Reset logs or an archive of earlier Reset actions.
 
 Inspection or an identical retry returns that recorded result without executing lifecycle work. A completed record has no startup or cleanup authority and never enters pending-action recovery. Core's last established Reset identity may legitimately change after a later Reset; that mismatch cannot turn an earlier completed action into pending cleanup.
 
@@ -235,6 +235,7 @@ The following are independent expected scenarios for [#67](https://github.com/at
 | Core is stopped and its pending Reset record is unreadable or conflicts with the Installation identity | Start refuses with the record problem; existing data survives; explicit local repair resolves authority through Core's private inspection before resuming |
 | Reset completes but the final reply is lost, then Stop/Start/Restart occurs | The same action returns its retained completed result without another cleanup, fresh commit or Plugin start |
 | A later Reset is accepted, then a delayed caller retries the earlier completed Reset | Earlier result is no longer retained; retry has no effect on the later Dataset or pending action |
+| Hard Reset follows a completed Reset, then fresh setup finishes and a caller inspects or retries the old action | Completed record removed from external recovery storage before fresh setup; result no longer retained; no stale Dataset/result or lifecycle effects in the fresh installation |
 | Compatible enabled Plugin fails ready handshake during Reset startup, then coordinator retries | Dataset stays established; durable Plugin fault visible; all startup outcomes accounted for and Reset action completed; no repeated start or cleanup; later explicit recovery does not rerun an Operation |
 | Hard Reset interrupted after Core exits, unrelated containers/files present | External marker blocks ordinary Start; resume clears only owned targets; unrelated resources/Core software survive |
 | New release replaces incompatible Dataset schema with valid setup | Explicit preflight/update retains Operator IDs, Asset bindings, retired denials, revoked verifiers and API-key creation identities |
