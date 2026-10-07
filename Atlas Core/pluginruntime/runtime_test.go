@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
 	"sync"
@@ -15,6 +18,7 @@ import (
 
 	"github.com/atlas-field-systems/atlas-core/plugindispatch"
 	"github.com/atlas-field-systems/atlas-core/pluginruntime"
+	"golang.org/x/sys/unix"
 )
 
 // Focused ownership/cleanup probes supplement the real-process workflows.
@@ -22,12 +26,22 @@ import (
 // the JSON process boundary, which naturally copies values.
 func runtimeFixture(t *testing.T, execute pluginruntime.Execute) *pluginruntime.Runtime {
 	t.Helper()
+	return openRuntimeFixture(t, runtimeConfiguration(t, execute))
+}
+
+func runtimeConfiguration(t *testing.T, execute pluginruntime.Execute) pluginruntime.Config {
+	t.Helper()
 	contract, err := plugindispatch.Load("../../Atlas Protocol/plugin-dispatch.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	definition := plugindispatch.Capability{ID: "double", InputVersion: "1", InputSchema: json.RawMessage(`{"type":"object","required":["value"],"properties":{"value":{"type":"integer"}}}`), OutputSchema: json.RawMessage(`{"type":"object","required":["value"],"properties":{"value":{"type":"integer"}}}`)}
-	runtime, err := pluginruntime.Open(pluginruntime.Config{Contract: contract, Binding: binding(), Token: "private-fixture-token", Release: release(), ConfigurationRevision: "1", WorkDirectory: t.TempDir(), ReceiptCapacity: 2, MaxEvidenceFiles: 2, MaxEvidenceBytes: 1024 * 1024, Capabilities: []pluginruntime.Capability{{Definition: definition, Execute: execute}}})
+	return pluginruntime.Config{Contract: contract, Binding: binding(), Token: "private-fixture-token", Release: release(), ConfigurationRevision: "1", WorkDirectory: t.TempDir(), ReceiptCapacity: 2, MaxEvidenceFiles: 2, MaxEvidenceBytes: 1024 * 1024, Capabilities: []pluginruntime.Capability{{Definition: definition, Execute: execute}}}
+}
+
+func openRuntimeFixture(t *testing.T, cfg pluginruntime.Config) *pluginruntime.Runtime {
+	t.Helper()
+	runtime, err := pluginruntime.Open(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,6 +53,151 @@ func runtimeFixture(t *testing.T, execute pluginruntime.Execute) *pluginruntime.
 		}
 	})
 	return runtime
+}
+
+func TestConflictingEffectsInOneUpdateDoNotCommit(t *testing.T) {
+	cfg := runtimeConfiguration(t, func(ctx context.Context, _ *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		<-ctx.Done()
+		return plugindispatch.Outcome{}, ctx.Err()
+	})
+	runtime := openRuntimeFixture(t, cfg)
+	if _, err := runtime.Accept(context.Background(), dispatch()); err != nil {
+		t.Fatal(err)
+	}
+	_, err := runtime.Record(dispatch().OperationID, pluginruntime.Update{
+		Effects: []plugindispatch.Effect{{ID: "effect", Description: "original description"}, {ID: "effect", Description: "changed description"}},
+		Outcome: &plugindispatch.Outcome{Status: "completed", Result: json.RawMessage(`{"value":14}`)},
+	})
+	if err == nil || err.Error() != "effect_conflict" {
+		t.Fatal("conflicting effects were accepted", err)
+	}
+	if len(runtime.Pending()) != 0 || len(runtime.Retained()) != 0 {
+		t.Fatal("conflicting update changed pending or retained evidence")
+	}
+	progress, err := runtime.Record(dispatch().OperationID, pluginruntime.Update{Progress: json.RawMessage(`{"percent":50}`)})
+	if err != nil || progress.Sequence != "1" || len(progress.Effects) != 0 || progress.Outcome != nil {
+		t.Fatal("rejected update changed the live receipt", progress, err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := runtime.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	replacement := openRuntimeFixture(t, cfg)
+	if len(replacement.Retained()) != 0 {
+		t.Fatal("rejected update persisted private evidence")
+	}
+}
+
+func TestIdenticalEffectsInOneUpdatePersistOnce(t *testing.T) {
+	cfg := runtimeConfiguration(t, func(ctx context.Context, _ *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		<-ctx.Done()
+		return plugindispatch.Outcome{}, ctx.Err()
+	})
+	runtime := openRuntimeFixture(t, cfg)
+	if _, err := runtime.Accept(context.Background(), dispatch()); err != nil {
+		t.Fatal(err)
+	}
+	effect := plugindispatch.Effect{ID: "effect", Description: "saved effect"}
+	saved, err := runtime.Record(dispatch().OperationID, pluginruntime.Update{Effects: []plugindispatch.Effect{effect, effect}})
+	if err != nil || len(saved.Effects) != 1 || saved.Effects[0] != effect {
+		t.Fatal("identical effect identities did not deduplicate", saved, err)
+	}
+	completed, err := runtime.Record(dispatch().OperationID, pluginruntime.Update{Outcome: &plugindispatch.Outcome{Status: "completed", Result: json.RawMessage(`{"value":14}`)}})
+	if err != nil || len(completed.Effects) != 1 || completed.Effects[0] != effect || completed.Sequence != "2" {
+		t.Fatal("live receipt did not retain one effect", completed, err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := runtime.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	replacement := openRuntimeFixture(t, cfg)
+	retained := replacement.Retained()
+	if len(retained) != 1 || len(retained[0].Effects) != 1 || retained[0].Effects[0] != effect || retained[0].Outcome == nil || retained[0].Outcome.Status != "completed" {
+		t.Fatal("identical effect identities did not retain one durable effect", retained)
+	}
+}
+
+func TestRuntimeValidatesLocalCapabilitySchemas(t *testing.T) {
+	cfg := runtimeConfiguration(t, func(ctx context.Context, _ *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		<-ctx.Done()
+		return plugindispatch.Outcome{}, ctx.Err()
+	})
+	definition := &cfg.Capabilities[0].Definition
+	definition.InputSchemaPath, definition.OutputSchemaPath, definition.ErrorSchemaPath = "schemas/input.json", "schemas/output.json", "schemas/failure.json"
+	definition.InputSchema = json.RawMessage(`{"$ref":"../values.json#/$defs/input"}`)
+	definition.OutputSchema = json.RawMessage(`{"$ref":"../values.json#/$defs/output"}`)
+	definition.ErrorSchema = json.RawMessage(`{"$ref":"../values.json#/$defs/failure"}`)
+	definition.SchemaResources = map[string]json.RawMessage{"values.json": json.RawMessage(`{"$defs":{"input":{"const":{"value":7}},"output":{"const":{"value":14}},"failure":{"const":{"reason":"fixture failure"}}}}`)}
+	runtime := openRuntimeFixture(t, cfg)
+	// Caller mutations cannot replace the original release's compiled schemas.
+	definition.SchemaResources["values.json"] = json.RawMessage(`{"$defs":{"input":{"const":{"value":8}},"output":{"const":{"value":16}},"failure":{"const":{"reason":"changed failure"}}}}`)
+	invalid := dispatch()
+	invalid.Input = json.RawMessage(`{"value":8}`)
+	invalid.InputDigest = plugindispatch.Digest(invalid.Input)
+	if _, err := runtime.Accept(context.Background(), invalid); err == nil {
+		t.Fatal("input bypassed the original local bundle schema")
+	}
+	if _, err := runtime.Accept(context.Background(), dispatch()); err != nil {
+		t.Fatal("local bundle input was rejected", err)
+	}
+	if _, err := runtime.Record(dispatch().OperationID, pluginruntime.Update{Outcome: &plugindispatch.Outcome{Status: "completed", Result: json.RawMessage(`{"value":16}`)}}); err == nil {
+		t.Fatal("result bypassed the original local bundle schema")
+	}
+	completed, err := runtime.Record(dispatch().OperationID, pluginruntime.Update{Outcome: &plugindispatch.Outcome{Status: "completed", Result: json.RawMessage(`{"value":14}`)}})
+	if err != nil || completed.Sequence != "1" || completed.Outcome == nil || string(completed.Outcome.Result) != `{"value":14}` {
+		t.Fatal("local bundle result was rejected", completed, err)
+	}
+	failed := dispatch()
+	failed.OperationID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+	if _, err := runtime.Accept(context.Background(), failed); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runtime.Record(failed.OperationID, pluginruntime.Update{Outcome: &plugindispatch.Outcome{Status: "failed", Error: json.RawMessage(`{"reason":"changed failure"}`)}}); err == nil {
+		t.Fatal("failure bypassed the original local bundle schema")
+	}
+	evidence, err := runtime.Record(failed.OperationID, pluginruntime.Update{Outcome: &plugindispatch.Outcome{Status: "failed", Error: json.RawMessage(`{"reason":"fixture failure"}`)}})
+	if err != nil || evidence.Sequence != "1" || evidence.Outcome == nil || string(evidence.Outcome.Error) != `{"reason":"fixture failure"}` || len(runtime.Retained()) != 2 {
+		t.Fatal("local bundle failure was rejected", evidence, err)
+	}
+}
+
+// A malformed retained file needs the real filesystem boundary. Run Open in a
+// subprocess so a FIFO read that blocks is killed and reaped before cleanup.
+func TestRetainedEvidenceFIFORefusesReadiness(t *testing.T) {
+	if args := flag.Args(); len(args) == 1 {
+		cfg := runtimeConfiguration(t, func(context.Context, *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+			return plugindispatch.Outcome{}, errors.New("unexpected execution")
+		})
+		cfg.WorkDirectory = args[0]
+		runtime, err := pluginruntime.Open(cfg)
+		if runtime != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			if err := runtime.Close(ctx); err != nil {
+				t.Error(err)
+			}
+		}
+		if err == nil || err.Error() != "incompatible_retained_evidence" {
+			t.Fatal("non-regular evidence file did not fault readiness", err)
+		}
+		return
+	}
+	directory := t.TempDir()
+	if err := unix.Mkfifo(filepath.Join(directory, dispatch().OperationID+".evidence.json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	child := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestRetainedEvidenceFIFORefusesReadiness$", "--", directory)
+	output, err := child.CombinedOutput()
+	if ctx.Err() != nil {
+		t.Fatal("retained FIFO blocked readiness instead of refusing it", ctx.Err())
+	}
+	if err != nil {
+		t.Fatalf("retained FIFO probe failed: %v\n%s", err, output)
+	}
 }
 func binding() plugindispatch.Binding {
 	return plugindispatch.Binding{PluginID: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", PrincipalID: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", DatasetID: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", CoreRunID: "run", RuntimeGeneration: "runtime"}
@@ -65,6 +224,9 @@ func TestReceiptAndEvidenceSnapshotsCannotRewriteRetainedFacts(t *testing.T) {
 	<-started
 	original.Input[9] = '9'
 	ready := runtime.Ready(false)
+	if ready.ReceiptCapacity != 2 {
+		t.Fatal("readiness did not advertise the configured receipt capacity", ready.ReceiptCapacity)
+	}
 	if string(ready.Receipts[0].Execution.Input) != `{"value":7}` {
 		t.Fatal("caller mutated live receipt")
 	}

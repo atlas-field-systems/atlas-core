@@ -48,7 +48,7 @@ func TestHostAndReadinessRequireExactInstalledCapabilityVersion(t *testing.T) {
 	if err := f.core.BindRuntime(context.Background(), f.binding); err != nil {
 		t.Fatal("rejected declarations consumed runtime authority", err)
 	}
-	ready := plugindispatch.Ready{Release: f.binding.Release, ConfigurationRevision: f.binding.ConfigurationRevision, ContractVersion: f.contract.Version, Capabilities: []plugindispatch.CapabilityIdentity{{ID: "double", InputVersion: "2"}}, ReceiptsRetained: true, Receipts: []plugindispatch.Receipt{}, Complete: true, LiveWitness: uuid.NewString()}
+	ready := plugindispatch.Ready{Release: f.binding.Release, ConfigurationRevision: f.binding.ConfigurationRevision, ContractVersion: f.contract.Version, ReceiptCapacity: f.binding.ReceiptCapacity, Capabilities: []plugindispatch.CapabilityIdentity{{ID: "double", InputVersion: "2"}}, ReceiptsRetained: true, Receipts: []plugindispatch.Receipt{}, Complete: true, LiveWitness: uuid.NewString()}
 	response := privateRequest(t, f, plugindispatch.Request{Kind: "ready", Binding: f.binding.Binding, Token: f.binding.Token, Ready: &ready})
 	if response.Kind != "error" || response.Error != "readiness_mismatch" || f.core.Available(pluginID) {
 		t.Fatal("readiness dropped the input-version binding", response)

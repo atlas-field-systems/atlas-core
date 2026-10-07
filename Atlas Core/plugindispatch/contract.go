@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
+	"net/url"
 	"os"
 
 	"github.com/atlas-field-systems/atlas-core/httpcontract"
@@ -28,8 +30,13 @@ type Release struct {
 	ImageDigest string `json:"image_digest"`
 }
 type Capability struct {
-	ID, InputVersion                       string
-	InputSchema, OutputSchema, ErrorSchema json.RawMessage
+	ID, InputVersion          string
+	InputSchema, OutputSchema json.RawMessage
+	ErrorSchema               json.RawMessage `json:"error_schema,omitempty"`
+	SchemaResources           map[string]json.RawMessage
+	InputSchemaPath           string `json:"input_schema_path,omitempty"`
+	OutputSchemaPath          string `json:"output_schema_path,omitempty"`
+	ErrorSchemaPath           string `json:"error_schema_path,omitempty"`
 }
 type CapabilityIdentity struct {
 	ID           string `json:"capability_id"`
@@ -75,6 +82,7 @@ type Ready struct {
 	ContractVersion       int                  `json:"contract_version"`
 	Capabilities          []CapabilityIdentity `json:"capabilities"`
 	ReceiptsRetained      bool                 `json:"receipts_retained"`
+	ReceiptCapacity       int                  `json:"receipt_capacity"`
 	Receipts              []Receipt            `json:"receipts"`
 	Complete              bool                 `json:"complete"`
 	LiveWitness           string               `json:"live_witness"`
@@ -174,7 +182,7 @@ func ValidateOutcome(outcome Outcome, output, failure *jsonschema.Schema, bound 
 		}
 		return ValidateJSON(output, outcome.Result, bound)
 	case "failed":
-		if len(outcome.Error) == 0 || len(outcome.Result) != 0 || failure == nil {
+		if len(outcome.Error) == 0 || len(outcome.Result) != 0 {
 			return errors.New("invalid_outcome")
 		}
 		return ValidateJSON(failure, outcome.Error, bound)
@@ -188,9 +196,24 @@ func ValidateOutcome(outcome Outcome, output, failure *jsonschema.Schema, bound 
 	}
 }
 
-// CompileSchema accepts self-contained schemas only. No network lookup can
-// occur during capability validation or retained-evidence validation.
+// CompileSchema compiles a self-contained schema without external retrieval.
 func CompileSchema(encoded json.RawMessage) (*jsonschema.Schema, error) {
+	return CompileCapabilitySchema(encoded, nil, "")
+}
+
+const schemaRootURL = "https://atlas.invalid/plugin-schema/"
+
+// CompileCapabilitySchema compiles a root schema with its local bundle files.
+// No filesystem or network loader is enabled, including for missing references.
+func CompileCapabilitySchema(encoded json.RawMessage, resources map[string]json.RawMessage, location string) (*jsonschema.Schema, error) {
+	rootURL := schemaRootURL
+	if location != "" {
+		var err error
+		rootURL, err = localSchemaURL(location)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if err := httpcontract.CheckJSONDocument(encoded); err != nil {
 		return nil, err
 	}
@@ -201,10 +224,48 @@ func CompileSchema(encoded json.RawMessage) (*jsonschema.Schema, error) {
 	compiler := jsonschema.NewCompiler()
 	compiler.UseLoader(jsonschema.SchemeURLLoader{})
 	compiler.AssertFormat()
-	if err := compiler.AddResource("schema.json", value); err != nil {
+	if err := compiler.AddResource(rootURL, value); err != nil {
 		return nil, err
 	}
-	return compiler.Compile("schema.json")
+	for name, encoded := range resources {
+		resourceURL, err := localSchemaURL(name)
+		if err != nil {
+			return nil, err
+		}
+		if err := httpcontract.CheckJSONDocument(encoded); err != nil {
+			return nil, fmt.Errorf("invalid local schema resource: %w", err)
+		}
+		resource, err := jsonschema.UnmarshalJSON(bytes.NewReader(encoded))
+		if err != nil {
+			return nil, err
+		}
+		if resourceURL == rootURL {
+			rootBytes, err := json.Marshal(value)
+			if err != nil {
+				return nil, err
+			}
+			resourceBytes, err := json.Marshal(resource)
+			if err != nil {
+				return nil, err
+			}
+			if !bytes.Equal(rootBytes, resourceBytes) {
+				return nil, errors.New("conflicting local root schema")
+			}
+			continue
+		}
+		if err := compiler.AddResource(resourceURL, resource); err != nil {
+			return nil, err
+		}
+	}
+	return compiler.Compile(rootURL)
+}
+
+func localSchemaURL(name string) (string, error) {
+	location, err := url.Parse(name)
+	if err != nil || !fs.ValidPath(name) || name == "." || location.Scheme != "" || location.Host != "" || location.RawQuery != "" || location.Fragment != "" || location.Path != name {
+		return "", errors.New("invalid local schema resource name")
+	}
+	return schemaRootURL + location.EscapedPath(), nil
 }
 func ValidateJSON(schema *jsonschema.Schema, encoded json.RawMessage, bound int) error {
 	if len(encoded) > bound {
@@ -217,8 +278,12 @@ func ValidateJSON(schema *jsonschema.Schema, encoded json.RawMessage, bound int)
 	if err != nil {
 		return errors.New("invalid_json")
 	}
-	if err := schema.Validate(value); err != nil {
-		return errors.New("invalid_schema")
+	// The private outcome contract permits arbitrary JSON errors when a
+	// capability declares no additional error schema.
+	if schema != nil {
+		if err := schema.Validate(value); err != nil {
+			return errors.New("invalid_schema")
+		}
 	}
 	return nil
 }
@@ -268,6 +333,19 @@ func SameDispatch(left, right Dispatch) bool {
 }
 
 func CloneDispatch(value Dispatch) Dispatch { value.Input = bytes.Clone(value.Input); return value }
+func CloneCapability(value Capability) Capability {
+	value.InputSchema = bytes.Clone(value.InputSchema)
+	value.OutputSchema = bytes.Clone(value.OutputSchema)
+	value.ErrorSchema = bytes.Clone(value.ErrorSchema)
+	if value.SchemaResources != nil {
+		resources := make(map[string]json.RawMessage, len(value.SchemaResources))
+		for name, schema := range value.SchemaResources {
+			resources[name] = bytes.Clone(schema)
+		}
+		value.SchemaResources = resources
+	}
+	return value
+}
 func CloneEvidence(value Evidence) Evidence {
 	value.Execution = CloneDispatch(value.Execution)
 	value.Progress = bytes.Clone(value.Progress)

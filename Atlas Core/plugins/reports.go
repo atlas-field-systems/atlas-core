@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/atlas-field-systems/atlas-core/plugindispatch"
@@ -58,7 +59,11 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 		}
 		if evidence.Outcome != nil {
 			outcome := evidence.Outcome
-			schemas, exists := m.resultSchemas[resultSchemaKey{string(operation.OutputSchema), string(operation.ErrorSchema)}]
+			key, err := operation.resultSchemaSource.identity()
+			if err != nil {
+				return fmt.Errorf("%w: original result schema: %w", ErrIntegrity, err)
+			}
+			schemas, exists := m.resultSchemas[key]
 			if !exists {
 				return errors.New("missing_original_result_schema")
 			}

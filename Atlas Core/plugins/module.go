@@ -81,12 +81,32 @@ type Operation struct {
 
 type operationRecord struct {
 	Operation
+	resultSchemaSource
 	Exposed        bool
 	Acknowledged   bool
 	Reports        map[string]string
 	LatestSequence uint64
-	OutputSchema   json.RawMessage
-	ErrorSchema    json.RawMessage `json:"error_schema,omitempty"`
+}
+
+// The complete original result context remains part of Core's private record,
+// including bundle locations needed to interpret relative references.
+type resultSchemaSource struct {
+	OutputSchema     json.RawMessage
+	ErrorSchema      json.RawMessage            `json:"error_schema,omitempty"`
+	SchemaResources  map[string]json.RawMessage `json:"schema_resources,omitempty"`
+	OutputSchemaPath string                     `json:"output_schema_path,omitempty"`
+	ErrorSchemaPath  string                     `json:"error_schema_path,omitempty"`
+}
+
+func resultSource(definition plugindispatch.Capability) resultSchemaSource {
+	return resultSchemaSource{definition.OutputSchema, definition.ErrorSchema, definition.SchemaResources, definition.OutputSchemaPath, definition.ErrorSchemaPath}
+}
+
+func (source resultSchemaSource) identity() (string, error) {
+	// Marshal exactly the owning representation, including resource bytes and
+	// paths. Identical root schemas can have different bundle meanings.
+	encoded, err := json.Marshal(source)
+	return string(encoded), err
 }
 
 // RuntimeBinding is a trusted host input. VerifiedProcess must identify the
@@ -125,9 +145,6 @@ type capabilityKey struct {
 	release          plugindispatch.Release
 	id, inputVersion string
 }
-type resultSchemaKey struct {
-	output, failure string
-}
 type resultSchemas struct {
 	output, failure *jsonschema.Schema
 }
@@ -150,7 +167,7 @@ type Module struct {
 	queries        *storage.Queries
 	cfg            Config
 	capabilities   map[capabilityKey]capability
-	resultSchemas  map[resultSchemaKey]resultSchemas
+	resultSchemas  map[string]resultSchemas
 	schemaLimit    int64
 	runtimes       map[string]*runtime
 	closed         bool
@@ -196,7 +213,7 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 		for _, definition := range registration.Capabilities {
 			identities = append(identities, plugindispatch.CapabilityIdentity{ID: definition.ID, InputVersion: definition.InputVersion})
 		}
-		declaration := plugindispatch.Ready{Release: registration.Release, ConfigurationRevision: "declaration", ContractVersion: cfg.Contract.Version, Capabilities: identities, Receipts: []plugindispatch.Receipt{}, LiveWitness: uuid.NewString()}
+		declaration := plugindispatch.Ready{Release: registration.Release, ConfigurationRevision: "declaration", ContractVersion: cfg.Contract.Version, Capabilities: identities, ReceiptCapacity: 1, Receipts: []plugindispatch.Receipt{}, LiveWitness: uuid.NewString()}
 		binding := plugindispatch.Binding{PluginID: registration.PluginID, PrincipalID: registration.PluginID, DatasetID: cfg.DatasetID, CoreRunID: cfg.CoreRunID, RuntimeGeneration: "declaration"}
 		if _, err := cfg.Contract.Encode(plugindispatch.Request{Kind: "ready", Binding: binding, Token: "local-declaration", Ready: &declaration}); err != nil {
 			return nil, err
@@ -204,24 +221,22 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 		registration.Capabilities = slices.Clone(registration.Capabilities)
 		for j := range registration.Capabilities {
 			definition := &registration.Capabilities[j]
-			definition.InputSchema = bytes.Clone(definition.InputSchema)
-			definition.OutputSchema = bytes.Clone(definition.OutputSchema)
-			definition.ErrorSchema = bytes.Clone(definition.ErrorSchema)
+			*definition = plugindispatch.CloneCapability(*definition)
 		}
 		definitionCount += int64(len(registration.Capabilities))
 	}
-	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[capabilityKey]capability), resultSchemas: make(map[resultSchemaKey]resultSchemas), schemaLimit: definitionCount, runtimes: make(map[string]*runtime)}
+	m := &Module{issuedBindings: make(map[plugindispatch.Binding]bool), issuedTokens: make(map[string]bool), cfg: cfg, changed: make(chan struct{}), capabilities: make(map[capabilityKey]capability), resultSchemas: make(map[string]resultSchemas), schemaLimit: definitionCount, runtimes: make(map[string]*runtime)}
 	for _, registration := range cfg.Releases {
 		for _, definition := range registration.Capabilities {
 			key := capabilityKey{registration.PluginID, registration.Release, definition.ID, definition.InputVersion}
 			if _, exists := m.capabilities[key]; exists {
 				return nil, errors.New("duplicate capability")
 			}
-			input, err := plugindispatch.CompileSchema(definition.InputSchema)
+			input, err := plugindispatch.CompileCapabilitySchema(definition.InputSchema, definition.SchemaResources, definition.InputSchemaPath)
 			if err != nil {
 				return nil, fmt.Errorf("compile capability input: %w", err)
 			}
-			if err := m.prepareResultSchemas(definition.OutputSchema, definition.ErrorSchema); err != nil {
+			if err := m.prepareResultSchemas(resultSource(definition)); err != nil {
 				return nil, err
 			}
 			m.capabilities[key] = capability{definition: definition, input: input}
@@ -250,7 +265,7 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	// a configured capability or a retained Operation; reports cannot add any.
 	m.schemaLimit += count
 	if err := m.scan(ctx, m.queries, func(operation operationRecord) error {
-		if err := m.prepareResultSchemas(operation.OutputSchema, operation.ErrorSchema); err != nil {
+		if err := m.prepareResultSchemas(operation.resultSchemaSource); err != nil {
 			return fmt.Errorf("%w: original result schema: %w", ErrIntegrity, err)
 		}
 		return m.validateStoredOutcomes(operation)
@@ -286,34 +301,24 @@ func Open(ctx context.Context, cfg Config) (_ *Module, result error) {
 	return m, nil
 }
 
-func (m *Module) prepareResultSchemas(output, failure json.RawMessage) error {
-	// Use the same RawMessage representation as the stored Operation: compact
-	// JSON with HTML escaping, without changing schema numbers or field order.
-	encodedOutput, err := json.Marshal(output)
+func (m *Module) prepareResultSchemas(source resultSchemaSource) error {
+	key, err := source.identity()
 	if err != nil {
 		return err
 	}
-	var encodedFailure []byte
-	if len(failure) > 0 {
-		encodedFailure, err = json.Marshal(failure)
-		if err != nil {
-			return err
-		}
-	}
-	key := resultSchemaKey{string(encodedOutput), string(encodedFailure)}
 	if _, exists := m.resultSchemas[key]; exists {
 		return nil
 	}
 	if int64(len(m.resultSchemas)) >= m.schemaLimit {
 		return ErrLimit
 	}
-	compiled, err := plugindispatch.CompileSchema(output)
+	compiled, err := plugindispatch.CompileCapabilitySchema(source.OutputSchema, source.SchemaResources, source.OutputSchemaPath)
 	if err != nil {
 		return fmt.Errorf("compile capability output: %w", err)
 	}
 	prepared := resultSchemas{output: compiled}
-	if len(failure) > 0 {
-		prepared.failure, err = plugindispatch.CompileSchema(failure)
+	if len(source.ErrorSchema) > 0 {
+		prepared.failure, err = plugindispatch.CompileCapabilitySchema(source.ErrorSchema, source.SchemaResources, source.ErrorSchemaPath)
 		if err != nil {
 			return fmt.Errorf("compile capability error: %w", err)
 		}
@@ -510,7 +515,8 @@ func (m *Module) Submit(ctx context.Context, submission Submission) (operation O
 		if count >= int64(m.cfg.MaxOperations) {
 			return ErrLimit
 		}
-		record = operationRecord{Operation: Operation{ID: uuid.NewString(), Original: submission, Status: Pending, Execution: plugindispatch.Dispatch{Binding: active.host.Binding, Release: active.host.Release, CapabilityID: submission.CapabilityID, InputVersion: submission.InputVersion, Input: input, InputDigest: plugindispatch.Digest(input)}}, Reports: make(map[string]string), OutputSchema: bytes.Clone(definition.definition.OutputSchema), ErrorSchema: bytes.Clone(definition.definition.ErrorSchema)}
+		originalDefinition := plugindispatch.CloneCapability(definition.definition)
+		record = operationRecord{Operation: Operation{ID: uuid.NewString(), Original: submission, Status: Pending, Execution: plugindispatch.Dispatch{Binding: active.host.Binding, Release: active.host.Release, CapabilityID: submission.CapabilityID, InputVersion: submission.InputVersion, Input: input, InputDigest: plugindispatch.Digest(input)}}, Reports: make(map[string]string), resultSchemaSource: resultSource(originalDefinition)}
 		record.Execution.OperationID = record.ID
 		body, err := json.Marshal(record)
 		if err != nil {
@@ -578,7 +584,7 @@ func (m *Module) BindRuntime(ctx context.Context, host RuntimeBinding) error {
 	if previous := m.runtimes[b.PluginID]; previous != nil {
 		return errors.New("runtime_already_bound")
 	}
-	tokenKey := b.PluginID + "/" + plugindispatch.Digest([]byte(host.Token))
+	tokenKey := plugindispatch.Digest([]byte(host.Token))
 	if m.issuedBindings[b] || m.issuedTokens[tokenKey] {
 		return ErrAuthority
 	}
@@ -590,7 +596,7 @@ func (m *Module) BindRuntime(ctx context.Context, host RuntimeBinding) error {
 			return ErrUnsupported
 		}
 	}
-	ready := plugindispatch.Ready{Release: host.Release, ConfigurationRevision: host.ConfigurationRevision, ContractVersion: m.cfg.Contract.Version, Capabilities: host.Capabilities, Receipts: []plugindispatch.Receipt{}, ReceiptsRetained: true, LiveWitness: uuid.NewString()}
+	ready := plugindispatch.Ready{Release: host.Release, ConfigurationRevision: host.ConfigurationRevision, ContractVersion: m.cfg.Contract.Version, ReceiptCapacity: host.ReceiptCapacity, Capabilities: host.Capabilities, Receipts: []plugindispatch.Receipt{}, ReceiptsRetained: true, LiveWitness: uuid.NewString()}
 	if _, err := m.cfg.Contract.Encode(plugindispatch.Request{Kind: "ready", Binding: b, Token: host.Token, Ready: &ready}); err != nil {
 		return err
 	}

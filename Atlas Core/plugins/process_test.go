@@ -46,9 +46,10 @@ func (f *fixture) startProcess(t *testing.T, mode string, coreMode bool) *child 
 		Binding                                   plugindispatch.Binding
 		Token                                     string
 		Release                                   plugindispatch.Release
+		Definition                                *plugindispatch.Capability
 		Capacity, MaxFiles                        int
 		MaxBytes                                  int64
-	}{ContractPath: absolute(t, "../../Atlas Protocol/plugin-dispatch.json"), Socket: f.socket, Work: f.work, Effects: f.effects, Mode: mode, Binding: f.binding.Binding, Token: f.binding.Token, Release: f.binding.Release, Capacity: f.binding.ReceiptCapacity, MaxFiles: f.maxFiles, MaxBytes: f.maxBytes}
+	}{ContractPath: absolute(t, "../../Atlas Protocol/plugin-dispatch.json"), Socket: f.socket, Work: f.work, Effects: f.effects, Mode: mode, Binding: f.binding.Binding, Token: f.binding.Token, Release: f.binding.Release, Definition: f.definition, Capacity: f.binding.ReceiptCapacity, MaxFiles: f.maxFiles, MaxBytes: f.maxBytes}
 	body, err := json.Marshal(config)
 	if err != nil {
 		t.Fatal(err)

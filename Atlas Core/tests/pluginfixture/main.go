@@ -28,6 +28,7 @@ type configuration struct {
 	Binding                                   plugindispatch.Binding
 	Token                                     string
 	Release                                   plugindispatch.Release
+	Definition                                *plugindispatch.Capability
 	Capacity, MaxFiles                        int
 	MaxBytes                                  int64
 }
@@ -73,6 +74,9 @@ func run() (result error) {
 	var releaseOnce sync.Once
 	var syncFault atomic.Bool
 	definition := fixtureDefinition()
+	if cfg.Definition != nil {
+		definition = *cfg.Definition
+	}
 	if cfg.Mode == "run-lookup-v1" || cfg.Mode == "run-lookup-v2" {
 		definition.ID = "lookup"
 		definition.InputVersion = strings.TrimPrefix(cfg.Mode, "run-lookup-v")
@@ -252,6 +256,22 @@ func run() (result error) {
 		case command := <-commands:
 			var commandErr error
 			switch command {
+			case "drop-dispatch-response":
+				response, err := exchange(plugindispatch.Request{Kind: "next"})
+				commandErr = err
+				if err == nil {
+					if response.Kind != "dispatch" {
+						commandErr = errors.New("expected dispatch to drop")
+					} else {
+						// Discard the committed exposure response before Accept can
+						// create a live receipt or execute the capability.
+						commandErr = connection.Close()
+						connection = nil
+						if commandErr == nil {
+							emit(event{Event: "dispatch_response_dropped"})
+						}
+					}
+				}
 			case "next":
 				response, err := exchange(plugindispatch.Request{Kind: "next"})
 				commandErr = err

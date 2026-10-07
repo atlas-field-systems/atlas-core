@@ -4,7 +4,6 @@
 package pluginruntime
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -114,25 +113,22 @@ func Open(cfg Config) (*Runtime, error) {
 	}
 	cfg.Capabilities = slices.Clone(cfg.Capabilities)
 	for i := range cfg.Capabilities {
-		definition := &cfg.Capabilities[i].Definition
-		definition.InputSchema = bytes.Clone(definition.InputSchema)
-		definition.OutputSchema = bytes.Clone(definition.OutputSchema)
-		definition.ErrorSchema = bytes.Clone(definition.ErrorSchema)
+		cfg.Capabilities[i].Definition = plugindispatch.CloneCapability(cfg.Capabilities[i].Definition)
 	}
 	r := &Runtime{cfg: cfg, capabilities: make(map[capabilityKey]compiledCapability), receipts: make(map[string]*receipt), evidence: make(map[string]plugindispatch.Evidence), pending: make(map[string]plugindispatch.Evidence), pendingCancel: make(map[string]bool), witness: uuid.NewString(), changes: make(chan struct{}, 1), failed: make(chan struct{}), failures: make(chan error, 1)}
 	r.lifetime, r.endLifetime = context.WithCancel(context.Background())
 	for _, capability := range cfg.Capabilities {
-		input, err := plugindispatch.CompileSchema(capability.Definition.InputSchema)
+		input, err := plugindispatch.CompileCapabilitySchema(capability.Definition.InputSchema, capability.Definition.SchemaResources, capability.Definition.InputSchemaPath)
 		if err != nil {
 			return nil, err
 		}
-		output, err := plugindispatch.CompileSchema(capability.Definition.OutputSchema)
+		output, err := plugindispatch.CompileCapabilitySchema(capability.Definition.OutputSchema, capability.Definition.SchemaResources, capability.Definition.OutputSchemaPath)
 		if err != nil {
 			return nil, err
 		}
 		var failure *jsonschema.Schema
 		if len(capability.Definition.ErrorSchema) > 0 {
-			failure, err = plugindispatch.CompileSchema(capability.Definition.ErrorSchema)
+			failure, err = plugindispatch.CompileCapabilitySchema(capability.Definition.ErrorSchema, capability.Definition.SchemaResources, capability.Definition.ErrorSchemaPath)
 			if err != nil {
 				return nil, err
 			}
@@ -168,12 +164,15 @@ func Open(cfg Config) (*Runtime, error) {
 				}
 				continue
 			}
-			if entry.Type()&os.ModeSymlink != 0 || entry.IsDir() || !strings.HasSuffix(entry.Name(), ".evidence.json") {
+			if !strings.HasSuffix(entry.Name(), ".evidence.json") {
 				return nil, errors.New("incompatible_retained_evidence")
 			}
 			info, err := entry.Info()
 			if err != nil {
 				return nil, err
+			}
+			if !info.Mode().IsRegular() {
+				return nil, errors.New("incompatible_retained_evidence")
 			}
 			if info.Size() > int64(cfg.Contract.Limits.MessageBytes) || info.Size()+r.evidenceBytes > cfg.MaxEvidenceBytes || len(r.evidence) >= cfg.MaxEvidenceFiles {
 				return nil, ErrLimit
@@ -230,7 +229,7 @@ func (r *Runtime) Ready(complete bool) plugindispatch.Ready {
 		receipts = append(receipts, plugindispatch.Receipt{Execution: plugindispatch.CloneDispatch(receipt.execution)})
 	}
 	sort.Slice(receipts, func(i, j int) bool { return receipts[i].Execution.OperationID < receipts[j].Execution.OperationID })
-	return plugindispatch.Ready{Release: r.cfg.Release, ConfigurationRevision: r.cfg.ConfigurationRevision, ContractVersion: r.cfg.Contract.Version, Capabilities: capabilities, ReceiptsRetained: true, Receipts: receipts, Complete: complete, LiveWitness: r.witness}
+	return plugindispatch.Ready{Release: r.cfg.Release, ConfigurationRevision: r.cfg.ConfigurationRevision, ContractVersion: r.cfg.Contract.Version, Capabilities: capabilities, ReceiptCapacity: r.cfg.ReceiptCapacity, ReceiptsRetained: true, Receipts: receipts, Complete: complete, LiveWitness: r.witness}
 }
 func (r *Runtime) Retained() []plugindispatch.Evidence {
 	r.mu.Lock()
@@ -367,21 +366,28 @@ func (r *Runtime) Record(id string, update Update) (plugindispatch.Evidence, err
 		return plugindispatch.Evidence{}, ErrLimit
 	}
 	evidence := plugindispatch.CloneEvidence(plugindispatch.Evidence{Execution: plugindispatch.CloneDispatch(receipt.execution), Sequence: strconv.FormatUint(receipt.sequence+1, 10), Outcome: update.Outcome, Progress: update.Progress, Effects: update.Effects, Outputs: update.Outputs})
-	if len(receipt.effects) > 0 || len(receipt.outputs) > 0 {
-		for _, effect := range receipt.effects {
-			found := false
-			for _, next := range evidence.Effects {
-				if next.ID == effect.ID {
-					if next != effect {
-						return evidence, errors.New("effect_conflict")
-					}
-					found = true
+	// Validate the whole proposed effect set before saving it or changing the
+	// receipt. Repeating one identity is harmless only with identical facts.
+	proposedEffects := slices.Concat(evidence.Effects, receipt.effects)
+	evidence.Effects = nil
+	for _, effect := range proposedEffects {
+		found := false
+		for _, known := range evidence.Effects {
+			if known.ID == effect.ID {
+				if known != effect {
+					return evidence, errors.New("effect_conflict")
 				}
-			}
-			if !found {
-				evidence.Effects = append(evidence.Effects, effect)
+				found = true
 			}
 		}
+		if !found {
+			if len(evidence.Effects) >= r.cfg.Contract.Limits.MaxEffects {
+				return evidence, ErrLimit
+			}
+			evidence.Effects = append(evidence.Effects, effect)
+		}
+	}
+	if len(receipt.outputs) > 0 {
 		for _, output := range receipt.outputs {
 			found := false
 			for _, next := range evidence.Outputs {

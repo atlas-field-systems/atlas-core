@@ -19,7 +19,7 @@ The listener holds an exclusive claim on its managed socket path until its write
 
 A runtime binding belongs to one installation/principal/Dataset/Core run/generation. Verification must come from the host's unchanged-process check. The live witness and retained receipt proof protect reconnection from a fresh runtime presenting old credentials; they do not implement the host supervisor. Starting a replacement requires new authority. Saved evidence preserves its original execution binding while its reporting envelope uses current authenticated authority.
 
-Capability declarations belong to a selected Plugin installation and release. Readiness advertises exact capability ID/input-version pairs. Core rejects an unsupported target/version or invalid input before creating an Operation; independent Plugins may use the same pair with different schemas. Retained Operations keep their original schemas for result validation and recovered evidence.
+Capability declarations belong to a selected Plugin installation and release. Readiness advertises exact capability ID/input-version pairs and the Runtime's configured receipt capacity; Core requires that capacity to match its trusted reservation bound before admission. Core rejects an unsupported target/version or invalid input before creating an Operation; independent Plugins may use the same pair with different schemas. Retained Operations keep their original schemas, bundle paths and local resources for result validation and recovered evidence.
 
 Plugin consumers call `pluginruntime.Open` and `Run`. The execution callback owns the meaning of external effects. Its context receives cancellation independently of the original Operation submitter. The Plugin persists evidence in its own directory; Core uses the private messages and never reads that directory.
 
@@ -35,7 +35,7 @@ Public API/SDK adapters, installation/configuration management, Docker/systemd c
 
 Core's private [SQL schema](sql/schema.sql) and [queries](sql/queries.sql) generate storage bindings with pinned sqlc. The normal generator deletes those outputs and recreates them. No generated storage file is tracked or edited.
 
-The separate [private Protocol artifact](../../Atlas%20Protocol/plugin-dispatch.json) owns dispatch version, wire structure and message/input/result bounds. It does not add public routes or operational SDK methods. Its self-contained JSON Schema capability/evidence profile is compiled by the already pinned Go validator. The private Go binding is handwritten under the [binding exception](../../docs/agents/code-conventions.md#protocol-and-generation): the public OpenAPI 3.0 generator does not consume this independently versioned Draft 2020-12 artifact. There is no second OpenAPI mirror or custom generator. Actual wire bytes validate against the canonical artifact before typed decoding; the existing strict JSON representation check rejects duplicate decoded names and invalid Unicode.
+The separate [private Protocol artifact](../../Atlas%20Protocol/plugin-dispatch.json) owns dispatch version, wire structure and message/input/result bounds. It does not add public routes or operational SDK methods. The already pinned Go validator compiles the self-contained private artifact and capability schemas with their supplied local bundle resources. Validation retrieves no filesystem or network references. The private Go binding is handwritten under the [binding exception](../../docs/agents/code-conventions.md#protocol-and-generation): the public OpenAPI 3.0 generator does not consume this independently versioned Draft 2020-12 artifact. There is no second OpenAPI mirror or custom generator. Actual wire bytes validate against the canonical artifact before typed decoding; the existing strict JSON representation check rejects duplicate decoded names and invalid Unicode.
 
 Core uses SQLite WAL with synchronous FULL. Plugin evidence uses synced temporary files, atomic replacement and directory sync, and exact revision acknowledgement. Process-kill tests qualify their exercised cut points on the test filesystem. They do not establish healthy-storage power-loss guarantees or deployment-wide qualification.
 
@@ -44,6 +44,12 @@ Retained opening validates stored Operation records before reconciliation. Missi
 Core may accumulate known facts from several bounded reports. Retained validation checks their individual shape, aggregate counts and unique identities; their combined inventory need not fit one wire frame.
 
 Array quotas come from the canonical schema's `maxItems` constraints. The contract loader derives receipt, capability, effect and output limits from those constraints so admission and wire validation use the same authored bounds. Core and Plugin validate terminal payloads through the same validator, using the original capability's schemas.
+
+A capability may report Failed without declaring an additional error schema. Its error must be present, valid JSON and within the canonical result bound, without a result body. A declared error schema adds its own constraints to that private contract.
+
+Bearer tokens cannot be reused across Plugin installations or previously issued runtime bindings in the same Core run. Planned draining can redeliver exposed unacknowledged work only to its verified original runtime. It does not first-expose pending work; explicit cancellation can finish that never-exposed work.
+
+The Runtime rejects conflicting effect identities before changing a receipt or saving evidence. Identical repeated facts persist once. Retained evidence entries must be regular files; a FIFO or other incompatible entry faults startup before reading it.
 
 Ordinary Plugin progress stays in memory. Reports carrying known effects, output references or a terminal outcome are saved before reporting and can be recovered after process replacement.
 
@@ -97,6 +103,11 @@ The [workflow source](workflow_test.go) records the deterministic schedules. The
 | Incremental reports retain a valid inventory larger than one wire frame | Separate stored-inventory and message validation | [Incremental effect read and retained-opening workflow](evidence_test.go) |
 | Retained history does not block current runtime dispatch | Indexed query for the exact binding's unfinished work | [Polling and completion with cancelled history](polling_test.go) |
 | Fault observers cannot consume the session's worker failure | Private failure signal and retained original cause | [Fault observation and surviving-worker tests](../pluginruntime/runtime_test.go) |
+| Supplied local schema resources retain their original release context without external retrieval | Immutable capability resources and resource-aware retained schema cache | [Bundle process and retained-opening workflow](schema_test.go), [external-retrieval refusal](../plugindispatch/schema_test.go), [Runtime input/result/error probes](../pluginruntime/runtime_test.go) |
+| Manifest-compliant capabilities can report definitive failure without an additional error schema | Canonical bounded JSON fallback at both outcome boundaries | `TestCapabilityWithoutErrorSchemaCanFailAndDrain` |
+| Receipt capacity agrees before admission and bearer tokens remain installation-specific | Exact readiness capacity comparison and Core-run token history | [Authority and capacity workflows](authority_test.go) |
+| Drain delivers lost exposure only to its original runtime | Exposed-only redelivery while draining, preserving cancellation and replacement fences | [Lost-response and replacement drain workflows](drain_test.go) |
+| Conflicting effect batches and non-regular evidence files fail before retention | Runtime record validation and regular-file startup check | [Effect and FIFO regressions](../pluginruntime/runtime_test.go) |
 | Cleanup after hard worker death, command deadline or owner interruption | Surviving verifier process/storage owner | `check_plugin_fixture_lifetime` in [executable cleanup checks](../../scripts/plugin_checks.py) |
 
 ## Remaining qualification

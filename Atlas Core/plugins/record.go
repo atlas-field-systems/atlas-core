@@ -168,7 +168,11 @@ func (m *Module) decode(row storage.PluginOperation) (operationRecord, error) {
 }
 
 func (m *Module) validateStoredOutcomes(operation operationRecord) error {
-	schemas, ok := m.resultSchemas[resultSchemaKey{string(operation.OutputSchema), string(operation.ErrorSchema)}]
+	key, err := operation.resultSchemaSource.identity()
+	if err != nil {
+		return fmt.Errorf("%w: original result schema: %w", ErrIntegrity, err)
+	}
+	schemas, ok := m.resultSchemas[key]
 	if !ok {
 		return fmt.Errorf("%w: missing original result schema", ErrIntegrity)
 	}

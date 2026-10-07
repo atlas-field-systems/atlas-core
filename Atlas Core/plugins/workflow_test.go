@@ -59,6 +59,7 @@ func request(id, input string) plugins.Submission {
 }
 
 type fixture struct {
+	definition                          *plugindispatch.Capability
 	children                            []*child
 	maxFiles                            int
 	maxBytes                            int64

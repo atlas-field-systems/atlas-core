@@ -178,7 +178,7 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 	}
 	if request.Kind == "ready" {
 		ready := request.Ready
-		if ready == nil || ready.ContractVersion != m.cfg.Contract.Version || ready.Release != active.host.Release || ready.ConfigurationRevision != active.host.ConfigurationRevision {
+		if ready == nil || ready.ContractVersion != m.cfg.Contract.Version || ready.Release != active.host.Release || ready.ConfigurationRevision != active.host.ConfigurationRevision || ready.ReceiptCapacity != active.host.ReceiptCapacity {
 			return fail(errors.New("readiness_mismatch"))
 		}
 		wanted := slices.Clone(active.host.Capabilities)
@@ -305,7 +305,7 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 				cancellation = &plugindispatch.Cancel{OperationID: operation.ID, CancellationID: operation.CancellationID}
 				continue
 			}
-			if !operation.Acknowledged && active.reserved[operation.ID] {
+			if !operation.Acknowledged && active.reserved[operation.ID] && (!active.draining || operation.Exposed) {
 				candidates = append(candidates, operation)
 			}
 		}
@@ -313,10 +313,10 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 			active.cancelSent[cancellation.OperationID] = cancellation.CancellationID
 			return plugindispatch.Response{Kind: "cancel", Cancel: cancellation}
 		}
-		if active.draining {
-			return plugindispatch.Response{Kind: "drain"}
-		}
 		if len(candidates) == 0 {
+			if active.draining {
+				return plugindispatch.Response{Kind: "drain"}
+			}
 			return plugindispatch.Response{Kind: "idle"}
 		}
 		operation := candidates[active.cursor%len(candidates)]

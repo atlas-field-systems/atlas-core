@@ -266,6 +266,10 @@
         "receipts_retained": {
           "type": "boolean"
         },
+        "receipt_capacity": {
+          "type": "integer",
+          "minimum": 1
+        },
         "receipts": {
           "type": "array",
           "maxItems": 4096,
@@ -287,6 +291,7 @@
         "contract_version",
         "capabilities",
         "receipts_retained",
+        "receipt_capacity",
         "receipts",
         "complete",
         "live_witness"
