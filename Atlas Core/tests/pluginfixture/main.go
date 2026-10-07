@@ -186,8 +186,9 @@ func run() (result error) {
 		if err != nil {
 			return err
 		}
-		if response.Ack == nil {
-			return errors.New("missing ACK")
+		expected := plugindispatch.Ack{OperationID: evidence.Execution.OperationID, Sequence: evidence.Sequence, Revision: evidence.Revision}
+		if response.Ack == nil || *response.Ack != expected {
+			return errors.New("missing or mismatched ACK")
 		}
 		if cleanup {
 			return runtime.Acknowledge(*response.Ack)
@@ -400,6 +401,25 @@ func run() (result error) {
 				if commandErr == nil {
 					commandErr = ready()
 				}
+			case "begin-reconnect-without-receipts":
+				commandErr = connect()
+				if commandErr == nil {
+					value := runtime.Ready(false)
+					value.Receipts = []plugindispatch.Receipt{}
+					_, commandErr = exchange(plugindispatch.Request{Kind: "ready", Ready: &value})
+				}
+				if commandErr == nil {
+					emit(event{Event: "readiness_started"})
+				}
+			case "ready-without-receipts", "ready-complete":
+				value := runtime.Ready(true)
+				if command == "ready-without-receipts" {
+					value.Receipts = []plugindispatch.Receipt{}
+				}
+				_, commandErr = exchange(plugindispatch.Request{Kind: "ready", Ready: &value})
+				if commandErr == nil {
+					emit(event{Event: "ready"})
+				}
 			case "conflicting-outcome", "changed-report", "invalid-result":
 				if saved == nil {
 					commandErr = errors.New("missing evidence")
@@ -426,7 +446,23 @@ func run() (result error) {
 			case "stop":
 				return nil
 			default:
-				if strings.HasPrefix(command, "report-evidence ") {
+				if strings.HasPrefix(command, "record-update ") {
+					var update pluginruntime.Update
+					commandErr = json.Unmarshal([]byte(strings.TrimPrefix(command, "record-update ")), &update)
+					if original == nil {
+						commandErr = errors.New("missing original dispatch")
+					}
+					if commandErr == nil {
+						evidence, err := runtime.Record(original.OperationID, update)
+						commandErr = err
+						if commandErr == nil {
+							commandErr = report(evidence, true)
+						}
+						if commandErr == nil {
+							emit(event{Event: "reported_update", Evidence: &evidence})
+						}
+					}
+				} else if strings.HasPrefix(command, "report-evidence ") {
 					var evidence plugindispatch.Evidence
 					commandErr = json.Unmarshal([]byte(strings.TrimPrefix(command, "report-evidence ")), &evidence)
 					if commandErr == nil {

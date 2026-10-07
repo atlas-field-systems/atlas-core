@@ -43,6 +43,10 @@ Ordinary Plugin progress stays in memory. Reports carrying known effects, output
 
 The bounded report budget reserves its final revision for Completed, Failed or Cancelled. Once the nonterminal budget is exhausted, further progress or evidence updates fail explicitly while the terminal report remains eligible. Evidence file and byte quotas still apply.
 
+An exact committed report retry remains acknowledgeable after newer reports. A previously unseen report must advance the sequence before Core records its outcome, effects or outputs. New output references pass the supplied resource validator; previously recorded references retain their attribution after resource deletion.
+
+Verified same-runtime reconnection requires live receipts for executions proven by dispatch acknowledgement or committed report evidence. Admission stays closed until the receipt inventory is complete.
+
 The post-rename fault hook schedules a directory-sync failure after the real file replacement. It is test fault injection, disabled during ordinary use, and qualifies preservation on that ambiguous-publication path.
 
 ## Verification
@@ -76,6 +80,9 @@ The [workflow source](workflow_test.go) records the deterministic schedules. The
 | Progress cannot consume the terminal report revision | Reserved final revision at Core and Plugin boundaries | [Completed, Failed and Cancelled workflows with confirmed drain](revision_test.go) |
 | Core crash restores its channel without unlinking a live owner | Exclusive listener claim retained until writer join | `TestCoreProcessCrashRetainsConfirmedAndRecoversOriginalRunEvidence`, `TestServerCloseCancelsOwnedReportsAndBoundsIncompleteJoin`, `TestSocketOwnershipProtectsLiveAndUnrelatedEntries` |
 | Wire validation and admission share array quotas | Limits derived from the compiled canonical schema | [Schema-bound frame validation](../plugindispatch/limits_test.go) |
+| Unseen reports advance sequence while exact retries preserve recorded facts | Core report commit ordering | [Stale-report and exact-retry workflow](evidence_test.go) |
+| Deleted known outputs retain attribution and allow terminal reporting | Validation of newly introduced references | [Cumulative-output deletion workflow](evidence_test.go) |
+| Same-runtime evidence requires a retained receipt even with a lost dispatch acknowledgement | Report acceptance and readiness inventory | [Lost-acknowledgement readiness workflow](evidence_test.go) |
 | Cleanup after hard worker death, command deadline or owner interruption | Surviving verifier process/storage owner | `check_plugin_fixture_lifetime` in [executable cleanup checks](../../scripts/plugin_checks.py) |
 
 ## Remaining qualification

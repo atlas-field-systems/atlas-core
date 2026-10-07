@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 
 	"github.com/atlas-field-systems/atlas-core/plugindispatch"
 	"github.com/atlas-field-systems/atlas-core/plugins/generated/storage"
@@ -36,7 +37,14 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 			if prior != evidence.Revision {
 				return errors.New("report_conflict")
 			}
+			if original == current && !operation.Acknowledged {
+				operation.Acknowledged = true
+				return save(ctx, q, operation)
+			}
 			return nil
+		}
+		if sequence <= operation.LatestSequence {
+			return errors.New("stale_report")
 		}
 		limit := m.cfg.Contract.Limits.MaxReportRevisions
 		if evidence.Outcome == nil {
@@ -71,15 +79,13 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 				operation.Status = Status(outcome.Status)
 				operation.Outcome = outcome
 			}
-		} else if !terminal(operation.Status) && sequence > operation.LatestSequence && len(evidence.Progress) > 0 {
+		} else if !terminal(operation.Status) && len(evidence.Progress) > 0 {
 			if operation.Status != CancellationRequested {
 				operation.Status = InProgress
 			}
 			operation.Progress = evidence.Progress
 		}
-		if sequence > operation.LatestSequence {
-			operation.LatestSequence = sequence
-		}
+		operation.LatestSequence = sequence
 		for _, effect := range evidence.Effects {
 			found := false
 			for _, known := range operation.KnownEffects {
@@ -98,24 +104,24 @@ func (m *Module) acceptEvidence(ctx context.Context, active *runtime, evidence p
 			}
 		}
 		for _, output := range evidence.Outputs {
+			if slices.Contains(operation.KnownOutputs, output) {
+				continue
+			}
 			if m.cfg.ValidateOutput == nil {
 				return errors.New("unresolved_output")
 			}
 			if err := m.cfg.ValidateOutput(ctx, output); err != nil {
 				return errors.New("invalid_output")
 			}
-			found := false
-			for _, known := range operation.KnownOutputs {
-				if known == output {
-					found = true
-				}
+			if len(operation.KnownOutputs) >= m.cfg.Contract.Limits.MaxOutputs {
+				return ErrLimit
 			}
-			if !found {
-				if len(operation.KnownOutputs) >= m.cfg.Contract.Limits.MaxOutputs {
-					return ErrLimit
-				}
-				operation.KnownOutputs = append(operation.KnownOutputs, output)
-			}
+			operation.KnownOutputs = append(operation.KnownOutputs, output)
+		}
+		// Same-runtime evidence proves acceptance even if dispatch_ack was lost.
+		// Replacement evidence retains its original execution binding.
+		if original == current {
+			operation.Acknowledged = true
 		}
 		operation.Reports[evidence.Sequence] = evidence.Revision
 		return save(ctx, q, operation)
