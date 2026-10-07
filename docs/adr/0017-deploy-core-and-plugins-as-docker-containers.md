@@ -18,7 +18,10 @@ Docker host
     Core database (Dataset and installation tables), Object content and Atlas-managed logs
     Per-Plugin working directories for private operational state
     Installation setup: configuration, secret material, Plugin artifacts and reference data,
-      Reset directive and local activity journal
+      and local activity journal
+
+  Host recovery storage outside the installation root
+    Management action records, including the Reset directive
 ```
 
 The containers are siblings managed by the host Docker Engine. A Compose project groups them; it is not a containing runtime or a nested Docker installation. Image layers package files, not Atlas subsystems. See [Docker's multi-container model](https://docs.docker.com/get-started/docker-concepts/running-containers/multi-container-applications/).

@@ -69,6 +69,10 @@ Local Command Catalog lookup is a package function, not an extra HTTP route, and
 | Open enrollment switch and selected test identity cleanup | S5 | Retained provenance/warnings/denials, races and retry; [cleanup](../topics/identity-and-access.md#cleanup-after-testing) |
 | Core configuration inspection/editing, live tuning, deployment apply and invalid-setting repair | S1 bootstrap, S7 complete settings/faults | Local CLI/TUI only, atomic validation, configured/effective state, startup gate and no automatic fallback/wipe; [configuration](../topics/dataset-lifecycle.md#core-configuration) |
 
+### Reset consolidation follow-up
+
+[Spec #116](https://github.com/atlas-field-systems/atlas-core/issues/116) reconciles the approved [Reset record consolidation](../topics/dataset-lifecycle.md#reset-execution) within the delivered S0 boundary. S0 has no operational management action record, independent Reset establishment or lifecycle cleanup. This follow-up changes their specification and verifies the existing foundation; it does not introduce those planned capabilities. S1-S3 retain the necessary Reset seams and S7 retains full lifecycle evidence, including the [completed-result and interrupted-recovery scenarios](../testing-strategy.md#fault-and-bandwidth-testing).
+
 ## Required-scenario homes
 
 Every row of the [required scenario table](../testing-strategy.md#required-scenario-coverage) has a feature-triggered home below. These are future completion obligations; neither the #69 experiment nor the delivered S0 fixture passes them.
