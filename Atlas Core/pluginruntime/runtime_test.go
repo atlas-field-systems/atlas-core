@@ -301,6 +301,70 @@ func TestIncompleteCloseRefusesNewWorkAndCanFinishAfterCallbackStops(t *testing.
 	}
 }
 
+func TestCloseCancelsAndJoinsIngestionWithBoundedRetry(t *testing.T) {
+	joined := make(chan struct{})
+	cancelled := make(chan struct{})
+	var joinOnce sync.Once
+	defer joinOnce.Do(func() { close(joined) })
+	cfg := runtimeConfiguration(t, func(context.Context, *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		return plugindispatch.Outcome{}, errors.New("unexpected execution")
+	})
+	cfg.StopIngestion = func(ctx context.Context) error {
+		<-ctx.Done()
+		close(cancelled)
+		// Cancelling the source is not yet confirmation that its writer joined.
+		<-joined
+		return nil
+	}
+	runtime := openRuntimeFixture(t, cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	if err := runtime.Close(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatal("ingestion writer incorrectly declared joined", err)
+	}
+	select {
+	case <-cancelled:
+	case <-time.After(time.Second):
+		t.Fatal("Close did not cancel the ingestion owner")
+	}
+	if _, err := os.Stat(cfg.WorkDirectory); err != nil {
+		t.Fatal("incomplete shutdown lost working storage", err)
+	}
+	joinOnce.Do(func() { close(joined) })
+	shutdown, stop := context.WithTimeout(context.Background(), time.Second)
+	defer stop()
+	if err := runtime.Close(shutdown); err != nil {
+		t.Fatal("confirmed ingestion join did not complete shutdown", err)
+	}
+}
+
+func TestClosePreservesFailedIngestionStop(t *testing.T) {
+	stopFailure := errors.New("ingestion writers not joined")
+	cfg := runtimeConfiguration(t, func(context.Context, *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		return plugindispatch.Outcome{}, errors.New("unexpected execution")
+	})
+	cfg.StopIngestion = func(context.Context) error { return stopFailure }
+	runtime, err := pluginruntime.Open(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shutdown, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	for range 2 {
+		if err := runtime.Close(shutdown); !errors.Is(err, stopFailure) {
+			t.Fatal("callback exit claimed ingestion writers were stopped", err)
+		}
+	}
+	select {
+	case err := <-runtime.Faults():
+		if !errors.Is(err, stopFailure) {
+			t.Fatal("ingestion failure notification lost its cause", err)
+		}
+	default:
+		t.Fatal("ingestion failure did not notify its owner")
+	}
+}
+
 func TestTransientProgressKeepsNewerPendingRevisionAndNeverBecomesRetained(t *testing.T) {
 	runtime := runtimeFixture(t, func(ctx context.Context, _ *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
 		<-ctx.Done()

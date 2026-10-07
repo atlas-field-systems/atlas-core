@@ -31,6 +31,10 @@ type Capability struct {
 	Execute    Execute
 }
 type Config struct {
+	// StopIngestion stops and joins continuous ingestion. Nil declares that
+	// this Plugin has none. It runs once on drain or Close, independently of
+	// channel sessions; a successful return confirms its writers have stopped.
+	StopIngestion func(context.Context) error
 	// AfterEvidenceRename is a deterministic fault-injection boundary. Ordinary
 	// use leaves it nil; writes and file sync always precede it.
 	AfterEvidenceRename               func() error
@@ -92,6 +96,7 @@ type Runtime struct {
 	failed        chan struct{}
 	workerFault   error
 	failures      chan error
+	ingestionDone chan struct{}
 }
 
 // Invocation provides the original dispatch and durable progress/effect
@@ -509,12 +514,13 @@ func (r *Runtime) Acknowledge(ack plugindispatch.Ack) error {
 }
 
 // Close ends the runtime and refuses new sessions/receipts before joining work.
-// A timeout reports incomplete shutdown; the owner must retain storage and use
-// its process boundary rather than claiming writers have stopped.
+// A failed ingestion stop or timeout reports incomplete shutdown; the owner
+// must retain storage and use its process boundary until writers have stopped.
 func (r *Runtime) Close(ctx context.Context) error {
 	r.mu.Lock()
 	if !r.closed {
 		r.closed = true
+		r.stopIngestionLocked()
 		r.endLifetime()
 		if r.sessionCancel != nil {
 			r.sessionCancel()
@@ -536,7 +542,14 @@ func (r *Runtime) Close(ctx context.Context) error {
 	r.mu.Unlock()
 	select {
 	case <-joined:
-		return nil
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		select {
+		case <-r.ingestionDone:
+			return nil
+		default:
+			return fmt.Errorf("continuous ingestion shutdown incomplete: %w", r.workerFault)
+		}
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -545,9 +558,41 @@ func (r *Runtime) Close(ctx context.Context) error {
 // Faults reports the first fatal worker failure without consuming Run's control
 // signal. The owner still uses Close to cancel and join surviving workers.
 func (r *Runtime) Faults() <-chan error { return r.failures }
-func (r *Runtime) finiteFinished() bool {
+
+// The caller holds mu so no stop worker can be added after Close starts joining.
+// The callback runs outside mu and survives a disconnected channel session.
+func (r *Runtime) stopIngestionLocked() {
+	if r.ingestionDone != nil {
+		return
+	}
+	r.ingestionDone = make(chan struct{})
+	if r.cfg.StopIngestion == nil {
+		close(r.ingestionDone)
+		return
+	}
+	r.workers.Add(1)
+	go func() {
+		defer r.workers.Done()
+		if err := r.cfg.StopIngestion(r.lifetime); err != nil {
+			r.fail(fmt.Errorf("continuous ingestion stop failed: %w", err))
+			return
+		}
+		close(r.ingestionDone)
+	}()
+}
+
+func (r *Runtime) drainFinished() bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.stopIngestionLocked()
+	if r.closed || r.workerFault != nil {
+		return false
+	}
+	select {
+	case <-r.ingestionDone:
+	default:
+		return false
+	}
 	for _, receipt := range r.receipts {
 		if !receipt.completed {
 			return false

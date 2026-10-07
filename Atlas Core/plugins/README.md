@@ -13,7 +13,7 @@
 
 Use `plugins.Open` before binding a runtime. `Submit`, `Read`, `List` and `Cancel` form the component's consumer seam. `BindRuntime`, `VerifyReconnect` and `ConfirmLoss` accept trusted host facts, not caller or Plugin claims. `Listen` owns the private Unix listener and its connections. Its `Close(ctx)` cancels owned work and joins it within the supplied deadline. If it reports incomplete shutdown, retain storage for the process owner; close Core storage only after server work has joined.
 
-`Drain` requests the [protected stopping policy](../../docs/topics/plugins.md#protecting-active-work); `Drained` reports confirmation for the current runtime to the host owner.
+`Drain` requests the [protected stopping policy](../../docs/topics/plugins.md#protecting-active-work); `Drained` reports confirmation for the current runtime to the host owner. A Plugin with continuous ingestion supplies `Config.StopIngestion`; successful return confirms its ingestion writers have joined. Nil declares no continuous ingestion. The Runtime invokes it once on drain or shutdown, preserves it across channel sessions and confirms draining only after ingestion and finite work finish. A failed stop remains a fault and cannot become confirmation on reconnect.
 
 The listener owns an exclusive socket-path claim until its writers join. It recovers a stale socket after Core process death, retries temporary descriptor pressure and reports permanent failures through `Server.Faults()` and `Close`. A fault notification does not establish writer shutdown.
 
@@ -23,7 +23,7 @@ Capability declarations belong to a selected Plugin installation and release. Re
 
 Plugin consumers call `pluginruntime.Open` and `Run`. The execution callback owns the meaning of external effects. Its context receives cancellation independently of the original Operation submitter. The Plugin persists evidence in its own directory; Core uses the private messages and never reads that directory.
 
-Stopping a channel session preserves accepted workers. `Close(ctx)` closes runtime admission, cancels workers and joins the owned session and execution within the supplied deadline. If shutdown is incomplete, the owner must retain working storage and use its process shutdown boundary before deleting it.
+Stopping a channel session preserves accepted workers and ingestion stopping. `Close(ctx)` closes runtime admission, cancels workers and joins the owned session, execution and ingestion stop within the supplied deadline. A callback error leaves ingestion shutdown unconfirmed. If shutdown is incomplete, the owner must retain working storage and use its process shutdown boundary before deleting it.
 
 `Runtime.Faults()` reports bounded notifications while `Run` retains the first worker failure. Fault observation does not take over `Close`'s cancellation and joining responsibility.
 
@@ -64,7 +64,7 @@ The [workflow source](workflow_test.go) records the deterministic schedules. The
 | Coverage | Reproducible validation |
 | --- | --- |
 | Durable acceptance, submission retries, cancellation, duplicate dispatch, capacity, interruption and exact evidence acknowledgement | [Real-process workflows](workflow_test.go) |
-| Runtime identity, partial readiness, cancellation retries, replacement fencing and protected drain | [Authority workflows](authority_test.go), [reconnection workflows](reconnect_test.go), [drain workflows](drain_test.go), [real-process recovery](workflow_test.go) |
+| Runtime identity, partial readiness, cancellation retries, replacement fencing and protected drain | [Authority workflows](authority_test.go), [reconnection workflows](reconnect_test.go), [drain workflows](drain_test.go), [ingestion stop workflows](ingestion_test.go), [real-process recovery](workflow_test.go) |
 | Report ordering, terminal immutability, output attribution and reserved final revision | [Evidence workflows](evidence_test.go), [revision workflows](revision_test.go) |
 | Plugin/release capability ownership, original schemas and local bundle resources | [Installation](installation_test.go), [capability](capability_test.go) and [schema workflows](schema_test.go), [schema boundary tests](../plugindispatch/schema_test.go) |
 | Retained integrity, bounded frames/files/bytes, transient progress, worker failures and detached snapshots | [Integrity workflows](integrity_test.go), [private boundary tests](boundary_test.go), [Runtime boundary tests](../pluginruntime/runtime_test.go), [schema-derived limits](../plugindispatch/limits_test.go) |

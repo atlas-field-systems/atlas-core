@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/atlas-field-systems/atlas-core/pluginruntime"
 )
 
-func runChannel(ctx context.Context, runtime *pluginruntime.Runtime, cfg configuration, release func()) error {
+func runChannel(ctx context.Context, runtime *pluginruntime.Runtime, cfg configuration, release func(), ingestion *ingestionFixture) error {
 	commands, scanErrors := readCommands(ctx)
 	var cancel context.CancelFunc
 	var done chan error
@@ -34,6 +35,15 @@ func runChannel(ctx context.Context, runtime *pluginruntime.Runtime, cfg configu
 			return err
 		case command := <-commands:
 			switch command {
+			case "ingest", "release-ingestion":
+				if ingestion == nil {
+					return errors.New("no ingestion fixture")
+				}
+				if command == "ingest" {
+					ingestion.observe(ctx)
+				} else {
+					ingestion.release.Do(func() { close(ingestion.allowed) })
+				}
 			case "progress":
 				ready := runtime.Ready(false)
 				if len(ready.Receipts) == 0 {
@@ -72,9 +82,83 @@ func runChannel(ctx context.Context, runtime *pluginruntime.Runtime, cfg configu
 		case err := <-done:
 			if err != nil {
 				emit(event{Event: "fault", Error: err.Error()})
+				if cfg.Mode == "run-ingestion-failed" {
+					reconnectErr := runtime.Run(ctx, cfg.Socket)
+					if reconnectErr == nil {
+						return errors.New("failed ingestion stop allowed reconnection")
+					}
+					emit(event{Event: "reconnect_rejected", Error: reconnectErr.Error()})
+				}
 				return err
 			}
 			done = nil
 		}
 	}
+}
+
+// Observation commands represent a blocking source. The loop remains live
+// until its owner cancels and joins it, independently of finite Operations.
+type ingestionFixture struct {
+	observations chan struct{}
+	allowed      chan struct{}
+	done         chan struct{}
+	cancel       context.CancelFunc
+	release      sync.Once
+	err          error
+	cfg          configuration
+}
+
+func startIngestion(ctx context.Context, cfg configuration) *ingestionFixture {
+	lifetime, cancel := context.WithCancel(ctx)
+	ingestion := &ingestionFixture{observations: make(chan struct{}), allowed: make(chan struct{}), done: make(chan struct{}), cancel: cancel, cfg: cfg}
+	go func() {
+		defer close(ingestion.done)
+		for {
+			select {
+			case <-lifetime.Done():
+				return
+			case <-ingestion.observations:
+				if err := appendEffects(cfg.Effects+".ingestion", 1); err != nil {
+					ingestion.err = err
+					return
+				}
+				emit(event{Event: "ingested"})
+			}
+		}
+	}()
+	return ingestion
+}
+
+func (i *ingestionFixture) observe(ctx context.Context) {
+	select {
+	case <-i.done:
+		emit(event{Event: "ingestion_rejected"})
+	case i.observations <- struct{}{}:
+	case <-ctx.Done():
+	}
+}
+
+func (i *ingestionFixture) stop(ctx context.Context) error {
+	if err := appendEffects(i.cfg.Effects+".ingestion-stop", 1); err != nil {
+		return err
+	}
+	emit(event{Event: "ingestion_stop_requested"})
+	if i.cfg.Mode == "run-ingestion-failed" {
+		return errors.New("injected_ingestion_stop_failure")
+	}
+	select {
+	case <-i.allowed:
+	case <-ctx.Done():
+	}
+	if err := i.close(); err != nil {
+		return err
+	}
+	emit(event{Event: "ingestion_stopped"})
+	return nil
+}
+
+func (i *ingestionFixture) close() error {
+	i.cancel()
+	<-i.done
+	return i.err
 }

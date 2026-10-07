@@ -232,6 +232,9 @@ func (c *child) expectFailure(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("faulted Plugin did not exit")
 	}
+	if strings.Contains(c.stderr.String(), "WARNING: DATA RACE") {
+		t.Fatal("race detector reported a race in the intentionally faulted fixture:", c.stderr.String())
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.result == nil {

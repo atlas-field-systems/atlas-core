@@ -267,17 +267,20 @@ func (m *Module) handle(ctx context.Context, request plugindispatch.Request, sta
 			receipts[dispatch.OperationID] = dispatch
 		}
 		if ready.Complete {
-			err := m.scan(ctx, m.queries, func(operation operationRecord) error {
+			// Reservations retain every exposed execution for this runtime's
+			// lifetime, including completed receipts. Unrelated history cannot
+			// add a receipt requirement or delay this bounded readiness check.
+			for id := range active.reserved {
+				operation, err := m.load(ctx, m.queries, id)
+				if err != nil {
+					return fail(err)
+				}
 				if operation.Execution.Binding == active.host.Binding && operation.Acknowledged {
 					retained, ok := receipts[operation.ID]
 					if !ok || !plugindispatch.SameDispatch(retained, operation.Execution) {
-						return errors.New("live_receipts_lost")
+						return fail(errors.New("live_receipts_lost"))
 					}
 				}
-				return nil
-			})
-			if err != nil {
-				return fail(err)
 			}
 			active.connected = true
 			active.reconnectVerified = false

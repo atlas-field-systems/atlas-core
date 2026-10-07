@@ -14,6 +14,8 @@ import (
 // caller to reconnect this unchanged Runtime. Close ends its work explicitly.
 // A fatal worker failure closes the channel and remains a fault on reconnect;
 // other accepted workers retain their lifetime until Close.
+// Drain stops continuous ingestion while finite work continues, and confirms
+// only after the ingestion owner and all finite evidence have finished.
 // No automatic connection retry, process restart or Operation rerun occurs.
 func (r *Runtime) Run(ctx context.Context, socket string) (result error) {
 	r.mu.Lock()
@@ -152,7 +154,7 @@ func (r *Runtime) Run(ctx context.Context, socket string) (result error) {
 				return err
 			}
 		case "idle", "drain":
-			if response.Kind == "drain" && !drainConfirmed && r.finiteFinished() {
+			if response.Kind == "drain" && !drainConfirmed && r.drainFinished() {
 				ack, err := exchange(plugindispatch.Request{Kind: "drained"})
 				if err != nil && ack.Error != "active_work" {
 					return err

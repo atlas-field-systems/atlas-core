@@ -57,6 +57,19 @@ func TestRetainedHistoryDoesNotBlockCurrentRuntimePolling(t *testing.T) {
 	}
 	child.command(t, "next")
 	child.event(t, "idle")
+	child.command(t, "disconnect")
+	child.event(t, "disconnected")
+	waitUnavailable(t, f)
+	if err := f.core.VerifyReconnect(f.binding.Binding, f.binding.VerifiedProcess); err != nil {
+		t.Fatal(err)
+	}
+	reconnect := time.Now()
+	child.command(t, "reconnect")
+	child.event(t, "ready")
+	if !f.core.Available(pluginID) {
+		t.Fatal("unrelated retained history blocked verified readiness")
+	}
+	t.Logf("same-runtime readiness after %d unrelated retained Operations: %s", historySize, time.Since(reconnect))
 	if err := f.core.Drain(f.binding.Binding); err != nil {
 		t.Fatal(err)
 	}

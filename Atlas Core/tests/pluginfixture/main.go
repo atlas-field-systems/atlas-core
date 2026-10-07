@@ -85,15 +85,22 @@ func run() (result error) {
 		definition.ID = "lookup"
 		definition.OutputSchema = json.RawMessage(`{"const":{"value":99}}`)
 	}
+	var ingestion *ingestionFixture
+	var stopIngestion func(context.Context) error
+	if strings.HasPrefix(cfg.Mode, "run-ingestion") {
+		ingestion = startIngestion(ctx, cfg)
+		stopIngestion = ingestion.stop
+		defer func() { result = errors.Join(result, ingestion.close()) }()
+	}
 	runtime, err := pluginruntime.Open(pluginruntime.Config{AfterEvidenceRename: func() error {
 		if syncFault.Load() {
 			return errors.New("injected_directory_sync_failure")
 		}
 		return nil
-	}, Contract: contract, Binding: cfg.Binding, Token: cfg.Token, Release: cfg.Release, ConfigurationRevision: "1", WorkDirectory: cfg.Work, ReceiptCapacity: cfg.Capacity, MaxEvidenceFiles: cfg.MaxFiles, MaxEvidenceBytes: cfg.MaxBytes, Capabilities: []pluginruntime.Capability{{Definition: definition, Execute: func(work context.Context, invocation *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
-		if cfg.Mode == "hold" || cfg.Mode == "hold-failed" || cfg.Mode == "ignore-cancel" || cfg.Mode == "run-hold" || cfg.Mode == "sync-failure" || cfg.Mode == "lost-ack-hold" {
+	}, StopIngestion: stopIngestion, Contract: contract, Binding: cfg.Binding, Token: cfg.Token, Release: cfg.Release, ConfigurationRevision: "1", WorkDirectory: cfg.Work, ReceiptCapacity: cfg.Capacity, MaxEvidenceFiles: cfg.MaxFiles, MaxEvidenceBytes: cfg.MaxBytes, Capabilities: []pluginruntime.Capability{{Definition: definition, Execute: func(work context.Context, invocation *pluginruntime.Invocation) (plugindispatch.Outcome, error) {
+		if cfg.Mode == "hold" || cfg.Mode == "hold-failed" || cfg.Mode == "ignore-cancel" || cfg.Mode == "run-hold" || cfg.Mode == "run-ingestion" || cfg.Mode == "sync-failure" || cfg.Mode == "lost-ack-hold" {
 			emit(event{Event: "started"})
-			if cfg.Mode == "hold" || cfg.Mode == "hold-failed" || cfg.Mode == "run-hold" {
+			if cfg.Mode == "hold" || cfg.Mode == "hold-failed" || cfg.Mode == "run-hold" || cfg.Mode == "run-ingestion" {
 				select {
 				case <-release:
 				case <-work.Done():
@@ -146,7 +153,7 @@ func run() (result error) {
 		result = errors.Join(result, runtime.Close(shutdown))
 	}()
 	if strings.HasPrefix(cfg.Mode, "run") {
-		return runChannel(ctx, runtime, cfg, func() { releaseOnce.Do(func() { close(release) }) })
+		return runChannel(ctx, runtime, cfg, func() { releaseOnce.Do(func() { close(release) }) }, ingestion)
 	}
 	var connection net.Conn
 	connect := func() error {
