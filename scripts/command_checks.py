@@ -14,10 +14,12 @@ from unittest.mock import patch
 
 from command_fault_checks import check_command_faults
 from command_supervisor import (
+    _cleanup_failure,
     _defer_interruptions,
     _Interruption,
     _owned_processes,
     _processes,
+    _restore_process_state,
     _stop,
     _subreaper,
     supervised_run,
@@ -55,9 +57,14 @@ def _verifier_probe(number, *, timeout=None):
     previous_subreaper = _subreaper()
     previous_signals = {value: signal.getsignal(value) for value in (signal.SIGINT, signal.SIGTERM)}
     closing = False
+    pending_signal = None
 
     def interrupt(value, _frame):
-        if not closing:
+        nonlocal pending_signal
+        if closing:
+            if pending_signal is None:
+                pending_signal = value
+        else:
             raise _Interruption(value)
 
     evidence = None
@@ -135,19 +142,12 @@ def _verifier_probe(number, *, timeout=None):
                     cleanup_errors.append(error)
             else:
                 cleanup_errors.append(RuntimeError(f"Verifier observer shutdown incomplete; retained {evidence}"))
-        for value, handler in previous_signals.items():
-            try:
-                signal.signal(value, handler)
-            except (OSError, ValueError) as error:
-                cleanup_errors.append(error)
-        try:
-            _subreaper(previous_subreaper)
-        except OSError as error:
-            cleanup_errors.append(error)
-        if cleanup_errors:
-            raise BaseExceptionGroup(
-                "Verifier probe and cleanup failures", [primary, *cleanup_errors] if primary else cleanup_errors
-            )
+        restoration_signal = _restore_process_state(previous_signals, previous_subreaper, cleanup_errors)
+        if pending_signal is None:
+            pending_signal = restoration_signal
+        failure = _cleanup_failure(primary, pending_signal, cleanup_errors, "Verifier probe and cleanup failures")
+        if failure is not None:
+            raise failure
 
 
 def _observer_signal_probe(number):
@@ -201,7 +201,12 @@ def _stop_detached(pid):
     errors = []
     for number, grace in ((signal.SIGTERM, 0.5), (signal.SIGKILL, 3)):
         try:
-            os.kill(pid, number)
+            exited = os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+            if exited is None:
+                os.kill(pid, number)
+        except ChildProcessError:
+            # The tested owner may already have reaped this recorded child.
+            return
         except ProcessLookupError:
             pass
         except OSError as error:
@@ -387,6 +392,8 @@ if __name__ == "__main__":
         try:
             _verifier_probe(None, timeout=30)
         except InterruptedError as error:
+            if error.__cause__ is not None:
+                print(error.__cause__, file=sys.stderr)
             print(f"InterruptedError: {error}", file=sys.stderr)
             sys.exit(128 + error.errno)
     else:

@@ -11,12 +11,12 @@ import time
 from pathlib import Path
 
 from command_supervisor import (
+    _cleanup_failure,
     _defer_interruptions,
     _Interruption,
     _owned_processes,
     _processes,
-    _reap_group,
-    _signal_group,
+    _restore_process_state,
     _stop,
     _subreaper,
     supervised_run,
@@ -84,9 +84,14 @@ def _signal_probe(command, env, core, number):
     evidence = None
     previous_signals = {value: signal.getsignal(value) for value in (signal.SIGINT, signal.SIGTERM)}
     closing = False
+    pending_signal = None
 
     def interrupt(value, _frame):
-        if not closing:
+        nonlocal pending_signal
+        if closing:
+            if pending_signal is None:
+                pending_signal = value
+        else:
             raise _Interruption(value)
 
     owner = None
@@ -136,11 +141,8 @@ def _signal_probe(command, env, core, number):
         if owner is not None:
             try:
                 _stop(owner, owned, previous_children)
-                if state is not None:
-                    _signal_group(state["worker_pid"], signal.SIGKILL)
-                    _reap_group(state["worker_pid"])
-                    if Path(state["root"]).exists():
-                        shutil.rmtree(state["root"])
+                if state is not None and Path(state["root"]).exists():
+                    shutil.rmtree(state["root"])
             except (OSError, RuntimeError, subprocess.SubprocessError, ExceptionGroup) as error:
                 errors.append(error)
         if not errors and evidence is not None:
@@ -148,19 +150,12 @@ def _signal_probe(command, env, core, number):
                 shutil.rmtree(evidence)
             except OSError as error:
                 errors.append(error)
-        for value, handler in previous_signals.items():
-            try:
-                signal.signal(value, handler)
-            except (OSError, ValueError) as error:
-                errors.append(error)
-        try:
-            _subreaper(previous_subreaper)
-        except OSError as error:
-            errors.append(error)
-        if errors:
-            raise BaseExceptionGroup(
-                "Plugin interruption and observer cleanup errors", [primary, *errors] if primary else errors
-            )
+        restoration_signal = _restore_process_state(previous_signals, previous_subreaper, errors)
+        if pending_signal is None:
+            pending_signal = restoration_signal
+        failure = _cleanup_failure(primary, pending_signal, errors, "Plugin interruption and observer cleanup errors")
+        if failure is not None:
+            raise failure
     print(f"PASS real Plugin cleanup after owner {signal.Signals(number).name}", flush=True)
 
 

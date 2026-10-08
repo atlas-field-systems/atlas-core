@@ -153,6 +153,8 @@ def main():
         else:
             verify(options.bootstrap)
     except InterruptedError as error:
+        if error.__cause__ is not None:
+            print(error.__cause__, file=sys.stderr)
         print(f"InterruptedError: {error}", file=sys.stderr)
         return 128 + error.errno
     return 0

@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -24,6 +25,48 @@ class _Interruption(BaseException):
     def __init__(self, number):
         self.number = number
         super().__init__(number)
+
+
+def _cleanup_failure(primary, pending_signal, errors, message):
+    if pending_signal is not None and not isinstance(primary, InterruptedError):
+        interruption = InterruptedError(pending_signal, "Verification interrupted")
+        interruption.__cause__ = primary
+        primary = interruption
+    if errors:
+        return BaseExceptionGroup(message, [primary, *errors] if primary is not None else errors)
+    return primary if pending_signal is not None else None
+
+
+def _restore_process_state(previous_signals, previous_subreaper, errors):
+    # Restoring one handler must not expose its old cancellation behavior before
+    # the remaining handlers and subreaper state are restored. Linux queues the
+    # signals for this short step; leave already-blocked caller signals alone.
+    numbers = set(previous_signals)
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, numbers)
+    pending = None
+    try:
+        try:
+            _subreaper(previous_subreaper)
+        except OSError as error:
+            errors.append(error)
+        for number, handler in previous_signals.items():
+            try:
+                signal.signal(number, handler)
+            except (OSError, ValueError) as error:
+                errors.append(error)
+        delivered = numbers - previous_mask
+        while delivered:
+            received = signal.sigtimedwait(delivered, 0)
+            if received is None:
+                break
+            delivered.discard(received.si_signo)
+            if pending is None:
+                pending = received.si_signo
+    except OSError as error:
+        errors.append(error)
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+    return pending
 
 
 @contextmanager
@@ -70,38 +113,6 @@ def _subreaper(enabled=None):
         error = ctypes.get_errno()
         raise OSError(error, os.strerror(error))
     return state.value
-
-
-def _group_exists(group):
-    try:
-        os.killpg(group, 0)
-    except ProcessLookupError:
-        return False
-    return True
-
-
-def _signal_group(group, number):
-    try:
-        os.killpg(group, number)
-    except ProcessLookupError:
-        pass
-
-
-def _reap_group(group):
-    deadline = time.monotonic() + 3
-    while True:
-        while True:
-            try:
-                pid, _ = os.waitpid(-group, os.WNOHANG)
-            except ChildProcessError:
-                break
-            if pid == 0:
-                break
-        if not _group_exists(group):
-            return
-        if time.monotonic() >= deadline:
-            raise RuntimeError(f"Fixture process group {group} did not exit and reap")
-        time.sleep(0.01)
 
 
 def _processes():
@@ -162,17 +173,20 @@ def _stop(process, owned, previous_children):
             remaining = _owned_processes(process, owned, previous_children)
             errors.extend(_reap_adopted(process, remaining))
             remaining = _owned_processes(process, owned, previous_children)
-            # Give the highest surviving owners the grace to drain their own
-            # children. An orphan becomes an owner only after its parent exits.
-            targets = (
-                remaining
-                if number == signal.SIGKILL
-                else {pid: facts for pid, facts in remaining.items() if facts[0] not in remaining}
-            )
+            # Stop direct/adopted owners before their children, including during
+            # forced shutdown. Their unreaped child ownership pins the PID; a
+            # nested child's parent could instead reap it before our signal.
+            targets = {pid: facts for pid, facts in remaining.items() if facts[0] == os.getpid()}
             for pid in targets:
                 if pid not in signalled:
                     try:
-                        os.kill(pid, number)
+                        # Prove ownership without reaping. An exited child no
+                        # longer needs a signal, and a nonchild is never safe.
+                        exited = os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+                        if exited is None:
+                            os.kill(pid, number)
+                    except ChildProcessError:
+                        continue
                     except ProcessLookupError:
                         pass
                     except OSError as error:
@@ -212,9 +226,14 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
     root = None
     previous_signals = {number: signal.getsignal(number) for number in (signal.SIGINT, signal.SIGTERM)}
     closing = False
+    pending_signal = None
 
     def interrupt(number, _frame):
-        if not closing:
+        nonlocal pending_signal
+        if closing:
+            if pending_signal is None:
+                pending_signal = number
+        else:
             raise _Interruption(number)
 
     process = None
@@ -283,19 +302,12 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
                     cleanup_errors.append(error)
             else:
                 cleanup_errors.append(RuntimeError(f"Command shutdown incomplete; retained {root}"))
-        for number, handler in previous_signals.items():
-            try:
-                signal.signal(number, handler)
-            except (OSError, ValueError) as error:
-                cleanup_errors.append(error)
-        try:
-            _subreaper(previous_subreaper)
-        except OSError as error:
-            cleanup_errors.append(error)
-        if cleanup_errors:
-            raise BaseExceptionGroup(
-                "Verification failure and cleanup errors", [primary, *cleanup_errors] if primary else cleanup_errors
-            )
+        restoration_signal = _restore_process_state(previous_signals, previous_subreaper, cleanup_errors)
+        if pending_signal is None:
+            pending_signal = restoration_signal
+        failure = _cleanup_failure(primary, pending_signal, cleanup_errors, "Verification failure and cleanup errors")
+        if failure is not None:
+            raise failure
     return output.strip() if capture else None
 
 
@@ -314,10 +326,15 @@ def main():
     try:
         supervised_run(command, os.environ, cwd=Path.cwd(), on_started=record)
     except InterruptedError as error:
+        if error.__cause__ is not None:
+            print(error.__cause__, file=sys.stderr)
         print(error, file=sys.stderr)
         return 128 + error.errno
     except (OSError, RuntimeError, subprocess.SubprocessError, BaseExceptionGroup) as error:
-        print(error, file=sys.stderr)
+        if isinstance(error, BaseExceptionGroup):
+            traceback.print_exception(error, file=sys.stderr)
+        else:
+            print(error, file=sys.stderr)
         return 1
     return 0
 
