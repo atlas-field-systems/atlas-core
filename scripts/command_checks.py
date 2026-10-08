@@ -16,6 +16,7 @@ from command_fault_checks import check_command_faults
 from command_supervisor import (
     _cleanup_failure,
     _defer_interruptions,
+    _direct_children,
     _Interruption,
     _owned_processes,
     _processes,
@@ -69,7 +70,7 @@ def _verifier_probe(number, *, timeout=None):
 
     evidence = None
     owner = None
-    previous_children = {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
+    previous_children = _direct_children()
     owned = {}
     cleanup_errors = []
     try:

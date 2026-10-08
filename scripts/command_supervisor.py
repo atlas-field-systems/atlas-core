@@ -129,19 +129,23 @@ def _processes():
     return result
 
 
+def _direct_children():
+    return {pid: facts[2] for pid, facts in _processes().items() if facts[0] == os.getpid()}
+
+
 def _owned_processes(process, owned, previous_children):
     snapshot = _processes()
     changed = True
     while changed:
         changed = False
-        for pid, (parent, group, birth) in snapshot.items():
-            if pid in owned:
+        for pid, (parent, _group, birth) in snapshot.items():
+            if owned.get(pid) == birth:
                 continue
+            parent_facts = snapshot.get(parent)
             if (
-                pid == process.pid
-                or parent in owned
-                or group == process.pid
-                or (parent == os.getpid() and pid not in previous_children)
+                (pid == process.pid and process.returncode is None and parent == os.getpid())
+                or (parent_facts is not None and owned.get(parent) == parent_facts[2])
+                or (parent == os.getpid() and previous_children.get(pid) != birth)
             ):
                 owned[pid] = birth
                 changed = True
@@ -151,7 +155,7 @@ def _owned_processes(process, owned, previous_children):
 def _reap_adopted(process, remaining):
     errors = []
     for pid, (parent, _group, _birth) in remaining.items():
-        if parent == os.getpid() and pid != process.pid:
+        if parent == os.getpid() and (pid != process.pid or process.returncode is not None):
             try:
                 os.waitpid(pid, os.WNOHANG)
             except ChildProcessError:
@@ -177,8 +181,9 @@ def _stop(process, owned, previous_children):
             # forced shutdown. Their unreaped child ownership pins the PID; a
             # nested child's parent could instead reap it before our signal.
             targets = {pid: facts for pid, facts in remaining.items() if facts[0] == os.getpid()}
-            for pid in targets:
-                if pid not in signalled:
+            for pid, (_parent, _group, birth) in targets.items():
+                identity = (pid, birth)
+                if identity not in signalled:
                     try:
                         # Prove ownership without reaping. An exited child no
                         # longer needs a signal, and a nonchild is never safe.
@@ -191,7 +196,7 @@ def _stop(process, owned, previous_children):
                         pass
                     except OSError as error:
                         errors.append(error)
-                    signalled.add(pid)
+                    signalled.add(identity)
             if not _owned_processes(process, owned, previous_children):
                 process.communicate(timeout=KILL_GRACE_SECONDS)
                 if errors:
@@ -221,7 +226,7 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("Command timeout must be positive and finite")
     previous_subreaper = _subreaper()
-    previous_children = {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
+    previous_children = _direct_children()
     owned = {}
     root = None
     previous_signals = {number: signal.getsignal(number) for number in (signal.SIGINT, signal.SIGTERM)}

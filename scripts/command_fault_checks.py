@@ -73,7 +73,7 @@ class _Fixture:
 def _children():
     # /proc/.../children requires optional CONFIG_PROC_CHILDREN. The supported
     # stat interface already supplies each process's parent on Linux.
-    return {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
+    return {pid: facts[2] for pid, facts in _processes().items() if facts[0] == os.getpid()}
 
 
 @contextmanager
@@ -112,7 +112,7 @@ def _fault_fixture():
         remaining = set()
         try:
             while fixture is not None:
-                fixture.pids.update(_children() - previous_children)
+                fixture.pids.update(pid for pid, birth in _children().items() if previous_children.get(pid) != birth)
                 for pid in fixture.pids:
                     try:
                         # Independently prove that this is still our unreaped
@@ -191,8 +191,11 @@ def _fault_fixture():
 def _writer(fixture):
     actor = fixture.evidence / "writer.py"
     actor.write_text("""
-import json,os,sys,time
+import json,os,signal,sys,time
 from pathlib import Path
+if len(sys.argv) > 2 and sys.argv[2] == 'detached':
+    os.setsid()
+    signal.signal(signal.SIGTERM,signal.SIG_IGN)
 root = Path(os.environ['TMPDIR'])
 with (root / 'writer').open('w') as writer:
     writer.write('actual open writer')
@@ -451,6 +454,108 @@ while True: time.sleep(.02)
     print("PASS forced shutdown across real parent reaping: no stale child PID signalled")
 
 
+def _nested_writer(fixture):
+    _writer(fixture)
+    owner = fixture.evidence / "replacement_owner.py"
+    owner.write_text("""
+import json,os,subprocess,sys,time
+from pathlib import Path
+evidence = Path(sys.argv[1])
+child = subprocess.Popen([sys.executable,evidence / 'writer.py',evidence / 'nested.json','detached'])
+deadline = time.monotonic() + 3
+while not (evidence / 'nested.json').exists():
+    if child.poll() is not None or time.monotonic() >= deadline:
+        raise RuntimeError('Replacement writer did not become ready')
+    time.sleep(.01)
+(evidence / 'ready.json').write_text(json.dumps({'pids':[os.getpid(),child.pid],'root':os.environ['TMPDIR']}))
+while True: time.sleep(.02)
+""")
+    return owner
+
+
+def _reused_identity_probe(adopted=False):
+    with _fault_fixture() as fixture:
+        owner = _nested_writer(fixture)
+        state = None
+        scheduled = False
+        actual_owned = _owned_processes
+
+        def ready(process, root):
+            nonlocal state
+            fixture.record(process, root)
+            state = fixture.ready(process)
+
+        def snapshot(process, owned, previous_children):
+            nonlocal scheduled
+            if state is not None and not scheduled and (not adopted or process.returncode is not None):
+                child = state["pids"][1]
+                birth = _processes()[child][2]
+                # Schedule only stale identity metadata. The current detached
+                # writer, its parent/adoption, signalling and storage are real.
+                owned[child] = str(int(birth) - 1)
+                if adopted:
+                    previous_children[child] = owned[child]
+                scheduled = True
+            return actual_owned(process, owned, previous_children)
+
+        with patch("command_supervisor._owned_processes", snapshot):
+            try:
+                supervised_run(
+                    [sys.executable, owner, fixture.evidence], os.environ, cwd=ROOT, timeout=1, on_started=ready
+                )
+            except subprocess.TimeoutExpired:
+                pass
+            else:
+                raise RuntimeError("Replacement-writer deadline incorrectly succeeded")
+        if not scheduled:
+            raise RuntimeError("Stale identity schedule did not execute")
+        fixture.require_clean()
+    stage = "adopted with old baseline" if adopted else "nested"
+    print(f"PASS {stage} writer with stale birth record: current child stopped/reaped before storage removal")
+
+
+def _stale_parent_probe():
+    with _fault_fixture() as fixture:
+        actor = _nested_writer(fixture)
+        foreign_root = fixture.evidence / "foreign-storage"
+        foreign_root.mkdir()
+        parent = subprocess.Popen(
+            [sys.executable, actor, fixture.evidence],
+            env={**os.environ, "TMPDIR": str(foreign_root)},
+            text=True,
+            start_new_session=True,
+        )
+        fixture.record(parent, foreign_root)
+        state = fixture.ready(parent)
+        birth = _processes()[parent.pid][2]
+        command = None
+        actual_owned = _owned_processes
+
+        def ready(process, root):
+            nonlocal command
+            fixture.record(process, root)
+            command = process, root
+
+        def snapshot(process, owned, previous_children):
+            # This real pre-existing parent belongs to the independent fixture,
+            # not the command. Its stale identity must not claim its live child.
+            owned[parent.pid] = str(int(birth) - 1)
+            return actual_owned(process, owned, previous_children)
+
+        with patch("command_supervisor._owned_processes", snapshot):
+            supervised_run([sys.executable, "-c", "pass"], os.environ, cwd=ROOT, on_started=ready)
+        process, root = command
+        if process.poll() != 0 or root.exists():
+            raise RuntimeError("Unrelated-parent control did not complete command cleanup")
+        for pid in state["pids"]:
+            os.kill(pid, 0)
+        if (foreign_root / "writer").read_text() != "actual open writer":
+            raise RuntimeError("Command cleanup changed unrelated writer storage")
+        # Those unrelated writers intentionally survive this assertion. The
+        # independent fixture owns their subsequent stop/reap and storage cleanup.
+    print("PASS stale unrelated parent identity cannot claim or stop its real writer")
+
+
 def _graceful_shutdown_probe(cleanup_signal=None):
     with _fault_fixture() as fixture:
         child = fixture.evidence / "child.py"
@@ -553,6 +658,9 @@ def check_command_faults():
             _graceful_shutdown_probe(number)
         _graceful_shutdown_probe()
         _parent_reaping_probe()
+        _reused_identity_probe()
+        _reused_identity_probe(adopted=True)
+        _stale_parent_probe()
         previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
         try:
             _cleanup_signal_probe(signal.SIGINT, "success")

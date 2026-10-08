@@ -13,9 +13,9 @@ from pathlib import Path
 from command_supervisor import (
     _cleanup_failure,
     _defer_interruptions,
+    _direct_children,
     _Interruption,
     _owned_processes,
-    _processes,
     _restore_process_state,
     _stop,
     _subreaper,
@@ -95,7 +95,7 @@ def _signal_probe(command, env, core, number):
             raise _Interruption(value)
 
     owner = None
-    previous_children = {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
+    previous_children = _direct_children()
     owned = {}
     state = None
     errors = []
