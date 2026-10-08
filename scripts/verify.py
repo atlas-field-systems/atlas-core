@@ -4,11 +4,13 @@
 import argparse
 import hashlib
 import json
+import os
 import shutil
+import sys
 from contextlib import contextmanager
 
+from command_checks import check_command_lifetime
 from generate import OUTPUTS, generate
-from go_test_supervisor import supervised_run
 from plugin_checks import check_plugin_fixture_lifetime
 from toolchain import LOCK, ROOT, prepare, run
 from toolchain_checks import check_toolchain_refusals
@@ -33,7 +35,7 @@ def check(passed, name):
 
 def _test_go(go, env, *, cwd, capture=False):
     # Shared fixture inputs outside the Go module are not covered by its result cache.
-    return supervised_run([go, "test", "-count=1", "./..."], env, cwd=cwd, capture=capture)
+    return run([go, "test", "-count=1", "./..."], env, cwd=cwd, capture=capture)
 
 
 def verify(bootstrap):
@@ -70,8 +72,10 @@ def verify(bootstrap):
         _test_go(go, env, cwd=core)
         run([go, "vet", "./..."], env, cwd=core)
         run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=core)
+    with check(passed, "verifier command deadline, interruption and detached-descendant cleanup"):
+        check_command_lifetime()
     with check(passed, "Plugin bookkeeping race and real-process recovery workflows"):
-        supervised_run(
+        run(
             [go, "test", "-race", "-count=1", "./plugins/...", "./pluginruntime/...", "./plugindispatch/..."],
             env,
             cwd=core,
@@ -123,14 +127,38 @@ def verify(bootstrap):
     print(f"PASS foundation and Plugin component at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bootstrap", action="store_true", help="download checksum-locked Go/sqlc/Ruff when absent")
     parser.add_argument(
         "--toolchain-self-test", action="store_true", help="only execute checksum and version refusal checks"
     )
+    parser.add_argument("--command-lifetime-probe", type=str, help=argparse.SUPPRESS)
+    parser.add_argument("--probe-timeout", type=float, default=5, help=argparse.SUPPRESS)
     options = parser.parse_args()
-    if options.toolchain_self_test:
-        check_toolchain_refusals()
-    else:
-        verify(options.bootstrap)
+    try:
+        if options.command_lifetime_probe:
+            run(
+                ["npm", "test", "--", "timeout-probe.ts"],
+                {
+                    **os.environ,
+                    "ATLAS_CONTRACT_PROBE_MODE": "async",
+                    "ATLAS_CONTRACT_PROBE_MARKER": options.command_lifetime_probe,
+                },
+                cwd=ROOT / "Atlas SDK",
+                timeout=options.probe_timeout,
+            )
+        elif options.toolchain_self_test:
+            check_toolchain_refusals()
+        else:
+            verify(options.bootstrap)
+    except InterruptedError as error:
+        if error.__cause__ is not None:
+            print(error.__cause__, file=sys.stderr)
+        print(f"InterruptedError: {error}", file=sys.stderr)
+        return 128 + error.errno
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

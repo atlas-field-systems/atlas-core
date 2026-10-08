@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,6 +11,7 @@ export interface SupervisorOptions {
   timeoutMs?: number;
   args?: string[];
   signal?: AbortSignal;
+  onFixtureStarted?: (fixture: { child: ChildProcess; pid: number; dataDir: string; privateRoot: string }) => void;
 }
 
 // One surviving owner runs each test worker and owns its real Go children.
@@ -50,6 +51,15 @@ export async function runContractTest(file: string, options: SupervisorOptions =
         if (closing) return undefined;
         const fixture = startFixture(dataDir, message.options);
         startedFixtures.push({ pid: fixture.pid, dataDir });
+        if (fixture.pid !== undefined) {
+          try {
+            // Report ownership before readiness can fail. Observer errors must
+            // not detach the launched fixture from its surviving cleanup owner.
+            options.onFixtureStarted?.({ child: fixture.child, pid: fixture.pid, dataDir, privateRoot });
+          } catch (error) {
+            controlErrors.push(error);
+          }
+        }
         return fixture;
       })();
       fixtures.set(message.id, entry);

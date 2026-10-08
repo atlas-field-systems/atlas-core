@@ -1,0 +1,83 @@
+{
+  "captured_at": "2026-10-08T02:29:15.194942+00:00",
+  "repository": "atlas-field-systems/atlas-core",
+  "branch": "main",
+  "capture_method": "Read-only gh api requests; no GitHub configuration changes.",
+  "relevant_settings": {
+    "required_checks": [
+      {
+        "context": "verify",
+        "app_id": 15368
+      }
+    ],
+    "strict_status_checks": false,
+    "enforce_admins": true,
+    "required_approving_review_count": 0,
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "require_last_push_approval": false,
+    "required_conversation_resolution": true,
+    "review_bypass_allowances": null,
+    "push_restrictions": null,
+    "allow_force_pushes": false,
+    "allow_deletions": false,
+    "effective_rules": []
+  },
+  "absence_note": "The protection readback omits bypass_pull_request_allowances and restrictions; null above records those absent fields. The effective branch rules readback is empty.",
+  "api_readback": {
+    "repos/atlas-field-systems/atlas-core/branches/main/protection": {
+      "url": "https://api.github.com/repos/atlas-field-systems/atlas-core/branches/main/protection",
+      "required_status_checks": {
+        "url": "https://api.github.com/repos/atlas-field-systems/atlas-core/branches/main/protection/required_status_checks",
+        "strict": false,
+        "contexts": [
+          "verify"
+        ],
+        "contexts_url": "https://api.github.com/repos/atlas-field-systems/atlas-core/branches/main/protection/required_status_checks/contexts",
+        "checks": [
+          {
+            "context": "verify",
+            "app_id": 15368
+          }
+        ]
+      },
+      "required_pull_request_reviews": {
+        "url": "https://api.github.com/repos/atlas-field-systems/atlas-core/branches/main/protection/required_pull_request_reviews",
+        "dismiss_stale_reviews": true,
+        "require_code_owner_reviews": false,
+        "require_last_push_approval": false,
+        "required_approving_review_count": 0
+      },
+      "required_signatures": {
+        "url": "https://api.github.com/repos/atlas-field-systems/atlas-core/branches/main/protection/required_signatures",
+        "enabled": false
+      },
+      "enforce_admins": {
+        "url": "https://api.github.com/repos/atlas-field-systems/atlas-core/branches/main/protection/enforce_admins",
+        "enabled": true
+      },
+      "required_linear_history": {
+        "enabled": false
+      },
+      "allow_force_pushes": {
+        "enabled": false
+      },
+      "allow_deletions": {
+        "enabled": false
+      },
+      "block_creations": {
+        "enabled": false
+      },
+      "required_conversation_resolution": {
+        "enabled": true
+      },
+      "lock_branch": {
+        "enabled": false
+      },
+      "allow_fork_syncing": {
+        "enabled": false
+      }
+    },
+    "repos/atlas-field-systems/atlas-core/rules/branches/main": []
+  }
+}

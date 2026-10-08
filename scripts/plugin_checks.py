@@ -10,7 +10,17 @@ import tempfile
 import time
 from pathlib import Path
 
-from go_test_supervisor import _reap_group, _signal_group, _stop, _subreaper, supervised_run
+from command_supervisor import (
+    _cleanup_failure,
+    _defer_interruptions,
+    _direct_children,
+    _Interruption,
+    _owned_processes,
+    _restore_process_state,
+    _stop,
+    _subreaper,
+    supervised_run,
+)
 from toolchain import ROOT, run
 
 
@@ -71,31 +81,41 @@ def _worker_probe(command, env, core, deadline):
 
 def _signal_probe(command, env, core, number):
     previous_subreaper = _subreaper()
-    evidence = Path(tempfile.mkdtemp(prefix="atlas-plugin-owner-probe-"))
-    manifest = evidence / "owner.json"
+    evidence = None
     previous_signals = {value: signal.getsignal(value) for value in (signal.SIGINT, signal.SIGTERM)}
     closing = False
+    pending_signal = None
 
     def interrupt(value, _frame):
-        if not closing:
-            raise InterruptedError(value, "Plugin cleanup observer interrupted")
+        nonlocal pending_signal
+        if closing:
+            if pending_signal is None:
+                pending_signal = value
+        else:
+            raise _Interruption(value)
 
     owner = None
+    previous_children = _direct_children()
+    owned = {}
     state = None
     errors = []
     try:
         _subreaper(1)
         for value in previous_signals:
             signal.signal(value, interrupt)
-        owner = subprocess.Popen(
-            [sys.executable, ROOT / "scripts/go_test_supervisor.py", "--manifest", manifest, "--", *command],
-            cwd=core,
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-            start_new_session=True,
-        )
+        with _defer_interruptions():
+            evidence = Path(tempfile.mkdtemp(prefix="atlas-plugin-owner-probe-"))
+            manifest = evidence / "owner.json"
+            owner = subprocess.Popen(
+                [sys.executable, ROOT / "scripts/command_supervisor.py", "--manifest", manifest, "--", *command],
+                cwd=core,
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                start_new_session=True,
+            )
+            _owned_processes(owner, owned, previous_children)
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:
             try:
@@ -113,37 +133,29 @@ def _signal_probe(command, env, core, number):
             raise RuntimeError(f"owner interruption returned {owner.returncode}: {diagnostic}")
         _assert_absent(plugin, root)
         _assert_absent(state["worker_pid"], root)
+    except _Interruption as error:
+        raise InterruptedError(error.number, "Plugin cleanup observer interrupted") from None
     finally:
         primary = sys.exception()
         closing = True
         if owner is not None:
             try:
-                _stop(owner)
-                if state is not None:
-                    _signal_group(state["worker_pid"], signal.SIGKILL)
-                    _reap_group(state["worker_pid"])
-                    if Path(state["root"]).exists():
-                        shutil.rmtree(state["root"])
-            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+                _stop(owner, owned, previous_children)
+                if state is not None and Path(state["root"]).exists():
+                    shutil.rmtree(state["root"])
+            except (OSError, RuntimeError, subprocess.SubprocessError, ExceptionGroup) as error:
                 errors.append(error)
-        if not errors:
+        if not errors and evidence is not None:
             try:
                 shutil.rmtree(evidence)
             except OSError as error:
                 errors.append(error)
-        for value, handler in previous_signals.items():
-            try:
-                signal.signal(value, handler)
-            except (OSError, ValueError) as error:
-                errors.append(error)
-        try:
-            _subreaper(previous_subreaper)
-        except OSError as error:
-            errors.append(error)
-        if errors:
-            raise BaseExceptionGroup(
-                "Plugin interruption and observer cleanup errors", [primary, *errors] if primary else errors
-            )
+        restoration_signal = _restore_process_state(previous_signals, previous_subreaper, errors)
+        if pending_signal is None:
+            pending_signal = restoration_signal
+        failure = _cleanup_failure(primary, pending_signal, errors, "Plugin interruption and observer cleanup errors")
+        if failure is not None:
+            raise failure
     print(f"PASS real Plugin cleanup after owner {signal.Signals(number).name}", flush=True)
 
 
