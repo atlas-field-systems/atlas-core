@@ -1,16 +1,18 @@
+import type { ChildProcess } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { hasErrorCode } from "./support.js";
 
 export interface TimeoutFixture {
+  child: ChildProcess;
   pid: number;
   dataDir: string;
   privateRoot: string;
 }
 
 interface CleanupOptions {
-  signal?: (pid: number, signal: "SIGTERM" | "SIGKILL") => void;
+  signal?: (child: ChildProcess, signal: "SIGTERM" | "SIGKILL") => void;
   removeDirectory?: (path: string) => Promise<void>;
 }
 
@@ -23,35 +25,42 @@ export async function withTimeoutFallback(
   work: (observe: (fixture: TimeoutFixture) => void) => Promise<void>,
   options: CleanupOptions = {},
 ) {
-  const fixtures = new Map<number, TimeoutFixture>();
+  const fixtures = new Map<ChildProcess, TimeoutFixture>();
   const errors: unknown[] = [];
   try {
-    await work((fixture) => fixtures.set(fixture.pid, fixture));
+    await work((fixture) => fixtures.set(fixture.child, fixture));
   } catch (error) {
     errors.push(error);
   }
 
   const retained: string[] = [];
   const directories = new Set<string>();
-  const signal = options.signal ?? ((pid, name) => process.kill(pid, name));
+  const signal = options.signal ?? ((child, name) => child.kill(name));
   const removeDirectory = options.removeDirectory ?? ((path) => rm(path, { recursive: true, force: true }));
   for (const fixture of fixtures.values()) {
     directories.add(fixture.dataDir);
     directories.add(fixture.privateRoot);
     let stopped = false;
+    const signalError = (error: Error) => errors.push(error);
+    fixture.child.on("error", signalError);
     for (const name of ["SIGTERM", "SIGKILL"] as const) {
+      // The surviving owner may already have reaped this child, including during
+      // a preceding wait. Its numeric PID can then belong to another process.
+      stopped = hasExited(fixture.child);
+      if (stopped) break;
       try {
-        signal(fixture.pid, name);
+        signal(fixture.child, name);
       } catch (error) {
         if (!hasErrorCode(error, "ESRCH")) errors.push(error);
       }
       try {
-        stopped = await waitForExit(fixture.pid);
+        stopped = await waitForExit(fixture.child);
       } catch (error) {
         errors.push(error);
       }
       if (stopped) break;
     }
+    fixture.child.off("error", signalError);
     if (!stopped) {
       retained.push(fixture.dataDir);
       errors.push(new Error(`Timeout fixture ${fixture.pid} could not be stopped; retained ${fixture.dataDir}`));
@@ -73,15 +82,14 @@ export async function withTimeoutFallback(
   if (errors.length > 1) throw new AggregateError(errors, "Timeout workflow and fallback cleanup failed");
 }
 
-async function waitForExit(pid: number) {
+function hasExited(child: ChildProcess) {
+  return child.exitCode !== null || child.signalCode !== null;
+}
+
+async function waitForExit(child: ChildProcess) {
   const deadline = performance.now() + shutdownGraceMs;
   while (true) {
-    try {
-      process.kill(pid, 0);
-    } catch (error) {
-      if (hasErrorCode(error, "ESRCH")) return true;
-      throw error;
-    }
+    if (hasExited(child)) return true;
     const remaining = deadline - performance.now();
     if (remaining <= 0) return false;
     await delay(Math.min(20, remaining));

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from unittest.mock import patch
 
-from command_supervisor import _defer_interruptions, _Interruption, _subreaper, supervised_run
+from command_supervisor import _defer_interruptions, _Interruption, _processes, _subreaper, supervised_run
 from toolchain import ROOT
 
 
@@ -61,7 +61,9 @@ class _Fixture:
 
 
 def _children():
-    return set(map(int, Path(f"/proc/{os.getpid()}/task/{os.getpid()}/children").read_text().split()))
+    # /proc/.../children requires optional CONFIG_PROC_CHILDREN. The supported
+    # stat interface already supplies each process's parent on Linux.
+    return {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
 
 
 @contextmanager
@@ -308,10 +310,21 @@ while True: time.sleep(.02)
 
 
 def check_command_faults():
-    for number in (signal.SIGINT, signal.SIGTERM):
-        _launch_cancellation_probe(number)
-        _pipe_cancellation_probe(number)
-    _graceful_shutdown_probe()
+    actual_read = Path.read_text
+
+    def without_children(path, *arguments, **options):
+        if path.name == "children" and path.is_relative_to("/proc"):
+            raise FileNotFoundError("Controlled kernel without CONFIG_PROC_CHILDREN")
+        return actual_read(path, *arguments, **options)
+
+    # Remove only the optional interface. Processes, stat snapshots, readiness
+    # files and the independent safety owner's termination/reaping remain real.
+    with patch("pathlib.Path.read_text", without_children):
+        for number in (signal.SIGINT, signal.SIGTERM):
+            _launch_cancellation_probe(number)
+            _pipe_cancellation_probe(number)
+        _graceful_shutdown_probe()
+    print("PASS real fault controls without the optional /proc children interface")
 
 
 if __name__ == "__main__":

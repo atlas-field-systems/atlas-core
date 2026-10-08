@@ -12,7 +12,7 @@ export async function run(signal: AbortSignal) {
   // These cases qualify the observer's fallback, rather than the ordinary
   // supervisor. Signaling faults leave a real writer running, and removal faults
   // come from an actual nonempty-directory refusal. Liveness is never mocked.
-  for (const fault of ["signal", "remove", "grace", "refusal", "ancestor"]) {
+  for (const fault of ["signal", "remove", "grace", "owner-stop", "refusal", "ancestor"]) {
     if (signal.aborted) return;
     const privateRoot = await mkdtemp(join(tmpdir(), "atlas-fallback-writer-"));
     const dataDir = join(privateRoot, "data");
@@ -25,14 +25,14 @@ export async function run(signal: AbortSignal) {
         "-e",
         `import { writeFileSync } from "node:fs";
          const path = process.argv[1];
-         if (process.argv[2] === "grace") process.on("SIGTERM", () => {});
+         if (process.argv[2] === "grace" || process.argv[2] === "owner-stop") process.on("SIGTERM", () => {});
          let count = 0;
          const write = () => writeFileSync(path, String(++count));
          write();
          console.log("ready");
          setInterval(write, 10);`,
         join(dataDir, "writer-state"),
-        fault === "grace" ? "grace" : "normal",
+        fault,
       ],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -57,10 +57,11 @@ export async function run(signal: AbortSignal) {
         "real fallback writer did not become ready",
       );
       assert(writer.pid !== undefined);
-      const resource = { pid: writer.pid, dataDir, privateRoot };
+      const resource = { child: writer, pid: writer.pid, dataDir, privateRoot };
       await access(join(dataDir, "writer-state"));
       const before = performance.now();
       const refusal = fault === "refusal" || fault === "ancestor";
+      const fallbackSignals: NodeJS.Signals[] = [];
       await assert.rejects(
         () =>
           withTimeoutFallback(
@@ -70,9 +71,13 @@ export async function run(signal: AbortSignal) {
               throw primary;
             },
             {
-              signal(pid, name) {
+              signal(child, name) {
+                fallbackSignals.push(name);
                 if (refusal || (fault === "signal" && name === "SIGTERM")) throw signalingFailure;
-                process.kill(pid, name);
+                child.kill(name);
+                // Let the independent owner reap the real writer while fallback
+                // is awaiting its graceful exit, before forced escalation.
+                if (fault === "owner-stop" && name === "SIGTERM") setImmediate(cancel);
               },
               removeDirectory(path) {
                 // Unlike a fake rm result, rmdir actually refuses this nonempty
@@ -84,7 +89,7 @@ export async function run(signal: AbortSignal) {
             },
           ),
         (error: unknown) => {
-          if (fault === "grace") {
+          if (fault === "grace" || fault === "owner-stop") {
             assert.equal(error, primary);
           } else {
             assert(error instanceof AggregateError);
@@ -102,6 +107,8 @@ export async function run(signal: AbortSignal) {
           return true;
         },
       );
+      if (fault === "owner-stop")
+        assert.deepEqual(fallbackSignals, ["SIGTERM"], "fallback does not escalate after its owner reaps the writer");
       assert(performance.now() - before < 6000, "fallback has bounded graceful and forced termination phases");
       if (refusal) {
         process.kill(resource.pid, 0);
@@ -120,7 +127,10 @@ export async function run(signal: AbortSignal) {
         }
         await assertPathRemoved(evidence, "independent evidence cleanup still runs after a removal failure");
         const stopped = await exited;
-        assert.equal(stopped.signal, fault === "grace" || fault === "signal" ? "SIGKILL" : "SIGTERM");
+        assert.equal(
+          stopped.signal,
+          fault === "grace" || fault === "signal" || fault === "owner-stop" ? "SIGKILL" : "SIGTERM",
+        );
       }
       outcome = { ok: true };
     } catch (error) {
@@ -155,23 +165,39 @@ export async function run(signal: AbortSignal) {
   if (signal.aborted) return;
   const evidence = await mkdtemp(join(tmpdir(), "atlas-fallback-started-"));
   const original = new Error("fixture observer fails before supervisor result");
+  const staleSignal = new Error("fallback tried to signal a fixture after its owner reaped it");
+  let staleSignalAttempts = 0;
   let observed: TimeoutFixture | undefined;
   await assert.rejects(
     () =>
-      withTimeoutFallback(evidence, async (observe) => {
-        await runContractTest(fileURLToPath(new URL("timeout-probe.ts", import.meta.url)), {
-          signal,
-          timeoutMs: 2500,
-          args: ["async", join(evidence, "ready.json")],
-          onFixtureStarted(resource) {
-            observed = resource;
-            observe(resource);
-            throw original;
+      withTimeoutFallback(
+        evidence,
+        async (observe) => {
+          await runContractTest(fileURLToPath(new URL("timeout-probe.ts", import.meta.url)), {
+            signal,
+            timeoutMs: 2500,
+            args: ["async", join(evidence, "ready.json")],
+            onFixtureStarted(resource) {
+              observed = resource;
+              observe(resource);
+              throw original;
+            },
+          });
+        },
+        {
+          signal(child) {
+            // The actual supervisor has already stopped and reaped its Go child.
+            // Refuse an unsafe call here so a red run cannot signal a reused PID.
+            assert(child.pid !== undefined);
+            assertProcessGone(child.pid);
+            staleSignalAttempts++;
+            throw staleSignal;
           },
-        });
-      }),
+        },
+      ),
     (error: unknown) => {
       assert(error instanceof AggregateError);
+      assert.equal(staleSignalAttempts, 0, "fallback never signals a fixture after its surviving owner reaps it");
       assert(error.errors.includes(original));
       return true;
     },

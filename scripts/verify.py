@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import shutil
+import sys
 from contextlib import contextmanager
 
 from command_checks import check_command_lifetime
@@ -126,7 +127,7 @@ def verify(bootstrap):
     print(f"PASS foundation and Plugin component at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bootstrap", action="store_true", help="download checksum-locked Go/sqlc/Ruff when absent")
     parser.add_argument(
@@ -135,18 +136,27 @@ if __name__ == "__main__":
     parser.add_argument("--command-lifetime-probe", type=str, help=argparse.SUPPRESS)
     parser.add_argument("--probe-timeout", type=float, default=5, help=argparse.SUPPRESS)
     options = parser.parse_args()
-    if options.command_lifetime_probe:
-        run(
-            ["npm", "test", "--", "timeout-probe.ts"],
-            {
-                **os.environ,
-                "ATLAS_CONTRACT_PROBE_MODE": "async",
-                "ATLAS_CONTRACT_PROBE_MARKER": options.command_lifetime_probe,
-            },
-            cwd=ROOT / "Atlas SDK",
-            timeout=options.probe_timeout,
-        )
-    elif options.toolchain_self_test:
-        check_toolchain_refusals()
-    else:
-        verify(options.bootstrap)
+    try:
+        if options.command_lifetime_probe:
+            run(
+                ["npm", "test", "--", "timeout-probe.ts"],
+                {
+                    **os.environ,
+                    "ATLAS_CONTRACT_PROBE_MODE": "async",
+                    "ATLAS_CONTRACT_PROBE_MARKER": options.command_lifetime_probe,
+                },
+                cwd=ROOT / "Atlas SDK",
+                timeout=options.probe_timeout,
+            )
+        elif options.toolchain_self_test:
+            check_toolchain_refusals()
+        else:
+            verify(options.bootstrap)
+    except InterruptedError as error:
+        print(f"InterruptedError: {error}", file=sys.stderr)
+        return 128 + error.errno
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

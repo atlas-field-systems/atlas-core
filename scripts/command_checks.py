@@ -94,8 +94,11 @@ def _verifier_probe(number, *, timeout=None):
             owner.send_signal(number)
         started = time.monotonic()
         output, diagnostic = owner.communicate(timeout=15)
-        if owner.returncode == 0:
-            raise RuntimeError("Verifier incorrectly passed after its deadline or interruption")
+        expected_status = 1 if number is None else 128 + number
+        if owner.returncode != expected_status:
+            raise RuntimeError(
+                f"Verifier returned {owner.returncode} instead of {expected_status}: {output}\n{diagnostic}"
+            )
         expected = "TimeoutExpired" if number is None else "InterruptedError"
         if expected not in diagnostic:
             raise RuntimeError(f"Verifier lost its {expected} failure: {output}\n{diagnostic}")
