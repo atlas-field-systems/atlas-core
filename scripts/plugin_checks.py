@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 
 from command_supervisor import (
+    _defer_interruptions,
+    _Interruption,
     _owned_processes,
     _processes,
     _reap_group,
@@ -79,14 +81,13 @@ def _worker_probe(command, env, core, deadline):
 
 def _signal_probe(command, env, core, number):
     previous_subreaper = _subreaper()
-    evidence = Path(tempfile.mkdtemp(prefix="atlas-plugin-owner-probe-"))
-    manifest = evidence / "owner.json"
+    evidence = None
     previous_signals = {value: signal.getsignal(value) for value in (signal.SIGINT, signal.SIGTERM)}
     closing = False
 
     def interrupt(value, _frame):
         if not closing:
-            raise InterruptedError(value, "Plugin cleanup observer interrupted")
+            raise _Interruption(value)
 
     owner = None
     previous_children = {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
@@ -97,16 +98,19 @@ def _signal_probe(command, env, core, number):
         _subreaper(1)
         for value in previous_signals:
             signal.signal(value, interrupt)
-        owner = subprocess.Popen(
-            [sys.executable, ROOT / "scripts/command_supervisor.py", "--manifest", manifest, "--", *command],
-            cwd=core,
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-            start_new_session=True,
-        )
-        _owned_processes(owner, owned, previous_children)
+        with _defer_interruptions():
+            evidence = Path(tempfile.mkdtemp(prefix="atlas-plugin-owner-probe-"))
+            manifest = evidence / "owner.json"
+            owner = subprocess.Popen(
+                [sys.executable, ROOT / "scripts/command_supervisor.py", "--manifest", manifest, "--", *command],
+                cwd=core,
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                start_new_session=True,
+            )
+            _owned_processes(owner, owned, previous_children)
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:
             try:
@@ -124,6 +128,8 @@ def _signal_probe(command, env, core, number):
             raise RuntimeError(f"owner interruption returned {owner.returncode}: {diagnostic}")
         _assert_absent(plugin, root)
         _assert_absent(state["worker_pid"], root)
+    except _Interruption as error:
+        raise InterruptedError(error.number, "Plugin cleanup observer interrupted") from None
     finally:
         primary = sys.exception()
         closing = True
@@ -137,7 +143,7 @@ def _signal_probe(command, env, core, number):
                         shutil.rmtree(state["root"])
             except (OSError, RuntimeError, subprocess.SubprocessError, ExceptionGroup) as error:
                 errors.append(error)
-        if not errors:
+        if not errors and evidence is not None:
             try:
                 shutil.rmtree(evidence)
             except OSError as error:

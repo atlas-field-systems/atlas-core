@@ -1,5 +1,6 @@
 """Exercise actual verifier deadlines and cancellation with serving fixtures."""
 
+import argparse
 import json
 import os
 import shutil
@@ -11,7 +12,16 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
-from command_supervisor import _owned_processes, _processes, _stop, _subreaper, supervised_run
+from command_fault_checks import check_command_faults
+from command_supervisor import (
+    _defer_interruptions,
+    _Interruption,
+    _owned_processes,
+    _processes,
+    _stop,
+    _subreaper,
+    supervised_run,
+)
 from toolchain import ROOT, run
 
 
@@ -39,33 +49,46 @@ def _wait_ready(owner, marker):
     raise RuntimeError("Verifier probe did not reach HTTP readiness within its bound")
 
 
-def _verifier_probe(number):
+def _verifier_probe(number, *, timeout=None):
+    if timeout is None:
+        timeout = 5 if number is None else 30
     previous_subreaper = _subreaper()
-    _subreaper(1)
-    evidence = Path(tempfile.mkdtemp(prefix="atlas-verifier-observer-"))
+    previous_signals = {value: signal.getsignal(value) for value in (signal.SIGINT, signal.SIGTERM)}
+    closing = False
+
+    def interrupt(value, _frame):
+        if not closing:
+            raise _Interruption(value)
+
+    evidence = None
     owner = None
     previous_children = {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
     owned = {}
     cleanup_errors = []
     try:
-        marker = evidence / "ready.json"
-        owner = subprocess.Popen(
-            [
-                sys.executable,
-                ROOT / "scripts/verify.py",
-                "--command-lifetime-probe",
-                marker,
-                "--probe-timeout",
-                "5" if number is None else "30",
-            ],
-            cwd=ROOT,
-            env={**os.environ, "TMPDIR": str(evidence)},
-            start_new_session=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        _owned_processes(owner, owned, previous_children)
+        for value in previous_signals:
+            signal.signal(value, interrupt)
+        _subreaper(1)
+        with _defer_interruptions():
+            evidence = Path(tempfile.mkdtemp(prefix="atlas-verifier-observer-"))
+            marker = evidence / "ready.json"
+            owner = subprocess.Popen(
+                [
+                    sys.executable,
+                    ROOT / "scripts/verify.py",
+                    "--command-lifetime-probe",
+                    marker,
+                    "--probe-timeout",
+                    str(timeout),
+                ],
+                cwd=ROOT,
+                env={**os.environ, "TMPDIR": str(evidence)},
+                start_new_session=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            _owned_processes(owner, owned, previous_children)
         state = _wait_ready(owner, marker)
         if number is not None:
             owner.send_signal(number)
@@ -85,8 +108,11 @@ def _verifier_probe(number):
         print(f"PASS actual verifier {action}: serving Go/SQLite fixture stopped/reaped, storage removed", flush=True)
         if time.monotonic() - started >= 15:
             raise RuntimeError("Verifier shutdown exceeded its qualification bound")
+    except _Interruption as error:
+        raise InterruptedError(error.number, "Verifier cleanup observer interrupted") from None
     finally:
         primary = sys.exception()
+        closing = True
         stopped = owner is None
         if owner is not None:
             try:
@@ -98,13 +124,19 @@ def _verifier_probe(number):
             except OSError as error:
                 cleanup_errors.append(error)
                 stopped = False
-        if stopped:
+        if evidence is not None:
+            if stopped:
+                try:
+                    shutil.rmtree(evidence)
+                except OSError as error:
+                    cleanup_errors.append(error)
+            else:
+                cleanup_errors.append(RuntimeError(f"Verifier observer shutdown incomplete; retained {evidence}"))
+        for value, handler in previous_signals.items():
             try:
-                shutil.rmtree(evidence)
-            except OSError as error:
+                signal.signal(value, handler)
+            except (OSError, ValueError) as error:
                 cleanup_errors.append(error)
-        else:
-            cleanup_errors.append(RuntimeError(f"Verifier observer shutdown incomplete; retained {evidence}"))
         try:
             _subreaper(previous_subreaper)
         except OSError as error:
@@ -113,6 +145,51 @@ def _verifier_probe(number):
             raise BaseExceptionGroup(
                 "Verifier probe and cleanup failures", [primary, *cleanup_errors] if primary else cleanup_errors
             )
+
+
+def _observer_signal_probe(number):
+    def interrupt(process, root):
+        deadline = time.monotonic() + 10
+        marker = None
+        while time.monotonic() < deadline:
+            marker = next(root.glob("atlas-verifier-observer-*/ready.json"), None)
+            if marker is not None:
+                break
+            if process.poll() is not None:
+                raise RuntimeError("Verifier observer exited before real HTTP/SQLite readiness")
+            time.sleep(0.02)
+        if marker is None:
+            raise RuntimeError("Verifier observer did not reach readiness within its bound")
+        state = _wait_ready(process, marker)
+        process.send_signal(number)
+        output, diagnostic = process.communicate(timeout=15)
+        if process.returncode != 128 + number or "InterruptedError" not in diagnostic:
+            raise RuntimeError(f"Verifier observer lost its interruption: {process.returncode}: {output}\n{diagnostic}")
+        # Check before this independent owner's finally can contain a failed
+        # observer or erase evidence that the observer itself failed to remove.
+        for pid in (process.pid, state["pid"], state["workerPid"]):
+            _require_gone(pid)
+        for private_root in (Path(state["dataDir"]).parents[1], marker.parent):
+            if private_root.exists():
+                raise RuntimeError(f"Interrupted verifier observer retained storage: {private_root}")
+
+    try:
+        supervised_run(
+            [sys.executable, ROOT / "scripts/command_checks.py", "--observer-probe"],
+            os.environ,
+            cwd=ROOT,
+            timeout=30,
+            capture=True,
+            on_started=interrupt,
+        )
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        raise RuntimeError("Interrupted verifier observer unexpectedly completed successfully")
+    print(
+        f"PASS verifier observer {signal.Signals(number).name}: real fixture stopped/reaped and evidence removed",
+        flush=True,
+    )
 
 
 def _stop_detached(pid):
@@ -290,6 +367,9 @@ def _cleanup_failure_probe():
 def check_command_lifetime():
     for number in (None, signal.SIGINT, signal.SIGTERM):
         _verifier_probe(number)
+    for number in (signal.SIGINT, signal.SIGTERM):
+        _observer_signal_probe(number)
+    check_command_faults()
     _detached_probe(exited=True)
     _detached_probe()
     _cleanup_failure_probe()
@@ -297,4 +377,14 @@ def check_command_lifetime():
 
 
 if __name__ == "__main__":
-    check_command_lifetime()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--observer-probe", action="store_true", help=argparse.SUPPRESS)
+    options = parser.parse_args()
+    if options.observer_probe:
+        try:
+            _verifier_probe(None, timeout=30)
+        except InterruptedError as error:
+            print(f"InterruptedError: {error}", file=sys.stderr)
+            sys.exit(128 + error.errno)
+    else:
+        check_command_lifetime()

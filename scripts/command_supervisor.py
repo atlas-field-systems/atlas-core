@@ -11,10 +11,51 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 TERM_GRACE_SECONDS = 5
 KILL_GRACE_SECONDS = 3
+
+
+class _Interruption(BaseException):
+    # selectors retries InterruptedError while reading subprocess pipes. Keep
+    # cancellation distinct until it has escaped that I/O boundary.
+    def __init__(self, number):
+        self.number = number
+        super().__init__(number)
+
+
+@contextmanager
+def _defer_interruptions():
+    # A child can already exist before Popen returns its handle. Record signals
+    # through that ownership handoff without blocking signals in the child.
+    previous = {number: signal.getsignal(number) for number in (signal.SIGINT, signal.SIGTERM)}
+    pending = None
+
+    def interrupt(number, _frame):
+        nonlocal pending
+        if pending is None:
+            pending = number
+
+    errors = []
+    try:
+        for number in previous:
+            signal.signal(number, interrupt)
+        yield
+    finally:
+        primary = sys.exception()
+        for number, handler in previous.items():
+            try:
+                signal.signal(number, handler)
+            except (OSError, ValueError) as error:
+                errors.append(error)
+        if errors:
+            raise BaseExceptionGroup(
+                "Launch and signal restoration failures", [primary, *errors] if primary is not None else errors
+            )
+    if pending is not None:
+        raise InterruptedError(pending, "Verification interrupted")
 
 
 def _subreaper(enabled=None):
@@ -120,7 +161,15 @@ def _stop(process, owned, previous_children):
             process.poll()
             remaining = _owned_processes(process, owned, previous_children)
             errors.extend(_reap_adopted(process, remaining))
-            for pid in remaining:
+            remaining = _owned_processes(process, owned, previous_children)
+            # Give the highest surviving owners the grace to drain their own
+            # children. An orphan becomes an owner only after its parent exits.
+            targets = (
+                remaining
+                if number == signal.SIGKILL
+                else {pid: facts for pid, facts in remaining.items() if facts[0] not in remaining}
+            )
+            for pid in targets:
                 if pid not in signalled:
                     try:
                         os.kill(pid, number)
@@ -136,6 +185,12 @@ def _stop(process, owned, previous_children):
                 return
             if time.monotonic() >= deadline:
                 break
+            # Drain captured pipes while allowing graceful cleanup to progress;
+            # otherwise an owner can block on its own shutdown diagnostics.
+            try:
+                process.communicate(timeout=min(0.02, max(0, deadline - time.monotonic())))
+            except subprocess.TimeoutExpired:
+                pass
             time.sleep(0.02)
     errors.append(RuntimeError(f"Command descendants did not exit and reap: {sorted(remaining)}"))
     raise ExceptionGroup("Command shutdown incomplete", errors)
@@ -154,13 +209,13 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
     previous_subreaper = _subreaper()
     previous_children = {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
     owned = {}
-    root = Path(tempfile.mkdtemp(prefix="atlas-verification-"))
+    root = None
     previous_signals = {number: signal.getsignal(number) for number in (signal.SIGINT, signal.SIGTERM)}
     closing = False
 
     def interrupt(number, _frame):
         if not closing:
-            raise InterruptedError(number, "Verification interrupted")
+            raise _Interruption(number)
 
     process = None
     cleanup_errors = []
@@ -169,24 +224,23 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
         _subreaper(1)
         for number in previous_signals:
             signal.signal(number, interrupt)
-        started = time.monotonic()
-        process = subprocess.Popen(
-            arguments,
-            cwd=cwd,
-            env={**env, "TMPDIR": str(root)},
-            text=True,
-            stdout=subprocess.PIPE if capture else None,
-            stderr=subprocess.PIPE if capture else None,
-            start_new_session=True,
-        )
-        _owned_processes(process, owned, previous_children)
+        with _defer_interruptions():
+            root = Path(tempfile.mkdtemp(prefix="atlas-verification-"))
+            started = time.monotonic()
+            process = subprocess.Popen(
+                arguments,
+                cwd=cwd,
+                env={**env, "TMPDIR": str(root)},
+                text=True,
+                stdout=subprocess.PIPE if capture else None,
+                stderr=subprocess.PIPE if capture else None,
+                start_new_session=True,
+            )
+            _owned_processes(process, owned, previous_children)
         if on_started is not None:
             on_started(process, root)
         output, errors = process.communicate(timeout=max(0, timeout - (time.monotonic() - started)))
         if process.returncode != 0:
-            if capture:
-                print(output or "", end="")
-                print(errors or "", end="")
             raise subprocess.CalledProcessError(process.returncode, arguments, output, errors)
         # Orphaned, already-exited helpers are this subreaper's responsibility.
         # Reap without signalling: a still-live descendant must remain a failure.
@@ -195,6 +249,8 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
             raise ExceptionGroup("Completed command descendant reaping failed", reap_errors)
         if _owned_processes(process, owned, previous_children):
             raise RuntimeError("Verification command left running or unreaped descendants")
+    except _Interruption as error:
+        raise InterruptedError(error.number, "Verification interrupted") from None
     finally:
         primary = sys.exception()
         closing = True
@@ -209,13 +265,24 @@ def supervised_run(arguments, env, *, cwd, capture=False, timeout=180, on_starte
             except OSError as error:
                 cleanup_errors.append(error)
                 stopped = False
-        if stopped:
-            try:
-                shutil.rmtree(root)
-            except OSError as error:
-                cleanup_errors.append(error)
-        else:
-            cleanup_errors.append(RuntimeError(f"Command shutdown incomplete; retained {root}"))
+            if stopped:
+                try:
+                    completed_output, diagnostic = process.communicate(timeout=KILL_GRACE_SECONDS)
+                    if isinstance(primary, (subprocess.TimeoutExpired, subprocess.CalledProcessError)):
+                        primary.output, primary.stderr = completed_output, diagnostic
+                    if capture and (primary is not None or cleanup_errors):
+                        print(completed_output or "", end="", flush=True)
+                        print(diagnostic or "", end="", file=sys.stderr, flush=True)
+                except (OSError, subprocess.SubprocessError) as error:
+                    cleanup_errors.append(error)
+        if root is not None:
+            if stopped:
+                try:
+                    shutil.rmtree(root)
+                except OSError as error:
+                    cleanup_errors.append(error)
+            else:
+                cleanup_errors.append(RuntimeError(f"Command shutdown incomplete; retained {root}"))
         for number, handler in previous_signals.items():
             try:
                 signal.signal(number, handler)
