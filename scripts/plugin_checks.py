@@ -10,7 +10,15 @@ import tempfile
 import time
 from pathlib import Path
 
-from go_test_supervisor import _reap_group, _signal_group, _stop, _subreaper, supervised_run
+from command_supervisor import (
+    _owned_processes,
+    _processes,
+    _reap_group,
+    _signal_group,
+    _stop,
+    _subreaper,
+    supervised_run,
+)
 from toolchain import ROOT, run
 
 
@@ -81,6 +89,8 @@ def _signal_probe(command, env, core, number):
             raise InterruptedError(value, "Plugin cleanup observer interrupted")
 
     owner = None
+    previous_children = {pid for pid, facts in _processes().items() if facts[0] == os.getpid()}
+    owned = {}
     state = None
     errors = []
     try:
@@ -88,7 +98,7 @@ def _signal_probe(command, env, core, number):
         for value in previous_signals:
             signal.signal(value, interrupt)
         owner = subprocess.Popen(
-            [sys.executable, ROOT / "scripts/go_test_supervisor.py", "--manifest", manifest, "--", *command],
+            [sys.executable, ROOT / "scripts/command_supervisor.py", "--manifest", manifest, "--", *command],
             cwd=core,
             env=env,
             stdout=subprocess.DEVNULL,
@@ -96,6 +106,7 @@ def _signal_probe(command, env, core, number):
             text=True,
             start_new_session=True,
         )
+        _owned_processes(owner, owned, previous_children)
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:
             try:
@@ -118,13 +129,13 @@ def _signal_probe(command, env, core, number):
         closing = True
         if owner is not None:
             try:
-                _stop(owner)
+                _stop(owner, owned, previous_children)
                 if state is not None:
                     _signal_group(state["worker_pid"], signal.SIGKILL)
                     _reap_group(state["worker_pid"])
                     if Path(state["root"]).exists():
                         shutil.rmtree(state["root"])
-            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            except (OSError, RuntimeError, subprocess.SubprocessError, ExceptionGroup) as error:
                 errors.append(error)
         if not errors:
             try:
