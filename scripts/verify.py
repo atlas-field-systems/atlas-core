@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One clean verification entry point for the Slice 0 foundation."""
+"""Verify the contract foundation and focused Plugin bookkeeping component."""
 
 import argparse
 import hashlib
@@ -8,6 +8,8 @@ import shutil
 from contextlib import contextmanager
 
 from generate import OUTPUTS, generate
+from go_test_supervisor import supervised_run
+from plugin_checks import check_plugin_fixture_lifetime
 from toolchain import LOCK, ROOT, prepare, run
 from toolchain_checks import check_toolchain_refusals
 from verification_checks import check_fresh_go_tests
@@ -31,7 +33,7 @@ def check(passed, name):
 
 def _test_go(go, env, *, cwd, capture=False):
     # Shared fixture inputs outside the Go module are not covered by its result cache.
-    return run([go, "test", "-count=1", "./..."], env, cwd=cwd, capture=capture)
+    return supervised_run([go, "test", "-count=1", "./..."], env, cwd=cwd, capture=capture)
 
 
 def verify(bootstrap):
@@ -68,6 +70,15 @@ def verify(bootstrap):
         _test_go(go, env, cwd=core)
         run([go, "vet", "./..."], env, cwd=core)
         run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=core)
+    with check(passed, "Plugin bookkeeping race and real-process recovery workflows"):
+        supervised_run(
+            [go, "test", "-race", "-count=1", "./plugins/...", "./pluginruntime/...", "./plugindispatch/..."],
+            env,
+            cwd=core,
+            timeout=300,
+        )
+    with check(passed, "Plugin fixture cleanup after worker death, deadline and interruption"):
+        check_plugin_fixture_lifetime(go, env)
     with check(passed, "TypeScript structural lint and independent rule probes"):
         run(["npm", "run", "lint"], env, cwd=sdk)
     with check(passed, "TypeScript/JavaScript formatting"):
@@ -109,7 +120,7 @@ def verify(bootstrap):
         )
         + "\n"
     )
-    print(f"PASS Slice 0 foundation at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
+    print(f"PASS foundation and Plugin component at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 
 if __name__ == "__main__":

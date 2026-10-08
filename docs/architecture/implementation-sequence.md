@@ -20,6 +20,8 @@ The [foundation-hardening spec #104](https://github.com/atlas-field-systems/atla
 
 S1–S3 are incremental workflow slices, not a release that waives Full synchronization parity. The initial Core-contract MVP is complete only when its applicable S4 coverage and the MVP Stop/Start/Restart/Reset checks pass. Implement the necessary lifecycle/bootstrap seams with those workflows; S7 extends them to the full interruption/update and measured-load matrix. Each new feature ships its required fault evidence, rather than postponing correctness until S7.
 
+[Spec #117](https://github.com/atlas-field-systems/atlas-core/issues/117) delivers the [focused Plugin bookkeeping component](../../Atlas%20Core/plugins/README.md) at the user-selected Core-module/private-process/storage seam. Its component evidence does not complete S3 or waive the public API, SDK, container and host obligations above.
+
 ## Foundation evidence and limits
 
 The delivered [#94 foundation](https://github.com/atlas-field-systems/atlas-core/issues/94) has separate coverage records for [#95 generation and fixture lifetime](../../tests/contract/README.md), [#96 requests and patches](../../tests/contract/README-96.md), [#97 responses and artificial-edition compatibility](../../tests/contract/README-97.md), [#98 reports and messages](../../tests/contract/README-98.md), [#99 local Catalog](../../tests/contract/README-99.md) and [#100 binary bindings](../../tests/contract/README-100.md). Its shared verifier records only executed successful checks; those records do not pass the operational scenario matrix below.

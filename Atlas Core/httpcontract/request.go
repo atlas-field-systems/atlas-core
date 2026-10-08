@@ -118,7 +118,7 @@ func ValidateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (
 			closeErr := r.Body.Close()
 			bodyErr := errors.Join(readErr, closeErr)
 			if bodyErr == nil && len(body) > 0 {
-				bodyErr = checkJSONDocument(body)
+				bodyErr = CheckJSONDocument(body)
 			}
 			if bodyErr != nil {
 				// Routing supplies only the authored pattern for diagnostics, never
@@ -139,7 +139,10 @@ func ValidateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (
 	}), nil
 }
 
-func checkJSONDocument(body []byte) error {
+// CheckJSONDocument validates the original JSON representation before schema or
+// typed decoding. Non-public message boundaries reuse the same Unicode and
+// unique-member rules; callers must bound the input before reading it.
+func CheckJSONDocument(body []byte) error {
 	if err := checkJSONStringEncoding(body); err != nil {
 		return err
 	}
