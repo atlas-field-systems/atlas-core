@@ -88,7 +88,7 @@ Under [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md), a gate
 
 ## Contact and freshness
 
-Contact is Core's record of the latest fresh accepted report from an Asset, held in the `heartbeat` component as `last_seen`. Core records the receipt time in [Core time](../adr/0025-use-core-time-as-the-installation-reference-clock.md); clients cannot supply it.
+Contact is Core's record of the latest fresh accepted report from an Asset, held in the `heartbeat` component as `last_seen`. Core records the receipt time in [Core time](../adr/0029-use-deployment-clocks-and-preserve-event-times.md); clients cannot supply it.
 
 ### What refreshes Contact
 
@@ -112,7 +112,7 @@ These never refresh Contact:
 
 ### Fresh, duplicate and historical reports
 
-Core distinguishes fresh reports from the late arrival of delayed data. A report is fresh contact evidence only when the Asset's current process generated it within its freshness window, judged in Core time. Position in the report sequence never decides Contact: a previously unrecorded historical outcome delivered as the newest report after reconnection is recorded without making a disconnected Asset appear recently reachable. Core does not infer current reachability merely from a newly received old packet.
+Core distinguishes fresh reports from the late arrival of delayed data. Fresh Contact requires the current process's source-authored `generated_at` within the configured challenge window and receipt before expiry, using the correct deployment clocks and the full [Contact proof](#contact-proof-and-clock-uncertainty). Position in the report sequence never decides Contact: a previously unrecorded historical outcome delivered as the newest report after reconnection is recorded without making a disconnected Asset appear recently reachable. Core does not infer current reachability merely from a newly received old packet.
 
 Delayed reports never overwrite newer component values. [Report acceptance](#asset-report-acceptance) applies this per affected state.
 
@@ -201,16 +201,16 @@ Protocol defines one Core-facing `report_context` used by check-in, Entity/statu
 | `asset_id` | Claimed origin; must match the authenticated Asset binding or the gateway's authorized origin binding |
 | `process_generation` | Core-issued generation, starting at `"1"` in a Dataset; not a Dataset ID or a caller-selected process authority |
 | `sequence` | Positive counter allocated once across all reporting routes for that Asset process; never reused for another report or reset within the generation. A gateway preserves this identity through its radio-to-Core mapping |
-| `generated_at` | Original onboard report/fact time in Core time, or null when unknown; retries and recovery retain it rather than substituting transmission time |
-| `clock_uncertainty_ms` | Nonnegative offset uncertainty, or null with unknown time; no unknown value defaults to zero |
+| `generated_at` | Original onboard report/fact time from the source's correct clock, or null for unknown original evidence; retries and recovery retain it rather than substituting transmission time |
 | `evidence_kind` | `current` for a newly generated current report, `historical` for retained execution/observation evidence |
 | `evidence_origin` | Original `process_generation`/`sequence` for recovered historical facts when known, otherwise null; never a claimed replacement authority |
 | `retained_evidence_id` | Stable UUID retained by the Asset OS or gateway integration for historical facts whose original ordering is unknown; required in that case, null otherwise; preserved across retransmission and process replacement |
-| `observation_times` | Optional timing by explicitly supplied movement quantity: `observed_at` and `clock_uncertainty_ms`; omitted/unknown observation time stays null, rather than inheriting send/receipt time |
+| `observation_times` | Optional original `observed_at` by explicitly supplied movement quantity; omitted/unknown observation time stays null, rather than inheriting send/receipt time |
+| `clock_uncertainty_ms` | Optional nullable compatibility metadata only; S1 does not compute it or use it for freshness or an uncertainty budget |
 | `contact_challenge` | Direct IP freshness proof: opaque Core challenge, or null; absence prevents direct IP fresh Contact but does not invalidate a legitimate report. Gateway freshness evidence follows the policy below; its wire fields remain open |
 | `process_proof` | Direct IP proof: Ed25519 signature made by the current process over canonical report facts, including headers, context except this signature, operation kind, target ID and typed payload. Gateway reports use authenticated gateway authority and the Asset binding; an originating Asset signature is not required |
 
-The concrete report-context schema qualified by S0 represents the direct IP path, including its required `process_proof` and `contact_challenge` fields. It does not yet define or qualify gateway reporting. Gateway-specific Core-facing proof and authority fields will be authored in Protocol with that integration; its radio messages need not reproduce the direct IP context.
+The concrete report-context schema qualified by S0 represents the direct IP path, including its required `process_proof` and `contact_challenge` fields. Its former offset-uncertainty fields are structural prior qualification; S1 authors the operational schema under [deployment clocks](../adr/0029-use-deployment-clocks-and-preserve-event-times.md). It does not yet define or qualify gateway reporting. Gateway-specific Core-facing proof and authority fields will be authored in Protocol with that integration; its radio messages need not reproduce the direct IP context.
 
 The report identity is `(dataset_id, asset_id, process_generation, sequence)`, independent of route. Core compares canonical validated facts, preserving omission versus null and array order while ignoring object-key order. Reuse on another route/target or with changed facts returns `report_identity_conflict`. Matching retries return `disposition: duplicate`, the original acceptance receipt and current resource state; they do not reapply facts or establish Contact. Authorization and current-generation checks precede duplicate replay, so old signatures or revoked credentials cannot regain access by retry.
 
@@ -228,19 +228,21 @@ An accepted historical report may leave all current values unchanged. It still r
 
 Task transitions also obey the [terminal/control rules](tasks.md#task-status-and-transitions), so ordering never authorizes a conflicting terminal outcome or manufactures completion. The pure transition module decides the Task effect before the shared transaction commits. A semantically invalid Task/result/queue report is rejected atomically; a valid older component value is an accepted no-op for that field, not a whole-report rejection.
 
-Entity reads expose a Core-owned `reporting` map keyed by Protocol reporting unit, containing the applied `process_generation`, `sequence`, `reported_at`, `received_at` and `time_quality` (`known`, `unknown`, or `uncertain`), plus explicit movement `observed_at`/uncertainty when supplied. Current ordinary reports use their own ordering pair; recovered facts retain their original pair. Report generation, measurement observation and Core receipt time stay distinct. This metadata changes only with that unit's current value/report, not another field or Contact. It is resource metadata, not a client-defined component. The map is empty before the first report, including for initial Command support supplied through registration.
+Entity reads expose a Core-owned `reporting` map keyed by Protocol reporting unit, containing the applied `process_generation`, `sequence`, `reported_at`, `received_at` and `time_quality` (`known`, `unknown`, or `uncertain`), plus explicit movement `observed_at` and any optional compatibility metadata when supplied. Current ordinary reports use their own ordering pair; recovered facts retain their original pair. Report generation, measurement observation and Core receipt time stay distinct. This metadata changes only with that unit's current value/report, not another field or Contact. It is resource metadata, not a client-defined component. The map is empty before the first report, including for initial Command support supplied through registration.
 
 The SDK result contains `disposition`, `report_id` (the four identity fields), `received_at`, `applied_fields`, `task_effect`, `movement_sample_ids` and `contact_refreshed`, alongside the route's current resource result. `task_effect` is `changed`, `unchanged`, or `not_applicable`. Accepted no-op and duplicate are successful results; rejection uses the ordinary typed error with a rejection code. A transport timeout has unknown acceptance outcome and follows [safe retry](sdk.md#writes), never an invented rejection. This result is not a synchronization input.
 
 ### Contact proof and clock uncertainty
 
+Clock availability and correctness are deployment assumptions under [ADR-0029](../adr/0029-use-deployment-clocks-and-preserve-event-times.md). There is no SDK offset estimate; any retained offset-uncertainty field is optional compatibility metadata, not an S1 freshness input. Original observation timing and Core receipt/change metadata retain their separate roles.
+
 For the direct IP path, an authenticated `GET /health` can request a `contact_challenge` for its bound Asset and current or candidate next generation. The response supplies Core time and challenge expiry. Core authenticates the token, binding it to Dataset, Asset, generation and the current Core run. The default IP freshness window is 10,000 ms, with link-specific expectations configurable under the Communication-state policy. The Asset client refreshes its challenge while connected rather than requesting one for every report.
 
-Direct IP Contact refresh requires all of these facts: a newly accepted current-process report; `evidence_kind: current`; a valid matching challenge received before report generation; the complete generated-time uncertainty interval within that challenge's issued/expiry interval; and receipt before expiry. Token expiry uses Core's monotonic clock. A clock discontinuity invalidates outstanding challenges and requires another offset estimate; Restart invalidates the previous run's challenges. Neither a wall-clock adjustment nor a replay can revive freshness. Core records `last_seen` at acceptance receipt time, not at a client timestamp. A candidate first check-in may obtain a challenge for `expected_generation + 1`, but it must also establish that generation with the authority claim below.
+Direct IP Contact refresh requires all of these facts: a newly accepted current-process report; `evidence_kind: current`; a valid matching challenge received before report generation; the original `generated_at` within that challenge's issued/expiry interval on the correct clocks; and receipt before expiry. Token expiry uses Core's monotonic clock. Restart invalidates the previous run's challenges, and replay cannot revive freshness. Core records `last_seen` at acceptance receipt time, not at a client timestamp. A candidate first check-in may obtain a challenge for `expected_generation + 1`, but it must also establish that generation with the authority claim below.
 
 Unknown or inconsistent timing means `contact_refreshed: false`; it does not erase valid historical execution evidence. `sent_at`, gateway forwarding time and HTTP connection liveness are not contact evidence. Recovering an old outcome into a new sequence retains `evidence_kind: historical` and its original fact time. A separate fresh check-in may establish current Contact without changing that historical outcome's age.
 
-For gateway reports, Core relies on the authenticated gateway's attestation that evidence from its bound Asset satisfies the same current-process freshness window in Core time. The integration must distinguish newly generated Asset evidence from backlog and account for timing uncertainty; unknown or inconsistent timing cannot refresh Contact. The gateway may translate compact evidence rather than forward an originating signature or Core-format challenge. The radio freshness mechanism and its Core-facing proof fields remain open. A gateway's own fresh connection cannot refresh a downstream Asset.
+For gateway reports, Core relies on the authenticated gateway's attestation that evidence from its bound Asset satisfies the same current-process freshness window using the deployment-provided clocks. The integration must distinguish newly generated Asset evidence from backlog; unknown original timing cannot refresh Contact. The gateway may translate compact evidence rather than forward an originating signature or Core-format challenge. The radio freshness mechanism and its Core-facing proof fields remain open. A gateway's own fresh connection cannot refresh a downstream Asset.
 
 ### Process authority establishment and replacement
 
@@ -267,7 +269,7 @@ Each row states expected behavior, not an executed test. Start with Dataset D, A
 | Fresh heading, sequence 20, receipt 103 | Accepted | Heading changes; position remains P12 | No position/speed/altitude sample | 103 |
 | Position P15, sequence 15, historical, origin (1,15) | Accepted | P15 becomes current position despite heading 20 | One P15 sample | Remains 103 |
 | Previously unrecorded T completion, sequence 13, historical, origin (1,13) | Accepted | T Completed on the Asset report, independently of result uploads | No movement sample | Remains 103 |
-| Current position 21 with unknown or skewed generated time and omitted observation timing | Accepted | Position applies by its sequence | One sample; observation time remains unknown | Remains 103 |
+| Current position 21 without valid generated-time freshness evidence and with omitted observation timing | Accepted | Position applies by its sequence | One sample; observation time remains unknown | Remains 103 |
 | Fresh position 22 at receipt 104; observation time 500, uncertainty 1 ms | Accepted | Position applies by sequence; observation time is uncertain | One sample retaining future 500 and receipt 104 | 104; report freshness does not make its observation fresh |
 | Operator Alias edit with valid edit revision | Ordinary edit | Alias changes; reporting unchanged | No sample | Remains 104 |
 | Position report with another Asset ID, or derived heartbeat field | Rejected | No state or acceptance identity | No sample | Remains 104 |
@@ -328,7 +330,7 @@ The [source reference](../atlas-modernization-reference.md#earlier-asset-reporti
 - [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md): Task and queue reports, process generation and authority transfer, and no Task outcome inferred from lost Contact.
 - [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md): acceptance state survives Restart and is cleared by Reset.
 - [ADR-0020](../adr/0020-limit-general-sdk-to-http-and-full-sync.md): IP-connected Assets and gateways report through the general SDK's Asset client; constrained links sit behind gateways.
-- [ADR-0025](../adr/0025-use-core-time-as-the-installation-reference-clock.md): Contact freshness is judged in Core time.
+- [ADR-0029](../adr/0029-use-deployment-clocks-and-preserve-event-times.md): Contact uses correct deployment clocks and preserves original event times.
 - [ADR-0028](../adr/0028-trust-gateways-to-author-bound-asset-reports.md): gateways authenticate as themselves and author Core-facing reports for bound Assets; direct IP signatures remain required.
 
 ## Test evidence

@@ -8,6 +8,8 @@ Protocol owns identifiers, canonical decimal counter syntax, Dataset/version hea
 
 Slice 0's required `process_proof` and `contact_challenge` fields qualify the direct IP report-context representation only. The [trusted gateway decision](../docs/adr/0028-trust-gateways-to-author-bound-asset-reports.md) allows a bound gateway to construct reports without an originating Asset's Core-format signature. Concrete gateway authority and freshness fields remain future Protocol work with that integration; the current fixture does not qualify gateway reporting.
 
+`MovementObservationTime` and `ReportContext` currently require `clock_uncertainty_ms`. These are prior S0 structural bindings, not the operational clock policy. [ADR-0029](../docs/adr/0029-use-deployment-clocks-and-preserve-event-times.md) assumes correct deployment-provided clocks and removes SDK offset estimation. S1 owns revising/authoring the operational schemas and corresponding fixtures; any retained uncertainty field is optional nullable compatibility metadata, without an S1 uncertainty budget. The representative Move To variants similarly do not establish that immediate or Geofeature tasking is implemented; [S1's boundary](../docs/architecture/implementation-sequence.md#s1-implementation-boundary) is queued coordinate-target movement.
+
 Run from the repository root with Python 3.12+, Linux amd64, Node 24.21.0 and npm 11.19.0:
 
 ```sh
