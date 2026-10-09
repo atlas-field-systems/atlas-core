@@ -24,6 +24,8 @@ S1–S3 are incremental workflow slices, not a release that waives Full synchron
 
 ## S1 implementation boundary
 
+[Spec #122](https://github.com/atlas-field-systems/atlas-core/issues/122) is the implementation specification for this boundary, with immutable source links and the required acceptance matrix.
+
 S1 is the first runnable direct-IP Asset workflow in HTTP mode. It implements the queued coordinate-target [Move To subset](../topics/spatial-data.md#move-to), the [minimal Asset component surface](../data-components.md), and [source/Core timestamp roles](../topics/sdk.md#timestamp-transfer). The deployment supplies correct Asset clocks; no SDK offset estimator, start deadline or custom timestamp codec is required.
 
 Provide a real local setup and private management path for installation trust, first administrator credential, enrollment authority, initial Core configuration, Start/Stop/Restart and ordinary Reset. Tests use that same management implementation against real Core/SQLite/files and its actual container boundary. The local path must be runnable outside the test harness. [Lifecycle](../topics/dataset-lifecycle.md) owns the behavior; S7 retains Hard Reset, update, full host interruption/cleanup and combined-load completion.
