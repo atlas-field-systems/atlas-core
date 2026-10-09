@@ -8,6 +8,7 @@ from toolchain import ROOT, prepare, run
 
 OUTPUTS = [
     ROOT / "Atlas Core/generated",
+    ROOT / "Atlas Core/plugins/generated",
     ROOT / "Atlas Core/tests/contractfixture/generated",
     ROOT / "Atlas SDK/generated",
     ROOT / "tests/contract/generated",
@@ -66,6 +67,7 @@ def generate(env, go, sqlc):
             timeout=120,
         )
     run([sqlc, "generate"], env, cwd=ROOT / "tests/contract", timeout=120)
+    run([sqlc, "generate"], env, cwd=ROOT / "Atlas Core/plugins", timeout=120)
     run(["npm", "run", "generate"], env, cwd=ROOT / "Atlas SDK", timeout=120)
     openapi_typescript = ROOT / "Atlas SDK/node_modules/.bin/openapi-typescript"
     for source, output in [

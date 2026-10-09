@@ -1,4 +1,8 @@
-Agents cannot waive requirements or authorize their own exceptions. Before changing requirements or recording a decision, follow the [decision authority and documentation completion rules](docs/agents/domain.md#decision-authority). Open pull requests ready for review.
+Agents cannot waive requirements or authorize their own exceptions. Before changing requirements or recording a decision, follow the [decision authority and documentation completion rules](docs/agents/domain.md#decision-authority).
+
+Answer exploratory questions without changing files. Treat clear requests for action as authorization to complete the work. Open pull requests only when explicitly requested, ready for review. Merge only when explicitly authorized.
+
+Before implementing a substantial new visual direction, present distinct static mocks and wait for the user's choice. Once approved, implement it without reopening routine layout, copy or consistency decisions.
 
 Before exploring, planning, implementing or reviewing work, read the sources for every branch it touches:
 

@@ -2,7 +2,11 @@
 
 `protocol.json` is the authored source for Slice 0's shared wire definitions. It contains no operational routes. Its unpublished `0.0.0` metadata is not a released edition or a compatibility promise. See [spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94), [generation policy](../docs/adr/0011-generate-shared-contracts-with-minimal-customization.md) and the [coverage record](../tests/contract/README.md).
 
+The separate [private Plugin dispatch artifact](plugin-dispatch.json) belongs to the [focused bookkeeping component](../Atlas%20Core/plugins/README.md#persistence-and-contract-source), independently of public HTTP generation and SDK routes.
+
 Protocol owns identifiers, canonical decimal counter syntax, Dataset/version headers and request parameters, read/mutation/error context, complete double-precision Position, the shared report context, and representative Move To/Pause inputs and Catalog metadata. `NullableIdentifier` is a named nullable scalar, keeping explicit null separate from omission. Full Entity resources, remaining Command variants and operational endpoints are added with their owning slices. The report context describes structure, not report authority, signature verification, counter-range enforcement or freshness decisions. The [local Catalog checks](../tests/contract/README-99.md) qualify structural inputs and metadata, without Task admission or execution.
+
+Slice 0's required `process_proof` and `contact_challenge` fields qualify the direct IP report-context representation only. The [trusted gateway decision](../docs/adr/0028-trust-gateways-to-author-bound-asset-reports.md) allows a bound gateway to construct reports without an originating Asset's Core-format signature. Concrete gateway authority and freshness fields remain future Protocol work with that integration; the current fixture does not qualify gateway reporting.
 
 Run from the repository root with Python 3.12+, Linux amd64, Node 24.21.0 and npm 11.19.0:
 

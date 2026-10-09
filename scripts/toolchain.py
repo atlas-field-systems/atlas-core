@@ -4,12 +4,13 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 import tarfile
 import tempfile
 import urllib.request
 from pathlib import Path
 from typing import NamedTuple
+
+from command_supervisor import supervised_run
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = json.loads((ROOT / "Atlas Protocol/toolchain.json").read_text())
@@ -39,17 +40,7 @@ def install_archive(tool, destination, cache):
 
 
 def run(arguments, env, *, cwd=ROOT, capture=False, timeout=180):
-    print("+ " + " ".join(map(str, arguments)), flush=True)
-    try:
-        result = subprocess.run(
-            list(map(str, arguments)), cwd=cwd, env=env, check=True, text=True, capture_output=capture, timeout=timeout
-        )
-    except subprocess.CalledProcessError as error:
-        if capture:
-            print(error.stdout or "", end="")
-            print(error.stderr or "", end="")
-        raise
-    return result.stdout.strip() if capture else None
+    return supervised_run(arguments, env, cwd=cwd, capture=capture, timeout=timeout)
 
 
 def default_cache():

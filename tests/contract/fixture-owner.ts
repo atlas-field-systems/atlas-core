@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +6,7 @@ import { FixtureStartupError, isReady, type FixtureOptions, type FixtureState } 
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 export interface OwnedFixture {
+  readonly child: ChildProcess;
   readonly pid: number | undefined;
   readonly dataDir: string;
   ready: Promise<FixtureState>;
@@ -135,6 +136,7 @@ export function startFixture(dataDir: string, options: FixtureOptions): OwnedFix
     if (errors.length > 1) throw new AggregateError(errors, "Fixture shutdown and private-data cleanup failed");
   }
   return {
+    child,
     ready,
     pid: child.pid,
     dataDir,

@@ -6,7 +6,7 @@ status: accepted
 
 Operators can issue Tasks and cancel outstanding Tasks while an Asset is disconnected, and Assets retain an onboard Task queue. The user selected this behavior to support intermittent field and radio connections, including cancelling outstanding work and issuing a return Task. Atlas Modernization instead required a registered, ready execution runtime for Task creation, failed immediate Tasks outside a 60-second start window, filtered delivery in Core and wrote terminal `cancelled` as soon as cancellation was requested; see rows D11 to D14 of the [comparison register](../architecture/modernization-differences.md).
 
-[ADR-0020](0020-limit-general-sdk-to-http-and-full-sync.md) limits the general SDK to HTTP and full synchronization and defers Core per-Asset snapshot/feed/replay coverage. IP-connected Assets without bandwidth limits use the general SDK and its Asset client directly; bandwidth-limited Assets reach Core through a gateway that uses the Asset client. Constrained transport remains separate from the general SDK. Gateway placement requires an adequate IP link to Core, not the same host or LAN. This changes delivery scope, not Asset report authority, execution ownership or the reconciliation guarantees below. The disconnected-Asset workflow applies while Core remains running; retention and the exclusion of whole-Core mission resumption follow [ADR-0015](0015-separate-start-stop-restart-and-reset.md).
+[ADR-0020](0020-limit-general-sdk-to-http-and-full-sync.md) limits the general SDK to HTTP and full synchronization and defers Core per-Asset snapshot/feed/replay coverage. IP-connected Assets without bandwidth limits use the general SDK and its Asset client directly; bandwidth-limited Assets reach Core through a gateway that uses the Asset client. Constrained transport remains separate from the general SDK. Gateway placement requires an adequate IP link to Core, not the same host or LAN. This changes delivery scope while retaining execution ownership and the reconciliation guarantees below. [ADR-0028](0028-trust-gateways-to-author-bound-asset-reports.md) subsequently revised gateway reporting authority: an authenticated bound gateway may construct Core-facing reports from Asset evidence without originating Core-format signatures. The disconnected-Asset workflow applies while Core remains running; retention and the exclusion of whole-Core mission resumption follow [ADR-0015](0015-separate-start-stop-restart-and-reset.md).
 
 Current rules: [Tasks](../topics/tasks.md).
 
@@ -29,6 +29,7 @@ Decision history:
 - 23 September 2026: the user accepted a private reporting-authority mechanism as a prerequisite for implementing recovery.
 - After the Pause clarification, the user accepted immediate Resume; control ordering was accepted after the latest design review.
 - 28 September 2026: the user accepted recording every cancellation request regardless of declared support, added cancellation declined, and set Pause to never expire and Resume to carry a declared expiry.
+- 6 October 2026: [ADR-0028](0028-trust-gateways-to-author-bound-asset-reports.md) made radio gateways trusted report authors for bound Assets, retaining downstream process generations and obsolete-process rejection. Gateway restart does not establish Asset restart; direct IP process-replacement rules remain in force.
 
 ## Rationale and alternatives
 
@@ -46,7 +47,7 @@ Decision history:
 - Assets need an onboard queue, local execution decisions and the ability to report outcomes of work performed while away.
 - A Task can remain `cancellation_requested` for as long as its Asset stays out of contact, and several Tasks may be in progress on one Asset while only one Queued Task executes.
 - Operational status, suspended-Task status and control-Task outcomes arrive separately, and reads must not present them as one atomic confirmation.
-- The private report-authority mechanism is a prerequisite for implementing recovery; exact authority-transfer proof and report ordering remain engineering work.
+- The private report-authority mechanism is a prerequisite for implementing recovery; direct IP signing and replacement follow [Asset reporting](../topics/asset-reporting.md#process-authority-establishment-and-replacement), while trusted gateway transfer proof remains engineering work under ADR-0028.
 - Wire fields, report correlation, deadline and expiry fields and recovery messages remain Protocol and engineering work.
 - Duplicate deliveries and ordinary reordering must pass the integration scenarios before the control contract is implemented.
 

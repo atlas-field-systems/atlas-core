@@ -297,3 +297,85 @@ During the code-quality review of the Slice 0 foundation, the user authorized re
 ## Agent instructions and coding standards, 6 October 2026
 
 The user authorized restructuring [AGENTS.md](../AGENTS.md) to remove no-ops and apply progressive disclosure, and moving the code conventions to [CODING_STANDARDS.md](../CODING_STANDARDS.md) as the single coding-standards entry point. The generated-file rules moved from AGENTS.md into its [Protocol and generation](../CODING_STANDARDS.md#protocol-and-generation) section. The Modernization register rules moved from AGENTS.md into the [register's introduction](architecture/modernization-differences.md). The table in the [documentation guide](agents/domain.md#where-information-belongs) is the single documentation router: it absorbed AGENTS.md's lifecycle, system design, API/SDK and Modernization reading triggers. AGENTS.md keeps the decision-authority guardrail and pointers to the glossary and documentation guide, CODING_STANDARDS.md, the testing strategy and the issue-tracker configuration. CODING_STANDARDS.md was rewritten for agents without requirement changes: it drops default behavior, rules the testing strategy owns and rules that required checks enforce, and merges its review guidance into [Review and completion](../CODING_STANDARDS.md#review-and-completion). This supersedes the [review and navigation proposal](research/pr-review-retrospective/review-and-navigation.md) against adding a second `CODING_STANDARDS.md`: the conventions file was renamed, not duplicated. No requirements changed; the rules' meaning is preserved.
+
+During conflict reconciliation on 9 October 2026, the user requested fixing and merging PR #112. The reconciliation retains the existing exploratory/action distinction, explicit PR and merge authorization, and visual-direction approval rules in AGENTS.md. It also preserves the subsequent decision records and updates the newer Plugin component's standards link.
+
+## Local configuration and trusted gateways, 6 October 2026
+
+During the focused plan-versus-implementation review, the user chose local administration for all Core configuration editing and inspection, including live tuning. They confirmed that remote health/readiness is sufficient and agreed to remove both public configuration endpoints. The user also chose trusted gateway translation for constrained radio links: a gateway constructs Core-facing reports for its explicitly bound Assets, without requiring those Assets to produce Core-format signatures. They clarified that gateways are not taskable Assets in the current scope and that future taskability remains open.
+
+The user confirmed the complete decision set before these documentation changes. [ADR-0027](adr/0027-administer-core-configuration-locally.md) and [Core configuration](topics/dataset-lifecycle.md#core-configuration) own local settings administration. [ADR-0028](adr/0028-trust-gateways-to-author-bound-asset-reports.md) and [report authority and relay](topics/asset-reporting.md#report-authority-and-relay) own the revised gateway trust boundary. Direct IP Asset proofs, downstream Asset identities and execution outcomes, obsolete-process rejection, report ordering, retry/Dataset boundaries and contact freshness remain required. A gateway restart does not imply its downstream Assets restarted.
+
+These are design decisions, not implemented operational behavior. Concrete radio messages and the gateway authority mechanism remain future engineering work. The other review alternatives, including synchronization, Reset and Plugin bookkeeping changes, remain proposals until separately decided.
+
+## Reset record consolidation round one, 7 October 2026
+
+The user said, "I agree with your recommendation," to Q1 in the Reset design interview. The accepted recommendation replaces the separate host Reset directive with the existing durable management action record while retaining Core's independent establishment proof and the existing cleanup and startup-accounting barriers. [ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#host-reset-directive-consolidation) records the tradeoff; [Reset execution](topics/dataset-lifecycle.md#reset-execution) owns the current rules.
+
+Host progress, Reset establishment and physical cleanup completion remain distinct. Plugin work, logs and the pending activity journal are cleared durably before establishment. Objects removes every noncurrent Dataset's owned content before readiness. A lost fresh-commit reply cannot authorize repeated cleanup or fresh opening, and recorded Plugin startup faults do not authorize automatic restart.
+
+Completed-action retention and recovery from unreadable or conflicting authority were open at the end of this round and are resolved in [round two](#reset-record-consolidation-round-two-7-october-2026). This round accepts the record consolidation only, not asynchronous cleanup or runtime qualification. The [prototype at 6c31123](https://github.com/atlas-field-systems/atlas-core/blob/6c311233365f155f40d52a90d94973d12993313a/docs/architecture/atlas-review.prototype.html), based on c5f9416, remains a throwaway model. #67 and #68 are closed specifications, with real Reset recovery evidence still assigned to the [S1-S3 seams and S7 lifecycle work](architecture/implementation-sequence.md#local-actions-and-retained-state). No production implementation, pull request or merge is authorized by this interview.
+
+## Reset record consolidation round two, 7 October 2026
+
+The user said, "I agree with the recommendations," to Q2 and Q3 in the Reset design interview.
+
+| Decision | Accepted behavior | Current authority |
+| --- | --- | --- |
+| Completed Reset results | Keep the latest completed result through Stop/Start/Restart until another Reset is accepted. A completed record has no startup or cleanup authority; an expired result returns an explicit no-longer-retained outcome and never becomes another Reset | [Completed results](topics/dataset-lifecycle.md#completed-reset-results) |
+| Damaged pending recovery record | With Core stopped, refuse Start if the pending Reset record is unreadable or conflicts with the Installation identity. Preserve data and require explicit authenticated local repair using Core's private inspection interface | [Interrupted Reset](topics/dataset-lifecycle.md#interrupted-reset) |
+
+[ADR-0015](adr/0015-separate-start-stop-restart-and-reset.md#host-reset-directive-consolidation) records the tradeoffs. Unavailable Core proof still cannot authorize destructive repetition, and old Object cleanup after establishment still blocks readiness while preserving the new Dataset. These existing requirements were not reopened. The second round resolves the two choices left open in round one; runtime implementation and real recovery evidence remain future work. After reviewing the complete design summary, the user said, "Looks good to me." This confirms shared understanding and closes the assigned Reset record consolidation interview; it authorizes no production implementation, pull request or merge.
+
+## Reset follow-through scope, 7 October 2026
+
+After the design interview, the user asked to complete the documentation PR, specification and verification sequence. They then clarified the implementation boundary: "If something is planned to be implemented in vertical slice 1 and wasn't implemented in vertical slice 0, then we shouldn't be touching it apart from the documentation." Existing delivered capabilities may be changed when the assigned decision requires it; planned operational Reset work remains documentation only.
+
+[Spec #116](https://github.com/atlas-field-systems/atlas-core/issues/116) captures this scope. The [implementation sequence](architecture/implementation-sequence.md#reset-consolidation-follow-up) retains S1-S3 Reset seams and S7 full lifecycle evidence. This follow-through authorizes the documentation PR and existing-foundation checks, not early implementation of the host record owner, manager, SQLite establishment or cleanup. Merge still requires explicit user authorization.
+
+## Ordered Core feed direction, 7 October 2026
+
+The user answered "I agree with the recommendation" to the first design round's three independent recommendations. They accepted Core ownership of cursor-based catch-up followed by live commits on the same ordered subscription, a consistent initial snapshot captured with its continuation cursor, and one complete commit per Protocol data message within an enforced producer bound. These replace the successor's moving initial pages, SDK coordination of HTTP replay with buffered live input, and application-level commit fragments.
+
+The [SDK topic](topics/sdk.md#synchronization-wire-and-application-boundary) owns the behavior and the [publication design](architecture/system-design.md#change-publication) owns Core collaboration. The tradeoff moves delivery coordination into Core and removes fragment assembly, while adding consistent snapshot storage and complete-batch admission obligations. Existing read modes, no hidden HTTP fallback, changed-since, local journal/cursors/notifications, complete-commit visibility, gaps, Dataset rejection and write-response separation remain in force.
+
+The first answer left early snapshot readability, snapshot lifetime or history protection, concurrent snapshot admission and repeated recovery failure for the following rounds. Existing requirements continued to apply until the user made those choices. Exact budgets and measured resource capacity remain [engineering work](topics/sdk.md#open-questions); the existing commit and connection bounds are provisional, and no sub-second snapshot claim is accepted.
+
+The [prototype at 6c31123](https://github.com/atlas-field-systems/atlas-core/blob/6c311233365f155f40d52a90d94973d12993313a/docs/architecture/atlas-review.prototype.html), based on c5f9416, is research input. Its early baseline readability and toy backlog limit are not adopted by this answer. The [#65 context comment](https://github.com/atlas-field-systems/atlas-core/issues/65#issuecomment-6021152316) and closed #65/#77 specify no runtime acceptance. Operational implementation, Protocol bindings and real storage/transport/capacity/security evidence remain with [S4](architecture/implementation-sequence.md#delivered-foundation-and-proposed-operational-sequence). This interview authorizes documentation of decisions, not production implementation, a PR or merging.
+
+In the second round the user answered "I agree with the recommendations" to Q4-Q7. They retained initial readiness after a fixed catch-up boundary and completed handoff, chose normal bounded replay retention with explicit expiry rather than protected per-reader continuation history, required explicit snapshot admission refusal while operational writes continue, and chose resumption of interrupted pages from the same still-valid snapshot. They also accepted bounded recovery attempts followed by `resource_limited` and paused rebuilding when resource capacity prevents maintaining the picture; deliberate retry or an observed relevant capacity change can resume attempts, while ordinary transport loss still reconnects automatically. [Snapshot lifetime and recovery](topics/sdk.md#snapshot-lifetime-and-recovery) owns these rules.
+
+Those answers did not settle frozen snapshot handles across Restart. In the final frontier round, the user answered "I agree with the recommendation" to Q8's narrow exception: temporary snapshot captures expire on Core Restart, so unfinished page loads begin again. Complete private or published pictures can still resume from their last applied cursor when retained replay covers it. Ordinary unexpired Core paging tokens, retained replay, Dataset identity and operational-state retention remain unchanged. [Snapshot lifetime and recovery](topics/sdk.md#snapshot-lifetime-and-recovery) owns the exception; [ADR-0020](adr/0020-limit-general-sdk-to-http-and-full-sync.md#ordered-catch-up-and-live-delivery) records the architectural tradeoffs. Exact lifetimes, budgets and retry thresholds remain engineering and measurement work, not further product choices or completed evidence.
+
+After reviewing the settled design summary, the user answered "Looks good to me", confirming shared understanding and closing this design interview. The confirmation adds no production implementation, PR or merge authorization.
+
+The user subsequently accepted the proposed handoff and asked to be guided through it: a documentation-only PR, an S4 implementation specification and the eventual implementation/acceptance checks at their owning workflow boundary. This follow-up publishes the accepted design and specification and checks the delivered foundation; the existing operational prerequisites and explicit merge-authorization requirement remain in force.
+
+## Plugin execution bookkeeping, round one, 7 October 2026
+
+The user said, "I agree with your recommendations," accepting Q1 B and Q2 A in this topic's design interview.
+
+| Decision | Accepted choice | Current authority |
+| --- | --- | --- |
+| Plugin crash evidence | Live duplicate detection replaces mandatory durable accepted/running records and ledger inspection. Outcomes and known-effect evidence remain durable until Core acknowledges them; Core acceptance and exposure fencing remain | [Execution evidence](adr/0002-core-manages-installed-plugins.md#execution-evidence), [private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+| Classification timing | After confirmed runtime loss, promptly classify exposed unresolved work Interrupted using already-confirmed Core evidence. Do not wait for manual replacement. Later evidence can supplement the record without changing terminal status | [Private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+
+Receipt capacity/admission, private-channel loss while the runtime remains alive and the public use of recovered terminal evidence were open at the end of this round and are resolved in [round two](#plugin-execution-bookkeeping-round-two-7-october-2026). Host supervision and lifetime leases are unchanged. The pinned prototype remains historical research; its walkthroughs do not qualify the real workflow. This authorization covers design documentation only, with no production implementation, PR or merge.
+
+## Plugin execution bookkeeping, round two, 7 October 2026
+
+The user said, "I agree with recommendations," accepting Q3 A and the recommendations for Q4 and Q5.
+
+| Decision | Accepted choice | Current authority |
+| --- | --- | --- |
+| Full receipt capacity | Refuse fresh invocations before acceptance when bounded live receipt capacity is full. Existing work can finish; capacity recovery uses a manual protected Plugin restart. Do not queue newly accepted work waiting for that restart | [Private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+| Same-runtime channel loss | Pause new admission while existing Operations remain nonterminal solely for the channel loss. Reconnect only to the verified authenticated same runtime, preserving receipts and the existing supervision/lease rules | [Private dispatch](topics/plugins.md#private-operation-dispatch-and-reconciliation) |
+| Recovered terminal evidence | Existing read/list APIs expose the Plugin-reported outcome and typed result/error separately from immutable Interrupted. SDK helpers preserve the distinction and do not return ordinary success | [Recovered outcomes](topics/plugins.md#recovered-outcomes), [SDK helpers](topics/sdk.md#helpers) |
+
+The five product choices in this bookkeeping design tree are resolved. Numeric budgets, schemas, concrete runtime-identity verification and real durability/transport/capacity qualification remain engineering work with S3 and S7. Other Plugin topics and host-supervision simplification are outside this interview. No production implementation, PR or merge is authorized or claimed.
+
+## Plugin design handoff, 7 October 2026
+
+After the documentation interview, the user said, "Let's do that. Can you get me through all those steps?" in response to the proposed documentation PR, scoped implementation specification and implementation with required tests. This authorizes that delivery work for Plugin execution bookkeeping. It does not authorize merging or changes to the other design threads' responsibilities. The accepted behavior remains in [Plugins](topics/plugins.md); the implementation specification belongs in the issue tracker.
+
+The user then selected "Focused bookkeeping component first (Recommended)" rather than the full Plugin workflow. [Implementation spec #117](https://github.com/atlas-field-systems/atlas-core/issues/117) owns this bounded work. The agreed test seam is Core's Plugins module with a separate Plugin process over the private socket and real SQLite/Plugin-owned files. Component qualification does not complete S3 or waive its public API, SDK, container and host requirements.

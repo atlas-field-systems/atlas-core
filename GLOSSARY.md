@@ -33,7 +33,7 @@ The Atlas SDK mode that maintains a Local operational picture of the whole Datas
 _Avoid_: full sync, hybrid mode, replica mode
 
 **Radio gateway**:
-Software connecting Atlas Core with bandwidth-limited Assets over a radio transport while preserving Asset identity and the meaning of their Tasks and reports. It has its own identity and relays only for its bound Assets.
+Software connecting Atlas Core with bandwidth-limited Assets over a radio transport, trusted to translate and submit reports for its bound Assets while preserving their identities and the meaning of their Tasks and reports. It has its own identity; gateway taskability is outside the current scope and remains open for the future.
 _Avoid_: Asset OS, Source Gateway, Core module
 
 **Core release**:
@@ -71,6 +71,14 @@ _Avoid_: Reset
 **Reset**:
 Stopping Core, clearing its operational Dataset and Atlas-managed diagnostic logs, and starting Core with a new Dataset while retaining installation setup.
 _Avoid_: Restart, Hard Reset, backup restore
+
+**Reset establishment**:
+The point at which a Reset creates its replacement Dataset. Establishment can precede completion of cleanup and startup.
+_Avoid_: Reset completion
+
+**Reset completion**:
+The point at which required Reset cleanup is complete, Core is ready and every compatible enabled Plugin has a recorded startup outcome. A recorded startup fault does not leave Reset pending.
+_Avoid_: Reset establishment
 
 **Hard Reset**:
 A local CLI/TUI action that stops Core and its managed Plugins, removes all Atlas-managed operational state and installation setup, and returns Atlas to first-time setup. The Core software and unrelated host resources remain.
@@ -138,7 +146,7 @@ The administrative withdrawal of an Asset from participation while retaining its
 _Avoid_: Entity deletion, Operational status, Task cancellation, physical stop
 
 **Enrollment**:
-Giving an Asset an authenticated identity bound to its Asset ID. The binding belongs to the Installation and survives Reset.
+Giving an Asset an authenticated identity bound to its Asset ID, directly or through an authorized gateway. The binding belongs to the Installation and survives Reset.
 _Avoid_: Asset registration
 
 **Open enrollment**:
@@ -266,8 +274,12 @@ One submitted invocation of a Plugin capability, with its own identity, lifecycl
 _Avoid_: Operation attempt, Plugin capability, Atlas Task, Asset Command, Datastream
 
 **Interrupted Operation**:
-An Operation whose outcome Core can no longer establish. It is terminal and records uncertainty, not proof that nothing happened.
-_Avoid_: Paused Task, suspended Task, Failed
+An Operation with a terminal record of uncertainty because Core could not establish completion or cancellation. Later evidence can supplement that record without changing its Interrupted outcome.
+_Avoid_: Paused Task, suspended Task, Failed, proof of nonexecution
+
+**Recovered outcome**:
+A Plugin-reported completion, failure or cancellation recovered after its Operation became Interrupted. It supplements the Operation's evidence without changing that terminal status.
+_Avoid_: recovered Operation, reopened Operation
 
 **External source**:
 A system outside Atlas from which a Plugin obtains data.

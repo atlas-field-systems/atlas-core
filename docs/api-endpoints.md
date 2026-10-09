@@ -1,6 +1,6 @@
 # API endpoint map
 
-Approved endpoint map as of 2026-09-22, based on the API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. The delivered [Slice 0 foundation](../tests/contract/README.md) has no public routes; its test-only operations do not implement this map. Production schemas and behavior follow the [owning workflows](architecture/implementation-sequence.md#public-api-and-sdk-inventory).
+The endpoint map follows the accepted API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, with subsequent changes linked to their decisions. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. The delivered [Slice 0 foundation](../tests/contract/README.md) has no public routes; its test-only operations do not implement this map. Production schemas and behavior follow the [owning workflows](architecture/implementation-sequence.md#public-api-and-sdk-inventory).
 
 [Asset retirement](topics/identity-and-access.md#asset-retirement) and independent result declarations now have concrete bindings below. Route specification is not evidence of implementation.
 
@@ -17,7 +17,7 @@ These are the starting families; more can be added as requirements emerge. Behav
 | `/entities` | Entity creation, queries, updates, and deletion |
 | `/tasks` | Operational instructions and their lifecycle |
 | `/objects` | File content, metadata, and references to related entities |
-| `/admin` | Core configuration, maintenance, and diagnostics |
+| `/admin` | Credentials, Operator profiles, activity history and diagnostics |
 | `/admin/auth` | API key management, including creation, listing, and revocation |
 | `/admin/activity` | Read-only structured history of selected operational actions |
 | `/admin/operators` | Operator identity information and personal settings |
@@ -115,17 +115,15 @@ Producer replay, content verification, durability and the deletion completion bo
 
 ## Administration
 
-All routes are authenticated. Only [operator administrative clients](topics/identity-and-access.md#operator-clients) may manage the documented configuration and credentials. Plugin configuration and process administration are exclusively local.
+All routes are authenticated. Only [operator administrative clients](topics/identity-and-access.md#operator-clients) may manage credentials. Core configuration inspection and editing, Plugin configuration and process administration are exclusively local.
 
-### Core configuration and diagnostics
+### Core diagnostics
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
-| `GET /admin/config` | Administrative clients inspect Core settings | No body → documented public configuration fields | None | New |
-| `PATCH /admin/config` | Administrative clients change supported Core settings | Changed fields, required version precondition → desired/active configuration and apply requirements | Atomic validated save; per-field live/deferred application under [Core configuration](topics/dataset-lifecycle.md#core-configuration) | New |
 | `GET /admin/resources` | Administrative clients inspect service resources | No body → host/process diagnostics | None | Adapt from `/resources` |
 
-Supported editable Core fields and application rules follow [Core configuration](topics/dataset-lifecycle.md#core-configuration). No public lifecycle/restart endpoint is introduced.
+Core settings are inspected and changed through [local administration](topics/dataset-lifecycle.md#core-configuration) under [ADR-0027](adr/0027-administer-core-configuration-locally.md). There are no public configuration or lifecycle endpoints; authenticated health and readiness remain available.
 
 ### Activity history
 
@@ -167,7 +165,7 @@ The public API exposes Plugin discovery/status and durable Operations; Plugin ma
 | `GET /plugins/{plugin_id}` | Consumers inspect a Plugin | Plugin ID → release, capabilities, availability and fault status | None; no configuration secrets or management controls | New |
 | `POST /plugins/{plugin_id}/operations` | Consumers invoke a declared capability | Capability identifier, input, dataset-scoped submission identity → accepted Operation and outcome URL | Record durable Operation; declared processing may publish operational resources | Adapt: replace request-bound capability invocation |
 | `GET /plugins/{plugin_id}/operations` | Consumers list Operations | Filters, pagination → Operation page | None | New |
-| `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one Operation | Core-owned Operation ID → status, progress, known outputs and outcome | None | New |
+| `GET /plugins/{plugin_id}/operations/{operation_id}` | Consumers query one Operation | Core-owned Operation ID → status, progress, known outputs, outcome and any separate [Recovered outcome](topics/plugins.md#recovered-outcomes) | None | New |
 | `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` | Consumers request cancellation | Operation ID → Operation | Record cancellation request; final outcome requires confirmation | New |
 
 Submission, retries, cancellation, the [Operation transitions](topics/plugins.md#operation-transitions) and retention are specified in [Plugins](topics/plugins.md#operations), including the `202 Accepted` submission response.
@@ -175,17 +173,17 @@ Submission, retries, cancellation, the [Operation transitions](topics/plugins.md
 
 ## Synchronization
 
-HTTP-mode operations call these routes directly, and the SDK's background synchronizer calls them privately in Full synchronization mode; read sources, freshness and recovery follow [SDK](topics/sdk.md#modes).
+HTTP-mode operations call these routes directly. The Full synchronization mode background synchronizer privately uses the full snapshot and cursor-based feed; application changed-since remains local. Read sources, freshness and recovery follow [SDK](topics/sdk.md#modes).
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
-| `GET /queries/full` | SDK clients load the full operational dataset | Per-resource pagination → Entities, Tasks, ready Objects with resource versions, continuations and stable baseline cursor | None; private staged load reconciles baseline replay before ready | Retain |
-| `GET /queries/changed-since` | SDK clients recover missed changes | Baseline version and cursor → ordered change events and next recovery boundary | None | Retain |
-| `GET /feed` | SDK clients subscribe to live operational changes | WebSocket upgrade, caller authentication, complete-picture subscribe → hello, boundary acknowledgement and commit-framed changes | Maintain connection; no resource writes; no selective subscriptions | Retain |
+| `GET /queries/full` | SDK clients load the full operational dataset | Initial `allocation_context` + `load_id`, then capture-bound page continuations → Entities, Tasks, ready Objects with versions, stable capture handle and covered continuation cursor | Allocate or replay one bounded temporary capture under [allocation retries](topics/sdk.md#snapshot-allocation-retries) and [snapshot recovery](topics/sdk.md#snapshot-lifetime-and-recovery); new admission may be refused at capacity; no resource writes | Retain route; revise snapshot consistency |
+| `GET /queries/changed-since` | HTTP-mode clients query missed changes | Complete Core cursor → ordered whole-commit pages through a fixed recovery boundary | None; capability remains independently available | Retain |
+| `GET /feed` | SDK clients subscribe to ordered changes or release a snapshot capture | Authenticated WebSocket → hello with required batch limits; complete-picture subscribe with accepted batch limits and optional complete Core cursor → boundary acknowledgement and catch-up/live complete commit messages; `release_snapshot(snapshot_handle)` → `snapshot_released`, usable before data subscription | Maintain connection or release the caller's capture under [snapshot recovery](topics/sdk.md#snapshot-lifetime-and-recovery); no resource writes; no selective subscriptions; no-cursor application subscription is live-only | Retain route; revise catch-up ownership, framing and capture controls |
 
 Asset-scoped synchronization is [deferred](topics/sdk.md#deferred-asset-hybrid-mode), and gateways use these routes like any other SDK client.
 
-When retained history no longer covers the requested version, `GET /queries/changed-since` returns an explicit cursor-expired response. The SDK's load and recovery procedure follows [background synchronization](topics/sdk.md#background-synchronization). Whole-commit retention bounds, complete-picture scope and continuation fields follow [synchronization wire](topics/sdk.md#synchronization-wire-and-application-boundary).
+Expired Core cursors fail explicitly through the [synchronization contract](topics/sdk.md#synchronization-wire-and-application-boundary), including HTTP changed-since. The SDK's load and recovery procedure follows [background synchronization](topics/sdk.md#background-synchronization) and [snapshot lifetime and recovery](topics/sdk.md#snapshot-lifetime-and-recovery). Exact snapshot lifetime, storage and measured budgets remain engineering work; route retention does not preserve the superseded SDK HTTP replay handoff.
 
 All reads, mutations, prepared uploads and recovery cursors follow Core's [Dataset wire boundary](topics/dataset-lifecycle.md#dataset-wire-boundary) and [SDK Dataset Reset handling](topics/sdk.md#dataset-reset-handling).
 
@@ -195,7 +193,7 @@ Feed authentication follows [connection setup](topics/sdk.md#connection-setup): 
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
-| `GET /health` | Authenticated clients discover Core state; Assets obtain contact proof | Credentials, optional bound Asset/generation challenge request → liveness, Dataset/Core time/version discovery, advisory Open enrollment status and optional contact challenge | No operational mutation or Contact refresh; challenge is proof for a later accepted report | Adapt: [freshness exchange](topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
+| `GET /health` | Authenticated clients discover Core state; Assets obtain contact proof | Credentials, optional bound Asset/generation challenge request → liveness, Dataset/Core time/version discovery, finite [snapshot allocation context](topics/sdk.md#snapshot-allocation-retries), advisory Open enrollment status and optional contact challenge | No operational mutation or Contact refresh; challenge is proof for a later accepted report | Adapt: [freshness exchange](topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
 | `GET /readiness` | Monitors check required dependencies | Caller credentials → readiness status and dependency checks | None | Adapt: now authenticated |
 | `GET /docs` | Developers browse interactive documentation | Caller credentials → documentation interface | None | New |
 | `GET /openapi.json` | SDK/tooling and docs read the HTTP contract | Caller credentials → OpenAPI document | None | New |
@@ -211,7 +209,7 @@ OpenAPI describes the API contract, and a documentation tool renders it at `/doc
 | Credential transport and setup | Retain the starting operator key transports `Authorization: Bearer` and `X-API-Key`. Caller authority follows [Identity and access](topics/identity-and-access.md#callers-and-permissions); TLS/docs/bootstrap and WebSocket setup follow [offline setup](topics/dataset-lifecycle.md#offline-tls-and-first-time-setup) and [SDK connections](topics/sdk.md#connection-setup) |
 | Lists | Shared bounded filters, cursor/source boundaries and assigned-queue coherence follow [query and status](topics/sdk.md#query-and-status-contract) |
 | Errors and wire context | JSON success/error envelopes, Dataset/version headers and decimal counters follow [public wire conventions](architecture/system-design.md#public-wire-conventions) |
-| Concurrent changes | Separate atomic report and descriptive mutations follow [mutation-class validation](topics/asset-reporting.md#mutation-classes-and-atomic-validation) and the [authority matrix](topics/tracks-and-geofeatures.md#mutation-authority-matrix); configuration uses [desired/active revisions](topics/dataset-lifecycle.md#core-configuration) |
+| Concurrent changes | Separate atomic report and descriptive mutations follow [mutation-class validation](topics/asset-reporting.md#mutation-classes-and-atomic-validation) and the [authority matrix](topics/tracks-and-geofeatures.md#mutation-authority-matrix); Core configuration uses the separate [local-management contract](topics/dataset-lifecycle.md#core-configuration) |
 | Retryable mutations | Operation-specific prepared identities and outcome categories follow [SDK mutation retries](topics/sdk.md#mutation-outcomes-and-retries); Core uses [retry identity](architecture/system-design.md#retry-identity) without replacing owner-specific facts or retention |
 | Compatibility | Health advertises explicit supported editions and the SDK selects a common edition under [connection setup](topics/sdk.md#connection-setup); Command Catalog lookup remains local |
 | Change events | Whole-commit Entity/Task/ready-Object frames, bounded replay and initial handoff follow [synchronization wire](topics/sdk.md#synchronization-wire-and-application-boundary) |

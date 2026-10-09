@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""One clean verification entry point for the Slice 0 foundation."""
+"""Verify the contract foundation and focused Plugin bookkeeping component."""
 
 import argparse
 import hashlib
 import json
+import os
 import shutil
+import sys
 from contextlib import contextmanager
 
+from command_checks import check_command_lifetime
 from generate import OUTPUTS, generate
+from plugin_checks import check_plugin_fixture_lifetime
 from toolchain import LOCK, ROOT, prepare, run
 from toolchain_checks import check_toolchain_refusals
 from verification_checks import check_fresh_go_tests
@@ -68,6 +72,17 @@ def verify(bootstrap):
         _test_go(go, env, cwd=core)
         run([go, "vet", "./..."], env, cwd=core)
         run([go, "build", "-o", artifacts / "contract-fixture", "./tests/contractfixture"], env, cwd=core)
+    with check(passed, "verifier command deadline, interruption and detached-descendant cleanup"):
+        check_command_lifetime()
+    with check(passed, "Plugin bookkeeping race and real-process recovery workflows"):
+        run(
+            [go, "test", "-race", "-count=1", "./plugins/...", "./pluginruntime/...", "./plugindispatch/..."],
+            env,
+            cwd=core,
+            timeout=300,
+        )
+    with check(passed, "Plugin fixture cleanup after worker death, deadline and interruption"):
+        check_plugin_fixture_lifetime(go, env)
     with check(passed, "TypeScript structural lint and independent rule probes"):
         run(["npm", "run", "lint"], env, cwd=sdk)
     with check(passed, "TypeScript/JavaScript formatting"):
@@ -109,17 +124,41 @@ def verify(bootstrap):
         )
         + "\n"
     )
-    print(f"PASS Slice 0 foundation at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
+    print(f"PASS foundation and Plugin component at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bootstrap", action="store_true", help="download checksum-locked Go/sqlc/Ruff when absent")
     parser.add_argument(
         "--toolchain-self-test", action="store_true", help="only execute checksum and version refusal checks"
     )
+    parser.add_argument("--command-lifetime-probe", type=str, help=argparse.SUPPRESS)
+    parser.add_argument("--probe-timeout", type=float, default=5, help=argparse.SUPPRESS)
     options = parser.parse_args()
-    if options.toolchain_self_test:
-        check_toolchain_refusals()
-    else:
-        verify(options.bootstrap)
+    try:
+        if options.command_lifetime_probe:
+            run(
+                ["npm", "test", "--", "timeout-probe.ts"],
+                {
+                    **os.environ,
+                    "ATLAS_CONTRACT_PROBE_MODE": "async",
+                    "ATLAS_CONTRACT_PROBE_MARKER": options.command_lifetime_probe,
+                },
+                cwd=ROOT / "Atlas SDK",
+                timeout=options.probe_timeout,
+            )
+        elif options.toolchain_self_test:
+            check_toolchain_refusals()
+        else:
+            verify(options.bootstrap)
+    except InterruptedError as error:
+        if error.__cause__ is not None:
+            print(error.__cause__, file=sys.stderr)
+        print(f"InterruptedError: {error}", file=sys.stderr)
+        return 128 + error.errno
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
