@@ -1,6 +1,6 @@
 # Domain documentation
 
-Atlas uses one root [GLOSSARY.md](../../GLOSSARY.md), one [topic page](../topics/README.md) per area of behavior and shared [ADRs](../adr/README.md). Read the glossary before exploring or changing domain behavior, then the topic page and the ADRs relevant to that work. Use its canonical terms and flag conflicts with accepted decisions explicitly.
+Atlas uses one root [GLOSSARY.md](../../GLOSSARY.md), one [topic page](../topics/README.md) per area of behavior and shared [ADRs](../adr/README.md). Before exploring, planning, implementing or reviewing behavior, design or documentation, read the glossary, then use the table below to pick what else to read: read every authoritative home whose trigger matches the work, and update each one the change affects. Use the glossary's canonical terms and flag conflicts with accepted decisions explicitly.
 
 ## Where information belongs
 
@@ -8,14 +8,15 @@ Atlas uses one root [GLOSSARY.md](../../GLOSSARY.md), one [topic page](../topics
 | --- | --- | --- |
 | Domain terms | [GLOSSARY.md](../../GLOSSARY.md) | Defining or using Atlas vocabulary; keep definitions short and free of implementation details |
 | Users, workload and field assumptions | [Operating model](../architecture/operating-model.md) | Evaluating product scope or a proposed workflow |
-| Current behavior rules, their routes and SDK operations, and open questions for one area | [Topic pages](../topics/README.md) | Planning, implementing or reviewing behavior in that area; each rule lives on exactly one page |
+| Current behavior rules, their routes and SDK operations, and open questions for one area | [Topic pages](../topics/README.md) | Planning, implementing or reviewing behavior in that area, including its API and SDK behavior; each rule lives on exactly one page |
 | Repository boundaries and responsibility assignments | [System outline](../architecture/system-outline.md) | Assigning ownership or planning a module; candidate subsystems remain proposals |
-| Cross-cutting mechanisms and module collaboration | [System design](../architecture/system-design.md) | Changing write commits, retry identity, change publication, Dataset opening, module interfaces or generation |
-| Public routes and their effects | [Endpoint map](../api-endpoints.md) | Adding or changing a route; behavior rules link to their topic page |
+| Cross-cutting mechanisms and module collaboration | [System design](../architecture/system-design.md) | Changing Protocol, generators, module interfaces, storage ownership, shared infrastructure, write commits, retry identity, change publication or Dataset opening; read its linked decisions too |
+| Dataset lifecycle, retention and cleanup | [Dataset lifecycle](../topics/dataset-lifecycle.md) and [ADR-0015](../adr/0015-separate-start-stop-restart-and-reset.md) | Changing lifecycle, storage, logs or client synchronization |
+| Public routes and their effects | [Endpoint map](../api-endpoints.md) | Planning, implementing or reviewing API or SDK behavior, with the topic pages; behavior rules link to their topic page |
 | Component inventory and proposed storage mapping | [Component catalog](../data-components.md) | Adding a component or planning storage |
 | Required test evidence | [Testing strategy](../testing-strategy.md) | Planning, adding or reviewing tests for a behavior |
 | Accepted architectural tradeoffs | [ADRs](../adr/README.md) | Changing behavior governed by a decision; retain the context, decision, rationale and consequences, and link to the topic page for detailed rules |
-| Differences from Modernization | [Comparison register](../architecture/modernization-differences.md) | Accepting a source-system behavior change; preserve evidence and stable row IDs |
+| Differences from Modernization | [Comparison register](../architecture/modernization-differences.md) | Recording or implementing an authorized behavior or design change from Atlas Modernization; update it as its introduction describes |
 | Dated decision history and user authorizations | [Decision log](../planning-reconciliation.md) | Recording a user decision; history only, never the authority for a current rule |
 | Historical evidence and alternatives | [Research index](../research/atlas-reassessment/README.md) | Evaluating a technology or revisiting a tradeoff |
 | Implementation specifications and assigned work | [GitHub Issues](issue-tracker.md) | An experiment or implementation slice is requested |

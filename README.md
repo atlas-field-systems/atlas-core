@@ -13,7 +13,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Earlier representative generation and validation research | [Pinned toolchain proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
 | Collaboration between Core, SDK, Protocol and local tools | [System design](docs/architecture/system-design.md) |
-| Deep-module design and review criteria | [Structure and interfaces](docs/agents/code-conventions.md#structure-and-interfaces) |
+| Deep-module design and review criteria | [Structure and interfaces](CODING_STANDARDS.md#structure-and-interfaces) |
 | Selected technology stack and generation tools | [Stack decision](docs/adr/0016-use-go-sqlite-and-openapi-tooling.md) |
 | Docker containers, Plugin separation and mounted storage | [Deployment decision](docs/adr/0017-deploy-core-and-plugins-as-docker-containers.md) |
 | General SDK scope, IP-connected Assets and radio gateway placement | [Two-mode SDK decision](docs/adr/0020-limit-general-sdk-to-http-and-full-sync.md) |

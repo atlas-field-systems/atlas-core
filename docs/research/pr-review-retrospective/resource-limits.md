@@ -18,7 +18,7 @@ These are distinct representations of the same recurring mistake. The historical
 
 ## Existing coverage
 
-[State, errors and background work](../../agents/code-conventions.md#state-errors-and-background-work) already requires bounded queues, retries, buffers and concurrency. [Operational protections](../../architecture/system-design.md#basic-operational-protections) and the [operating model](../../architecture/operating-model.md) own Atlas's admission behavior. The missing detail is what a reviewer must count and when the limit takes effect.
+[State, errors and background work](../../../CODING_STANDARDS.md#state-errors-and-background-work) already requires bounded queues, retries, buffers and concurrency. [Operational protections](../../architecture/system-design.md#basic-operational-protections) and the [operating model](../../architecture/operating-model.md) own Atlas's admission behavior. The missing detail is what a reviewer must count and when the limit takes effect.
 
 Current request and response adapters now contain byte bounds. The proposal prevents recurrence; it does not claim those original findings remain unfixed.
 

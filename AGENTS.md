@@ -1,26 +1,12 @@
-## Working together
+Agents cannot waive requirements or authorize their own exceptions. Before changing requirements or recording a decision, follow the [decision authority and documentation completion rules](docs/agents/domain.md#decision-authority).
 
-- Answer exploratory questions without changing files. Treat clear requests for action as authorization to do the work, and complete authorized work without repeatedly asking permission.
-- Agents cannot waive requirements or authorize their own exceptions. Before changing requirements or recording a decision, follow the [decision authority and documentation completion rules](docs/agents/domain.md#decision-authority).
-- Open a pull request only when explicitly requested, and open it ready for review. Merge only when explicitly authorized.
-- Before implementing a substantial new visual direction, present distinct static mocks and wait for the user's choice. Once approved, implement that direction without reopening it for routine layout, copy or consistency fixes.
+Answer exploratory questions without changing files. Treat clear requests for action as authorization to complete the work. Open pull requests only when explicitly requested, ready for review. Merge only when explicitly authorized.
 
-## Agent skills
+Before implementing a substantial new visual direction, present distinct static mocks and wait for the user's choice. Once approved, implement it without reopening routine layout, copy or consistency decisions.
 
-- Before exploring, planning, implementing or reviewing domain behavior, read `GLOSSARY.md` and the relevant ADRs using `docs/agents/domain.md`. This includes behavior specified in documentation.
-- Before designing, implementing or reviewing code, read all of `docs/agents/code-conventions.md` and inspect existing implementations in the area. During review, check every applicable convention and the originating issue or specification separately.
-- When creating or updating issues, follow `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`.
+Before exploring, planning, implementing or reviewing work, read the sources for every branch it touches:
 
-## Architecture and lifecycle
-
-Before planning, implementing or reviewing changes to lifecycle, storage, logs or client synchronization, read `docs/topics/dataset-lifecycle.md` and `docs/adr/0015-separate-start-stop-restart-and-reset.md`. They define Restart retention, Reset cleanup and the field-use boundary. Backup/restore and version-to-version operational-data migrations are excluded.
-
-Before planning, implementing or reviewing changes to Protocol, generators, module interfaces, storage ownership or shared infrastructure, read `docs/architecture/system-design.md` and its linked decisions.
-
-Before planning, implementing or reviewing behavior changes, read `docs/testing-strategy.md` and identify the applicable required scenarios. Read it before planning, adding, changing or reviewing tests too. Before planning, implementing or reviewing API and SDK behavior, use the topic pages and endpoint map indexed in `README.md`.
-
-When recording or implementing an authorized behavior or design change from Atlas Modernization, update `docs/architecture/modernization-differences.md` with baseline evidence and a link to the successor decision. Distinguish confirmed differences, carried-forward behavior and proposals.
-
-## Generated files
-
-Author shared contract facts in Protocol and regenerate their representations. Never hand-edit or post-process generated files. Before planning, implementing or reviewing generator or binding changes, read [Protocol and generation](docs/agents/code-conventions.md#protocol-and-generation).
+- **Behavior, design or documentation**, including behavior specified in documentation: `GLOSSARY.md`, then the sources that the table in `docs/agents/domain.md` assigns to the work.
+- **Code**, including generators and generated bindings: all of `CODING_STANDARDS.md`.
+- **Behavior or test changes**: `docs/testing-strategy.md`. Identify the applicable required scenarios.
+- **Issues**, when creating or updating them: `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`.
