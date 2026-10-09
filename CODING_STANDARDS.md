@@ -43,7 +43,7 @@ These standards govern code quality. The [system design](docs/architecture/syste
 - Use supported generator output with small configuration. Avoid endpoint-specific templates, duplicate wrapper APIs and patches that recreate the maintenance removed by generation.
 - When a required case does not fit, simplify the contract's representation while preserving accepted behavior, reconsider the tool choice under the accepted stack decision, or keep that binding handwritten. Changes to accepted behavior or tooling follow [decision authority](docs/agents/domain.md#decision-authority). Explain the tradeoff before expanding generator machinery.
 - Keep SDK conveniences separate from generated bindings. Helpers may compose supported operations for an actual consumer workflow; they must preserve the contract and Core's authority.
-- Validate wire examples and public behavior independently of generated output; matching generated snapshots alone does not establish correctness. See [generation and testing](docs/architecture/system-design.md#generation-and-testing).
+- Regeneration must be deterministic. Validate wire examples and public behavior independently of generated output; matching generated snapshots alone does not establish correctness. See [generation and testing](docs/architecture/system-design.md#generation-and-testing).
 
 ## State, errors and background work
 
