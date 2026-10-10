@@ -6,16 +6,18 @@
     "generate": "openapi-typescript \"../Atlas Protocol/protocol.json\" --output generated/protocol.ts",
     "check": "tsc --noEmit",
     "lint": "node ../scripts/lint-typescript.mjs && node ../scripts/lint-typescript-checks.mjs",
-    "prettier": "prettier \"src/**/*.ts\" \"checks/**/*.{ts,mjs}\" \"../tests/contract/*.{ts,mjs}\" \"../scripts/*.mjs\"",
+    "prettier": "prettier \"src/**/*.ts\" \"checks/**/*.{ts,mjs}\" \"../tests/contract/*.{ts,mjs}\" \"../tests/s1/**/*.{ts,mjs}\" \"../examples/s1/**/*.{ts,mjs}\" \"../scripts/*.mjs\"",
     "format": "npm run -s prettier -- --write",
     "format:check": "npm run -s prettier -- --check",
     "build": "tsc -p tsconfig.build.json",
     "check:consumer": "node checks/consumer.mjs && tsc --noEmit -p tsconfig.consumer.json",
-    "test": "node ../tests/contract/run.mjs"
+    "test": "node ../tests/contract/run.mjs",
+    "test:s1": "node ../tests/s1/run.mjs"
   },
   "dependencies": {
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "canonicalize": "5.1.0",
     "openapi-fetch": "0.17.0"
   },
   "devDependencies": {
@@ -33,6 +35,10 @@
     "./protocol": {
       "types": "./dist/generated/protocol.d.ts",
       "default": "./dist/generated/protocol.js"
+    },
+    "./node": {
+      "types": "./dist/src/node.d.ts",
+      "default": "./dist/src/node.js"
     }
   },
   "files": [

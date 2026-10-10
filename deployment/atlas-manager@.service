@@ -1,0 +1,15 @@
+[Unit]
+Description=Atlas installation manager %i
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=/opt/atlas/bin/atlas-manager --config /etc/atlas/%i/manager.json
+Restart=on-failure
+RestartSec=2s
+TimeoutStopSec=30s
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

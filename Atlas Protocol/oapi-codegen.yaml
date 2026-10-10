@@ -1,6 +1,8 @@
 package: protocol
 generate:
   models: true
+  gorilla-server: true
+  strict-server: true
   embedded-spec: true
 output-options:
   nullable-type: true

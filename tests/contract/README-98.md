@@ -12,8 +12,8 @@ The verifier records the final source revision, working-tree status, exact locks
 
 | Requirement | Implementation | Observable check |
 | --- | --- | --- |
-| One shared report context and Position | Fixture position-report route references canonical `ReportContext` and `Position` | `report.test.ts` sends six hand-authored payloads through each isolated generated/direct path and compares separately authored expected envelopes and supported GET read-back |
-| Selected artificial edition | Report GET/PUT response headers echo the admitted request edition | The same six report fixtures run under both `0.1.0` and `0.2.0` through generated/direct HTTP, checking selected-edition headers and persisted expected bodies |
+| One shared report context and Position | Fixture position-report route references canonical `ReportContext` and `Position` | `report.test.ts` sends seven hand-authored payloads through each isolated generated/direct path and compares separately authored expected envelopes and supported GET read-back |
+| Selected artificial edition | Report GET/PUT response headers echo the admitted request edition | The same seven report fixtures run under both artificial `0.1.0` and `0.2.0` through generated/direct HTTP, checking selected-edition headers and persisted expected bodies |
 | Current and historical identity fidelity | Required nullable fields remain generated values; report handler stores generated JSON with existing private keyed SQLite queries | Current, original-ordering and retained-UUID cases preserve positive decimal sequences `9007199254740993`/`9007199254740994` and original `9007199254740992` without numeric conversion |
 | Unknown, absent and known-zero times | Canonical optional observation map and nullable timing/evidence fields | Omitted map, empty map, explicit unknown position timing, known observation time with zero uncertainty and unknown report time survive persistence distinctly; no send/receipt time is inserted |
 | Complete named double coordinates | Canonical double Position is reused without a route-local coordinate schema | Positive/negative precision-sensitive coordinates, zero and inclusive coordinate boundaries round-trip in axis order; malformed/incomplete/out-of-range/nonfinite coordinate encodings fail |
@@ -27,7 +27,9 @@ The report handler writes a single keyed fixture value and reads it through the 
 
 Go's non-HTTP consumer imports the shared Core adapter to register its supported schema formats. The independent malformed-UUID cases exposed kin-openapi's opt-in UUID validation. The format rule belongs to that common adapter, rather than another UUID declaration in a message consumer.
 
-Generated Go UUID/date-time bindings normalize some valid spellings; [binding representation limits](../../Atlas%20Protocol/README.md#binding-representation-limits) records why a typed round trip is not evidence of original string retention for later signing.
+Under [S1 #122](https://github.com/atlas-field-systems/atlas-core/issues/122) and ADR-0029, the seventh fixture omits the former required offset uncertainty and preserves original `.500+00:00` report and `.250+00:00` observation spellings. Named source-string date-time bindings retain those spellings. Existing explicit-null/zero compatibility metadata remains qualified, without an uncertainty computation or budget. Missing `observed_at`, malformed dates, negative metadata and all unrelated rejection coverage remain required.
+
+Generated Go UUID and ordinary date-time bindings still normalize some valid spellings; [binding representation limits](../../Atlas%20Protocol/README.md#binding-representation-limits) explains why signatures must use the original validated facts.
 
 The exact qualified tools are Go 1.27.1, Node 24.21.0, npm 11.19.0, sqlc 1.31.1, oapi-codegen 2.8.0, openapi-typescript 7.13.0, openapi-fetch 0.17.0, TypeScript 5.9.3 and tsx 4.23.15. OpenAPI is 3.0.3. Runtime kin-openapi is 0.149.0; the generator parser remains 0.142.0. Ajv is 8.20.0 with ajv-formats 3.0.1; modernc.org/sqlite is 1.60.1 with SQLite 3.53.4. [Protocol's lock record](../../Atlas%20Protocol/README.md#exact-qualified-pins) also records nullable/runtime/middleware pins and archive checksums. The verifier checks installed tools and both locked dependency graphs.
 

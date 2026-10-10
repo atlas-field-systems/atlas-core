@@ -1,6 +1,6 @@
 # Atlas Core
 
-Atlas Core is being extracted and simplified from Atlas Modernization. This repository contains Core, Protocol and SDK design, research and a bounded [Slice 0 contract foundation](tests/contract/README.md); the Command Interface is a separate consumer.
+Atlas Core is being extracted and simplified from Atlas Modernization. This repository contains Core, Protocol and SDK design, the [Slice 0 contract foundation](tests/contract/README.md), and the [S1 direct-IP Move To workflow](tests/s1/README.md). The Command Interface is a separate consumer.
 
 | Read for | Document |
 | --- | --- |
@@ -9,6 +9,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/testing-strategy.md#mvp-integration-checks) |
 | Implementation slices, route/scenario coverage and specification tickets | [Implementation sequence](docs/architecture/implementation-sequence.md) |
 | Delivered foundation and per-ticket qualification | [Slice 0 coverage](tests/contract/README.md) |
+| Runnable Core, local CLI, SDK and retained simulator | [S1 workflow and qualification](tests/s1/README.md) and [deployment](deployment/README.md) |
 | Focused Plugin bookkeeping component and its qualification limits | [Component integration](Atlas%20Core/plugins/README.md) |
 | Earlier representative generation and validation research | [Pinned toolchain proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
@@ -33,7 +34,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Source evidence, technology alternatives and proposed experiments | [Research index](docs/research/atlas-reassessment/README.md) |
 | Proposed convention improvements from historical PR feedback | [Coding conventions retrospective](docs/research/pr-review-retrospective/README.md) |
 
-The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted. Slice 0 establishes shared contract tooling and an isolated fixture workflow; the [focused Plugin component](Atlas%20Core/plugins/README.md) adds a bookkeeping seam, while public operational Core/SDK workflows remain unimplemented. The original isolated Protocol proof remains executable research evidence.
+The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. Slice 0 establishes shared contract tooling; the [focused Plugin component](Atlas%20Core/plugins/README.md) adds a bookkeeping seam. [S1 #122](tests/s1/README.md) implements 19 operational routes, a real TLS Core container, HTTP-mode SDK and local lifecycle management. Later slices retain their completion obligations. The original isolated Protocol proof remains executable research evidence.
 
 ## API and SDK behavior
 
@@ -48,6 +49,6 @@ Current API and SDK rules live on the topic pages. The [decision log](docs/plann
 
 ## Contract foundation
 
-[Spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94) delivered [Slice 0](tests/contract/README.md), with the #95-100 coverage records linked there. It contains the shared Protocol baseline, generated Core/SDK bindings, narrow validation adapters and local representative Catalog lookup. Its isolated checks cover HTTP/SQLite/file workflows and canonical non-HTTP messages. The shipped public Protocol has no routes; fixture operations stay in test-only contracts. The [#69 proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) remains research prior art.
+[Spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94) delivered [Slice 0](tests/contract/README.md), with the #95-100 coverage records linked there. It contains the shared Protocol baseline, generated Core/SDK bindings, narrow validation adapters and local representative Catalog lookup. Its isolated checks cover HTTP/SQLite/file workflows and canonical non-HTTP messages. S0 authored no public routes; S1 adds its operational routes separately, while fixture operations stay in test-only contracts. The [#69 proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) remains research prior art.
 
-Run required foundation checks with `python3 scripts/verify.py --bootstrap`. Fixture bounds and artificial editions qualify these adapters, without establishing production capacity or release compatibility. Operational workflows and their required failure evidence remain with the owners in the [implementation sequence](docs/architecture/implementation-sequence.md).
+Run required repository checks with `python3 scripts/verify.py --bootstrap`. This includes S0, the Plugin component and S1's real container and offline workflows. [S1 prerequisites and evidence](tests/s1/README.md) describe the supported local environment. Fixture bounds and artificial editions establish no production capacity or released compatibility range. Later workflows and their failure evidence remain with the owners in the [implementation sequence](docs/architecture/implementation-sequence.md).

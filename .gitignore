@@ -1,6 +1,4 @@
-Atlas Core/generated/
-Atlas Core/plugins/generated/
-Atlas Core/tests/contractfixture/generated/
+Atlas Core/**/generated/
 Atlas SDK/generated/
 Atlas SDK/node_modules/
 Atlas SDK/dist/

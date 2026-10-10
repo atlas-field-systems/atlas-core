@@ -1,5 +1,7 @@
 # Local representative Command Catalog
 
+S1 #122 changes current operational lookup to queued coordinate-target Move To at unpublished local edition `0.1.0`. `catalog.test.ts` checks this advertising, absence of Pause/Resume and rejection of a Geofeature target. It retains the former broader Move To/Pause shape checks through canonical structural schemas. The original Slice 0 metadata qualification below records prior behavior and does not advertise S6 support in S1.
+
 This is [ticket #99](https://github.com/atlas-field-systems/atlas-core/issues/99), within [Slice 0 #94](https://github.com/atlas-field-systems/atlas-core/issues/94). Run the shared command from [the fixture guide](README.md):
 
 ```sh

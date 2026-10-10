@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the contract foundation and focused Plugin bookkeeping component."""
+"""Verify the contract foundation, Plugin component and operational S1 slice."""
 
 import argparse
 import hashlib
@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from command_checks import check_command_lifetime
 from generate import OUTPUTS, generate
 from plugin_checks import check_plugin_fixture_lifetime
+from s1_checks import build_s1, check_host_fixture_lifetime, check_host_workflows, check_offline_workflow
 from toolchain import LOCK, ROOT, prepare, run
 from toolchain_checks import check_toolchain_refusals
 from verification_checks import check_fresh_go_tests
@@ -109,14 +110,39 @@ def verify(bootstrap):
         print("PASS SDK consumer package excludes fixture tooling", flush=True)
     with check(passed, "generated transport/direct Protocol workflows and fixture cleanup"):
         run(["npm", "test"], env, cwd=sdk)
+    with check(passed, "S1 SDK, retained execution, bounded TLS transport and nested fixture cleanup"):
+        run(["npm", "run", "test:s1"], env, cwd=sdk, timeout=300)
+    with check(passed, "S1 real SQLite authority, reporting, Task, deletion and Reset races"):
+        run(
+            [go, "test", "-race", "-count=1", "./operationaltests/...", "./tasks/...", "./writecommit/..."],
+            env,
+            cwd=core,
+            timeout=300,
+        )
+    with check(passed, "S1 production binaries and local container image"):
+        image, docker, s1_evidence = build_s1(go, env, artifacts)
+    with check(passed, "S1 real container lifecycle, SDK/direct routes and execution recovery"):
+        check_host_workflows(go, env, artifacts, image, docker)
+    with check(passed, "S1 fixture owner survives worker death, deadline and interruption"):
+        check_host_fixture_lifetime(go, env, artifacts, image, docker)
+    with check(passed, "S1 standalone offline CLI and SDK demonstration"):
+        check_offline_workflow(env, artifacts, image, docker)
     revision = run(["git", "rev-parse", "HEAD"], env, capture=True)
     dirty = bool(run(["git", "status", "--porcelain"], env, capture=True))
+    changed = set(run(["git", "diff", "--name-only", "-z", "HEAD"], env, capture=True).split("\0"))
+    changed.update(run(["git", "ls-files", "--others", "--exclude-standard", "-z"], env, capture=True).split("\0"))
+    working_files = {
+        name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() if (ROOT / name).is_file() else None
+        for name in sorted(changed - {""})
+    }
     report.write_text(
         json.dumps(
             {
                 "source_revision": revision,
                 "working_tree_changed": dirty,
+                "working_files_sha256": working_files,
                 "toolchain": LOCK,
+                "s1": s1_evidence,
                 "generated_sha256": {name: hashlib.sha256(value).hexdigest() for name, value in first.items()},
                 "checks": passed,
             },
@@ -124,7 +150,7 @@ def verify(bootstrap):
         )
         + "\n"
     )
-    print(f"PASS foundation and Plugin component at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
+    print(f"PASS foundation, Plugin component and S1 at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 
 def main():

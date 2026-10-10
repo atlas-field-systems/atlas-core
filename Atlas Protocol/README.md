@@ -1,14 +1,14 @@
-# Protocol foundation
+# Atlas Protocol
 
-`protocol.json` is the authored source for Slice 0's shared wire definitions. It contains no operational routes. Its unpublished `0.0.0` metadata is not a released edition or a compatibility promise. See [spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94), [generation policy](../docs/adr/0011-generate-shared-contracts-with-minimal-customization.md) and the [coverage record](../tests/contract/README.md).
+`protocol.json` authors shared wire definitions and the 19 direct-IP operational routes required by [S1 #122](https://github.com/atlas-field-systems/atlas-core/issues/122). Its unpublished `0.1.0` edition is for local qualification, without a released compatibility claim. See [generation policy](../docs/adr/0011-generate-shared-contracts-with-minimal-customization.md), [S0 coverage](../tests/contract/README.md), and the [operational encoding](operational-contract.md). Authored routes require operational Core/SDK workflow evidence before completion.
 
 The separate [private Plugin dispatch artifact](plugin-dispatch.json) belongs to the [focused bookkeeping component](../Atlas%20Core/plugins/README.md#persistence-and-contract-source), independently of public HTTP generation and SDK routes.
 
-Protocol owns identifiers, canonical decimal counter syntax, Dataset/version headers and request parameters, read/mutation/error context, complete double-precision Position, the shared report context, and representative Move To/Pause inputs and Catalog metadata. `NullableIdentifier` is a named nullable scalar, keeping explicit null separate from omission. Full Entity resources, remaining Command variants and operational endpoints are added with their owning slices. The report context describes structure, not report authority, signature verification, counter-range enforcement or freshness decisions. The [local Catalog checks](../tests/contract/README-99.md) qualify structural inputs and metadata, without Task admission or execution.
+Protocol owns identifiers, counters, Dataset/version context, typed Asset/Task/queue resources, Enrollment grants, process claims, report acceptance, sparse telemetry, movement pages and the implemented Command Catalog. `NullableIdentifier` keeps explicit null separate from omission. Remaining Entity variants and Commands belong to their owning slices. Schema validation does not replace Core's authority, counter-range, transition or freshness decisions. [Catalog checks](../tests/contract/README-99.md) qualify inputs and metadata separately from operational admission/execution.
 
 Slice 0's required `process_proof` and `contact_challenge` fields qualify the direct IP report-context representation only. The [trusted gateway decision](../docs/adr/0028-trust-gateways-to-author-bound-asset-reports.md) allows a bound gateway to construct reports without an originating Asset's Core-format signature. Concrete gateway authority and freshness fields remain future Protocol work with that integration; the current fixture does not qualify gateway reporting.
 
-`MovementObservationTime` and `ReportContext` currently require `clock_uncertainty_ms`. These are prior S0 structural bindings, not the operational clock policy. [ADR-0029](../docs/adr/0029-use-deployment-clocks-and-preserve-event-times.md) assumes correct deployment-provided clocks and removes SDK offset estimation. S1 owns revising/authoring the operational schemas and corresponding fixtures; any retained uncertainty field is optional nullable compatibility metadata, without an S1 uncertainty budget. The representative Move To variants similarly do not establish that immediate or Geofeature tasking is implemented; [S1's boundary](../docs/architecture/implementation-sequence.md#s1-implementation-boundary) is queued coordinate-target movement.
+`MovementObservationTime` and `ReportContext` retain `clock_uncertainty_ms` as optional nullable compatibility metadata under [ADR-0029](../docs/adr/0029-use-deployment-clocks-and-preserve-event-times.md), without computation or an S1 uncertainty budget. `SourceInstant` and `NullableSourceInstant` keep the accepted source string spelling while retaining date-time validation; their supported `x-go-type: string` annotation prevents generated Go from rewriting it. The current Catalog advertises only queued coordinate-target Move To. Broader target/Pause definitions remain structural examples for S6 and are absent from operational lookup.
 
 Run from the repository root with Python 3.12+, Linux amd64, Node 24.21.0 and npm 11.19.0:
 
@@ -32,7 +32,7 @@ Generation alone, after locked dependencies have been installed:
 python3 scripts/generate.py
 ```
 
-The four generated directories are ignored build artifacts. Delete them freely. Never edit or post-process them. `scripts/generate.py` mechanically merges canonical components with sorted test-only `tests/contract/*.contract.json` fragments, rejects duplicate paths/components, and invokes supported generators with small configurations. Public bindings come from `protocol.json`; fixture bindings come from the assembled test contract; private query bindings come from authored fixture SQL. Fixture declarations cannot replace canonical facts.
+Generated directories are ignored build artifacts. Delete them freely. Never edit or post-process them. `scripts/generate.py` assembles canonical components with fixture-owned paths from sorted `tests/contract/*.contract.json` fragments, rejects duplicate paths/components, and invokes supported generators with small configurations. Public strict server bindings come from `protocol.json`; fixture bindings contain only fixture operations; private query bindings come from authored SQL. Fixture declarations cannot replace canonical facts.
 
 | Owner | Authored files and locks |
 | --- | --- |
@@ -77,13 +77,13 @@ The SDK response adapter qualifies explicit three-digit HTTP status codes from `
 
 At each exact status, the adapter qualifies separately declared `application/json`, JSON suffix media such as `application/problem+json`, and binary alternatives. It selects the authored schema by the received media type, refuses colliding normalized JSON declarations and requires an explicit JSON response byte bound; [response coverage](../tests/contract/README-97.md) records the independent HTTP checks.
 
-External references, recursive schemas, other composition profiles, nullable enum combinations, OpenAPI 3.1/3.2 features and custom endpoint templates remain unqualified. A new feature needs an independent fixture and executed check before adoption. Operational range, authority and cross-field decisions stay with their owning modules.
+S1's focused schema consumers additionally qualify `not` with a singleton numeric enum for heading's exclusive upper boundary and `x-go-type: string` source timestamps. External references, recursive schemas, other composition profiles, nullable enum combinations, OpenAPI 3.1/3.2 features and custom endpoint templates remain unqualified. A new feature needs an independent fixture and executed check before adoption. Operational range, authority and cross-field decisions stay with their owning modules.
 
 ### Binding representation limits
 
-Generated Go UUID and date-time bindings can change a valid string's spelling when re-encoding it. For example, uppercase or UUID URN inputs become bare lowercase UUIDs, and date-times ending in `+00:00` or `.500Z` become `Z` or `.5Z`. These examples retain equivalent UUID identities and time instants, but their original string values are not retained by those bindings.
+Generated Go UUID and ordinary date-time bindings can change a valid string's spelling when re-encoding it. For example, uppercase or UUID URN inputs become bare lowercase UUIDs, and ordinary date-times ending in `+00:00` or `.500Z` become `Z` or `.5Z`. Shared source times use the named string bindings above and retain their original spelling; Core-owned times still use ordinary date-time bindings.
 
-Slice 0 does not qualify signing or canonicalization. The later [signed-report workflow](../docs/topics/asset-reporting.md#shared-report-context) must canonicalize the validated original facts rather than reconstruct them from re-encoded Go UUID/date-time values.
+Slice 0 does not qualify signing or canonicalization. The operational [signed-report workflow](../docs/topics/asset-reporting.md#shared-report-context) canonicalizes validated original facts instead of reconstructing them from normalized values. Its encoding is in [the operational contract](operational-contract.md#enrollment-and-signatures).
 
 ### JSON request representation
 

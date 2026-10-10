@@ -60,7 +60,17 @@ interface DeclaredResponse {
 export function responseValidation(
   document: ResponseContract,
   context: { datasetId: string; protocolVersion: string },
-  options: { maxJSONBytes: number },
+  options: { maxJSONBytes: number; allowDatasetChange?: false },
+): Middleware;
+export function responseValidation(
+  document: ResponseContract,
+  context: { datasetId?: string; protocolVersion?: string },
+  options: { maxJSONBytes: number; allowDatasetChange: true },
+): Middleware;
+export function responseValidation(
+  document: ResponseContract,
+  context: { datasetId?: string; protocolVersion?: string },
+  options: { maxJSONBytes: number; allowDatasetChange?: boolean },
 ): Middleware {
   const maxJSONBytes = options.maxJSONBytes;
   if (!Number.isSafeInteger(maxJSONBytes) || maxJSONBytes <= 0) {
@@ -86,8 +96,15 @@ export function responseValidation(
           continue;
         }
         if (!header.validate(value)) throw refuse(failure);
-        if (header.role === "dataset" && !sameDataset(value, context.datasetId)) throw refuse("context");
-        if (header.role === "version" && value !== context.protocolVersion) throw refuse("context");
+        if (
+          header.role === "dataset" &&
+          context.datasetId !== undefined &&
+          !options.allowDatasetChange &&
+          !sameDataset(value, context.datasetId)
+        )
+          throw refuse("context");
+        if (header.role === "version" && context.protocolVersion !== undefined && value !== context.protocolVersion)
+          throw refuse("context");
       }
       const media = mediaType(response.headers.get("Content-Type") ?? "");
       if (media === undefined) throw refuse("media_type");
@@ -115,7 +132,11 @@ export function responseValidation(
         typeof body === "object" &&
         body !== null &&
         "dataset_id" in body &&
-        (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))
+        (typeof body.dataset_id !== "string" ||
+          !sameDataset(body.dataset_id, response.headers.get("Atlas-Dataset-ID") ?? "") ||
+          (context.datasetId !== undefined &&
+            !options.allowDatasetChange &&
+            !sameDataset(body.dataset_id, context.datasetId)))
       ) {
         throw refuse("context");
       }
@@ -233,7 +254,7 @@ async function readClone(response: Response, limit: number): Promise<Uint8Array 
 
 // The authored UUID schemas validate wire values first. Compare their identity
 // without changing the caller's selected context or the returned representation.
-function sameDataset(left: string, right: string) {
+export function sameDataset(left: string, right: string) {
   const identity = (value: string) => value.toLowerCase().replace(/^urn:uuid:/u, "");
   return identity(left) === identity(right);
 }

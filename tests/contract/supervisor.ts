@@ -11,6 +11,7 @@ export interface SupervisorOptions {
   timeoutMs?: number;
   args?: string[];
   signal?: AbortSignal;
+  providePrivateRoot?: boolean;
   onFixtureStarted?: (fixture: { child: ChildProcess; pid: number; dataDir: string; privateRoot: string }) => void;
 }
 
@@ -28,9 +29,19 @@ export async function runContractTest(file: string, options: SupervisorOptions =
   let cancelled = false;
   let killTimer: ReturnType<typeof setTimeout> | undefined;
   const controlErrors: unknown[] = [];
-  const child = spawn(process.execPath, ["--import", loader, file, ...(options.args ?? [])], {
-    stdio: ["inherit", "inherit", "inherit", "ipc"],
-  });
+  const child = spawn(
+    process.execPath,
+    [
+      "--import",
+      loader,
+      file,
+      ...(options.args ?? []),
+      ...(options.providePrivateRoot ? ["--owned-root", privateRoot] : []),
+    ],
+    {
+      stdio: ["inherit", "inherit", "inherit", "ipc"],
+    },
+  );
   const send = (reply: FixtureReply) => {
     if (!child.connected || closing) return;
     child.send(reply, (error) => {

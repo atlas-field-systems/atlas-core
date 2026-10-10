@@ -69,8 +69,9 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       requestHeaders: Record<string, string> = headers,
       status = 400,
       code = "invalid_request",
+      query = "",
     ) {
-      const response = await timedFetch(`${baseUrl}/__fixture/patch/${pathId}?secret=sensitive-fixture-credential`, {
+      const response = await timedFetch(`${baseUrl}/__fixture/patch/${pathId}${query ? `?${query}` : ""}`, {
         method: "PATCH",
         body,
         headers: {
@@ -144,6 +145,15 @@ for (const mode of ["generated transport", "direct Protocol"]) {
       }
     }
     const contextBody = JSON.stringify({ alias: "must not commit" });
+    await rejected(
+      contextBody,
+      "unknown query is refused without disclosing its value or committing the valid body",
+      fixtureId,
+      headers,
+      400,
+      "invalid_request",
+      "secret=sensitive-fixture-credential",
+    );
     await rejected(
       contextBody,
       "wrong Dataset",

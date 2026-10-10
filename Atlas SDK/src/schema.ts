@@ -13,7 +13,7 @@ export function contractValidator(document: ContractDocument) {
   // checks only local declarations; runtime required validation stays enabled.
   const ajv = new Ajv({ strict: true, strictRequired: false, allErrors: true });
   for (const [name, format] of Object.entries(fullFormats)) ajv.addFormat(name, format);
-  for (const keyword of ["components", "paths", "discriminator", "x-atlas-command"]) {
+  for (const keyword of ["components", "paths", "discriminator", "x-atlas-command", "x-go-type"]) {
     ajv.addKeyword({ keyword });
   }
   ajv.addSchema({ $id: "atlas", components: document.components, paths: document.paths });

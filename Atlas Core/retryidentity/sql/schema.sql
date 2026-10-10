@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS dataset_retry (kind TEXT NOT NULL, scope TEXT NOT NULL, identity TEXT NOT NULL, original TEXT NOT NULL, result_id TEXT NOT NULL, ended INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(kind,scope,identity));

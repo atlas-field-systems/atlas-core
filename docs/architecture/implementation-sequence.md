@@ -2,7 +2,7 @@
 
 This page maps accepted contracts to implementation slices and required evidence. Specification issues #63-84 are closed, resolving the earlier specification prerequisite. [Spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94) delivered the bounded Slice 0 foundation through #95-100. The [#69 Protocol experiment](../research/atlas-reassessment/13-protocol-toolchain-proof.md) remains research prior art; it is not the sole S0 implementation evidence.
 
-The [foundation-hardening spec #104](https://github.com/atlas-field-systems/atlas-core/issues/104) authorizes its stated follow-up work. Closing prerequisites and documenting S0 do not authorize operational slices. S1-S8 remain future work, with their existing contracts and completion obligations below.
+The [foundation-hardening spec #104](https://github.com/atlas-field-systems/atlas-core/issues/104) authorizes its stated follow-up work. [S1 #122](https://github.com/atlas-field-systems/atlas-core/issues/122) authorizes the first operational workflow, whose implementation and executable qualification are mapped in [S1 coverage](../../tests/s1/README.md). S2-S8 remain future work with their existing completion obligations below.
 
 ## Delivered foundation and proposed operational sequence
 
@@ -36,7 +36,7 @@ Immediate scheduling, point-Geofeature Move To, queue edits/adoption operations,
 
 The delivered [#94 foundation](https://github.com/atlas-field-systems/atlas-core/issues/94) has separate coverage records for [#95 generation and fixture lifetime](../../tests/contract/README.md), [#96 requests and patches](../../tests/contract/README-96.md), [#97 responses and artificial-edition compatibility](../../tests/contract/README-97.md), [#98 reports and messages](../../tests/contract/README-98.md), [#99 local Catalog](../../tests/contract/README-99.md) and [#100 binary bindings](../../tests/contract/README-100.md). Its shared verifier records only executed successful checks; those records do not pass the operational scenario matrix below.
 
-Fixture body limits, fixed Dataset/context values and artificial `0.1.0`/`0.2.0` editions are qualification inputs. They establish no production sizing, actual supported release range, power-loss durability or field readiness. The public Protocol's unpublished `0.0.0` metadata is also not a released edition. See the [foundation limits](../../tests/contract/README.md#current-limits) and [Protocol profile](../../Atlas%20Protocol/README.md#supported-schema-profile).
+Fixture body limits, fixed Dataset/context values and artificial `0.1.0`/`0.2.0` editions are qualification inputs. They establish no production sizing, actual supported release range, power-loss durability or field readiness. S1's unpublished `0.1.0` metadata is not a released edition. See the [foundation limits](../../tests/contract/README.md#current-limits) and [Protocol profile](../../Atlas%20Protocol/README.md#supported-schema-profile).
 
 Later workflow owners retain the accepted obligations:
 
@@ -46,7 +46,7 @@ Later workflow owners retain the accepted obligations:
 
 ## Public API and SDK inventory
 
-The [endpoint map](../api-endpoints.md) specifies 51 future public method/path pairs after the removal of public configuration inspection and editing under [ADR-0027](../adr/0027-administer-core-configuration-locally.md); the shipped S0 public Protocol has no routes. This inventory groups all 51 and assigns their production schemas and behavior to the owning workflow. Every corresponding method in the [SDK operations catalog](../topics/sdk.md#operations-catalog) has the same owner. Administrative/history/content methods remain explicit HTTP operations in either SDK mode; operational picture reads use the selected mode's source.
+The [endpoint map](../api-endpoints.md) specifies 51 public method/path pairs after the removal of public configuration inspection and editing under [ADR-0027](../adr/0027-administer-core-configuration-locally.md). S1 implements 19 Asset-only method/path pairs; S0 authored no public routes. This inventory groups all 51 and assigns their production schemas and behavior to the owning workflow. Every corresponding method in the [SDK operations catalog](../topics/sdk.md#operations-catalog) has the same owner. Administrative/history/content methods remain explicit HTTP operations in either SDK mode; operational picture reads use the selected mode's source.
 
 | Accepted route group | Count | Owning slice and SDK operation coverage | Authority |
 | --- | --- | --- | --- |
