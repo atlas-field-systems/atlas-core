@@ -7,7 +7,7 @@ import { createServer as createHttpsServer, request as httpsRequest, type Server
 import { createServer, type Socket } from "node:net";
 import { join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
-import { AtlasClient, type components, type MutationOutcome } from "../../Atlas SDK/src/index.js";
+import { AtlasClient, AtlasError, type components, type MutationOutcome } from "../../Atlas SDK/src/index.js";
 import { nodeFetch } from "../../Atlas SDK/src/node.js";
 import { prepareAsset, ReportingProcess, type CommandManifest, type Link } from "../simulator/index.js";
 
@@ -501,4 +501,9 @@ export async function establishedAsset(
 // moveTo is the independent S1 coordinate Move To input.
 export function moveTo(latitude: number, longitude: number) {
   return { command: "move_to" as const, target: { kind: "position" as const, position: { latitude, longitude } } };
+}
+
+// failsWith is an assert.rejects predicate for an SDK read failure code.
+export function failsWith(code: string) {
+  return (error: unknown) => error instanceof AtlasError && error.code === code;
 }
