@@ -156,7 +156,9 @@
           "observed_at": {
             "type": "string",
             "format": "date-time",
-            "nullable": true
+            "nullable": true,
+            "x-go-type": "string",
+            "description": "Original source timestamp or null. Preserve its exact string value; parse a separate value when comparing instants."
           },
           "clock_uncertainty_ms": {
             "type": "number",
@@ -186,7 +188,9 @@
           "generated_at": {
             "type": "string",
             "format": "date-time",
-            "nullable": true
+            "nullable": true,
+            "x-go-type": "string",
+            "description": "Original source timestamp or null. Preserve its exact string value; parse a separate value when comparing instants."
           },
           "clock_uncertainty_ms": {
             "type": "number",

@@ -16,6 +16,9 @@ export function contractValidator(document: ContractDocument) {
   for (const keyword of ["components", "paths", "discriminator", "x-atlas-command"]) {
     ajv.addKeyword({ keyword });
   }
+  // Qualified generator annotation only. Wire type/format/nullability still
+  // validate normally; unknown annotations and other Go overrides stay refused.
+  ajv.addKeyword({ keyword: "x-go-type", schemaType: "string", metaSchema: { enum: ["string"] }, valid: true });
   ajv.addSchema({ $id: "atlas", components: document.components, paths: document.paths });
   return ajv;
 }
