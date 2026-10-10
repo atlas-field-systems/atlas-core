@@ -49,7 +49,7 @@ func (m *Module) Register(ctx context.Context, principal *identity.Principal, en
 	if err != nil {
 		return Registration{}, err
 	}
-	if err := checkDerived(members); err != nil {
+	if err := checkDerived(members, forbiddenDerived); err != nil {
 		return Registration{}, err
 	}
 	if _, ok := members["components"]; ok {

@@ -62,8 +62,17 @@ export class AtlasClient {
     return this.connection.discover();
   }
 
-  readiness() {
-    return this.connection.read((session, signal) => session.transport.GET("/readiness", { signal }));
+  // readiness reports Core's dependency checks. Not ready (503) is a
+  // validated result, not a failure.
+  async readiness(): Promise<Schemas["Readiness"]> {
+    const response = await this.connection.read(async (session, signal) => {
+      const result = await session.transport.GET("/readiness", { signal });
+      if (result.response.status === 503 && result.error !== undefined && "data" in result.error) {
+        return { data: result.error, response: result.response };
+      }
+      return result;
+    });
+    return response.data;
   }
 
   openAPI() {

@@ -51,10 +51,10 @@ type SetupOptions struct {
 
 // SetupResult reports nonsecret setup facts for verification.
 type SetupResult struct {
-	InstallationID string
-	CACertificate  string
-	CAFingerprint  string
-	Created        bool
+	InstallationID string `json:"installation_id"`
+	CACertificate  string `json:"ca_certificate"`
+	CAFingerprint  string `json:"ca_sha256_fingerprint"`
+	Created        bool   `json:"created"`
 }
 
 // AdminKeyName names the first administrator credential.

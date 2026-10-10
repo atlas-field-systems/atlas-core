@@ -244,9 +244,12 @@ export class AssetClient {
     if (generation === undefined) {
       throw new AtlasError("process_authority_required", "Establish process authority with a claim before reporting");
     }
+    const historical = evidence.kind === "historical" ? evidence : undefined;
+    // Obtain the challenge before allocating a sequence, so a disconnected
+    // preparation consumes no report identity.
+    const challenge = historical === undefined ? await this.contactChallenge(generation) : null;
     const sequence = this.sequence.toString();
     this.sequence += 1n;
-    const historical = evidence.kind === "historical" ? evidence : undefined;
     const context: UnsignedContext = {
       asset_id: this.assetId,
       process_generation: generation,
@@ -258,7 +261,7 @@ export class AssetClient {
           ? null
           : { process_generation: historical.origin.processGeneration, sequence: historical.origin.sequence },
       retained_evidence_id: historical?.retainedEvidenceId ?? null,
-      contact_challenge: historical === undefined ? await this.contactChallenge(generation) : null,
+      contact_challenge: challenge,
       ...(evidence.observationTimes === undefined ? {} : { observation_times: evidence.observationTimes }),
     };
     return {

@@ -6,7 +6,7 @@
     "generate": "openapi-typescript \"../Atlas Protocol/protocol.json\" --output generated/protocol.ts",
     "check": "tsc --noEmit",
     "lint": "node ../scripts/lint-typescript.mjs && node ../scripts/lint-typescript-checks.mjs",
-    "prettier": "prettier \"src/**/*.ts\" \"checks/**/*.{ts,mjs}\" \"../tests/contract/*.{ts,mjs}\" \"../scripts/*.mjs\"",
+    "prettier": "prettier \"src/**/*.ts\" \"checks/**/*.{ts,mjs}\" \"../tests/contract/*.{ts,mjs}\" \"../tests/{s1,simulator}/*.{ts,mjs}\" \"../scripts/*.mjs\"",
     "format": "npm run -s prettier -- --write",
     "format:check": "npm run -s prettier -- --check",
     "build": "tsc -p tsconfig.build.json",

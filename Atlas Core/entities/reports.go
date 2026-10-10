@@ -37,9 +37,13 @@ var telemetryUnits = []string{unitPosition, unitSpeed, unitAltitude, unitHeading
 var movementQuantities = []string{unitPosition, unitSpeed, unitAltitude}
 
 // Derived and immutable members accepted structurally only so their presence
-// rejects the whole request as a forbidden field.
-var forbiddenTopLevel = []string{"id", "type", "version", "edit_revision", "created_at", "updated_at", "reporting", "task_queue"}
-var forbiddenComponents = []string{"communications", "heartbeat"}
+// rejects the whole request as a forbidden field. Registration supplies
+// identity; later requests cannot change it.
+var (
+	forbiddenDerived    = []string{"version", "edit_revision", "created_at", "updated_at", "reporting", "task_queue"}
+	forbiddenTopLevel   = append([]string{"id", "type"}, forbiddenDerived...)
+	forbiddenComponents = []string{"communications", "heartbeat"}
+)
 
 var (
 	descriptiveMembers = []string{"alias", "subtype", "expected_edit_revision"}
@@ -75,8 +79,8 @@ func objectMembers(members map[string]json.RawMessage, name string) (map[string]
 
 // checkDerived rejects Derived and immutable members anywhere a request names
 // Entity fields.
-func checkDerived(members map[string]json.RawMessage) error {
-	paths := present(members, "", forbiddenTopLevel)
+func checkDerived(members map[string]json.RawMessage, topLevel []string) error {
+	paths := present(members, "", topLevel)
 	components, err := objectMembers(members, "components")
 	if err != nil {
 		return err
@@ -366,7 +370,7 @@ func (m *Module) CheckIn(ctx context.Context, principal identity.Principal, data
 	if err != nil {
 		return ReportResponse{}, err
 	}
-	if err := checkDerived(members); err != nil {
+	if err := checkDerived(members, forbiddenTopLevel); err != nil {
 		return ReportResponse{}, err
 	}
 	env.Context, env.Claim = body.ReportContext, body.AuthorityClaim
@@ -390,7 +394,7 @@ func (m *Module) Patch(ctx context.Context, principal identity.Principal, datase
 	if err != nil {
 		return ReportResponse{}, err
 	}
-	if err := checkDerived(members); err != nil {
+	if err := checkDerived(members, forbiddenTopLevel); err != nil {
 		return ReportResponse{}, err
 	}
 	descriptive := present(members, "", descriptiveMembers)
