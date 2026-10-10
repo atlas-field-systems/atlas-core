@@ -85,8 +85,8 @@ A local CLI/TUI action that stops Core and its managed Plugins, removes all Atla
 _Avoid_: ordinary Reset, software uninstall
 
 **Core time**:
-The installation's reference clock. Observation age, freshness and execution deadlines are judged in Core time; other participants estimate their offset from it.
-_Avoid_: Asset clock, wall-clock time
+Time recorded by Core's deployment-provided clock, including receipt and resource change times. Asset event times are recorded at their source; Atlas assumes correct clocks and does not estimate offsets.
+_Avoid_: Asset observation time, SDK clock estimate
 
 **Activity history**:
 The record of which authenticated caller (an operator client, local administrator, Asset, Plugin or gateway) issued or cancelled Atlas Tasks, retired Assets or changed Plugins, credentials or configuration, retained until Reset.

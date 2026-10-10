@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import ts from "../Atlas SDK/node_modules/typescript/lib/typescript.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const scopes = ["Atlas SDK/src", "Atlas SDK/checks", "tests/contract"];
+const scopes = ["Atlas SDK/src", "Atlas SDK/checks", "tests/contract", "tests/s1", "examples/s1"];
 
 function sources(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -56,7 +56,8 @@ function lint(path) {
   const source = ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true);
   const name = relative(root, path).replaceAll("\\", "/");
   const negativeTypeTest =
-    name.endsWith(".type-test.ts") && (name.startsWith("Atlas SDK/checks/") || name.startsWith("tests/contract/"));
+    name.endsWith(".type-test.ts") &&
+    (name.startsWith("Atlas SDK/checks/") || name.startsWith("tests/contract/") || name.startsWith("tests/s1/"));
   const findings = [];
   const comments = new Map();
   function report(position, rule) {

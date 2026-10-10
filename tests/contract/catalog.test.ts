@@ -1,39 +1,40 @@
 import assert from "node:assert/strict";
-import { lookupCommand, type components } from "../../Atlas SDK/src/index.js";
+import { contractValidator, lookupCommand, type components } from "../../Atlas SDK/src/index.js";
+import protocol from "../../Atlas Protocol/protocol.json" with { type: "json" };
 import fixtures from "./catalog-fixtures.json" with { type: "json" };
 
 const move = lookupCommand("move_to");
 assert(move, "installed Catalog contains Move To");
 assert.deepEqual(move.metadata, {
   name: "move_to",
-  scheduling: ["queued", "immediate"],
+  scheduling: ["queued"],
   default_scheduling: "queued",
   success: "arrival_reported_by_asset",
-  binding: "representative",
+  binding: "operational",
 });
-assert.equal(move.protocolVersion, "0.0.0");
+assert.equal(move.protocolVersion, "0.1.0");
 assert.equal(move.inputSchema, "#/components/schemas/MoveTo");
 assert(
   move.validateInput({ command: "move_to", target: { kind: "position", position: { latitude: 10, longitude: 20 } } }),
 );
 console.log("PASS local Move To metadata and canonical input lookup");
 
-const pause = lookupCommand("pause");
-assert(pause, "installed Catalog contains Pause");
-assert.deepEqual(pause.metadata, {
-  name: "pause",
-  scheduling: ["immediate"],
-  default_scheduling: "immediate",
-  success: "suspension_reported_by_asset",
-  binding: "representative",
-});
-assert.equal(pause.protocolVersion, "0.0.0");
-assert.equal(pause.inputSchema, "#/components/schemas/Pause");
-assert(pause.validateInput({ command: "pause" }));
-for (const name of ["resume", "unknown", "", "Move To"]) {
+for (const name of ["pause", "resume", "unknown", "", "Move To"]) {
   assert.equal(lookupCommand(name), undefined, `unknown Command ${JSON.stringify(name)} stays absent`);
 }
-console.log("PASS local Pause metadata and typed absent lookup");
+console.log("PASS unimplemented and unknown Commands stay absent from operational Catalog");
+
+// #122 narrows operational advertising; retain the broader S0 shape evidence
+// independently of lookup until S6 implements those Commands and targets.
+const ajv = contractValidator(protocol);
+const representativeMove = ajv.compile({ $ref: "atlas#/components/schemas/RepresentativeMoveTo" });
+const representativePause = ajv.compile({ $ref: "atlas#/components/schemas/Pause" });
+for (const example of fixtures.structural_inputs) {
+  const validate = example.command === "pause" ? representativePause : representativeMove;
+  assert.equal(validate(example.input), true, example.name);
+  const command = lookupCommand(example.command);
+  assert.equal(command?.validateInput(example.input) ?? false, false, `${example.name} is not operational S1 support`);
+}
 
 for (const example of fixtures.valid_inputs) {
   const command = lookupCommand(example.command);
@@ -46,9 +47,9 @@ console.log("PASS independent valid Catalog inputs without default insertion");
 
 for (const example of fixtures.invalid_inputs) {
   const command = lookupCommand(example.command);
-  assert(command, example.name);
+  const validate = command?.validateInput ?? representativePause;
   const before = structuredClone(example.input);
-  assert.equal(command.validateInput(example.input), false, example.name);
+  assert.equal(validate(example.input), false, example.name);
   assert.deepEqual(example.input, before, `${example.name} remains unchanged after rejection`);
 }
 console.log("PASS independent invalid Catalog inputs without coercion or property removal");

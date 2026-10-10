@@ -1,0 +1,20 @@
+[
+  {
+    "name": "RFC8785 UTF-16 property ordering",
+    "source": "https://www.rfc-editor.org/rfc/rfc8785.html#section-3.2.3",
+    "input": "{\"\\u20ac\":\"Euro Sign\",\"\\r\":\"Carriage Return\",\"\\ufb33\":\"Hebrew Letter Dalet With Dagesh\",\"1\":\"One\",\"\\ud83d\\ude00\":\"Emoji: Grinning Face\",\"\\u0080\":\"Control\",\"\\u00f6\":\"Latin Small Letter O With Diaeresis\"}",
+    "canonical": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"😀\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}"
+  },
+  {
+    "name": "RFC8785 numeric serialization sample",
+    "source": "https://www.rfc-editor.org/rfc/rfc8785.html#section-3.2.2",
+    "input": "{\"numbers\":[333333333.33333329,1E30,4.50,2e-3,0.000000000000000000000000001]}",
+    "canonical": "{\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27]}"
+  },
+  {
+    "name": "Independently authored timestamp spellings and sparse nullable facts",
+    "source": "Atlas Protocol/operational-contract.md",
+    "input": "{\"generated_at\":\"2026-10-10T12:00:00.123400+02:00\",\"telemetry\":{\"position\":null,\"speed_mps\":0},\"observed_at\":null}",
+    "canonical": "{\"generated_at\":\"2026-10-10T12:00:00.123400+02:00\",\"observed_at\":null,\"telemetry\":{\"position\":null,\"speed_mps\":0}}"
+  }
+]

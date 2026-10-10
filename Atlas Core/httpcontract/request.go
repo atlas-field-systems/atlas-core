@@ -12,6 +12,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -93,6 +94,18 @@ func ValidateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (
 	if err != nil {
 		return nil, fmt.Errorf("create JSON validation router: %w", err)
 	}
+	queryParameters := make(map[*openapi3.Operation]map[string]*openapi3.Parameter)
+	for _, path := range spec.Paths.Map() {
+		for _, operation := range path.Operations() {
+			allowed := make(map[string]*openapi3.Parameter)
+			for _, reference := range operation.Parameters {
+				if reference.Value.In == "query" {
+					allowed[reference.Value.Name] = reference.Value
+				}
+			}
+			queryParameters[operation] = allowed
+		}
+	}
 	validated := middleware.OapiRequestValidatorWithOptions(spec, &middleware.Options{
 		Options: openapi3filter.Options{SkipSettingDefaults: true},
 		ErrorHandlerWithOpts: func(ctx context.Context, err error, w http.ResponseWriter, r *http.Request, opts middleware.ErrorHandlerOpts) {
@@ -102,6 +115,53 @@ func ValidateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (
 	// Check the original document before either schema or typed decoding. Those
 	// decoders can disagree on duplicate names when typed structs merge values.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if route, _, err := router.FindRoute(r); err == nil {
+			allowed := queryParameters[route.Operation]
+			query, err := url.ParseQuery(r.URL.RawQuery)
+			if err != nil {
+				RequestError(w, r, err)
+				return
+			}
+			for name, values := range query {
+				parameter, known := allowed[name]
+				if !known || len(values) != 1 {
+					RequestError(w, r, errors.New("unknown or repeated query parameter"))
+					return
+				}
+				media := parameter.Content["application/json"]
+				if media == nil {
+					continue
+				}
+				var value interface{}
+				err := CheckJSONDocument([]byte(values[0]))
+				if err == nil {
+					err = json.Unmarshal([]byte(values[0]), &value)
+				}
+				// Older S1 callers use single status/Asset values. Normalize that
+				// convenience once before both schema validation and binding.
+				legacy := name == "status" || name == "asset_id"
+				if err != nil && legacy {
+					value = []string{values[0]}
+					err = nil
+				}
+				if err == nil {
+					err = media.Schema.Value.VisitJSON(value)
+				}
+				if err != nil {
+					RequestError(w, r, err)
+					return
+				}
+				if legacy {
+					encoded, err := json.Marshal(value)
+					if err != nil {
+						RequestError(w, r, err)
+						return
+					}
+					query.Set(name, string(encoded))
+				}
+			}
+			r.URL.RawQuery = query.Encode()
+		}
 		// The supported validator buffers even undeclared media before refusing it.
 		// Install the bound before it can read any ordinary request stream.
 		if r.Body != nil && r.Body != http.NoBody {
@@ -151,7 +211,7 @@ func CheckJSONDocument(body []byte) error {
 	}
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.UseNumber()
-	if err := readJSONValue(decoder); err != nil {
+	if err := readJSONValue(decoder, 0); err != nil {
 		return err
 	}
 	if _, err := decoder.Token(); err != io.EOF {
@@ -160,7 +220,9 @@ func CheckJSONDocument(body []byte) error {
 	return nil
 }
 
-func readJSONValue(decoder *json.Decoder) error {
+const maximumJSONDepth = 64
+
+func readJSONValue(decoder *json.Decoder, depth int) error {
 	token, err := decoder.Token()
 	if err != nil {
 		return err
@@ -168,6 +230,9 @@ func readJSONValue(decoder *json.Decoder) error {
 	delimiter, composite := token.(json.Delim)
 	if !composite {
 		return nil
+	}
+	if depth >= maximumJSONDepth {
+		return errors.New("JSON body exceeds its supported nesting depth")
 	}
 	switch delimiter {
 	case '{':
@@ -185,13 +250,13 @@ func readJSONValue(decoder *json.Decoder) error {
 				return errors.New("JSON object repeats a member name")
 			}
 			names[name] = struct{}{}
-			if err := readJSONValue(decoder); err != nil {
+			if err := readJSONValue(decoder, depth+1); err != nil {
 				return err
 			}
 		}
 	case '[':
 		for decoder.More() {
-			if err := readJSONValue(decoder); err != nil {
+			if err := readJSONValue(decoder, depth+1); err != nil {
 				return err
 			}
 		}

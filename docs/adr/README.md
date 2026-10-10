@@ -28,7 +28,8 @@ ADRs record accepted tradeoffs and their rationale. Superseded records stay for 
 | [ADR-0022](0022-one-publisher-per-track.md) | Give each Track one publisher for observed data | Accepted |
 | [ADR-0023](0023-protect-required-entity-references-during-tasks.md) | Protect required Entity references during Tasks | Accepted |
 | [ADR-0024](0024-use-live-geofeature-geometry-in-tasks.md) | Use live Geofeature geometry in Tasks | Accepted |
-| [ADR-0025](0025-use-core-time-as-the-installation-reference-clock.md) | Use Core time as the installation reference clock | Accepted |
+| [ADR-0025](0025-use-core-time-as-the-installation-reference-clock.md) | Use Core time as the installation reference clock | Superseded by [ADR-0029](0029-use-deployment-clocks-and-preserve-event-times.md) |
 | [ADR-0026](0026-record-asset-completion-independently-of-result-availability.md) | Record Asset completion independently of result availability | Accepted |
 | [ADR-0027](0027-administer-core-configuration-locally.md) | Administer Core configuration locally | Accepted |
 | [ADR-0028](0028-trust-gateways-to-author-bound-asset-reports.md) | Trust gateways to author reports for bound Assets | Accepted |
+| [ADR-0029](0029-use-deployment-clocks-and-preserve-event-times.md) | Use deployment clocks and preserve event times | Accepted |

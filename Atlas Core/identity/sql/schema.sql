@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS identity_installation_credentials (verifier TEXT PRIMARY KEY,principal_id TEXT NOT NULL,kind TEXT NOT NULL,asset_id TEXT NOT NULL DEFAULT '',revoked INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS identity_asset_bindings (asset_id TEXT PRIMARY KEY,principal_id TEXT NOT NULL UNIQUE,recovery_public_key TEXT NOT NULL,credential_verifier TEXT NOT NULL,registration_id TEXT NOT NULL,original TEXT NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,open_enrollment INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS identity_enrollment (singleton INTEGER PRIMARY KEY CHECK(singleton=1),verifier TEXT NOT NULL,public_key TEXT NOT NULL,page_key TEXT NOT NULL);

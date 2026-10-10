@@ -1,4 +1,12 @@
-import { lookupCommand, responseValidation, type components } from "@atlas-field-systems/sdk";
+import {
+  lookupCommand,
+  responseValidation,
+  type components,
+  type AtlasClient,
+  type PreparedTask,
+  type PreparedTaskReport,
+  type MutationOutcome,
+} from "@atlas-field-systems/sdk";
 import type { components as ProtocolComponents } from "@atlas-field-systems/sdk/protocol";
 
 const pause: components["schemas"]["Pause"] = { command: "pause" };
@@ -33,3 +41,18 @@ responseValidation({ components: { schemas: {} }, paths: missingResponses }, con
 
 // @ts-expect-error Response validation requires an explicit caller-selected JSON byte bound.
 responseValidation(pathMetadata, context);
+
+// Published overloads keep both original descriptor and response type.
+declare const atlas: AtlasClient;
+declare const preparedTask: PreparedTask;
+declare const preparedReport: PreparedTaskReport;
+const taskOutcome: Promise<MutationOutcome<components["schemas"]["TaskMutationResponse"], PreparedTask>> =
+  atlas.submit(preparedTask);
+const reportOutcome: Promise<MutationOutcome<components["schemas"]["TaskReportResponse"], PreparedTaskReport>> =
+  atlas.submit(preparedReport);
+void taskOutcome;
+void reportOutcome;
+
+// @ts-expect-error Default middleware retains the selected Dataset/edition requirement.
+responseValidation(pathMetadata, {}, bound);
+responseValidation(pathMetadata, {}, { ...bound, allowDatasetChange: true });

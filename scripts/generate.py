@@ -6,18 +6,24 @@ import shutil
 
 from toolchain import ROOT, prepare, run
 
+SQL_MODULES = sorted(path.parent for path in (ROOT / "Atlas Core").glob("*/sqlc.yaml"))
+
 OUTPUTS = [
     ROOT / "Atlas Core/generated",
-    ROOT / "Atlas Core/plugins/generated",
     ROOT / "Atlas Core/tests/contractfixture/generated",
     ROOT / "Atlas SDK/generated",
     ROOT / "tests/contract/generated",
+    *(module / "generated" for module in SQL_MODULES),
 ]
 
 
 def assemble_contract():
     contract = json.loads((ROOT / "Atlas Protocol/protocol.json").read_text())
     contract["info"] = {"title": "Slice 0 test-only contract", "version": "0.2.0"}
+    # Fixture handlers qualify canonical schemas independently of operational
+    # serving. Public paths belong only to the operational server interface.
+    contract["paths"] = {}
+    contract.pop("security", None)
     for source in sorted((ROOT / "tests/contract").glob("*.contract.json")):
         fragment = json.loads(source.read_text())
         for path, value in fragment.get("paths", {}).items():
@@ -67,7 +73,8 @@ def generate(env, go, sqlc):
             timeout=120,
         )
     run([sqlc, "generate"], env, cwd=ROOT / "tests/contract", timeout=120)
-    run([sqlc, "generate"], env, cwd=ROOT / "Atlas Core/plugins", timeout=120)
+    for module in SQL_MODULES:
+        run([sqlc, "generate"], env, cwd=module, timeout=120)
     run(["npm", "run", "generate"], env, cwd=ROOT / "Atlas SDK", timeout=120)
     openapi_typescript = ROOT / "Atlas SDK/node_modules/.bin/openapi-typescript"
     for source, output in [

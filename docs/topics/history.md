@@ -65,7 +65,7 @@ Existing Asset report authority and freshness rules still apply under [Asset rep
 
 ### Sample contents and timing
 
-Each sample records its Entity association, stable sample identity, originating report/evidence correlation, Core receipt time and supplied measurements. Each quantity retains its own observation time, uncertainty and correction identity from the reporting contract; differently aged quantities do not acquire one invented observation time. Receipt time is recorded in [Core time](../adr/0025-use-core-time-as-the-installation-reference-clock.md). Unknown observation time stays explicitly unknown; receipt time provides a labeled alternative for history ordering, never evidence of observation freshness.
+Each sample records its Entity association, stable sample identity, originating report/evidence correlation, Core receipt time and supplied measurements. Each quantity retains its own observation time, any retained compatibility metadata and correction identity from the reporting contract; differently aged quantities do not acquire one invented observation time. Receipt time is authored by Core under [deployment clocks](../adr/0029-use-deployment-clocks-and-preserve-event-times.md). Unknown observation time stays explicitly unknown; receipt time provides a labeled alternative for history ordering, never evidence of observation freshness.
 
 ### Retention and deletion
 
@@ -126,7 +126,7 @@ These are deferred:
 - [ADR-0019](../adr/0019-retire-assets-without-inventing-task-outcomes.md): retirement records the attributed action in its commit.
 - [ADR-0007](../adr/0007-reconcile-asset-tasks-after-disconnection.md): cancellation attempts are preserved in activity history.
 - [ADR-0022](../adr/0022-one-publisher-per-track.md): corrections do not rewrite recorded history.
-- [ADR-0025](../adr/0025-use-core-time-as-the-installation-reference-clock.md): receipt times are recorded in Core time.
+- [ADR-0029](../adr/0029-use-deployment-clocks-and-preserve-event-times.md): source event and Core receipt timestamps remain separate.
 
 ## Test evidence
 
