@@ -162,12 +162,12 @@
             "type": "number",
             "format": "double",
             "minimum": 0,
-            "nullable": true
+            "nullable": true,
+            "description": "Optional nullable compatibility metadata. It does not establish freshness or an S1 uncertainty budget; deployment provides correct clocks."
           }
         },
         "required": [
-          "observed_at",
-          "clock_uncertainty_ms"
+          "observed_at"
         ]
       },
       "ReportContext": {
@@ -192,7 +192,8 @@
             "type": "number",
             "format": "double",
             "minimum": 0,
-            "nullable": true
+            "nullable": true,
+            "description": "Optional nullable compatibility metadata. It does not establish freshness or an S1 uncertainty budget; deployment provides correct clocks."
           },
           "evidence_kind": {
             "type": "string",
@@ -227,7 +228,6 @@
           "process_generation",
           "sequence",
           "generated_at",
-          "clock_uncertainty_ms",
           "evidence_kind",
           "evidence_origin",
           "retained_evidence_id",

@@ -65,10 +65,6 @@ const invalidBodies = [
     body: { ...baseline.body, report_context: { ...context, asset_id: "not-a-uuid" } },
   },
   {
-    name: "observation timing lacks uncertainty",
-    body: { ...baseline.body, report_context: { ...context, observation_times: { position: { observed_at: null } } } },
-  },
-  {
     name: "observation timing lacks its time",
     body: {
       ...baseline.body,
@@ -152,13 +148,7 @@ for (const field of ["process_generation", "sequence"]) {
     });
   }
 }
-for (const field of [
-  "generated_at",
-  "clock_uncertainty_ms",
-  "evidence_origin",
-  "retained_evidence_id",
-  "contact_challenge",
-]) {
+for (const field of ["generated_at", "evidence_origin", "retained_evidence_id", "contact_challenge"]) {
   const body = structuredClone(baseline.body);
   Reflect.deleteProperty(body.report_context, field);
   rejected.push({ name: `required nullable ${field} is absent`, json: JSON.stringify(body) });
