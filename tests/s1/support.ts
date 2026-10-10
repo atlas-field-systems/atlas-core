@@ -507,3 +507,11 @@ export function moveTo(latitude: number, longitude: number) {
 export function failsWith(code: string) {
   return (error: unknown) => error instanceof AtlasError && error.code === code;
 }
+
+// sameInstant compares a read timestamp with a source timestamp. Reads return
+// the original instant in RFC 3339 form; the original spelling remains in
+// signed and compared report facts.
+export function sameInstant(actual: string | null | undefined, expected: string | null | undefined, message: string) {
+  assert(typeof actual === "string" && typeof expected === "string", `${message}: both instants are present`);
+  assert.equal(Date.parse(actual), Date.parse(expected), message);
+}

@@ -3,7 +3,16 @@
 import assert from "node:assert/strict";
 import { accepted, AssetClient, type Evidence } from "../../Atlas SDK/src/index.js";
 import { processSigner } from "../simulator/index.js";
-import { acceptedOutcome, errorCode, establishedAsset, Installation, moveTo, rejectionCode, step } from "./support.js";
+import {
+  acceptedOutcome,
+  errorCode,
+  establishedAsset,
+  Installation,
+  moveTo,
+  rejectionCode,
+  sameInstant,
+  step,
+} from "./support.js";
 
 const installation = await Installation.create();
 await installation.start();
@@ -28,7 +37,7 @@ await report(
 );
 const afterPosition = await operator.getEntity(os.assetId);
 const positionUnit = afterPosition.reporting.position;
-assert.equal(positionUnit?.observed_at, positionTime, "original observation time is preserved");
+sameInstant(positionUnit?.observed_at, positionTime, "original observation time is preserved");
 assert.notEqual(positionUnit?.received_at, positionTime, "receipt time is Core's");
 await report({ components: { telemetry: { heading_deg: 90 } } });
 const afterHeading = await operator.getEntity(os.assetId);

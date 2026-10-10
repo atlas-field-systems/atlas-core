@@ -130,14 +130,20 @@ func (m *Module) Assigned(ctx context.Context, datasetID, assetID string, params
 		for index, id := range q.requested() {
 			position[id] = index
 		}
+		// Immediate work first; then started queued work, which is ahead of
+		// everything still waiting; then the eligible requested order; then
+		// unstarted work excluded by pending cancellation, by submission.
 		order := func(row storage.Task) (int, int) {
 			if row.Scheduling == string(protocol.Immediate) {
 				return 0, 0
 			}
-			if index, ok := position[row.TaskID]; ok {
-				return 1, index
+			if execution := Status(row.ExecutionStatus); !execution.unstarted() && !execution.Terminal() {
+				return 1, 0
 			}
-			return 1, len(position)
+			if index, ok := position[row.TaskID]; ok {
+				return 2, index
+			}
+			return 3, 0
 		}
 		slices.SortStableFunc(rows, func(a, b storage.Task) int {
 			groupA, indexA := order(a)
