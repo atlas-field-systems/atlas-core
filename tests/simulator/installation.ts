@@ -116,7 +116,8 @@ export class Installation {
   // create runs setup through the CLI in a new directory below parent.
   // Secrets are generated into owner-only files, never passed as arguments.
   static async create(parent: string, options: InstallationOptions = {}) {
-    const directory = join(parent, randomUUID());
+    // A short name keeps the private socket path under the Unix address limit.
+    const directory = join(parent, randomUUID().slice(0, 8));
     const installation = new Installation(directory, options.port ?? (await freePort()), randomUUID());
     await mkdir(join(directory, "deployment"), { recursive: true, mode: 0o700 });
     await installation.setup(options);

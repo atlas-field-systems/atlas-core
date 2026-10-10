@@ -20,6 +20,7 @@ import {
   failsWith,
   freePort,
   manage,
+  ManageError,
   newInstallation,
   record,
   requestTimeoutMs,
@@ -56,6 +57,21 @@ const pairs = Object.entries(record(document.paths)).flatMap(([path, item]) =>
 );
 assert.equal(pairs.length, 19, "the served edition has exactly the 19 S1 routes");
 step("anonymous documentation exposes no schema; the raw document and every operation require authentication");
+
+// Setup refuses a root whose private socket path exceeds the Unix socket
+// address limit, before creating anything.
+const deep = join(runDirectory(), "d".repeat(100));
+const refusal = await manage(
+  { root: join(deep, "root"), recovery: join(deep, "recovery") },
+  "setup",
+  "--admin-key-file",
+  join(deep, "admin.key"),
+  "--enrollment-authority-file",
+  join(deep, "authority.pem"),
+).catch((error: unknown) => error);
+assert(refusal instanceof ManageError && /installation root is too long/u.test(refusal.stderr), String(refusal));
+await assert.rejects(() => stat(deep), { code: "ENOENT" }, "a refused setup creates nothing");
+step("setup refuses an installation root too long for its private socket path");
 
 // Edition negotiation and Dataset boundaries.
 const health = await direct.request("GET", "/health");

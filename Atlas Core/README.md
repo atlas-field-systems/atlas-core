@@ -12,7 +12,7 @@ This folder contains Atlas Core: the S1 operational server from [spec #122](http
 | `corerun/`, `cmd/atlas-core/` | The Core container process: owned mounts, the private Unix-socket management protocol (peer UID checked), Dataset opening and HTTP/1.1 TLS serving |
 | `manager/`, `cmd/atlas-manage/` | Host-side local management: setup, inspection, Start/Stop/Restart, ordinary Reset with durable action records, enrollment authorization, activity and test faults. Docker control stays on the host; Core never receives the Docker socket |
 
-Core is the sole accessor of its SQLite database. Each module owns its private tables and sqlc queries; collaborators use module interfaces inside one `system.Store` commit. Build the CLI and load the `FROM scratch` image, then follow the [documented demonstration](../tests/simulator/README.md):
+Setup refuses an installation root whose private socket path would exceed the Unix socket address limit. Core is the sole accessor of its SQLite database. Each module owns its private tables and sqlc queries; collaborators use module interfaces inside one `system.Store` commit. Build the CLI and load the `FROM scratch` image, then follow the [documented demonstration](../tests/simulator/README.md):
 
 ```sh
 python3 scripts/build_core.py

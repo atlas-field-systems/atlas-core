@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/atlas-field-systems/atlas-core/canonical"
@@ -80,6 +81,11 @@ func Setup(ctx context.Context, installation Installation, options SetupOptions)
 		if !filepath.IsAbs(directory) {
 			return SetupResult{}, fmt.Errorf("owned path %s must be absolute", directory)
 		}
+	}
+	// Local management reaches Core through a Unix socket under the root, and
+	// Unix socket addresses have a fixed maximum length.
+	if limit := len(syscall.RawSockaddrUnix{}.Path) - 1; len(installation.socket()) > limit {
+		return SetupResult{}, fmt.Errorf("installation root is too long: its private socket path %s exceeds %d bytes; choose a shorter root", installation.socket(), limit)
 	}
 	if existing, err := installation.record(); err == nil && existing.InstallationID != options.InstallationID {
 		return SetupResult{}, fmt.Errorf("the root already holds installation %s", existing.InstallationID)

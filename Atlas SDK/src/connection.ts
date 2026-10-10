@@ -100,16 +100,19 @@ function requestCoding(acceptsGzip: boolean): Middleware {
 
 export type Authentication = { readonly bearer: string } | { readonly enrollment: string };
 
+// Deployment enrollment authorization travels only in this request header.
+export const enrollmentHeader = "Atlas-Enrollment";
+
 function authorization(authentication: ConnectionOptions["authentication"]): Middleware {
   return {
     async onRequest({ request }) {
       // A retained registration descriptor carries its own enrollment
       // authorization, so its retries authenticate as first prepared.
-      if (request.headers.has("Atlas-Enrollment")) return request;
+      if (request.headers.has(enrollmentHeader)) return request;
       const current = await authentication?.();
       if (current === undefined) return request;
       if ("bearer" in current) request.headers.set("Authorization", `Bearer ${current.bearer}`);
-      else request.headers.set("Atlas-Enrollment", current.enrollment);
+      else request.headers.set(enrollmentHeader, current.enrollment);
       return request;
     },
   };

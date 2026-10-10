@@ -2,7 +2,7 @@
 // dropped Command support and cancellation through real Core, the SDK and the
 // simulator.
 import assert from "node:assert/strict";
-import { accepted } from "../../Atlas SDK/src/index.js";
+import { accepted, type Page } from "../../Atlas SDK/src/index.js";
 import {
   acceptedOutcome,
   directProtocol,
@@ -130,6 +130,31 @@ assert.deepEqual(
 );
 assert.equal((await operator.getEntity(os.assetId)).task_queue?.confirmed_revision, null, "reading confirms nothing");
 step("submission sequence and default requested order; listing assigned work confirms no adoption");
+
+// Lists page from one boundary without gaps or duplicates.
+const pages = async <T extends { id: string }>(read: (token?: string) => Promise<Page<T>>) => {
+  const ids: string[] = [];
+  let token: string | undefined;
+  do {
+    const page = await read(token);
+    ids.push(...page.items.map((item) => item.id));
+    token = page.nextPageToken ?? undefined;
+  } while (token !== undefined);
+  return ids;
+};
+const allTasks = (await operator.listTasks({ limit: 1000 })).items.map((task) => task.id);
+assert(allTasks.length >= 3);
+assert.deepEqual(
+  await pages((token) => operator.listTasks({ limit: 1, ...(token === undefined ? {} : { page_token: token }) })),
+  allTasks,
+);
+const allEntities = (await operator.listEntities({ limit: 1000 })).items.map((item) => item.id);
+assert.equal(allEntities.length, 2);
+assert.deepEqual(
+  await pages((token) => operator.listEntities({ limit: 1, ...(token === undefined ? {} : { page_token: token }) })),
+  allEntities,
+);
+step("Entity and Task lists page one item at a time without gaps or duplicates");
 
 // Execution: completion is accepted with older or outside telemetry; it
 // needs no Object.

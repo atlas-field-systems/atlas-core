@@ -1,6 +1,6 @@
 import type { components } from "../generated/protocol.js";
 import { AtlasClient, newIdentity, type AssignedWork, type Entity, type Task } from "./client.js";
-import { commitCursorOf, sameDataset, type ConnectionOptions } from "./connection.js";
+import { commitCursorOf, enrollmentHeader, sameDataset, type ConnectionOptions } from "./connection.js";
 import { AtlasError, type MutationOutcome } from "./errors.js";
 import { authorityClaimFacts, canonicalIdentifier, digest, reportFacts } from "./signing.js";
 
@@ -194,7 +194,7 @@ export class AssetClient {
           params: { header: session.headers },
           ...(descriptor.enrollmentToken === undefined
             ? {}
-            : { headers: { "Atlas-Enrollment": descriptor.enrollmentToken } }),
+            : { headers: { [enrollmentHeader]: descriptor.enrollmentToken } }),
           body: descriptor.body,
           signal,
         }),
