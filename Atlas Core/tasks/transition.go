@@ -37,6 +37,11 @@ func Transition(current protocol.Task, event protocol.TaskReportRequest, newer b
 	if event.ExecutionId != nil && !current.ExecutionId.IsNull() && current.ExecutionId.GetOrEmpty() != *event.ExecutionId {
 		return current, false, ErrTransition
 	}
+	// Lifecycle times describe the original events, not this report's arrival.
+	// Unknown times may be supplied later; established facts cannot be rewritten.
+	conflictingTime := (event.AcknowledgedAt.IsSpecified() && current.AcknowledgedAt.IsSpecified() && !current.AcknowledgedAt.IsNull() && event.AcknowledgedAt.GetOrEmpty() != current.AcknowledgedAt.GetOrEmpty()) ||
+		(event.StartedAt.IsSpecified() && current.StartedAt.IsSpecified() && !current.StartedAt.IsNull() && event.StartedAt.GetOrEmpty() != current.StartedAt.GetOrEmpty()) ||
+		(event.FinishedAt.IsSpecified() && current.FinishedAt.IsSpecified() && !current.FinishedAt.IsNull() && event.FinishedAt.GetOrEmpty() != current.FinishedAt.GetOrEmpty())
 	if Terminal(current.Status) {
 		if event.Status != nil && protocol.TaskStatus(*event.Status) != current.Status {
 			return current, false, ErrTerminal
@@ -51,13 +56,16 @@ func Transition(current protocol.Task, event protocol.TaskReportRequest, newer b
 				return current, false, ErrTerminal
 			}
 		}
-		if event.FinishedAt.IsSpecified() && event.FinishedAt.GetOrEmpty() != current.FinishedAt.GetOrEmpty() {
+		if conflictingTime || (event.FinishedAt.IsSpecified() && event.FinishedAt.GetOrEmpty() != current.FinishedAt.GetOrEmpty()) {
 			return current, false, ErrTerminal
 		}
 		return current, false, nil
 	}
 	if !newer {
 		return current, false, nil
+	}
+	if conflictingTime {
+		return current, false, ErrTransition
 	}
 	if event.Status != nil {
 		desired := *event.Status

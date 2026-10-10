@@ -182,8 +182,23 @@ export async function runRecoveryWorkflow(config: S1Config) {
     assert.equal(result.data.acceptance.contact_refreshed, false);
     await recoveredRuntime.acknowledge(id, reporter.snapshot());
   }
-  assert.equal(accepted(await operator.getTask(suspendedId)).data.status, "paused");
-  assert.equal(accepted(await operator.getTask(runningId)).data.status, "in_progress");
+  const recoveredSuspension = accepted(await operator.getTask(suspendedId)).data;
+  assert.equal(recoveredSuspension.status, "paused");
+  assert.equal(recoveredSuspension.started_at, originalTime);
+  const recoveredRunning = accepted(await operator.getTask(runningId)).data;
+  assert.equal(recoveredRunning.status, "in_progress");
+  assert.equal(recoveredRunning.started_at, originalTime);
+  // Lost OS records are uncertainty even when Core still knows an execution or
+  // has not yet received its start report. Neither permits another execution.
+  for (const missingId of [runningId, suspendedId, unknownId]) {
+    const incomplete = snapshot();
+    incomplete.executions = incomplete.executions.filter((evidence) => evidence.taskId !== missingId);
+    const held = accepted(await reporter.reconcile(incomplete));
+    assert(held.heldTaskIds.includes(missingId));
+    assert(held.heldTaskIds.includes(untouchedId));
+    assert.equal(held.tasks.length, 0);
+    assert(!held.reports.some((report) => report.targetId === missingId));
+  }
   assert.equal(retainedExecutions.snapshot(completedId).executionCount, 1);
   assert.equal(retainedExecutions.snapshot(runningId).executionCount, 1);
   assert.equal(retainedExecutions.snapshot(suspendedId).executionCount, 1);
@@ -200,6 +215,6 @@ export async function runRecoveryWorkflow(config: S1Config) {
   const confirmedState: AssetProcessSnapshot = reporter.snapshot();
   assert.equal(confirmedState.processGeneration, "2");
   console.log(
-    "PASS real container SDK recovery: lost completion/authority replies, exact retained replay, replacement, execution counts and explicit unknown hold/recovery",
+    "PASS real container SDK recovery: lost completion/authority replies, exact retained replay, replacement, execution counts, missing evidence and explicit unknown hold/recovery",
   );
 }

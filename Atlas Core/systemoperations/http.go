@@ -21,7 +21,6 @@ import (
 	"time"
 )
 
-const ProtocolVersion = "0.1.0"
 const ordinaryPageLifetime = 60 * time.Second
 
 type requestContext struct {
@@ -103,7 +102,7 @@ func (c *Core) Handler(ctx context.Context) (http.Handler, error) {
 	if pageClock == nil {
 		pageClock = time.Now
 	}
-	api := &httpAPI{core: c, spec: spec, openapi: openapi, pager: &pagination{key: pageKey, lifetime: ordinaryPageLifetime, clock: pageClock}, maximum: config.MaxJSONBytes}
+	api := &httpAPI{core: c, spec: spec, openapi: openapi, pager: &pagination{key: pageKey, edition: spec.Info.Version, lifetime: ordinaryPageLifetime, clock: pageClock}, maximum: config.MaxJSONBytes}
 	strict := protocol.NewStrictHandlerWithOptions(api, nil, protocol.StrictHTTPServerOptions{RequestErrorHandlerFunc: httpcontract.RequestError, ResponseErrorHandlerFunc: c.error})
 	handler := protocol.HandlerWithOptions(strict, protocol.GorillaServerOptions{ErrorHandlerFunc: httpcontract.RequestError})
 	// Identity authenticates before structural dispatch, including pending first Enrollment.
@@ -120,7 +119,7 @@ func (c *Core) Handler(ctx context.Context) (http.Handler, error) {
 			return
 		}
 		w.Header().Set("Atlas-Dataset-ID", metadata.DatasetID)
-		w.Header().Set("Atlas-Protocol-Version", ProtocolVersion)
+		w.Header().Set("Atlas-Protocol-Version", spec.Info.Version)
 		secret := identity.Secret(r.Header.Get("Authorization"), r.Header.Get("X-API-Key"))
 		var principal identity.Principal
 		authErr := c.boundary.Read(r.Context(), "", func(commit *writecommit.Commit) error {
@@ -141,9 +140,9 @@ func (c *Core) Handler(ctx context.Context) (http.Handler, error) {
 		version := r.Header.Get("Atlas-Protocol-Version")
 		discovery := r.URL.Path == "/health" || r.URL.Path == "/readiness" || r.URL.Path == "/docs" || r.URL.Path == "/openapi.json"
 		if version == "" && discovery {
-			version = ProtocolVersion
+			version = spec.Info.Version
 		}
-		if version != ProtocolVersion {
+		if version != spec.Info.Version {
 			c.error(w, r, &publicError{400, "protocol_incompatible", "Requested Protocol edition is unsupported"})
 			return
 		}
@@ -215,7 +214,7 @@ func (c *Core) Handler(ctx context.Context) (http.Handler, error) {
 			return
 		}
 		w.Header().Set("Atlas-Dataset-ID", metadata.DatasetID)
-		w.Header().Set("Atlas-Protocol-Version", ProtocolVersion)
+		w.Header().Set("Atlas-Protocol-Version", spec.Info.Version)
 		encoded.ServeHTTP(w, r)
 	}), nil
 }
@@ -349,14 +348,14 @@ func (a *httpAPI) GetEntity(ctx context.Context, r protocol.GetEntityRequestObje
 	if err != nil {
 		return nil, err
 	}
-	return protocol.GetEntity200JSONResponse{Body: protocol.AssetResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v}, Headers: protocol.GetEntity200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetEntity200JSONResponse{Body: protocol.AssetResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v}, Headers: protocol.GetEntity200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetEntityByAlias(ctx context.Context, r protocol.GetEntityByAliasRequestObject) (protocol.GetEntityByAliasResponseObject, error) {
 	v, readContext, err := a.core.entities.ByAlias(ctx, r.Params.AtlasDatasetID.String(), wire(ctx).principal, r.Alias)
 	if err != nil {
 		return nil, err
 	}
-	return protocol.GetEntityByAlias200JSONResponse{Body: protocol.AssetResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v}, Headers: protocol.GetEntityByAlias200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetEntityByAlias200JSONResponse{Body: protocol.AssetResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v}, Headers: protocol.GetEntityByAlias200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) RegisterAsset(ctx context.Context, r protocol.RegisterAssetRequestObject) (protocol.RegisterAssetResponseObject, error) {
 	w := wire(ctx)
@@ -372,21 +371,21 @@ func (a *httpAPI) RegisterAsset(ctx context.Context, r protocol.RegisterAssetReq
 	if err != nil {
 		return nil, err
 	}
-	return protocol.RegisterAsset201JSONResponse{Body: protocol.RegistrationResponse{DatasetId: a.dataset(ctx), Data: protocol.RegistrationResponseData{Entity: v, Association: association}, CommitCursor: cursor}, Headers: protocol.RegisterAsset201ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.RegisterAsset201JSONResponse{Body: protocol.RegistrationResponse{DatasetId: a.dataset(ctx), Data: protocol.RegistrationResponseData{Entity: v, Association: association}, CommitCursor: cursor}, Headers: protocol.RegisterAsset201ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) DeleteEntity(ctx context.Context, r protocol.DeleteEntityRequestObject) (protocol.DeleteEntityResponseObject, error) {
 	_, err := a.core.entities.Delete(ctx, r.Params.AtlasDatasetID.String(), wire(ctx).principal, r.EntityId.String())
 	if err != nil {
 		return nil, err
 	}
-	return protocol.DeleteEntity204Response{Headers: protocol.DeleteEntity204ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.DeleteEntity204Response{Headers: protocol.DeleteEntity204ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetAssetStatus(ctx context.Context, r protocol.GetAssetStatusRequestObject) (protocol.GetAssetStatusResponseObject, error) {
 	v, readContext, err := a.core.entities.Read(ctx, r.Params.AtlasDatasetID.String(), wire(ctx).principal, r.EntityId.String())
 	if err != nil {
 		return nil, err
 	}
-	return protocol.GetAssetStatus200JSONResponse{Body: protocol.StatusResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v.Components.Status}, Headers: protocol.GetAssetStatus200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetAssetStatus200JSONResponse{Body: protocol.StatusResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v.Components.Status}, Headers: protocol.GetAssetStatus200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) entityReport(ctx context.Context, id string, kind string, components *protocol.ReportedComponents, manifest *protocol.CommandManifest, context protocol.ReportContext, authority *protocol.AuthorityClaim) (protocol.EntityReportResponse, error) {
 	w := wire(ctx)
@@ -401,7 +400,7 @@ func (a *httpAPI) Checkin(ctx context.Context, r protocol.CheckinRequestObject) 
 	if err != nil {
 		return nil, err
 	}
-	return protocol.Checkin200JSONResponse{Body: v, Headers: protocol.Checkin200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.Checkin200JSONResponse{Body: v, Headers: protocol.Checkin200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) PatchEntity(ctx context.Context, r protocol.PatchEntityRequestObject) (protocol.PatchEntityResponseObject, error) {
 	w := wire(ctx)
@@ -437,14 +436,14 @@ func (a *httpAPI) PatchEntity(ctx context.Context, r protocol.PatchEntityRequest
 			return nil, err
 		}
 	}
-	return protocol.PatchEntity200JSONResponse{Body: body, Headers: protocol.PatchEntity200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.PatchEntity200JSONResponse{Body: body, Headers: protocol.PatchEntity200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) ReportAssetStatus(ctx context.Context, r protocol.ReportAssetStatusRequestObject) (protocol.ReportAssetStatusResponseObject, error) {
 	report, err := a.entityReport(ctx, r.EntityId.String(), "status_report", &protocol.ReportedComponents{Status: &r.Body.Status}, nil, r.Body.ReportContext, nil)
 	if err != nil {
 		return nil, err
 	}
-	return protocol.ReportAssetStatus200JSONResponse{Body: protocol.StatusReportResponse{DatasetId: report.DatasetId, CommitCursor: report.CommitCursor, Data: protocol.StatusReportResponseData{Entity: report.Data.Entity, Status: report.Data.Entity.Components.Status, Acceptance: report.Data.Acceptance}}, Headers: protocol.ReportAssetStatus200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.ReportAssetStatus200JSONResponse{Body: protocol.StatusReportResponse{DatasetId: report.DatasetId, CommitCursor: report.CommitCursor, Data: protocol.StatusReportResponseData{Entity: report.Data.Entity, Status: report.Data.Entity.Components.Status, Acceptance: report.Data.Acceptance}}, Headers: protocol.ReportAssetStatus200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) CreateTask(ctx context.Context, r protocol.CreateTaskRequestObject) (protocol.CreateTaskResponseObject, error) {
 	w := wire(ctx)
@@ -452,14 +451,14 @@ func (a *httpAPI) CreateTask(ctx context.Context, r protocol.CreateTaskRequestOb
 	if err != nil {
 		return nil, err
 	}
-	return protocol.CreateTask201JSONResponse{Body: protocol.TaskMutationResponse{DatasetId: a.dataset(ctx), Data: v, CommitCursor: cursor}, Headers: protocol.CreateTask201ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.CreateTask201JSONResponse{Body: protocol.TaskMutationResponse{DatasetId: a.dataset(ctx), Data: v, CommitCursor: cursor}, Headers: protocol.CreateTask201ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetTask(ctx context.Context, r protocol.GetTaskRequestObject) (protocol.GetTaskResponseObject, error) {
 	v, readContext, err := a.core.tasks.Read(ctx, r.Params.AtlasDatasetID.String(), wire(ctx).principal, r.TaskId.String())
 	if err != nil {
 		return nil, err
 	}
-	return protocol.GetTask200JSONResponse{Body: protocol.TaskResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v}, Headers: protocol.GetTask200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetTask200JSONResponse{Body: protocol.TaskResponse{DatasetId: a.dataset(ctx), ReadContext: readContext, Data: v}, Headers: protocol.GetTask200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) UpdateTaskStatus(ctx context.Context, r protocol.UpdateTaskStatusRequestObject) (protocol.UpdateTaskStatusResponseObject, error) {
 	w := wire(ctx)
@@ -495,7 +494,7 @@ func (a *httpAPI) UpdateTaskStatus(ctx context.Context, r protocol.UpdateTaskSta
 			return nil, err
 		}
 	}
-	return protocol.UpdateTaskStatus200JSONResponse{Body: body, Headers: protocol.UpdateTaskStatus200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.UpdateTaskStatus200JSONResponse{Body: body, Headers: protocol.UpdateTaskStatus200ResponseHeaders{AtlasDatasetID: a.dataset(ctx), AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetHealth(ctx context.Context, r protocol.GetHealthRequestObject) (protocol.GetHealthResponseObject, error) {
 	var metadata writecommit.Metadata
@@ -527,9 +526,9 @@ func (a *httpAPI) GetHealth(ctx context.Context, r protocol.GetHealthRequestObje
 	if err != nil {
 		return nil, err
 	}
-	value := protocol.Health{Live: true, CoreRelease: WritingRelease, SupportedProtocolVersions: []protocol.ProtocolVersion{ProtocolVersion}, ServerTime: time.Now().UTC(), OpenEnrollment: config.OpenEnrollment, OpenEnrolledIdentityCount: int(count), ContactChallenge: challenge}
+	value := protocol.Health{Live: true, CoreRelease: WritingRelease, SupportedProtocolVersions: []protocol.ProtocolVersion{a.spec.Info.Version}, ServerTime: time.Now().UTC(), OpenEnrollment: config.OpenEnrollment, OpenEnrolledIdentityCount: int(count), ContactChallenge: challenge}
 	id := uuid.MustParse(metadata.DatasetID)
-	return protocol.GetHealth200JSONResponse{Body: protocol.HealthResponse{DatasetId: id, ReadContext: readContext, Data: value}, Headers: protocol.GetHealth200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetHealth200JSONResponse{Body: protocol.HealthResponse{DatasetId: id, ReadContext: readContext, Data: value}, Headers: protocol.GetHealth200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) discoveryRead(ctx context.Context) (uuid.UUID, protocol.HTTPReadContext, error) {
 	var dataset string
@@ -545,7 +544,7 @@ func (a *httpAPI) GetReadiness(ctx context.Context, r protocol.GetReadinessReque
 	if err != nil {
 		return nil, err
 	}
-	return protocol.GetReadiness200JSONResponse{Body: protocol.ReadinessResponse{DatasetId: id, ReadContext: readContext, Data: protocol.Readiness{Ready: a.core.serving.Load(), Checks: protocol.ReadinessChecks{Sqlite: true, Filesystem: true}}}, Headers: protocol.GetReadiness200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetReadiness200JSONResponse{Body: protocol.ReadinessResponse{DatasetId: id, ReadContext: readContext, Data: protocol.Readiness{Ready: a.core.serving.Load(), Checks: protocol.ReadinessChecks{Sqlite: true, Filesystem: true}}}, Headers: protocol.GetReadiness200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetDocs(ctx context.Context, r protocol.GetDocsRequestObject) (protocol.GetDocsResponseObject, error) {
 	id, _, err := a.discoveryRead(ctx)
@@ -553,14 +552,14 @@ func (a *httpAPI) GetDocs(ctx context.Context, r protocol.GetDocsRequestObject) 
 		return nil, err
 	}
 	body := `<!doctype html><title>Atlas S1 API</title><h1>Atlas S1 API</h1><p>Authenticated operational schema.</p><pre id="schema"></pre><script>const key=prompt('API key');if(key)fetch('/openapi.json',{headers:{Authorization:'Bearer '+key}}).then(r=>r.json()).then(s=>document.getElementById('schema').textContent=JSON.stringify(s,null,2));</script>`
-	return protocol.GetDocs200TexthtmlResponse{Body: strings.NewReader(body), ContentLength: int64(len(body)), Headers: protocol.GetDocs200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetDocs200TexthtmlResponse{Body: strings.NewReader(body), ContentLength: int64(len(body)), Headers: protocol.GetDocs200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetOpenAPI(ctx context.Context, r protocol.GetOpenAPIRequestObject) (protocol.GetOpenAPIResponseObject, error) {
 	id, _, err := a.discoveryRead(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return protocol.GetOpenAPI200JSONResponse{Body: a.openapi, Headers: protocol.GetOpenAPI200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetOpenAPI200JSONResponse{Body: a.openapi, Headers: protocol.GetOpenAPI200ResponseHeaders{AtlasDatasetID: id, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 
 func (c *Core) error(w http.ResponseWriter, r *http.Request, err error) {

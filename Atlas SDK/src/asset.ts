@@ -275,11 +275,20 @@ class AssetReports {
     }
     const reports: PreparedTaskReport[] = [];
     const tasks: S["Task"][] = [];
+    let missingQueuedEvidence = false;
     for (const task of outstanding) {
       const evidence = established.get(task.id);
+      if (!evidence) {
+        held.add(task.id);
+        if (task.scheduling === "queued") missingQueuedEvidence = true;
+        continue;
+      }
       if (held.has(task.id)) continue;
-      if (!evidence || evidence.state === "not_started") {
-        tasks.push(task);
+      if (evidence.state === "not_started") {
+        // Assigned work follows submission order. Missing execution knowledge
+        // keeps its queued continuation back until the Asset OS reconciles it.
+        if (task.scheduling === "queued" && missingQueuedEvidence) held.add(task.id);
+        else tasks.push(task);
         continue;
       }
       if (!evidence.executionId || (evidence.state === "completed" && !evidence.outcome)) {
@@ -315,9 +324,11 @@ class AssetReports {
       const fields: TaskReportFields = evidence.originalReport?.fields ?? {
         status,
         execution_id: evidence.executionId,
-        acknowledged_at: evidence.acknowledgedAt,
-        started_at: evidence.startedAt,
-        finished_at: evidence.finishedAt,
+        // Unknown retained times supply no new fact. Omission preserves any
+        // original time Core already accepted for this execution.
+        ...(evidence.acknowledgedAt === null ? {} : { acknowledged_at: evidence.acknowledgedAt }),
+        ...(evidence.startedAt === null ? {} : { started_at: evidence.startedAt }),
+        ...(evidence.finishedAt === null ? {} : { finished_at: evidence.finishedAt }),
         ...(evidence.progress === null ? {} : { progress: evidence.progress }),
         ...(evidence.outcome?.failure === undefined ? {} : { failure: evidence.outcome.failure }),
         ...(evidence.outcome?.cancellationResponse === undefined

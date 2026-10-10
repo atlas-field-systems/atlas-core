@@ -19,6 +19,7 @@ import (
 
 type pagination struct {
 	key      []byte
+	edition  string
 	lifetime time.Duration
 	clock    func() time.Time
 }
@@ -72,12 +73,12 @@ func (p *pagination) begin(dataset, scope string, limit *int, cursor *string) (p
 	if count < 1 || count > 1000 {
 		return pageIdentity{}, &publicError{400, "invalid_request", "Page limit is outside its supported range"}
 	}
-	value := pageIdentity{Edition: ProtocolVersion, Dataset: dataset, Scope: scope, Limit: count, ExpiresAt: p.clock().UTC().Add(p.lifetime)}
+	value := pageIdentity{Edition: p.edition, Dataset: dataset, Scope: scope, Limit: count, ExpiresAt: p.clock().UTC().Add(p.lifetime)}
 	if cursor == nil {
 		return value, nil
 	}
 	existing, err := p.parse(*cursor)
-	if err != nil || existing.Edition != ProtocolVersion || existing.Dataset != dataset || existing.Scope != scope || existing.Limit != count {
+	if err != nil || existing.Edition != p.edition || existing.Dataset != dataset || existing.Scope != scope || existing.Limit != count {
 		return pageIdentity{}, &publicError{400, "cursor_invalid", "Continuation does not match this Dataset and read"}
 	}
 	if !p.clock().Before(existing.ExpiresAt) {
@@ -121,7 +122,7 @@ func (a *httpAPI) ListEntities(ctx context.Context, r protocol.ListEntitiesReque
 	if err = writecommit.CheckResult(a.maximum, body); err != nil {
 		return nil, err
 	}
-	return protocol.ListEntities200JSONResponse{Body: body, Headers: protocol.ListEntities200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.ListEntities200JSONResponse{Body: body, Headers: protocol.ListEntities200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func pageScope(prefix string, filters interface{}) (string, error) {
 	encoded, err := json.Marshal(filters)
@@ -162,7 +163,7 @@ func (a *httpAPI) ListTasks(ctx context.Context, r protocol.ListTasksRequestObje
 	if err = writecommit.CheckResult(a.maximum, body); err != nil {
 		return nil, err
 	}
-	return protocol.ListTasks200JSONResponse{Body: body, Headers: protocol.ListTasks200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.ListTasks200JSONResponse{Body: body, Headers: protocol.ListTasks200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetAssignedTasks(ctx context.Context, r protocol.GetAssignedTasksRequestObject) (protocol.GetAssignedTasksResponseObject, error) {
 	outstanding := r.Params.Outstanding
@@ -195,7 +196,7 @@ func (a *httpAPI) GetAssignedTasks(ctx context.Context, r protocol.GetAssignedTa
 	if err = writecommit.CheckResult(a.maximum, body); err != nil {
 		return nil, err
 	}
-	return protocol.GetAssignedTasks200JSONResponse{Body: body, Headers: protocol.GetAssignedTasks200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetAssignedTasks200JSONResponse{Body: body, Headers: protocol.GetAssignedTasks200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }
 func (a *httpAPI) GetMovementHistory(ctx context.Context, r protocol.GetMovementHistoryRequestObject) (protocol.GetMovementHistoryResponseObject, error) {
 	basis := "received_at"
@@ -228,5 +229,5 @@ func (a *httpAPI) GetMovementHistory(ctx context.Context, r protocol.GetMovement
 	if err = writecommit.CheckResult(a.maximum, body); err != nil {
 		return nil, err
 	}
-	return protocol.GetMovementHistory200JSONResponse{Body: body, Headers: protocol.GetMovementHistory200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: ProtocolVersion}}, nil
+	return protocol.GetMovementHistory200JSONResponse{Body: body, Headers: protocol.GetMovementHistory200ResponseHeaders{AtlasDatasetID: r.Params.AtlasDatasetID, AtlasProtocolVersion: a.spec.Info.Version}}, nil
 }

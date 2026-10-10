@@ -112,6 +112,7 @@ test("replacement reconciliation preserves source provenance and holds unknown w
     timing: { generatedAt: running.generatedAt },
   };
   const suspended = retained(ids[4], "suspended");
+  suspended.startedAt = null;
   const snapshot: RetainedAssetSnapshot = {
     assetId,
     datasetId,
@@ -148,6 +149,11 @@ test("replacement reconciliation preserves source provenance and holds unknown w
   assert.equal(recovered.body.report_context.generated_at, completed.generatedAt);
   assert.equal("started_at" in recovered.body, false);
   assert.equal("acknowledged_at" in recovered.body, false);
+  const recoveredSuspension = result.value.reports.find((report) => report.targetId === ids[4]);
+  assert(recoveredSuspension);
+  assert.equal("acknowledged_at" in recoveredSuspension.body, false);
+  assert.equal("started_at" in recoveredSuspension.body, false);
+  assert.equal("finished_at" in recoveredSuspension.body, false);
   assert.deepEqual(
     snapshot.executions.map((evidence) => evidence.executionCount),
     [1, 1, 1, 1, 1, 1],
@@ -167,5 +173,21 @@ test("replacement reconciliation preserves source provenance and holds unknown w
   assert(recoveredQueue.outcome === "accepted");
   assert(recoveredQueue.value.tasks.some((task) => task.id === ids[1]));
   assert(recoveredQueue.value.tasks.some((task) => task.id === ids[2]));
+  const missing = await reporter.reconcile({
+    ...snapshot,
+    executions: snapshot.executions.filter((evidence) => evidence.taskId !== ids[1]),
+  });
+  assert(missing.outcome === "accepted");
+  assert(missing.value.heldTaskIds.includes(ids[1]));
+  assert(missing.value.heldTaskIds.includes(ids[2]));
+  assert(missing.value.heldTaskIds.includes(ids[5]));
+  assert.equal(missing.value.tasks.length, 0);
+  assert(missing.value.reports.some((report) => report.targetId === ids[3]));
+  assert(missing.value.reports.some((report) => report.targetId === ids[4]));
+  const absent = await reporter.reconcile({ ...snapshot, executions: [] });
+  assert(absent.outcome === "accepted");
+  assert.deepEqual(new Set(absent.value.heldTaskIds), new Set(ids));
+  assert.equal(absent.value.tasks.length, 0);
+  assert.equal(absent.value.reports.length, 0);
   server.closeAllConnections();
 });
