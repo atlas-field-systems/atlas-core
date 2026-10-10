@@ -1,12 +1,309 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Atlas Protocol shared baseline",
+    "title": "Atlas Protocol",
     "version": "0.0.0",
-    "description": "Unpublished Slice 0 shared definitions. Operational routes are added by their owning slices."
+    "description": "Unpublished S1 development edition. It defines the direct-IP Asset-to-Core Move To workflow routes; later slices add their own routes and variants."
   },
-  "paths": {},
+  "security": [{ "bearer": [] }, { "apiKey": [] }],
+  "paths": {
+    "/entities": {
+      "get": {
+        "operationId": "listEntities",
+        "summary": "List Entities ordered by permanent ID",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" },
+          { "name": "ids", "in": "query", "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/components/schemas/Identifier" } } },
+          { "name": "type", "in": "query", "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 3, "items": { "$ref": "#/components/schemas/EntityType" } } },
+          { "name": "alias", "in": "query", "schema": { "$ref": "#/components/schemas/Alias" } },
+          { "name": "alias_is_set", "in": "query", "schema": { "type": "boolean" } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/PageToken" }
+        ],
+        "responses": {
+          "200": { "description": "Entity page", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityPageResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "operationId": "createEntity",
+        "summary": "Register an Asset under its enrolled identity",
+        "description": "Ordinary Entity creation. First Enrollment presents deployment enrollment authorization with the Asset's prepared credential; re-registration presents the surviving Asset credential. A matching registration retry returns the original association and the current Entity.",
+        "security": [{ "bearer": [] }, { "apiKey": [] }, { "enrollment": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityCreate" } } } },
+        "responses": {
+          "200": { "description": "Replayed registration with the current Entity", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegistrationResponse" } } } },
+          "201": { "description": "Registered Asset", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegistrationResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/entities/alias/{alias}": {
+      "get": {
+        "operationId": "getEntityByAlias",
+        "summary": "Resolve an Alias case-insensitively",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" },
+          { "name": "alias", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Alias" } }
+        ],
+        "responses": {
+          "200": { "description": "Entity", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/entities/{entity_id}": {
+      "parameters": [{ "$ref": "#/components/parameters/EntityID" }],
+      "get": {
+        "operationId": "getEntity",
+        "summary": "Read one Entity",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "responses": {
+          "200": { "description": "Entity", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "patch": {
+        "operationId": "patchEntity",
+        "summary": "Apply one mutation class: a Descriptive edit or an Asset report",
+        "description": "Descriptive edits carry expected_edit_revision. Asset reports carry report_context and only Reported fields. Mixed classes, Derived and immutable fields reject the whole request.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityPatch" } } } },
+        "responses": {
+          "200": { "description": "Committed Entity, with the report result for an Asset report", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityMutationResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteEntity",
+        "summary": "Delete an Entity; Asset deletion revokes its bound credentials",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "responses": {
+          "204": { "description": "Entity deleted", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" }, "Atlas-Commit-Cursor": { "$ref": "#/components/headers/Atlas-Commit-Cursor" } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/entities/{entity_id}/checkin": {
+      "parameters": [{ "$ref": "#/components/parameters/EntityID" }],
+      "post": {
+        "operationId": "checkIn",
+        "summary": "Report current Asset data; a first report may establish process authority",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckIn" } } } },
+        "responses": {
+          "200": { "description": "Accepted or duplicate report with the current Entity", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityMutationResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/entities/{entity_id}/status": {
+      "parameters": [{ "$ref": "#/components/parameters/EntityID" }],
+      "get": {
+        "operationId": "getAssetStatus",
+        "summary": "Read an Asset's Operational status and its report times",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "responses": {
+          "200": { "description": "Operational status", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssetStatusResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "patch": {
+        "operationId": "reportAssetStatus",
+        "summary": "Report a complete Operational status record",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssetStatusReportRequest" } } } },
+        "responses": {
+          "200": { "description": "Accepted or duplicate report with the current Entity", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityMutationResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/entities/{entity_id}/tasks": {
+      "parameters": [{ "$ref": "#/components/parameters/EntityID" }],
+      "get": {
+        "operationId": "listAssignedTasks",
+        "summary": "Read an Asset's assigned Tasks in default requested order",
+        "description": "Listing does not acknowledge, start or adopt work. Every page token pins the Asset's queue revision.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" },
+          { "name": "outstanding", "in": "query", "schema": { "type": "boolean" } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/PageToken" }
+        ],
+        "responses": {
+          "200": { "description": "Assigned Task page and queue aggregate", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignedTaskPageResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/entities/{entity_id}/movement-history": {
+      "parameters": [{ "$ref": "#/components/parameters/EntityID" }],
+      "get": {
+        "operationId": "getMovementHistory",
+        "summary": "Read retained movement samples for one Entity",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" },
+          { "name": "from", "in": "query", "schema": { "$ref": "#/components/schemas/Timestamp" } },
+          { "name": "to", "in": "query", "schema": { "$ref": "#/components/schemas/Timestamp" } },
+          { "name": "time_basis", "in": "query", "schema": { "$ref": "#/components/schemas/MovementTimeBasis" } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/PageToken" }
+        ],
+        "responses": {
+          "200": { "description": "Movement sample page", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MovementHistoryResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/tasks": {
+      "get": {
+        "operationId": "listTasks",
+        "summary": "List Tasks ordered by permanent ID",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" },
+          { "name": "ids", "in": "query", "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/components/schemas/Identifier" } } },
+          { "name": "asset_id", "in": "query", "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/components/schemas/Identifier" } } },
+          { "name": "status", "in": "query", "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 8, "items": { "$ref": "#/components/schemas/TaskStatus" } } },
+          { "name": "scheduling", "in": "query", "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 2, "items": { "$ref": "#/components/schemas/TaskScheduling" } } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/PageToken" }
+        ],
+        "responses": {
+          "200": { "description": "Task page", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskPageResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "operationId": "createTask",
+        "summary": "Create one Task for one Asset, including while it is offline",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskCreate" } } } },
+        "responses": {
+          "200": { "description": "Replayed Task for a matching creation identity", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskMutationResponse" } } } },
+          "201": { "description": "Created Task", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskMutationResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/tasks/{task_id}": {
+      "parameters": [{ "$ref": "#/components/parameters/TaskID" }],
+      "get": {
+        "operationId": "getTask",
+        "summary": "Read one Task",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "responses": {
+          "200": { "description": "Task", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/tasks/{task_id}/status": {
+      "parameters": [{ "$ref": "#/components/parameters/TaskID" }],
+      "patch": {
+        "operationId": "updateTaskStatus",
+        "summary": "Request cancellation, or report the assigned Asset's lifecycle evidence",
+        "description": "Not a generic status setter. Tasking clients request cancellation; only the assigned Asset reports acknowledgement, execution, progress, outcomes and cancellation confirmation or decline.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Atlas-Dataset-ID" },
+          { "$ref": "#/components/parameters/Atlas-Protocol-Version" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskStatusUpdate" } } } },
+        "responses": {
+          "200": { "description": "The recorded Task", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskStatusResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Discover the current Dataset and supported editions; Assets may request a contact challenge",
+        "description": "Requires authentication and no Dataset precondition. Enrollment authorization may discover before first Enrollment. A contact challenge is proof for a later fresh report, not Contact itself.",
+        "security": [{ "bearer": [] }, { "apiKey": [] }, { "enrollment": [] }],
+        "parameters": [
+          { "name": "challenge_asset_id", "in": "query", "schema": { "$ref": "#/components/schemas/Identifier" } },
+          { "name": "challenge_generation", "in": "query", "schema": { "$ref": "#/components/schemas/PositiveDecimalCounter" } }
+        ],
+        "responses": {
+          "200": { "description": "Health and discovery", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Accept-Encoding": { "$ref": "#/components/headers/Accept-Encoding" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/readiness": {
+      "get": {
+        "operationId": "getReadiness",
+        "summary": "Check Core's required dependencies",
+        "responses": {
+          "200": { "description": "Ready", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReadinessResponse" } } } },
+          "503": { "description": "Not ready", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReadinessResponse" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "operationId": "getDocs",
+        "summary": "Protected interactive documentation shell",
+        "description": "The HTML exception to the JSON envelope. The shell contains no schema; the entered key stays in page memory and authorizes fetching /openapi.json.",
+        "security": [{}, { "bearer": [] }, { "apiKey": [] }],
+        "responses": {
+          "200": { "description": "Documentation shell for an authenticated caller", "content": { "text/html": { "schema": { "type": "string" } } } },
+          "401": { "description": "Key-entry shell without schema or operational data", "content": { "text/html": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenAPI",
+        "summary": "Raw OpenAPI document without the JSON success envelope",
+        "responses": {
+          "200": { "description": "The served Protocol edition", "headers": { "Atlas-Dataset-ID": { "$ref": "#/components/headers/Atlas-Dataset-ID" }, "Atlas-Protocol-Version": { "$ref": "#/components/headers/Atlas-Protocol-Version" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenAPIDocument" } } } },
+          "400": { "$ref": "#/components/responses/Error" }, "401": { "$ref": "#/components/responses/Error" }, "403": { "$ref": "#/components/responses/Error" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "410": { "$ref": "#/components/responses/Error" }, "413": { "$ref": "#/components/responses/Error" }, "415": { "$ref": "#/components/responses/Error" }, "428": { "$ref": "#/components/responses/Error" }, "429": { "$ref": "#/components/responses/Error" }, "500": { "$ref": "#/components/responses/Error" }, "503": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
   "components": {
+    "securitySchemes": {
+      "bearer": { "type": "http", "scheme": "bearer", "description": "Operator API key or Asset credential" },
+      "apiKey": { "type": "apiKey", "in": "header", "name": "X-API-Key", "description": "Operator API key or Asset credential" },
+      "enrollment": { "type": "apiKey", "in": "header", "name": "Atlas-Enrollment", "description": "Deployment enrollment authorization for one Asset ID: unpadded base64url of the RFC 8785 canonical EnrollmentAuthorization. It authenticates discovery and first Enrollment only." }
+    },
     "schemas": {
       "Identifier": {
         "type": "string",
@@ -25,8 +322,23 @@
         "type": "string",
         "pattern": "^[1-9][0-9]*$"
       },
+      "NullableDecimalCounter": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)$",
+        "nullable": true
+      },
       "ProtocolVersion": {
         "type": "string"
+      },
+      "Timestamp": {
+        "description": "A UTC instant from the authoring participant's deployment-provided clock.",
+        "type": "string",
+        "format": "date-time"
+      },
+      "NullableTimestamp": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
       },
       "Latitude": {
         "type": "number",
@@ -55,6 +367,37 @@
           "latitude",
           "longitude"
         ]
+      },
+      "NullablePosition": {
+        "description": "A complete Position, or null to remove the reported position.",
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "latitude": { "$ref": "#/components/schemas/Latitude" },
+          "longitude": { "$ref": "#/components/schemas/Longitude" }
+        },
+        "required": ["latitude", "longitude"]
+      },
+      "Altitude": {
+        "description": "Height in metres above the WGS84 ellipsoid, never implicitly mean sea level or ground height.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value_m": { "type": "number", "format": "double" },
+          "vertical_reference": { "type": "string", "enum": ["wgs84_ellipsoid"] }
+        },
+        "required": ["value_m", "vertical_reference"]
+      },
+      "NullableAltitude": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "value_m": { "type": "number", "format": "double" },
+          "vertical_reference": { "type": "string", "enum": ["wgs84_ellipsoid"] }
+        },
+        "required": ["value_m", "vertical_reference"]
       },
       "MoveToPositionTarget": {
         "type": "object",
@@ -89,14 +432,7 @@
         }
       },
       "TargetAltitude": {
-        "description": "Optional target height in metres above the WGS84 ellipsoid. Omission imposes no vertical target.",
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "value_m": { "type": "number", "format": "double" },
-          "vertical_reference": { "type": "string", "enum": ["wgs84_ellipsoid"] }
-        },
-        "required": ["value_m", "vertical_reference"]
+        "$ref": "#/components/schemas/Altitude"
       },
       "MoveTo": {
         "description": "Representative input binding only. Task admission, validity, references and execution remain operational work.",
@@ -149,6 +485,13 @@
           "sequence"
         ]
       },
+      "ClockUncertainty": {
+        "description": "Optional compatibility metadata under ADR-0029. Core neither computes it nor uses it for freshness or age.",
+        "type": "number",
+        "format": "double",
+        "minimum": 0,
+        "nullable": true
+      },
       "MovementObservationTime": {
         "type": "object",
         "additionalProperties": false,
@@ -159,15 +502,11 @@
             "nullable": true
           },
           "clock_uncertainty_ms": {
-            "type": "number",
-            "format": "double",
-            "minimum": 0,
-            "nullable": true
+            "$ref": "#/components/schemas/ClockUncertainty"
           }
         },
         "required": [
-          "observed_at",
-          "clock_uncertainty_ms"
+          "observed_at"
         ]
       },
       "ReportContext": {
@@ -189,10 +528,7 @@
             "nullable": true
           },
           "clock_uncertainty_ms": {
-            "type": "number",
-            "format": "double",
-            "minimum": 0,
-            "nullable": true
+            "$ref": "#/components/schemas/ClockUncertainty"
           },
           "evidence_kind": {
             "type": "string",
@@ -227,13 +563,802 @@
           "process_generation",
           "sequence",
           "generated_at",
-          "clock_uncertainty_ms",
           "evidence_kind",
           "evidence_origin",
           "retained_evidence_id",
           "contact_challenge",
           "process_proof"
         ]
+      },
+      "Ed25519PublicKey": {
+        "description": "Unpadded base64url Ed25519 public key (RFC 8032).",
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      },
+      "Ed25519Signature": {
+        "description": "Unpadded base64url Ed25519 signature over RFC 8785 canonical facts.",
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{86}$"
+      },
+      "CredentialSecret": {
+        "description": "A caller-prepared secret of at least 32 random bytes in unpadded base64url. Core stores only a verifier.",
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43,128}$"
+      },
+      "EntityType": {
+        "description": "S1 implements Asset Entities. Track and Geofeature variants belong to S6.",
+        "type": "string",
+        "enum": ["asset"]
+      },
+      "Alias": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "NullableAlias": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "nullable": true
+      },
+      "NullableSubtype": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "nullable": true
+      },
+      "NullableReason": {
+        "type": "string",
+        "maxLength": 512,
+        "nullable": true
+      },
+      "AssetStatusValue": {
+        "type": "string",
+        "enum": ["unknown", "initializing", "ready", "busy", "paused", "error", "stopped"]
+      },
+      "AssetStatus": {
+        "description": "Reported Operational status with its source report time and Core receipt/change times.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": { "$ref": "#/components/schemas/AssetStatusValue" },
+          "reason": { "$ref": "#/components/schemas/NullableReason" },
+          "reported_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "received_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "changed_at": { "$ref": "#/components/schemas/NullableTimestamp" }
+        },
+        "required": ["value", "reason", "reported_at", "received_at", "changed_at"]
+      },
+      "AssetStatusReport": {
+        "description": "A complete Operational status record. Null in a patch attempts to remove the required component and is rejected.",
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "value": { "$ref": "#/components/schemas/AssetStatusValue" },
+          "reason": { "$ref": "#/components/schemas/NullableReason" }
+        },
+        "required": ["value"]
+      },
+      "CommunicationState": {
+        "type": "string",
+        "enum": ["high_bandwidth", "healthy", "degraded", "offline"]
+      },
+      "AssetCommunications": {
+        "description": "Derived by Core; never reported.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": { "$ref": "#/components/schemas/CommunicationState" }
+        },
+        "required": ["state"]
+      },
+      "AssetHeartbeat": {
+        "description": "Contact: Core receipt time of the latest fresh accepted report.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "last_seen": { "$ref": "#/components/schemas/NullableTimestamp" }
+        },
+        "required": ["last_seen"]
+      },
+      "Speed": {
+        "description": "Metres per second.",
+        "type": "number",
+        "format": "double",
+        "minimum": 0
+      },
+      "NullableSpeed": {
+        "type": "number",
+        "format": "double",
+        "minimum": 0,
+        "nullable": true
+      },
+      "Heading": {
+        "description": "Degrees clockwise from true north, 0 inclusive to 360 exclusive.",
+        "type": "number",
+        "format": "double",
+        "minimum": 0,
+        "maximum": 360
+      },
+      "NullableHeading": {
+        "type": "number",
+        "format": "double",
+        "minimum": 0,
+        "maximum": 360,
+        "nullable": true
+      },
+      "AssetTelemetry": {
+        "description": "Reported movement telemetry. Absent quantities are unknown, never zero-filled.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "position": { "$ref": "#/components/schemas/Position" },
+          "speed_mps": { "$ref": "#/components/schemas/Speed" },
+          "altitude": { "$ref": "#/components/schemas/Altitude" },
+          "heading_deg": { "$ref": "#/components/schemas/Heading" }
+        }
+      },
+      "TelemetryPatch": {
+        "description": "Partial telemetry. Omission preserves a quantity, null removes it, and null for the whole object removes telemetry.",
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "position": { "$ref": "#/components/schemas/NullablePosition" },
+          "speed_mps": { "$ref": "#/components/schemas/NullableSpeed" },
+          "altitude": { "$ref": "#/components/schemas/NullableAltitude" },
+          "heading_deg": { "$ref": "#/components/schemas/NullableHeading" }
+        }
+      },
+      "EntityComponents": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "$ref": "#/components/schemas/AssetStatus" },
+          "communications": { "$ref": "#/components/schemas/AssetCommunications" },
+          "heartbeat": { "$ref": "#/components/schemas/AssetHeartbeat" },
+          "telemetry": { "$ref": "#/components/schemas/AssetTelemetry" }
+        },
+        "required": ["status", "communications", "heartbeat"]
+      },
+      "ComponentsPatch": {
+        "description": "Components named in a request. Communication state and Contact are Derived and are declared only so Core can reject them as forbidden fields.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "$ref": "#/components/schemas/AssetStatusReport" },
+          "telemetry": { "$ref": "#/components/schemas/TelemetryPatch" },
+          "communications": { "$ref": "#/components/schemas/AssetCommunications" },
+          "heartbeat": { "$ref": "#/components/schemas/AssetHeartbeat" }
+        }
+      },
+      "CommandName": {
+        "type": "string",
+        "enum": ["move_to", "pause"]
+      },
+      "TaskScheduling": {
+        "type": "string",
+        "enum": ["queued", "immediate"]
+      },
+      "CommandSupport": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": { "$ref": "#/components/schemas/CommandName" },
+          "scheduling": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "$ref": "#/components/schemas/TaskScheduling" } },
+          "cancellation": { "type": "boolean" },
+          "progress": { "type": "boolean" },
+          "description": { "$ref": "#/components/schemas/NullableReason" }
+        },
+        "required": ["command", "scheduling", "cancellation", "progress"]
+      },
+      "CommandManifest": {
+        "description": "Asset-reported subset of Catalog Commands. Each Command appears at most once.",
+        "type": "array",
+        "maxItems": 16,
+        "items": { "$ref": "#/components/schemas/CommandSupport" }
+      },
+      "TimeQuality": {
+        "type": "string",
+        "enum": ["known", "unknown", "uncertain"]
+      },
+      "ReportingUnit": {
+        "description": "Core-owned metadata for the report that supplied a unit's current value.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "process_generation": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "sequence": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "reported_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "received_at": { "$ref": "#/components/schemas/Timestamp" },
+          "time_quality": { "$ref": "#/components/schemas/TimeQuality" },
+          "observed_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "clock_uncertainty_ms": { "$ref": "#/components/schemas/ClockUncertainty" }
+        },
+        "required": ["process_generation", "sequence", "reported_at", "received_at", "time_quality"]
+      },
+      "EntityReporting": {
+        "description": "Reporting units with an applied report. Empty before the first report.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "$ref": "#/components/schemas/ReportingUnit" },
+          "command_manifest": { "$ref": "#/components/schemas/ReportingUnit" },
+          "position": { "$ref": "#/components/schemas/ReportingUnit" },
+          "speed_mps": { "$ref": "#/components/schemas/ReportingUnit" },
+          "altitude": { "$ref": "#/components/schemas/ReportingUnit" },
+          "heading_deg": { "$ref": "#/components/schemas/ReportingUnit" }
+        }
+      },
+      "QueueAdoptionState": {
+        "type": "string",
+        "enum": ["none", "adopted", "conflict"]
+      },
+      "TaskQueueAdoption": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": { "$ref": "#/components/schemas/QueueAdoptionState" },
+          "revision": { "$ref": "#/components/schemas/NullableDecimalCounter" },
+          "reason": { "$ref": "#/components/schemas/NullableReason" }
+        },
+        "required": ["state", "revision", "reason"]
+      },
+      "TaskQueue": {
+        "description": "Tasks-owned Derived queue aggregate. Requested order is not Asset adoption; confirmed evidence stays null until the Asset reports adoption.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "revision": { "$ref": "#/components/schemas/DecimalCounter" },
+          "requested_revision": { "$ref": "#/components/schemas/DecimalCounter" },
+          "requested_task_ids": { "type": "array", "items": { "$ref": "#/components/schemas/Identifier" } },
+          "confirmed_revision": { "$ref": "#/components/schemas/NullableDecimalCounter" },
+          "confirmed_task_ids": { "type": "array", "items": { "$ref": "#/components/schemas/Identifier" } },
+          "adoption": { "$ref": "#/components/schemas/TaskQueueAdoption" },
+          "active_queued_task_id": { "$ref": "#/components/schemas/NullableIdentifier" },
+          "suspended_task_id": { "$ref": "#/components/schemas/NullableIdentifier" }
+        },
+        "required": ["revision", "requested_revision", "requested_task_ids", "confirmed_revision", "confirmed_task_ids", "adoption", "active_queued_task_id", "suspended_task_id"]
+      },
+      "Entity": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "type": { "$ref": "#/components/schemas/EntityType" },
+          "alias": { "$ref": "#/components/schemas/NullableAlias" },
+          "subtype": { "$ref": "#/components/schemas/NullableSubtype" },
+          "version": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "edit_revision": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "created_at": { "$ref": "#/components/schemas/Timestamp" },
+          "updated_at": { "$ref": "#/components/schemas/Timestamp" },
+          "command_manifest": { "$ref": "#/components/schemas/CommandManifest" },
+          "components": { "$ref": "#/components/schemas/EntityComponents" },
+          "reporting": { "$ref": "#/components/schemas/EntityReporting" },
+          "task_queue": { "$ref": "#/components/schemas/TaskQueue" }
+        },
+        "required": ["id", "type", "alias", "subtype", "version", "edit_revision", "created_at", "updated_at", "command_manifest", "components", "reporting", "task_queue"]
+      },
+      "EnrollmentAuthorization": {
+        "description": "Deployment authorization for first Enrollment of one Asset ID with its recovery public key, signed by the installation's enrollment authority over RFC 8785 canonical facts.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "installation_id": { "$ref": "#/components/schemas/Identifier" },
+          "asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "recovery_public_key": { "$ref": "#/components/schemas/Ed25519PublicKey" },
+          "signature": { "$ref": "#/components/schemas/Ed25519Signature" }
+        },
+        "required": ["installation_id", "asset_id", "recovery_public_key", "signature"]
+      },
+      "AssetEnrollment": {
+        "description": "First Enrollment's prepared Asset credential, presented with enrollment authorization in the Atlas-Enrollment header.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "credential": { "$ref": "#/components/schemas/CredentialSecret" }
+        },
+        "required": ["credential"]
+      },
+      "EntityCreate": {
+        "description": "Registration carries only Descriptive data and Command support. Reported and Derived fields are declared only so Core can reject them atomically.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "type": { "$ref": "#/components/schemas/EntityType" },
+          "registration_id": { "$ref": "#/components/schemas/Identifier" },
+          "alias": { "$ref": "#/components/schemas/NullableAlias" },
+          "subtype": { "$ref": "#/components/schemas/NullableSubtype" },
+          "command_manifest": { "$ref": "#/components/schemas/CommandManifest" },
+          "enrollment": { "$ref": "#/components/schemas/AssetEnrollment" },
+          "components": { "$ref": "#/components/schemas/ComponentsPatch" },
+          "version": { "$ref": "#/components/schemas/DecimalCounter" },
+          "edit_revision": { "$ref": "#/components/schemas/DecimalCounter" },
+          "created_at": { "$ref": "#/components/schemas/Timestamp" },
+          "updated_at": { "$ref": "#/components/schemas/Timestamp" },
+          "reporting": { "$ref": "#/components/schemas/EntityReporting" },
+          "task_queue": { "$ref": "#/components/schemas/TaskQueue" }
+        },
+        "required": ["id", "type", "registration_id"]
+      },
+      "EntityPatch": {
+        "description": "Exactly one mutation class: Descriptive (alias/subtype with expected_edit_revision) or Asset Reported (report_context with command_manifest/components). Immutable and Derived fields are declared only so Core can reject them.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "alias": { "$ref": "#/components/schemas/NullableAlias" },
+          "subtype": { "$ref": "#/components/schemas/NullableSubtype" },
+          "expected_edit_revision": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "report_context": { "$ref": "#/components/schemas/ReportContext" },
+          "command_manifest": { "$ref": "#/components/schemas/CommandManifest" },
+          "components": { "$ref": "#/components/schemas/ComponentsPatch" },
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "type": { "$ref": "#/components/schemas/EntityType" },
+          "version": { "$ref": "#/components/schemas/DecimalCounter" },
+          "edit_revision": { "$ref": "#/components/schemas/DecimalCounter" },
+          "created_at": { "$ref": "#/components/schemas/Timestamp" },
+          "updated_at": { "$ref": "#/components/schemas/Timestamp" },
+          "reporting": { "$ref": "#/components/schemas/EntityReporting" },
+          "task_queue": { "$ref": "#/components/schemas/TaskQueue" }
+        }
+      },
+      "AuthorityClaim": {
+        "description": "Process-authority claim carried by the first signed check-in of a reporting process. recovery_proof signs the claim without its proof, bound to the report digest, Dataset and Asset.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "transfer_id": { "$ref": "#/components/schemas/Identifier" },
+          "process_id": { "$ref": "#/components/schemas/Identifier" },
+          "expected_generation": { "$ref": "#/components/schemas/DecimalCounter" },
+          "process_public_key": { "$ref": "#/components/schemas/Ed25519PublicKey" },
+          "recovery_proof": { "$ref": "#/components/schemas/Ed25519Signature" }
+        },
+        "required": ["transfer_id", "process_id", "expected_generation", "process_public_key", "recovery_proof"]
+      },
+      "CheckIn": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "report_context": { "$ref": "#/components/schemas/ReportContext" },
+          "authority_claim": { "$ref": "#/components/schemas/AuthorityClaim" },
+          "command_manifest": { "$ref": "#/components/schemas/CommandManifest" },
+          "components": { "$ref": "#/components/schemas/ComponentsPatch" }
+        },
+        "required": ["report_context"]
+      },
+      "AssetStatusReportRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "report_context": { "$ref": "#/components/schemas/ReportContext" },
+          "status": { "$ref": "#/components/schemas/AssetStatusReport" }
+        },
+        "required": ["report_context", "status"]
+      },
+      "ReportID": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": { "$ref": "#/components/schemas/Identifier" },
+          "asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "process_generation": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "sequence": { "$ref": "#/components/schemas/PositiveDecimalCounter" }
+        },
+        "required": ["dataset_id", "asset_id", "process_generation", "sequence"]
+      },
+      "ProcessAuthority": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "process_generation": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "transfer_id": { "$ref": "#/components/schemas/Identifier" },
+          "process_id": { "$ref": "#/components/schemas/Identifier" }
+        },
+        "required": ["process_generation", "transfer_id", "process_id"]
+      },
+      "ReportResult": {
+        "description": "Acceptance receipt. It is not a synchronization input.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "disposition": { "type": "string", "enum": ["accepted", "duplicate"] },
+          "report_id": { "$ref": "#/components/schemas/ReportID" },
+          "received_at": { "$ref": "#/components/schemas/Timestamp" },
+          "applied_fields": { "type": "array", "items": { "type": "string" } },
+          "task_effect": { "type": "string", "enum": ["changed", "unchanged", "not_applicable"] },
+          "movement_sample_ids": { "type": "array", "items": { "$ref": "#/components/schemas/Identifier" } },
+          "contact_refreshed": { "type": "boolean" },
+          "authority": { "$ref": "#/components/schemas/ProcessAuthority" }
+        },
+        "required": ["disposition", "report_id", "received_at", "applied_fields", "task_effect", "movement_sample_ids", "contact_refreshed"]
+      },
+      "EntityMutationData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity": { "$ref": "#/components/schemas/Entity" },
+          "report": { "$ref": "#/components/schemas/ReportResult" }
+        },
+        "required": ["entity"]
+      },
+      "Registration": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "registration_id": { "$ref": "#/components/schemas/Identifier" },
+          "asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "principal_id": { "$ref": "#/components/schemas/Identifier" },
+          "registered_at": { "$ref": "#/components/schemas/Timestamp" }
+        },
+        "required": ["registration_id", "asset_id", "principal_id", "registered_at"]
+      },
+      "RegistrationData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "registration": { "$ref": "#/components/schemas/Registration" },
+          "entity": { "$ref": "#/components/schemas/Entity" }
+        },
+        "required": ["registration", "entity"]
+      },
+      "EntityPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Entity" } },
+          "next_page_token": { "$ref": "#/components/schemas/NullablePageToken" }
+        },
+        "required": ["items", "next_page_token"]
+      },
+      "AssetStatusData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": { "$ref": "#/components/schemas/Identifier" },
+          "status": { "$ref": "#/components/schemas/AssetStatus" }
+        },
+        "required": ["entity_id", "status"]
+      },
+      "PageToken": {
+        "description": "Opaque continuation bound to its Dataset, resource, filters and page size.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024,
+        "pattern": "^[A-Za-z0-9_-]+$"
+      },
+      "NullablePageToken": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024,
+        "pattern": "^[A-Za-z0-9_-]+$",
+        "nullable": true
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": ["pending", "acknowledged", "in_progress", "paused", "cancellation_requested", "completed", "failed", "cancelled"]
+      },
+      "TaskLifecycleEvent": {
+        "description": "Asset event time from its correct clock and Core receipt time.",
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "properties": {
+          "reported_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "received_at": { "$ref": "#/components/schemas/Timestamp" }
+        },
+        "required": ["reported_at", "received_at"]
+      },
+      "TaskLifecycle": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "acknowledged": { "$ref": "#/components/schemas/TaskLifecycleEvent" },
+          "started": { "$ref": "#/components/schemas/TaskLifecycleEvent" },
+          "finished": { "$ref": "#/components/schemas/TaskLifecycleEvent" }
+        },
+        "required": ["acknowledged", "started", "finished"]
+      },
+      "MoveToProgressDetails": {
+        "description": "Asset-selected Move To progress. Core does not compare it with an arrival rule.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "enum": ["move_to"] },
+          "distance_remaining_m": { "type": "number", "format": "double", "minimum": 0 },
+          "distance_uncertainty_m": { "type": "number", "format": "double", "minimum": 0, "nullable": true }
+        },
+        "required": ["command", "distance_remaining_m"]
+      },
+      "TaskProgressReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fraction": { "type": "number", "format": "double", "minimum": 0, "maximum": 1, "nullable": true },
+          "details": { "$ref": "#/components/schemas/MoveToProgressDetails" }
+        }
+      },
+      "TaskProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fraction": { "type": "number", "format": "double", "minimum": 0, "maximum": 1, "nullable": true },
+          "details": { "$ref": "#/components/schemas/MoveToProgressDetails" },
+          "reported_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "received_at": { "$ref": "#/components/schemas/Timestamp" }
+        },
+        "required": ["fraction", "reported_at", "received_at"]
+      },
+      "TaskFailureCode": {
+        "type": "string",
+        "enum": ["unsupported", "invalid_input", "execution_failed"]
+      },
+      "TaskFailure": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": { "$ref": "#/components/schemas/TaskFailureCode" },
+          "message": { "type": "string", "maxLength": 1024 }
+        },
+        "required": ["code", "message"]
+      },
+      "PrincipalKind": {
+        "type": "string",
+        "enum": ["operator", "asset"]
+      },
+      "Actor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": { "$ref": "#/components/schemas/Identifier" },
+          "kind": { "$ref": "#/components/schemas/PrincipalKind" }
+        },
+        "required": ["principal_id", "kind"]
+      },
+      "CancellationState": {
+        "type": "string",
+        "enum": ["requested", "confirmed", "declined", "closed"]
+      },
+      "TaskCancellation": {
+        "description": "A recorded cancellation request. Closed means another terminal outcome resolved the Task first.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cancellation_id": { "$ref": "#/components/schemas/Identifier" },
+          "requested_by": { "$ref": "#/components/schemas/Actor" },
+          "requested_at": { "$ref": "#/components/schemas/Timestamp" },
+          "reason": { "$ref": "#/components/schemas/NullableReason" },
+          "state": { "$ref": "#/components/schemas/CancellationState" },
+          "resolution": { "$ref": "#/components/schemas/TaskLifecycleEvent" }
+        },
+        "required": ["cancellation_id", "requested_by", "requested_at", "reason", "state", "resolution"]
+      },
+      "Task": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Identifier" },
+          "asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "command": { "$ref": "#/components/schemas/CommandName" },
+          "scheduling": { "$ref": "#/components/schemas/TaskScheduling" },
+          "input": { "$ref": "#/components/schemas/MoveTo" },
+          "submission_sequence": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "status": { "$ref": "#/components/schemas/TaskStatus" },
+          "version": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "created_by": { "$ref": "#/components/schemas/Actor" },
+          "created_at": { "$ref": "#/components/schemas/Timestamp" },
+          "updated_at": { "$ref": "#/components/schemas/Timestamp" },
+          "lifecycle": { "$ref": "#/components/schemas/TaskLifecycle" },
+          "progress": { "$ref": "#/components/schemas/TaskProgress" },
+          "failure": { "$ref": "#/components/schemas/TaskFailure" },
+          "cancellations": { "type": "array", "items": { "$ref": "#/components/schemas/TaskCancellation" } }
+        },
+        "required": ["id", "asset_id", "command", "scheduling", "input", "submission_sequence", "status", "version", "created_by", "created_at", "updated_at", "lifecycle", "cancellations"]
+      },
+      "TaskCreate": {
+        "description": "S1 admits queued Move To with a named position target. Omitted scheduling selects queued.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": { "$ref": "#/components/schemas/Identifier" },
+          "asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "scheduling": { "$ref": "#/components/schemas/TaskScheduling" },
+          "input": { "$ref": "#/components/schemas/MoveTo" }
+        },
+        "required": ["request_id", "asset_id", "input"]
+      },
+      "TaskCancellationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "action": { "type": "string", "enum": ["request_cancellation"] },
+          "cancellation_id": { "$ref": "#/components/schemas/Identifier" },
+          "reason": { "$ref": "#/components/schemas/NullableReason" }
+        },
+        "required": ["action", "cancellation_id"]
+      },
+      "TaskReportEvent": {
+        "type": "string",
+        "enum": ["acknowledged", "started", "progress", "completed", "failed", "cancellation_confirmed", "cancellation_declined"]
+      },
+      "TaskLifecycleReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "action": { "type": "string", "enum": ["report"] },
+          "report_context": { "$ref": "#/components/schemas/ReportContext" },
+          "event": { "$ref": "#/components/schemas/TaskReportEvent" },
+          "progress": { "$ref": "#/components/schemas/TaskProgressReport" },
+          "failure": { "$ref": "#/components/schemas/TaskFailure" },
+          "cancellation_id": { "$ref": "#/components/schemas/Identifier" }
+        },
+        "required": ["action", "report_context", "event"]
+      },
+      "TaskStatusUpdate": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/TaskCancellationRequest" },
+          { "$ref": "#/components/schemas/TaskLifecycleReport" }
+        ],
+        "discriminator": {
+          "propertyName": "action",
+          "mapping": {
+            "request_cancellation": "#/components/schemas/TaskCancellationRequest",
+            "report": "#/components/schemas/TaskLifecycleReport"
+          }
+        }
+      },
+      "TaskStatusData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task": { "$ref": "#/components/schemas/Task" },
+          "report": { "$ref": "#/components/schemas/ReportResult" }
+        },
+        "required": ["task"]
+      },
+      "TaskPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } },
+          "next_page_token": { "$ref": "#/components/schemas/NullablePageToken" }
+        },
+        "required": ["items", "next_page_token"]
+      },
+      "AssignedTaskPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "queue_revision": { "$ref": "#/components/schemas/DecimalCounter" },
+          "task_queue": { "$ref": "#/components/schemas/TaskQueue" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } },
+          "next_page_token": { "$ref": "#/components/schemas/NullablePageToken" }
+        },
+        "required": ["asset_id", "queue_revision", "task_queue", "items", "next_page_token"]
+      },
+      "MovementTimeBasis": {
+        "type": "string",
+        "enum": ["received_at", "observed_at"]
+      },
+      "MovementQuantityName": {
+        "type": "string",
+        "enum": ["position", "speed_mps", "altitude"]
+      },
+      "MovementPosition": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": { "$ref": "#/components/schemas/Position" },
+          "observed_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "clock_uncertainty_ms": { "$ref": "#/components/schemas/ClockUncertainty" }
+        },
+        "required": ["value", "observed_at"]
+      },
+      "MovementSpeed": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": { "$ref": "#/components/schemas/Speed" },
+          "observed_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "clock_uncertainty_ms": { "$ref": "#/components/schemas/ClockUncertainty" }
+        },
+        "required": ["value", "observed_at"]
+      },
+      "MovementAltitude": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": { "$ref": "#/components/schemas/Altitude" },
+          "observed_at": { "$ref": "#/components/schemas/NullableTimestamp" },
+          "clock_uncertainty_ms": { "$ref": "#/components/schemas/ClockUncertainty" }
+        },
+        "required": ["value", "observed_at"]
+      },
+      "MovementSample": {
+        "description": "Raw supplied movement quantities from one accepted report, with their own observation times and Core receipt time.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sample_id": { "$ref": "#/components/schemas/Identifier" },
+          "entity_id": { "$ref": "#/components/schemas/Identifier" },
+          "received_at": { "$ref": "#/components/schemas/Timestamp" },
+          "evidence_origin": { "$ref": "#/components/schemas/EvidenceOrigin" },
+          "retained_evidence_id": { "$ref": "#/components/schemas/NullableIdentifier" },
+          "position": { "$ref": "#/components/schemas/MovementPosition" },
+          "speed_mps": { "$ref": "#/components/schemas/MovementSpeed" },
+          "altitude": { "$ref": "#/components/schemas/MovementAltitude" },
+          "matched_quantities": { "type": "array", "items": { "$ref": "#/components/schemas/MovementQuantityName" } }
+        },
+        "required": ["sample_id", "entity_id", "received_at", "evidence_origin", "retained_evidence_id", "matched_quantities"]
+      },
+      "MovementHistoryPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": { "$ref": "#/components/schemas/Identifier" },
+          "entity_deleted": { "type": "boolean" },
+          "time_basis": { "$ref": "#/components/schemas/MovementTimeBasis" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/MovementSample" } },
+          "next_page_token": { "$ref": "#/components/schemas/NullablePageToken" }
+        },
+        "required": ["entity_id", "entity_deleted", "time_basis", "items", "next_page_token"]
+      },
+      "ContactChallenge": {
+        "description": "Opaque proof bound to the Dataset, Asset, generation and current Core run. Its interval bounds a fresh report's original generated_at.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "process_generation": { "$ref": "#/components/schemas/PositiveDecimalCounter" },
+          "token": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 512 },
+          "issued_at": { "$ref": "#/components/schemas/Timestamp" },
+          "expires_at": { "$ref": "#/components/schemas/Timestamp" }
+        },
+        "required": ["asset_id", "process_generation", "token", "issued_at", "expires_at"]
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "type": "string", "enum": ["ok"] },
+          "core_release": { "type": "string" },
+          "supported_protocol_versions": { "type": "array", "minItems": 1, "items": { "$ref": "#/components/schemas/ProtocolVersion" } },
+          "response_time": { "$ref": "#/components/schemas/Timestamp" },
+          "principal": { "$ref": "#/components/schemas/Actor" },
+          "enrollment_asset_id": { "$ref": "#/components/schemas/Identifier" },
+          "contact_challenge": { "$ref": "#/components/schemas/ContactChallenge" }
+        },
+        "required": ["status", "core_release", "supported_protocol_versions", "response_time"]
+      },
+      "ReadinessCheck": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "ready": { "type": "boolean" }
+        },
+        "required": ["name", "ready"]
+      },
+      "Readiness": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ready": { "type": "boolean" },
+          "checks": { "type": "array", "items": { "$ref": "#/components/schemas/ReadinessCheck" } }
+        },
+        "required": ["ready", "checks"]
+      },
+      "OpenAPIDocument": {
+        "description": "The raw served OpenAPI document.",
+        "type": "object",
+        "properties": {
+          "openapi": { "type": "string" },
+          "info": { "type": "object" },
+          "paths": { "type": "object" }
+        },
+        "required": ["openapi", "info", "paths"]
       },
       "ResponseContext": {
         "type": "object",
@@ -260,6 +1385,84 @@
               "commit_cursor"
             ]
           }
+        ]
+      },
+      "EntityResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Entity" } }, "required": ["data"] }
+        ]
+      },
+      "EntityPageResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/EntityPage" } }, "required": ["data"] }
+        ]
+      },
+      "EntityMutationResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MutationResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/EntityMutationData" } }, "required": ["data"] }
+        ]
+      },
+      "RegistrationResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MutationResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/RegistrationData" } }, "required": ["data"] }
+        ]
+      },
+      "AssetStatusResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/AssetStatusData" } }, "required": ["data"] }
+        ]
+      },
+      "TaskResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Task" } }, "required": ["data"] }
+        ]
+      },
+      "TaskMutationResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MutationResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Task" } }, "required": ["data"] }
+        ]
+      },
+      "TaskStatusResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MutationResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/TaskStatusData" } }, "required": ["data"] }
+        ]
+      },
+      "TaskPageResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/TaskPage" } }, "required": ["data"] }
+        ]
+      },
+      "AssignedTaskPageResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/AssignedTaskPage" } }, "required": ["data"] }
+        ]
+      },
+      "MovementHistoryResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MovementHistoryPage" } }, "required": ["data"] }
+        ]
+      },
+      "HealthResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Health" } }, "required": ["data"] }
+        ]
+      },
+      "ReadinessResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResponseContext" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/Readiness" } }, "required": ["data"] }
         ]
       },
       "ErrorInfo": {
@@ -303,6 +1506,16 @@
         ]
       }
     },
+    "responses": {
+      "Error": {
+        "description": "Typed JSON error. Context headers are present when Core can attribute them to the caller's request.",
+        "headers": {
+          "Atlas-Dataset-ID": { "schema": { "$ref": "#/components/schemas/Identifier" } },
+          "Atlas-Protocol-Version": { "schema": { "$ref": "#/components/schemas/ProtocolVersion" } }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    },
     "headers": {
       "Atlas-Dataset-ID": {
         "required": true,
@@ -315,6 +1528,16 @@
         "schema": {
           "$ref": "#/components/schemas/ProtocolVersion"
         }
+      },
+      "Atlas-Commit-Cursor": {
+        "description": "Committed cursor for a successful mutation without a JSON body.",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "Accept-Encoding": {
+        "description": "Request content codings Core accepts for JSON bodies (RFC 9110 section 12.5.3).",
+        "required": true,
+        "schema": { "type": "string" }
       }
     },
     "parameters": {
@@ -333,6 +1556,29 @@
         "schema": {
           "$ref": "#/components/schemas/ProtocolVersion"
         }
+      },
+      "EntityID": {
+        "in": "path",
+        "name": "entity_id",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Identifier" }
+      },
+      "TaskID": {
+        "in": "path",
+        "name": "task_id",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/Identifier" }
+      },
+      "Limit": {
+        "in": "query",
+        "name": "limit",
+        "description": "Page size, default 100.",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 1000 }
+      },
+      "PageToken": {
+        "in": "query",
+        "name": "page_token",
+        "schema": { "$ref": "#/components/schemas/PageToken" }
       }
     }
   }

@@ -65,6 +65,12 @@ func RequestError(w http.ResponseWriter, r *http.Request, err error) {
 // WriteError emits the shared Protocol envelope. The context owner sets the
 // Dataset/version headers before dispatching to this adapter.
 func WriteError(w http.ResponseWriter, status int, code, message string) {
+	WriteErrorDetails(w, status, code, message, nil)
+}
+
+// WriteErrorDetails emits the envelope with safe, nonsecret details such as
+// offending JSON paths.
+func WriteErrorDetails(w http.ResponseWriter, status int, code, message string, details map[string]any) {
 	var dataset *protocol.Identifier
 	if header := w.Header().Get("Atlas-Dataset-ID"); header != "" {
 		var identifier protocol.Identifier
@@ -76,9 +82,11 @@ func WriteError(w http.ResponseWriter, status int, code, message string) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(protocol.Error{DatasetId: dataset, Error: protocol.ErrorInfo{
-		Code: code, Message: message, RequestId: uuid.New(),
-	}}); err != nil {
+	info := protocol.ErrorInfo{Code: code, Message: message, RequestId: uuid.New()}
+	if details != nil {
+		info.Details = &details
+	}
+	if err := json.NewEncoder(w).Encode(protocol.Error{DatasetId: dataset, Error: info}); err != nil {
 		log.Printf("write HTTP error response: %v", err)
 	}
 }
@@ -86,6 +94,19 @@ func WriteError(w http.ResponseWriter, status int, code, message string) {
 // ValidateRequests rejects unsupported structure before a strict handler can
 // dispatch effects. Binary streams are handled separately.
 func ValidateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (http.Handler, error) {
+	return validateRequests(spec, next, maxJSONBytes, openapi3filter.Options{SkipSettingDefaults: true})
+}
+
+// ValidateAuthenticatedRequests is ValidateRequests for a contract that
+// declares security requirements. The owning adapter authenticates callers
+// before this check, so declared schemes are not evaluated again here.
+func ValidateAuthenticatedRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (http.Handler, error) {
+	return validateRequests(spec, next, maxJSONBytes, openapi3filter.Options{
+		SkipSettingDefaults: true, AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
+	})
+}
+
+func validateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64, options openapi3filter.Options) (http.Handler, error) {
 	if maxJSONBytes <= 0 {
 		return nil, errors.New("JSON validation requires a positive body bound")
 	}
@@ -94,7 +115,7 @@ func ValidateRequests(spec *openapi3.T, next http.Handler, maxJSONBytes int64) (
 		return nil, fmt.Errorf("create JSON validation router: %w", err)
 	}
 	validated := middleware.OapiRequestValidatorWithOptions(spec, &middleware.Options{
-		Options: openapi3filter.Options{SkipSettingDefaults: true},
+		Options: options,
 		ErrorHandlerWithOpts: func(ctx context.Context, err error, w http.ResponseWriter, r *http.Request, opts middleware.ErrorHandlerOpts) {
 			RequestError(w, r, err)
 		},

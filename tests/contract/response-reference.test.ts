@@ -71,3 +71,71 @@ await withLoopbackServer(
     console.log("PASS unresolved, malformed and unsupported header references still fail construction");
   },
 );
+
+// S1 operations share one error Response Object by local reference. The
+// referenced component keeps every body, header and context check of an inline
+// Response Object.
+let suppliedBody: unknown = expected;
+await withLoopbackServer(
+  (_request, response) => {
+    response.writeHead(200, { ...suppliedHeaders, "Content-Type": "application/json" });
+    response.end(JSON.stringify(suppliedBody));
+  },
+  async (baseUrl) => {
+    const clientFor = (
+      reference: string,
+      responses: Record<string, typeof definition | { $ref: string }> = { FixtureValue: definition },
+    ) =>
+      fixtureClient(baseUrl, {
+        maxJSONBytes: 256,
+        document: {
+          ...protocol,
+          components: { ...protocol.components, responses },
+          paths: { "/__fixture/value": { get: { responses: { "200": { $ref: reference } } } } },
+        },
+      });
+    for (const reference of [
+      "#/components/responses/FixtureValue",
+      "#/components/responses/%46ixtureValue",
+      "#%2Fcomponents%2Fresponses%2FFixtureValue",
+    ]) {
+      const client = clientFor(reference);
+      suppliedHeaders = headers;
+      suppliedBody = expected;
+      const result = await client.GET("/__fixture/value", { params: { header: headers } });
+      assert.deepEqual(result.data, expected, reference);
+      for (const [invalidHeaders, invalidBody, reason] of [
+        [{ "Atlas-Protocol-Version": version }, expected, "context"],
+        [{ ...headers, "Atlas-Dataset-ID": otherDataset }, expected, "context"],
+        [headers, { ...expected, dataset_id: otherDataset }, "context"],
+        [headers, { dataset_id: dataset, data: { value: 1, count: "1" } }, "schema"],
+      ] as const) {
+        suppliedHeaders = invalidHeaders;
+        suppliedBody = invalidBody;
+        await assert.rejects(
+          () => client.GET("/__fixture/value", { params: { header: headers } }),
+          isRefusal(reason),
+          `${reference} ${reason}`,
+        );
+      }
+    }
+    console.log("PASS literal/encoded local Response Object references keep body schema, header and context checks");
+
+    assert.throws(() => clientFor("#/components/responses/Missing"), /Response reference is unresolved/u);
+    assert.throws(
+      () =>
+        clientFor("#/components/responses/Chained", {
+          Chained: { $ref: "#/components/responses/FixtureValue" },
+          FixtureValue: definition,
+        }),
+      /Response reference is unresolved/u,
+    );
+    for (const reference of [
+      "https://example.invalid/contract.json#/components/responses/FixtureValue",
+      "#/components/schemas/FixtureValue",
+    ]) {
+      assert.throws(() => clientFor(reference), /Responses require local component references/u);
+    }
+    console.log("PASS missing, chained, external and non-response references fail construction");
+  },
+);

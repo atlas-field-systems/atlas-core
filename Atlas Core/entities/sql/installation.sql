@@ -1,0 +1,1 @@
+-- Entities holds no installation tables; Asset bindings belong to Identity and access.
