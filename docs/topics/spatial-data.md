@@ -14,6 +14,8 @@ An optional target altitude is `{ "value_m": number, "vertical_reference": "wgs8
 
 ## Move To
 
+S1 implements only queued `move_to` with a named coordinate-position target. It has no execution deadline or start-by input; on receipt the Asset OS starts when its existing queue permits. Immediate scheduling and point-Geofeature targets below remain the accepted broader Command contract for S6. S1 rejects those unimplemented variants before Task creation and advertises only its implemented support. Its progress and outcome fixture is still required.
+
 `move_to` supports queued or immediate scheduling when the Asset advertises the selected choice; omitted scheduling selects queued. Its immutable input has `target` with either `kind: "position"` and a named `position`, or `kind: "geofeature"` and a `geofeature_id` referring to a point Geofeature. The point reference is required while the Task is nonterminal and follows live geometry until its [cutoff](tasks.md#live-geofeature-geometry). Lines or polygons are not implicit destinations for this Command. Unsupported inputs fail before Task creation.
 
 Successful execution means arrival, as determined by the Asset's implementation. Core does not define an arrival radius, compare telemetry to the target or infer success from position uncertainty. Progress may carry Asset-selected distance and uncertainty details in the shared units. On a terminal report involving a Geofeature, record the actual applied geometry revision even if a newer point is now saved. The simulated Asset's independent fixture chooses its own arrival boundary; that fixture threshold is not a Core admission or completion rule.

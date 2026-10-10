@@ -4,6 +4,8 @@ This is the design inventory for resource data and database planning. It lists e
 
 The catalog describes logical data units. A row does not necessarily mean a separate SQL table, and the API can assemble one resource from several tables. Tasks and Objects have structured records and payloads, not the older Entity `components` bag.
 
+S1 freezes the Asset component surface to required `status`, `communications` and `heartbeat`, plus optional `telemetry` for position, speed, altitude and heading. Identity, Alias, Command support and Task records retain their separate contracts. S1 does not need `health`/battery, `sensor_refs`, `mil_view` or `media_refs`; their broader applicability remains deferred. Telemetry timestamps follow [Asset reporting](topics/asset-reporting.md#shared-report-context), with no SDK clock-offset estimator.
+
 ## Component applicability
 
 `Required` means every resource of that type must have the component. `Optional` means it may be present and must validate when supplied. `No` means the component does not belong on that resource type in this proposed design. Missing data is not represented by fake measurements, `N/A`, or placeholder component rows.
@@ -194,4 +196,4 @@ Source: Atlas Modernization's locally read commit `8edee4e2743fbf0f85c16dfe638d9
 - [Task model](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/docs/atlas-protocol/commands-and-tasking.md): lifecycle-specific fields and Command-defined input/output.
 - [Object metadata](https://github.com/the-Drunken-coder/Atlas-Modernization/blob/8edee4e2743fbf0f85c16dfe638d9222141cf279/services/core/docs/database-structure/objects.md): descriptive metadata, storage-owned fields, and associations.
 
-Before authoring database tables, review remaining applicability proposals, settle Command declaration requirements, and choose detailed physical mappings based on the reads and writes we need. No additional named components are assumed to exist merely because the older wildcard could accept them.
+Use the frozen S1 component surface above when authoring its schemas and tables. Review remaining applicability proposals before implementing later components, settle their Command declaration requirements, and choose physical mappings from the reads and writes they need. No additional named components are assumed to exist merely because the older wildcard could accept them.

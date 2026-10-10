@@ -9,7 +9,7 @@ The [foundation-hardening spec #104](https://github.com/atlas-field-systems/atla
 | Slice | Scope and prerequisite specifications | Required completion evidence |
 | --- | --- | --- |
 | S0: Protocol/toolchain, delivered | Canonical shared definitions, locked generation, Core/SDK validation adapters and representative local Catalog; #94/#95-100 | [Executed foundation qualification](../../tests/contract/README.md): deterministic absent-output regeneration, generated/direct HTTP with real SQLite/files, independent request/response, shared-message, Catalog and binary checks; public Protocol has no routes |
-| S1: Asset-to-Core Move To | TLS/bootstrap and Dataset/version boundary; enrollment, registration, report identity/process authority, basic ordered delivery, cancellation and actual outcomes; #63/#66/#71/#78/#79/#81/#82 | Real SDK/Core/direct-Protocol parity with simulated Asset, lost responses, offline issuance/cancellation, historical versus fresh reports, initial defaults, movement capture, no arrival or upload gate |
+| S1: Asset-to-Core Move To | Usable local TLS/bootstrap and Start/Stop/Restart/Reset; Dataset/version boundary, enrollment, registration, report identity/process authority; queued coordinate-target Move To without a deadline, basic ordered delivery, cancellation and actual outcomes; #63/#66/#71/#78/#79/#81/#82 | Real SDK/Core/direct-Protocol parity with independent retained simulator evidence, lost responses, offline issuance/cancellation, historical versus fresh reports, initial defaults, movement capture, no arrival or upload gate |
 | S2: Independent Object transfer | File-first durable publication, replayable producer, identity/digest, quota, deletion and protected hold seam; #70/#72 | Actual SQLite/filesystem kill barriers, interrupted/lost-response upload, concurrency/revocation/Reset races, exact downloaded bytes, download/delete ordering and no exposed partial Object |
 | S3: Independent Elevation Plugin | Manifest/capability validation, live dispatch receipts and durable unacknowledged evidence, local host lifetime and offline fixture; #64/#68/#76/#78/#79/#80 | Separately built Plugin container, accepted work survives caller loss, delayed/duplicate dispatch without re-execution before and after outcome acknowledgement, known elevation/reference, cancellation/stop/fault and retained Operation lookup |
 | S4: Both SDK modes and recovery | Consistent snapshot continuation, Core-owned ordered catch-up/live feed, complete commit messages, query/feed bounds, unknown outcomes; #65/#66/#71/#77 | Existing S1–S3 operational workflows in HTTP and Full synchronization modes plus independent direct Protocol fixtures; frozen-page races and resumption, lost first-allocation replies and independent load identities, interrupted messages, producer-bound refusals and negotiated batch capacity including retained batches, snapshot admission/release/expiry and Restart capture/page-handle invalidation versus complete-cursor resumption, bounded catch-up progress and capacity pause/public SDK retry, late responses, deletions, expiry, Reset and zero hidden read fallback |
@@ -21,6 +21,16 @@ The [foundation-hardening spec #104](https://github.com/atlas-field-systems/atla
 S1–S3 are incremental workflow slices, not a release that waives Full synchronization parity. The initial Core-contract MVP is complete only when its applicable S4 coverage and the MVP Stop/Start/Restart/Reset checks pass. Implement the necessary lifecycle/bootstrap seams with those workflows; S7 extends them to the full interruption/update and measured-load matrix. Each new feature ships its required fault evidence, rather than postponing correctness until S7.
 
 [Spec #117](https://github.com/atlas-field-systems/atlas-core/issues/117) delivers the [focused Plugin bookkeeping component](../../Atlas%20Core/plugins/README.md) at the user-selected Core-module/private-process/storage seam. Its component evidence does not complete S3 or waive the public API, SDK, container and host obligations above.
+
+## S1 implementation boundary
+
+S1 is the first runnable direct-IP Asset workflow in HTTP mode. It implements the queued coordinate-target [Move To subset](../topics/spatial-data.md#move-to), the [minimal Asset component surface](../data-components.md), and [source/Core timestamp roles](../topics/sdk.md#timestamp-transfer). The deployment supplies correct Asset clocks; no SDK offset estimator, start deadline or custom timestamp codec is required.
+
+Provide a real local setup and private management path for installation trust, first administrator credential, enrollment authority, initial Core configuration, Start/Stop/Restart and ordinary Reset. Tests use that same management implementation against real Core/SQLite/files and its actual container boundary. The local path must be runnable outside the test harness. [Lifecycle](../topics/dataset-lifecycle.md) owns the behavior; S7 retains Hard Reset, update, full host interruption/cleanup and combined-load completion.
+
+The simulated Asset uses the SDK Asset client while a separate Asset OS fixture supplies retained execution evidence and signing/recovery authority across reporting-process replacement. It distinguishes completed, running, suspended, not-started and unknown work independently of Core's Task state. Unknown work and its queued continuation stay held for explicit Asset-side recovery. This is a test adapter, not an Asset OS implementation or a new Core/SDK journal; see [process recovery](../topics/tasks.md#recovery-after-an-unexpected-asset-restart) and [test evidence](../testing-strategy.md#s1-simulator-evidence).
+
+Immediate scheduling, point-Geofeature Move To, queue edits/adoption operations, Pause/Resume and broader observations belong to S6. Other optional Asset components, Objects, Plugin execution, complete administration/history reads, Full synchronization, constrained-radio encoding and physical-field qualification remain in their assigned slices. Default assigned order and initial empty/unconfirmed queue state are still required in S1. S1 completion does not declare the whole MVP or field readiness complete.
 
 ## Foundation evidence and limits
 
@@ -43,7 +53,7 @@ The [endpoint map](../api-endpoints.md) specifies 51 future public method/path p
 | Entity list/create/get/alias/patch/delete | 6 | S1 Asset paths; S6 Track/Geofeature variants; Entity CRUD/helpers in both modes | [Entities](../topics/tracks-and-geofeatures.md), [registration](../topics/identity-and-access.md#asset-registration) |
 | Entity movement-history and associated-Object reads | 2 | S1 movement capture/read, S2 Object associations, S6 corrections; explicit history/content metadata reads | [History](../topics/history.md), [Objects](../topics/objects.md) |
 | Asset check-in and status get/patch | 3 | S1 Asset client/startup/status helpers | [Asset reporting](../topics/asset-reporting.md) |
-| Assigned Tasks, order edit and confirmation | 3 | S1 default assigned work; S4 coherent reads; S6 queue operations | [Queue representation](../topics/tasks.md#queue-representation-and-coherent-reads) |
+| Assigned Tasks, order edit and confirmation | 3 | S1 default assigned-work read and empty/unconfirmed queue state; S4 coherent reads; S6 order edit and adoption/conflict operations | [Queue representation](../topics/tasks.md#queue-representation-and-coherent-reads) |
 | Asset retirement | 1 | S5 `POST /entities/{entity_id}/retire`, retirement helper and retries | [Retirement](../topics/identity-and-access.md#asset-retirement) |
 | Task list/create/get/status | 4 | S1 Move To lifecycle; S6 immediate/control/scan variants; Task helpers | [Tasks](../topics/tasks.md) |
 | Task result declaration | 1 | S6 Asset client append-only `POST /tasks/{task_id}/results` | [Results](../topics/tasks.md#result-declarations-and-execution-fixtures) |
@@ -56,7 +66,7 @@ The [endpoint map](../api-endpoints.md) specifies 51 future public method/path p
 | Plugin list/get | 2 | S3 discovery; S5 historical removed identity | [Plugins](../topics/plugins.md#plugin-capabilities-and-discovery) |
 | Plugin Operation submit/list/get/cancel | 4 | S3 capability invocation and retained outcomes; S6 broader consumers | [Operation dispatch](../topics/plugins.md#private-operation-dispatch-and-reconciliation) |
 | Full load, changed-since and WebSocket feed | 3 | S4 full picture, Core/local changed-since, status/query/feed helpers | [Synchronization](../topics/sdk.md#synchronization-wire-and-application-boundary) |
-| Health/readiness/docs/OpenAPI | 4 | S1 production schemas, authenticated discovery/Core time/Asset challenge, baseline readiness and protected docs/raw OpenAPI; S4 reconnect; S5 diagnostics; S7 full dependency/lifecycle faults | [Health and documentation](../api-endpoints.md#health-and-documentation), [Setup](../topics/dataset-lifecycle.md#offline-tls-and-first-time-setup), [Contact proof](../topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
+| Health/readiness/docs/OpenAPI | 4 | S1 production schemas, authenticated discovery/Core-authored response time/Asset challenge, baseline readiness and protected docs/raw OpenAPI; S4 reconnect; S5 diagnostics; S7 full dependency/lifecycle faults | [Health and documentation](../api-endpoints.md#health-and-documentation), [Setup](../topics/dataset-lifecycle.md#offline-tls-and-first-time-setup), [Contact proof](../topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
 
 Local Command Catalog lookup is a package function, not an extra HTTP route, and belongs to S0/S1. Connection, readiness, query, local subscription/history and Dataset-rebuild SDK methods belong to S4. The Asset client wraps registration, reports, assigned work, result uploads, queue adoption and reconnect/process recovery in S1/S6 without implementing the Asset OS.
 
@@ -86,7 +96,7 @@ Every row of the [required scenario table](../testing-strategy.md#required-scena
 | Open enrollment cleanup | S5 |
 | Asset identity and contact | S1, extended by S5/S6 |
 | Asset retirement | S5 |
-| Asset deletion | S1 guard, S5 full races/revocation |
+| Asset deletion | S1 guard, atomic revocation and Task/report races; S5 complete administration and feed cut-off coverage |
 | API-key creation | S1 bootstrap, S5 public retry/revocation |
 | Task lifecycle | S1, extended by S6 |
 | Required Entity references | S6 |
@@ -107,7 +117,7 @@ Every row of the [required scenario table](../testing-strategy.md#required-scena
 | Plugin operational storage | S3 installation separation, S7 interruption/cleanup matrix |
 | Resource limits | S2 upload reserve, S4 buffers/picture guards, S7 measured combined workload |
 
-Cross-cutting validation focus remains mandatory with its triggering feature: shared commits/retries/Dataset boundaries, compatible/unsupported contracts, actor authority/revocation, clock uncertainty, movement/activity deduplication, secret redaction and background-work lifetime. Independent transition-model tests supplement, rather than replace, real SQLite/files/HTTP/Plugin integration. Meaningful failures, reproducible schedules and supported versions must be recorded before claiming completion.
+Cross-cutting validation focus remains mandatory with its triggering feature: shared commits/retries/Dataset boundaries, compatible/unsupported contracts, actor authority/revocation, original event versus receipt timing, movement/activity deduplication, secret redaction and background-work lifetime. Independent transition-model tests supplement, rather than replace, real SQLite/files/HTTP/Plugin integration. Meaningful failures, reproducible schedules and supported versions must be recorded before claiming completion.
 
 ## Specification ticket evidence
 

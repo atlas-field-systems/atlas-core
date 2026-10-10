@@ -8,6 +8,8 @@ Protocol owns identifiers, canonical decimal counter syntax, Dataset/version hea
 
 Slice 0's required `process_proof` and `contact_challenge` fields qualify the direct IP report-context representation only. The [trusted gateway decision](../docs/adr/0028-trust-gateways-to-author-bound-asset-reports.md) allows a bound gateway to construct reports without an originating Asset's Core-format signature. Concrete gateway authority and freshness fields remain future Protocol work with that integration; the current fixture does not qualify gateway reporting.
 
+`MovementObservationTime` and `ReportContext` retain `clock_uncertainty_ms` as optional nullable compatibility metadata under [ADR-0029](../docs/adr/0029-use-deployment-clocks-and-preserve-event-times.md). Omission, explicit null and a supplied nonnegative value remain distinct across generated transport and storage. The field establishes neither freshness nor an S1 uncertainty budget; deployment supplies correct clocks, and no SDK offset estimator is introduced. Original report and observation times retain their independent required-nullable fields. The representative Move To variants similarly do not establish that immediate or Geofeature tasking is implemented; [S1's boundary](../docs/architecture/implementation-sequence.md#s1-implementation-boundary) is queued coordinate-target movement.
+
 Run from the repository root with Python 3.12+, Linux amd64, Node 24.21.0 and npm 11.19.0:
 
 ```sh
@@ -79,7 +81,9 @@ External references, recursive schemas, other composition profiles, nullable enu
 
 ### Binding representation limits
 
-Generated Go UUID and date-time bindings can change a valid string's spelling when re-encoding it. For example, uppercase or UUID URN inputs become bare lowercase UUIDs, and date-times ending in `+00:00` or `.500Z` become `Z` or `.5Z`. These examples retain equivalent UUID identities and time instants, but their original string values are not retained by those bindings.
+Default generated Go UUID and date-time bindings can change a valid string's spelling when re-encoding it. For example, uppercase or UUID URN inputs become bare lowercase UUIDs, and default date-time bindings normalize offsets and fractional-second spelling. Equivalent identities or instants do not preserve the original signed string values.
+
+`ReportContext.generated_at` and `MovementObservationTime.observed_at` use the supported `x-go-type: string` annotation to retain their original source text. Their wire schemas remain nullable date-time strings, so ordinary request and response validation still reject malformed values. The SDK schema adapter accepts this narrowly qualified annotation without relaxing strict checking of other unknown keywords or allowing other Go overrides. Independent report fixtures preserve `.500+00:00` and `.2500-04:00` through both transports and real SQLite; profile checks retain malformed-date and unqualified-annotation refusal. Consumers comparing time instants parse a separate value rather than changing the stored original text. Other default bindings, including UUIDs, retain their documented normalization limit.
 
 Slice 0 does not qualify signing or canonicalization. The later [signed-report workflow](../docs/topics/asset-reporting.md#shared-report-context) must canonicalize the validated original facts rather than reconstruct them from re-encoded Go UUID/date-time values.
 

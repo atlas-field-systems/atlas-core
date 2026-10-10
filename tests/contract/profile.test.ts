@@ -34,3 +34,20 @@ const mutation = ajv.compile({ $ref: "atlas#/components/schemas/MutationResponse
 assert(mutation({ dataset_id: dataset, commit_cursor: "fixture:commit:1" }));
 assert.equal(mutation({ dataset_id: dataset }), false);
 console.log("PASS composed mutation context still requires commit cursor");
+
+// The qualified Go string binding must not disable date-time validation or
+// make strict schema compilation accept arbitrary generator annotations.
+const sourceTimeSchema = { type: "string", format: "date-time", nullable: true, "x-go-type": "string" };
+const sourceTime = ajv.compile(sourceTimeSchema);
+assert(sourceTime("2026-10-09T12:00:05.500+00:00"));
+assert(sourceTime(null));
+assert.equal(sourceTime("not-a-date"), false);
+assert.equal(sourceTime(123), false);
+for (const schema of [
+  { type: "string", "x-go-type": "time.Time" },
+  { type: "string", "x-go-type": 123 },
+  { type: "string", "x-go-unknown": "string" },
+]) {
+  assert.throws(() => ajv.compile(schema), "unqualified generator annotations remain refused");
+}
+console.log("PASS qualified source-time string binding preserves format checking and strict schema compilation");
