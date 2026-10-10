@@ -321,9 +321,10 @@ export function errorCode(response: DirectResponse) {
 
 // pass relays; refuse drops connections; drop_response delivers each mutation
 // and discards Core's complete answer; stall delivers mutations and never
-// answers; hold keeps mutations undelivered until release(). Reads such as
-// discovery always pass in the mutation modes.
-export type ProxyMode = "pass" | "refuse" | "drop_response" | "stall" | "hold";
+// answers; hold keeps mutations undelivered until release(); tamper delivers
+// mutations and replaces Core's answer with a schema-invalid one. Reads such
+// as discovery always pass in the mutation modes.
+export type ProxyMode = "pass" | "refuse" | "drop_response" | "stall" | "hold" | "tamper";
 
 const hopByHop = new Set(["connection", "keep-alive", "transfer-encoding", "host", "content-length"]);
 
@@ -438,6 +439,15 @@ export class FaultProxy {
         response.on("data", (chunk: Buffer) => reply.push(chunk));
         response.on("end", () => {
           if (mode === "stall") return;
+          if (mode === "tamper") {
+            const forged = Buffer.from("{}");
+            outgoing.writeHead(response.statusCode ?? 502, {
+              "content-type": "application/json",
+              "content-length": String(forged.length),
+            });
+            outgoing.end(forged);
+            return;
+          }
           if (mode === "drop_response") {
             // Core finished the request; its answer is lost in transit.
             this.dropped.push(`${incoming.method} ${incoming.url}`);
