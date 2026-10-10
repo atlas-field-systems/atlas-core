@@ -81,9 +81,10 @@ interface Retained {
   commandManifest: CommandManifest;
   registration: RegistrationDescriptor | null;
   registered: boolean;
-  // Last generation established by an accepted claim. A replacement claims
-  // the generation after it.
+  // Last generation established by an accepted claim, and its Dataset. A
+  // replacement claims the generation after it; a new Dataset starts at 0.
   establishedGeneration: string;
+  establishedDataset: string | null;
   reporting: ReportingState;
   readonly executions: Execution[];
   readonly evidence: RetainedEvidence[];
@@ -117,6 +118,7 @@ export class AssetOS {
       registration: null,
       registered: false,
       establishedGeneration: "0",
+      establishedDataset: null,
       reporting: await newReporting(),
       executions: [],
       evidence: [],
@@ -153,8 +155,9 @@ export class AssetOS {
   get reporting(): Readonly<ReportingState> {
     return this.state.reporting;
   }
-  get establishedGeneration() {
-    return this.state.establishedGeneration;
+  // expectedGeneration is the generation a new claim in datasetId expects.
+  expectedGeneration(datasetId: string) {
+    return this.state.establishedDataset === datasetId ? this.state.establishedGeneration : "0";
   }
   get registration() {
     return this.state.registration;
@@ -190,8 +193,9 @@ export class AssetOS {
     await this.save();
   }
 
-  async generationEstablished(generation: string) {
+  async generationEstablished(generation: string, datasetId: string) {
     this.state.establishedGeneration = generation;
+    this.state.establishedDataset = datasetId;
     this.state.reporting = { ...this.state.reporting, generation, claim: null };
     await this.save();
   }

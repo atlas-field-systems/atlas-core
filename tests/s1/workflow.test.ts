@@ -75,7 +75,6 @@ assert.deepEqual(
   [task.id],
 );
 assert.equal((await operator.getTask(task.id)).status, "pending", "reading work acknowledges nothing");
-await asset.capture(os.evidence().at(-1));
 await asset.capture(await os.startNext());
 assert.deepEqual(
   (await asset.flush()).map((submission) => submission.outcome),

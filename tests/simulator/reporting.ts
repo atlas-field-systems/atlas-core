@@ -50,12 +50,15 @@ export class ReportingProcess {
   // register submits the retained registration, preparing it once before its
   // first transmission. A retry after a lost reply resends it unchanged.
   async register() {
+    await this.client.client.connection.session();
     let descriptor = this.os.registration;
-    if (descriptor === null) {
+    // After Reset the old registration is obsolete; an enrolled identity
+    // registers again with a new registration identity and no enrollment.
+    if (descriptor === null || !this.client.isCurrent(descriptor)) {
       descriptor = await this.client.prepareRegistration({
         alias: this.os.alias,
         commandManifest: this.os.commandManifest,
-        credential: this.os.credential,
+        ...(this.os.registered ? {} : { credential: this.os.credential }),
       });
       await this.os.retainRegistration(descriptor);
     }
@@ -67,9 +70,10 @@ export class ReportingProcess {
   // establish claims process authority with a signed check-in. The claim is
   // retained until accepted, so a lost transfer response retries identically.
   async establish(payload: Parameters<AssetClient["prepareCheckIn"]>[0] = {}) {
+    const session = await this.client.client.connection.session();
     let descriptor = this.os.reporting.claim;
-    if (descriptor === null) {
-      const claim = this.client.prepareClaim(this.os.establishedGeneration);
+    if (descriptor === null || !this.client.isCurrent(descriptor)) {
+      const claim = this.client.prepareClaim(this.os.expectedGeneration(session.datasetId));
       descriptor = await this.client.prepareCheckIn(
         { command_manifest: this.os.commandManifest, ...payload },
         { claim: { descriptor: claim, recovery: recoveryAuthority(this.os.recoveryKey) } },
@@ -80,7 +84,7 @@ export class ReportingProcess {
     if (outcome.outcome === "accepted") {
       const generation = outcome.value.report?.authority?.process_generation;
       if (generation === undefined) throw new AtlasError("protocol_error", "Accepted claim returned no authority");
-      await this.os.generationEstablished(generation);
+      await this.os.generationEstablished(generation, descriptor.datasetId);
     }
     return outcome;
   }
@@ -90,7 +94,7 @@ export class ReportingProcess {
   async receiveWork(): Promise<AssignedWork> {
     const work = await this.client.fetchAssignedTasks();
     for (const task of work.tasks) {
-      if (task.input.target.kind === "position") await this.os.receive(task);
+      if (task.input.target.kind === "position") await this.capture(await this.os.receive(task));
     }
     return work;
   }
@@ -99,7 +103,7 @@ export class ReportingProcess {
   // Disconnected evidence stays unprepared and is later reported as
   // historical with its original time and stable identity.
   async capture(evidence: RetainedEvidence | undefined) {
-    if (evidence === undefined) return;
+    if (evidence === undefined || evidence.descriptor !== null) return;
     try {
       await this.prepare(evidence, { kind: "current" });
     } catch (error) {

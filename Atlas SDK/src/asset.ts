@@ -65,9 +65,13 @@ interface Prepared {
   readonly context: UnsignedContext;
 }
 
+// RegistrationDescriptor is a prepared registration. A first Enrollment
+// retains its deployment authorization so every retry authenticates the same
+// way, even after the Asset's credential becomes usable.
 export interface RegistrationDescriptor {
   readonly kind: "asset_registration";
   readonly datasetId: string;
+  readonly enrollmentToken?: string;
   readonly body: Schemas["EntityCreate"];
 }
 
@@ -156,9 +160,18 @@ export class AssetClient {
     credential?: string;
   }): Promise<RegistrationDescriptor> {
     const session = await this.client.connection.session();
+    const enrollmentToken = this.enrollmentToken;
+    let enrollment: { enrollmentToken: string } | Record<string, never> = {};
+    if (request.credential !== undefined) {
+      if (enrollmentToken === undefined) {
+        throw new AtlasError("enrollment_required", "First Enrollment requires deployment enrollment authorization");
+      }
+      enrollment = { enrollmentToken };
+    }
     return {
       kind: "asset_registration",
       datasetId: session.datasetId,
+      ...enrollment,
       body: {
         id: this.assetId,
         type: "asset",
@@ -177,7 +190,14 @@ export class AssetClient {
     const outcome = await this.client.connection.mutate(
       descriptor.datasetId,
       (session, signal) =>
-        session.transport.POST("/entities", { params: { header: session.headers }, body: descriptor.body, signal }),
+        session.transport.POST("/entities", {
+          params: { header: session.headers },
+          ...(descriptor.enrollmentToken === undefined
+            ? {}
+            : { headers: { "Atlas-Enrollment": descriptor.enrollmentToken } }),
+          body: descriptor.body,
+          signal,
+        }),
       (data) => {
         if (data === undefined) throw new AtlasError("protocol_error", "Registration response has no body");
         return { value: data.data, commitCursor: commitCursorOf(data) };

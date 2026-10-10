@@ -9,6 +9,7 @@ import { join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { AtlasClient, type components, type MutationOutcome } from "../../Atlas SDK/src/index.js";
 import { nodeFetch } from "../../Atlas SDK/src/node.js";
+import { prepareAsset, ReportingProcess, type CommandManifest, type Link } from "../simulator/index.js";
 
 export type Schemas = components["schemas"];
 
@@ -199,6 +200,11 @@ export class Installation {
     return nodeFetch({ ca: await this.ca() });
   }
 
+  // link is a direct, verified HTTPS path to Core for simulated Assets.
+  async link(): Promise<Link> {
+    return { baseUrl: this.baseUrl, fetch: await this.fetch(), requestTimeoutMs };
+  }
+
   async operator(baseUrl = this.baseUrl, fetch?: (request: Request) => Promise<Response>) {
     const key = await this.adminKey();
     return new AtlasClient({
@@ -300,7 +306,11 @@ export function errorCode(response: DirectResponse) {
   return text(record(record(response.body).error).code, "error code");
 }
 
-export type ProxyMode = "pass" | "refuse" | "drop_response";
+// pass relays; refuse drops connections; drop_response delivers each mutation
+// and discards Core's complete answer; stall delivers mutations and never
+// answers; hold keeps mutations undelivered until release(). Reads such as
+// discovery always pass in the mutation modes.
+export type ProxyMode = "pass" | "refuse" | "drop_response" | "stall" | "hold";
 
 const hopByHop = new Set(["connection", "keep-alive", "transfer-encoding", "host", "content-length"]);
 
@@ -315,6 +325,9 @@ export class FaultProxy {
   readonly dropped: string[] = [];
   private readonly sockets = new Set<Socket>();
   private listening = 0;
+  private held: (() => void)[] = [];
+  // Resolves when the next held request is waiting.
+  private onHeld: (() => void) | undefined;
 
   private constructor(
     private readonly server: HttpsServer,
@@ -354,6 +367,22 @@ export class FaultProxy {
     for (const socket of this.sockets) socket.destroy();
   }
 
+  // nextHeld resolves once a request is held undelivered.
+  nextHeld() {
+    if (this.held.length > 0) return Promise.resolve();
+    return new Promise<void>((resolveHeld) => {
+      this.onHeld = resolveHeld;
+    });
+  }
+
+  // release delivers every held request to Core now.
+  release() {
+    const held = this.held;
+    this.held = [];
+    this.mode = "pass";
+    for (const deliver of held) deliver();
+  }
+
   async close() {
     this.set("refuse");
     await new Promise<void>((resolveClose) => this.server.close(() => resolveClose()));
@@ -368,38 +397,52 @@ export class FaultProxy {
     const chunks: Buffer[] = [];
     incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
     incoming.on("end", () => {
-      const body = Buffer.concat(chunks);
-      const headers: Record<string, string | string[]> = {};
-      for (const [name, value] of Object.entries(incoming.headers)) {
-        if (value !== undefined && !hopByHop.has(name)) headers[name] = value;
+      if (incoming.method === "GET") {
+        this.forward(incoming, outgoing, Buffer.concat(chunks), "pass");
+        return;
       }
-      headers["content-length"] = String(body.length);
-      const upstream = httpsRequest(
-        new URL(incoming.url ?? "/", this.target.baseUrl),
-        { method: incoming.method, headers, ca: this.ca, agent: false, timeout: requestTimeoutMs },
-        (response) => {
-          const reply: Buffer[] = [];
-          response.on("data", (chunk: Buffer) => reply.push(chunk));
-          response.on("end", () => {
-            if (mode === "drop_response") {
-              // Core finished the request; its answer is lost in transit.
-              this.dropped.push(`${incoming.method} ${incoming.url}`);
-              outgoing.socket?.destroy();
-              return;
-            }
-            const replyHeaders: Record<string, string | string[]> = {};
-            for (const [name, value] of Object.entries(response.headers)) {
-              if (value !== undefined && !hopByHop.has(name)) replyHeaders[name] = value;
-            }
-            outgoing.writeHead(response.statusCode ?? 502, replyHeaders);
-            outgoing.end(Buffer.concat(reply));
-          });
-        },
-      );
-      upstream.on("timeout", () => upstream.destroy(new Error("relay deadline elapsed")));
-      upstream.on("error", () => outgoing.socket?.destroy());
-      upstream.end(body);
+      if (mode === "hold") {
+        this.held.push(() => this.forward(incoming, outgoing, Buffer.concat(chunks), "pass"));
+        this.onHeld?.();
+        this.onHeld = undefined;
+        return;
+      }
+      this.forward(incoming, outgoing, Buffer.concat(chunks), mode);
     });
+  }
+
+  private forward(incoming: IncomingMessage, outgoing: ServerResponse, body: Buffer, mode: ProxyMode) {
+    const headers: Record<string, string | string[]> = {};
+    for (const [name, value] of Object.entries(incoming.headers)) {
+      if (value !== undefined && !hopByHop.has(name)) headers[name] = value;
+    }
+    headers["content-length"] = String(body.length);
+    const upstream = httpsRequest(
+      new URL(incoming.url ?? "/", this.target.baseUrl),
+      { method: incoming.method, headers, ca: this.ca, agent: false, timeout: requestTimeoutMs },
+      (response) => {
+        const reply: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => reply.push(chunk));
+        response.on("end", () => {
+          if (mode === "stall") return;
+          if (mode === "drop_response") {
+            // Core finished the request; its answer is lost in transit.
+            this.dropped.push(`${incoming.method} ${incoming.url}`);
+            outgoing.socket?.destroy();
+            return;
+          }
+          const replyHeaders: Record<string, string | string[]> = {};
+          for (const [name, value] of Object.entries(response.headers)) {
+            if (value !== undefined && !hopByHop.has(name)) replyHeaders[name] = value;
+          }
+          outgoing.writeHead(response.statusCode ?? 502, replyHeaders);
+          outgoing.end(Buffer.concat(reply));
+        });
+      },
+    );
+    upstream.on("timeout", () => upstream.destroy(new Error("relay deadline elapsed")));
+    upstream.on("error", () => outgoing.socket?.destroy());
+    upstream.end(body);
   }
 }
 
@@ -432,4 +475,30 @@ export function acceptedOutcome<T>(outcome: MutationOutcome<T>, message: string)
 export function rejectionCode(outcome: MutationOutcome<unknown>, message: string) {
   if (outcome.outcome !== "rejected") assert.fail(`${message} should be rejected: ${JSON.stringify(outcome)}`);
   return outcome.rejection.code;
+}
+
+// establishedAsset enrolls, registers and claims process authority for one
+// simulated Asset, with optional initial check-in data.
+export async function establishedAsset(
+  installation: Installation,
+  options: {
+    alias?: string | null;
+    commandManifest?: CommandManifest;
+    link?: Link;
+    checkIn?: Parameters<ReportingProcess["establish"]>[0];
+  } = {},
+) {
+  const os = await prepareAsset(runDirectory(), (assetId, key) => installation.authorizeEnrollment(assetId, key), {
+    ...(options.alias === undefined ? {} : { alias: options.alias }),
+    ...(options.commandManifest === undefined ? {} : { commandManifest: options.commandManifest }),
+  });
+  const process = new ReportingProcess(os, options.link ?? (await installation.link()));
+  acceptedOutcome(await process.register(), "registration");
+  acceptedOutcome(await process.establish(options.checkIn), "process-authority claim");
+  return { os, process };
+}
+
+// moveTo is the independent S1 coordinate Move To input.
+export function moveTo(latitude: number, longitude: number) {
+  return { command: "move_to" as const, target: { kind: "position" as const, position: { latitude, longitude } } };
 }

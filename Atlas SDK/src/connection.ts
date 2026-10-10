@@ -103,6 +103,9 @@ export type Authentication = { readonly bearer: string } | { readonly enrollment
 function authorization(authentication: ConnectionOptions["authentication"]): Middleware {
   return {
     async onRequest({ request }) {
+      // A retained registration descriptor carries its own enrollment
+      // authorization, so its retries authenticate as first prepared.
+      if (request.headers.has("Atlas-Enrollment")) return request;
       const current = await authentication?.();
       if (current === undefined) return request;
       if ("bearer" in current) request.headers.set("Authorization", `Bearer ${current.bearer}`);
