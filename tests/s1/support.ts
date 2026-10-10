@@ -244,9 +244,24 @@ export class FaultProxy {
       if (value !== undefined && !hopByHop.has(name)) headers[name] = value;
     }
     headers["content-length"] = String(body.length);
+    // The relay only ever reaches Core: the upstream host and port are fixed,
+    // and only an origin-form request target is forwarded as the path.
+    const path = incoming.url ?? "";
+    if (!path.startsWith("/") || path.startsWith("//")) {
+      outgoing.writeHead(400).end();
+      return;
+    }
     const upstream = httpsRequest(
-      new URL(incoming.url ?? "/", this.target.baseUrl),
-      { method: incoming.method, headers, ca: this.ca, agent: false, timeout: requestTimeoutMs },
+      {
+        host: "127.0.0.1",
+        port: this.target.port,
+        path,
+        method: incoming.method,
+        headers,
+        ca: this.ca,
+        agent: false,
+        timeout: requestTimeoutMs,
+      },
       (response) => {
         const reply: Buffer[] = [];
         response.on("data", (chunk: Buffer) => reply.push(chunk));
