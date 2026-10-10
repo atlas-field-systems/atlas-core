@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the contract foundation and focused Plugin bookkeeping component."""
+"""Verify the contract foundation, Plugin bookkeeping and the S1 workflow."""
 
 import argparse
 import hashlib
@@ -9,6 +9,7 @@ import shutil
 import sys
 from contextlib import contextmanager
 
+from build_core import build_core
 from command_checks import check_command_lifetime
 from generate import OUTPUTS, generate
 from plugin_checks import check_plugin_fixture_lifetime
@@ -109,6 +110,12 @@ def verify(bootstrap):
         print("PASS SDK consumer package excludes fixture tooling", flush=True)
     with check(passed, "generated transport/direct Protocol workflows and fixture cleanup"):
         run(["npm", "test"], env, cwd=sdk)
+    with check(passed, "Core image and management CLI from the locked toolchain"):
+        build_core(env, go)
+    with check(passed, "S1 workflows through real Core, SDK, simulator, SQLite, TLS and local management"):
+        # Requires a local Docker daemon, openssl, unshare and python3; the
+        # runner removes every container, network and file it created.
+        run(["npm", "run", "test:s1"], env, cwd=sdk, timeout=3600)
     revision = run(["git", "rev-parse", "HEAD"], env, capture=True)
     dirty = bool(run(["git", "status", "--porcelain"], env, capture=True))
     report.write_text(
@@ -124,7 +131,7 @@ def verify(bootstrap):
         )
         + "\n"
     )
-    print(f"PASS foundation and Plugin component at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
+    print(f"PASS foundation, Plugin component and S1 at {revision}; evidence: {report.relative_to(ROOT)}", flush=True)
 
 
 def main():

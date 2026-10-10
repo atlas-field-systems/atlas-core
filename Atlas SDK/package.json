@@ -11,7 +11,8 @@
     "format:check": "npm run -s prettier -- --check",
     "build": "tsc -p tsconfig.build.json",
     "check:consumer": "node checks/consumer.mjs && tsc --noEmit -p tsconfig.consumer.json",
-    "test": "node ../tests/contract/run.mjs"
+    "test": "node ../tests/contract/run.mjs",
+    "test:s1": "node ../tests/s1/run.mjs"
   },
   "dependencies": {
     "ajv": "8.20.0",

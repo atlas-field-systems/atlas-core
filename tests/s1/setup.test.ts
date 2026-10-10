@@ -267,7 +267,19 @@ const container = (
     `label=com.atlas.installation=${installation.installationId}`,
   ])
 ).stdout.trim();
-surfaces.push(["container definition", (await run("docker", ["inspect", container])).stdout]);
+const definition = (await run("docker", ["inspect", container])).stdout;
+surfaces.push(["container definition", definition]);
+const containers: unknown = JSON.parse(definition);
+assert(Array.isArray(containers), "docker inspect returns a list");
+const inspected = record(containers[0]);
+const hostConfig = record(inspected.HostConfig);
+assert.equal(hostConfig.ReadonlyRootfs, true, "Core runs on a read-only root filesystem");
+assert.equal(record(hostConfig.RestartPolicy).Name, "no", "the host manager, not Docker, restarts Core");
+const mounts = Array.isArray(inspected.Mounts) ? inspected.Mounts.map(record) : [];
+assert(
+  mounts.length > 0 && mounts.every((mount) => !String(mount.Source).includes("docker.sock")),
+  "Core never receives the Docker socket",
+);
 const logs = await run("docker", ["logs", container]);
 surfaces.push(["container logs", logs.stdout + logs.stderr]);
 for (const [surface, content] of surfaces) {
@@ -293,12 +305,28 @@ await new Promise<void>((resolveListen) => relay.listen(socketPath, resolveListe
 const demoDirectory = join(runDirectory(), "offline-demo");
 await run("mkdir", ["-p", demoDirectory]);
 const root = resolve(import.meta.dirname, "../..");
+// Creating a network namespace needs privilege; a non-root run uses
+// non-interactive sudo and drops back to the invoking user for the demo.
+const uid = globalThis.process.getuid?.() ?? 0;
+const gid = globalThis.process.getgid?.() ?? 0;
+const privileged =
+  uid === 0
+    ? ["unshare", "--net", "python3", join(import.meta.dirname, "offline.py")]
+    : [
+        "sudo",
+        "-n",
+        "--preserve-env=PATH,HOME",
+        "unshare",
+        "--net",
+        "python3",
+        join(import.meta.dirname, "offline.py"),
+        "--as",
+        `${uid}:${gid}`,
+      ];
 const offline = spawn(
-  "unshare",
+  privileged[0] ?? "unshare",
   [
-    "--net",
-    "python3",
-    join(import.meta.dirname, "offline.py"),
+    ...privileged.slice(1),
     String(port),
     socketPath,
     globalThis.process.execPath,

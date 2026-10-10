@@ -1,6 +1,6 @@
 # API endpoint map
 
-The endpoint map follows the accepted API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, with subsequent changes linked to their decisions. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. The delivered [Slice 0 foundation](../tests/contract/README.md) has no public routes; its test-only operations do not implement this map. Production schemas and behavior follow the [owning workflows](architecture/implementation-sequence.md#public-api-and-sdk-inventory).
+The endpoint map follows the accepted API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, with subsequent changes linked to their decisions. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. The delivered [Slice 0 foundation](../tests/contract/README.md) has no public routes; its test-only operations do not implement this map. [S1](../tests/s1/README.md#routes) implements 19 of these method/path pairs for its Asset and Move To scope. Production schemas and behavior follow the [owning workflows](architecture/implementation-sequence.md#public-api-and-sdk-inventory).
 
 [Asset retirement](topics/identity-and-access.md#asset-retirement) and independent result declarations now have concrete bindings below. Route specification is not evidence of implementation.
 

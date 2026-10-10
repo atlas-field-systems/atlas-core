@@ -8,7 +8,7 @@ python3 scripts/verify.py --bootstrap
 
 The check uses generated TypeScript transport and generated Go strict handlers over real loopback HTTP, with the shared real SQLite/file fixture. Each direct Protocol workflow starts in a separate equivalent fixture. `response-fixtures.json` contains independently authored wire replies and expected failure classifications. The direct path checks the actual injected status, headers and body; the generated path checks that the SDK refuses those replies before returning interpreted data.
 
-The [#106 hardening](https://github.com/atlas-field-systems/atlas-core/issues/106) qualifies exact status-code declarations with inline Response Objects and local Header Object references. Unsupported `default` and status-range declarations fail construction, including when mixed with exact statuses. Response Object `$ref` resolution remains unqualified.
+The [#106 hardening](https://github.com/atlas-field-systems/atlas-core/issues/106) qualifies exact status-code declarations with inline Response Objects and local Header Object references. Unsupported `default` and status-range declarations fail construction, including when mixed with exact statuses. S1 later qualified one level of local Response Object references, as the [supported schema profile](../../Atlas%20Protocol/README.md#supported-schema-profile) records.
 
 | Requirement | Implementation | Executed evidence |
 | --- | --- | --- |

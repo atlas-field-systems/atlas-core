@@ -12,8 +12,8 @@ The verifier records the final source revision, working-tree status, exact locks
 
 | Requirement | Implementation | Observable check |
 | --- | --- | --- |
-| One shared report context and Position | Fixture position-report route references canonical `ReportContext` and `Position` | `report.test.ts` sends six hand-authored payloads through each isolated generated/direct path and compares separately authored expected envelopes and supported GET read-back |
-| Selected artificial edition | Report GET/PUT response headers echo the admitted request edition | The same six report fixtures run under both `0.1.0` and `0.2.0` through generated/direct HTTP, checking selected-edition headers and persisted expected bodies |
+| One shared report context and Position | Fixture position-report route references canonical `ReportContext` and `Position` | `report.test.ts` sends eight hand-authored payloads through each isolated generated/direct path and compares separately authored expected envelopes and supported GET read-back |
+| Selected artificial edition | Report GET/PUT response headers echo the admitted request edition | The same eight report fixtures run under both `0.1.0` and `0.2.0` through generated/direct HTTP, checking selected-edition headers and persisted expected bodies |
 | Current and historical identity fidelity | Required nullable fields remain generated values; report handler stores generated JSON with existing private keyed SQLite queries | Current, original-ordering and retained-UUID cases preserve positive decimal sequences `9007199254740993`/`9007199254740994` and original `9007199254740992` without numeric conversion |
 | Unknown, absent and known-zero times | Canonical optional observation map and nullable timing/evidence fields | Omitted map, empty map, explicit unknown position timing, known observation time with zero uncertainty and unknown report time survive persistence distinctly; no send/receipt time is inserted |
 | Complete named double coordinates | Canonical double Position is reused without a route-local coordinate schema | Positive/negative precision-sensitive coordinates, zero and inclusive coordinate boundaries round-trip in axis order; malformed/incomplete/out-of-range/nonfinite coordinate encodings fail |
@@ -34,3 +34,14 @@ The exact qualified tools are Go 1.27.1, Node 24.21.0, npm 11.19.0, sqlc 1.31.1,
 Before implementation, the HTTP tracer returned 400 for the absent route, and both message consumers refused the absent definitions. The final verification log/report carries the passing evidence and exact final revision; a failed or dirty verification is not final completion evidence.
 
 This fixture establishes structural representation fidelity only. `process_proof: "AA"` and the contact challenge are opaque data. The fixed Dataset, artificial `0.1.0`/`0.2.0` editions and `fixture:report:1` cursor do not establish discovery, edition negotiation or committed-cursor semantics. Entity projections, upsert messages and private dispatch projections remain test-only. They establish no complete Entity/feed/Plugin contract, uint64-range enforcement, signing/canonicalization, process authority, principal binding, issued-generation checks, evidence deduplication, cross-field report admission, Contact/clock decisions, Task outcomes, synchronization framing/replay, live Plugin dispatch, crash durability, capacity or field readiness. Those accepted guarantees remain with their owning operational slices.
+
+## ADR-0029 requalification
+
+[Spec #122](https://github.com/atlas-field-systems/atlas-core/issues/122) revised `ReportContext` and `MovementObservationTime` under [ADR-0029](../../docs/adr/0029-use-deployment-clocks-and-preserve-event-times.md): `clock_uncertainty_ms` is now optional nullable compatibility metadata, and `observed_at` remains the only required observation-timing member. Two promises above changed with that authorized decision, and only those two:
+
+| Earlier rejection | Requalified expectation |
+| --- | --- |
+| "observation timing lacks uncertainty" (`{ observed_at: null }`) | Accepted. `report-fixtures.json` adds "ADR-0029 observation time without clock uncertainty keeps the member omitted", which persists and reads back without inserting the member |
+| "required nullable clock_uncertainty_ms is absent" | Accepted. `report-fixtures.json` adds "ADR-0029 report without clock uncertainty keeps the member omitted", with the same omission check |
+
+Every other timing, origin and counter rejection is unchanged, so the corpus now holds 71 rejections, and the persisted fixtures grow from six to eight. Explicit null and known zero uncertainty keep their existing distinct fixtures. Operational report evidence lives in the [S1 coverage record](../s1/README.md).
