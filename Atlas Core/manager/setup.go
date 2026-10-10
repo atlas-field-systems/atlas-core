@@ -51,10 +51,9 @@ type SetupOptions struct {
 
 // SetupResult reports nonsecret setup facts for verification.
 type SetupResult struct {
-	InstallationID string `json:"installation_id"`
-	CACertificate  string `json:"ca_certificate"`
-	CAFingerprint  string `json:"ca_sha256_fingerprint"`
-	Created        bool   `json:"created"`
+	InstallationID string   `json:"installation_id"`
+	Trust          CAResult `json:"trust"`
+	Created        bool     `json:"created"`
 }
 
 // AdminKeyName names the first administrator credential.
@@ -172,11 +171,11 @@ func Setup(ctx context.Context, installation Installation, options SetupOptions)
 			return SetupResult{}, err
 		}
 	}
-	fingerprint, err := certificateFingerprint(installation.CACertificate())
+	trust, err := CA(installation)
 	if err != nil {
 		return SetupResult{}, err
 	}
-	return SetupResult{InstallationID: options.InstallationID, CACertificate: installation.CACertificate(), CAFingerprint: fingerprint, Created: created}, nil
+	return SetupResult{InstallationID: options.InstallationID, Trust: trust, Created: created}, nil
 }
 
 // preparedSecret reads the retained administrator secret, generating it with
@@ -381,14 +380,24 @@ func AuthorizeEnrollment(installation Installation, authorityFile, assetID, reco
 	return map[string]string{"asset_id": system.CanonicalIdentifier(assetID), "token": canonical.Encode(authorization)}, nil
 }
 
-// CAResult identifies the exported nonsecret installation CA.
+// CAResult identifies the exported nonsecret trust material: the generated
+// installation CA, or, when the administrator supplied server material, the
+// served certificate whose issuer clients already trust.
 type CAResult struct {
 	Certificate string `json:"certificate"`
 	Fingerprint string `json:"sha256_fingerprint"`
+	Supplied    bool   `json:"supplied"`
 }
 
-// CA reports the installation CA certificate for client trust stores.
+// CA reports the trust material for client trust stores and out-of-band
+// fingerprint comparison.
 func CA(installation Installation) (CAResult, error) {
-	fingerprint, err := certificateFingerprint(installation.CACertificate())
-	return CAResult{Certificate: installation.CACertificate(), Fingerprint: fingerprint}, err
+	path, supplied := installation.CACertificate(), false
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		path, supplied = filepath.Join(installation.coreSetupDir(), "tls", "server.crt"), true
+	} else if err != nil {
+		return CAResult{}, fmt.Errorf("inspect installation CA: %w", err)
+	}
+	fingerprint, err := certificateFingerprint(path)
+	return CAResult{Certificate: path, Fingerprint: fingerprint, Supplied: supplied}, err
 }

@@ -16,7 +16,7 @@ import {
   establishedAsset,
   failsWith,
   FaultProxy,
-  Installation,
+  newInstallation,
   moveTo,
   rejectionCode,
   runDirectory,
@@ -24,7 +24,7 @@ import {
   waitFor,
 } from "./support.js";
 
-const installation = await Installation.create({ testFaults: true });
+const installation = await newInstallation({ testFaults: true });
 await installation.start();
 const operator = await installation.operator();
 const { os, process } = await establishedAsset(installation);

@@ -12,7 +12,8 @@ import {
   errorCode,
   establishedAsset,
   FaultProxy,
-  Installation,
+  directProtocol,
+  newInstallation,
   moveTo,
   record,
   rejectionCode,
@@ -20,10 +21,10 @@ import {
   step,
 } from "./support.js";
 
-const installation = await Installation.create();
+const installation = await newInstallation();
 await installation.start();
 const operator = await installation.operator();
-const direct = await installation.direct();
+const direct = await directProtocol(installation);
 await direct.discover();
 const { os, process } = await establishedAsset(installation);
 

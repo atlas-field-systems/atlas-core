@@ -10,16 +10,17 @@ import {
   errorCode,
   establishedAsset,
   failsWith,
-  Installation,
+  directProtocol,
+  newInstallation,
   moveTo,
   rejectionCode,
   step,
 } from "./support.js";
 
-const installation = await Installation.create();
+const installation = await newInstallation();
 await installation.start();
 const operator = await installation.operator();
-const direct = await installation.direct();
+const direct = await directProtocol(installation);
 await direct.discover();
 
 const rover = await establishedAsset(installation, { alias: "Rover-A" });

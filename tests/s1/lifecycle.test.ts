@@ -14,7 +14,8 @@ import {
   establishedAsset,
   failsWith,
   FaultProxy,
-  Installation,
+  directProtocol,
+  newInstallation,
   ManageError,
   manageWith,
   moveTo,
@@ -27,7 +28,7 @@ import {
 } from "./support.js";
 
 const run = promisify(execFile);
-const installation = await Installation.create();
+const installation = await newInstallation();
 const started = await installation.start();
 const firstDataset = text(started.dataset_id, "Dataset");
 const operator = await installation.operator();
@@ -130,7 +131,7 @@ assert.equal(
   `Core rejected the delayed obsolete mutation: ${JSON.stringify(delayedOutcome)}`,
 );
 assert.equal((await operator.createTask(oldDescriptor)).outcome, "dataset_invalidated");
-const direct = await installation.direct();
+const direct = await directProtocol(installation);
 const stale = await direct.request("POST", "/tasks", {
   headers: { "Atlas-Dataset-ID": firstDataset, "Atlas-Protocol-Version": "0.0.0" },
   json: delayedCreation.body,

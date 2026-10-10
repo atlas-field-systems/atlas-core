@@ -8,14 +8,14 @@ import { AssetOS, prepareAsset, processSigner, recoveryAuthority, ReportingProce
 import {
   acceptedOutcome,
   FaultProxy,
-  Installation,
+  newInstallation,
   rejectionCode,
   requestTimeoutMs,
   runDirectory,
   step,
 } from "./support.js";
 
-const installation = await Installation.create();
+const installation = await newInstallation();
 await installation.start();
 const operator = await installation.operator();
 const fetch = await installation.fetch();

@@ -4,9 +4,9 @@
 import assert from "node:assert/strict";
 import { accepted } from "../../Atlas SDK/src/index.js";
 import { prepareAsset, ReportingProcess } from "../simulator/index.js";
-import { acceptedOutcome, Installation, requestTimeoutMs, runDirectory, step } from "./support.js";
+import { acceptedOutcome, newInstallation, requestTimeoutMs, runDirectory, step } from "./support.js";
 
-const installation = await Installation.create();
+const installation = await newInstallation();
 const started = await installation.start();
 assert.equal(started.outcome, "serving");
 const operator = await installation.operator();

@@ -7,14 +7,15 @@ import {
   acceptedOutcome,
   errorCode,
   establishedAsset,
-  Installation,
+  directProtocol,
+  newInstallation,
   moveTo,
   rejectionCode,
   sameInstant,
   step,
 } from "./support.js";
 
-const installation = await Installation.create();
+const installation = await newInstallation();
 await installation.start();
 const operator = await installation.operator();
 const { os, process } = await establishedAsset(installation);
@@ -91,7 +92,7 @@ assert.deepEqual(
   "each sample has only its supplied quantities; heading is not movement",
 );
 assert.equal(history.items[1]?.speed_mps?.observed_at, null, "unknown original time stays null");
-const direct = await installation.direct();
+const direct = await directProtocol(installation);
 await direct.discover();
 const complete = await client.prepareComponentReport({
   components: { telemetry: { position: { latitude: 10, longitude: 20 } } },

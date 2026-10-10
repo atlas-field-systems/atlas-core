@@ -3,12 +3,21 @@
 // simulator.
 import assert from "node:assert/strict";
 import { accepted } from "../../Atlas SDK/src/index.js";
-import { acceptedOutcome, errorCode, establishedAsset, Installation, moveTo, rejectionCode, step } from "./support.js";
+import {
+  acceptedOutcome,
+  directProtocol,
+  errorCode,
+  establishedAsset,
+  moveTo,
+  newInstallation,
+  rejectionCode,
+  step,
+} from "./support.js";
 
-const installation = await Installation.create();
+const installation = await newInstallation();
 await installation.start();
 const operator = await installation.operator();
-const direct = await installation.direct();
+const direct = await directProtocol(installation);
 await direct.discover();
 
 const { os, process } = await establishedAsset(installation, { alias: "tasker" });

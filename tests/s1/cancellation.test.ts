@@ -8,14 +8,14 @@ import {
   acceptedOutcome,
   establishedAsset,
   FaultProxy,
-  Installation,
+  newInstallation,
   moveTo,
   rejectionCode,
   requestTimeoutMs,
   step,
 } from "./support.js";
 
-const installation = await Installation.create();
+const installation = await newInstallation();
 await installation.start();
 const operator = await installation.operator();
 const proxy = await FaultProxy.start(installation);
