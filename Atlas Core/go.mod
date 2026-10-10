@@ -5,6 +5,8 @@ go 1.27.1
 require (
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/mux v1.8.1
+	github.com/gowebpki/jcs v1.0.1
 	github.com/oapi-codegen/nethttp-middleware v1.2.0
 	github.com/oapi-codegen/nullable v1.2.0
 	github.com/oapi-codegen/runtime v1.7.0
@@ -17,7 +19,6 @@ require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect

@@ -13,6 +13,10 @@ This document owns product scope, workload and field assumptions. Examples illus
 
 An Asset temporarily losing radio contact does not end the mission. Closing the Command Interface does not stop Core. Restart, Reset and release updates occur outside missions, and active mission continuity across Core restart is excluded under the [Mission boundary](../topics/dataset-lifecycle.md#missions), an operating assumption rather than a claim that hardware or processes cannot fail.
 
+## Deployment clocks
+
+Assets have available, correct clocks as a deployment assumption. Timestamp representation and separate source/Core roles follow [ADR-0029](../adr/0029-use-deployment-clocks-and-preserve-event-times.md); clock provisioning does not require internet during a Mission. Atlas does not provide SDK offset estimation or a clock-failure recovery workflow. Unknown original timing on retained evidence stays unknown.
+
 ## Expected workload
 
 The first deployment uses one Core server with field devices. A busy run has roughly 20 Assets, 100–200 Tracks and one or two operators. Thousands are a future scale to evaluate, not a promised first-version capacity. The user accepted the following provisional sizing targets on 3 October 2026; they are inputs to testing, not measured capacity or automatic runtime limits. A mission or session remains a usage description, not a new API resource.

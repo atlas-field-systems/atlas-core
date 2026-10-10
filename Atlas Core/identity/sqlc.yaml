@@ -1,0 +1,9 @@
+version: "2"
+sql:
+  - engine: sqlite
+    schema: [sql/installation.sql, sql/dataset.sql]
+    queries: sql/queries.sql
+    gen:
+      go:
+        package: storage
+        out: generated/storage

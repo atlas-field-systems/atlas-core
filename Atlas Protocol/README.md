@@ -1,12 +1,14 @@
 # Protocol foundation
 
-`protocol.json` is the authored source for Slice 0's shared wire definitions. It contains no operational routes. Its unpublished `0.0.0` metadata is not a released edition or a compatibility promise. See [spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94), [generation policy](../docs/adr/0011-generate-shared-contracts-with-minimal-customization.md) and the [coverage record](../tests/contract/README.md).
+`protocol.json` is the authored source for Atlas's shared wire definitions and the 19 S1 operational routes from [spec #122](https://github.com/atlas-field-systems/atlas-core/issues/122). Its unpublished `0.0.0` edition is the only edition this Core and SDK implement and negotiate; it is not a released edition or a compatibility promise. See [spec #94](https://github.com/atlas-field-systems/atlas-core/issues/94), [generation policy](../docs/adr/0011-generate-shared-contracts-with-minimal-customization.md), the [S0 coverage record](../tests/contract/README.md) and the [S1 coverage record](../tests/s1/README.md).
 
 The separate [private Plugin dispatch artifact](plugin-dispatch.json) belongs to the [focused bookkeeping component](../Atlas%20Core/plugins/README.md#persistence-and-contract-source), independently of public HTTP generation and SDK routes.
 
-Protocol owns identifiers, canonical decimal counter syntax, Dataset/version headers and request parameters, read/mutation/error context, complete double-precision Position, the shared report context, and representative Move To/Pause inputs and Catalog metadata. `NullableIdentifier` is a named nullable scalar, keeping explicit null separate from omission. Full Entity resources, remaining Command variants and operational endpoints are added with their owning slices. The report context describes structure, not report authority, signature verification, counter-range enforcement or freshness decisions. The [local Catalog checks](../tests/contract/README-99.md) qualify structural inputs and metadata, without Task admission or execution.
+Protocol owns identifiers, canonical decimal counter syntax, Dataset/version headers and request parameters, read/mutation/error context, complete double-precision Position, the shared report context, and representative Move To/Pause inputs and Catalog metadata. `NullableIdentifier` is a named nullable scalar, keeping explicit null separate from omission. S1 adds the Asset Entity resource, its reports, Task lifecycle, movement history, discovery and enrollment security; other Entity types, remaining Command variants and later endpoints are added with their owning slices. The report context describes structure, not report authority, signature verification, counter-range enforcement or freshness decisions. The [local Catalog checks](../tests/contract/README-99.md) qualify structural inputs and metadata, without Task admission or execution.
 
 Slice 0's required `process_proof` and `contact_challenge` fields qualify the direct IP report-context representation only. The [trusted gateway decision](../docs/adr/0028-trust-gateways-to-author-bound-asset-reports.md) allows a bound gateway to construct reports without an originating Asset's Core-format signature. Concrete gateway authority and freshness fields remain future Protocol work with that integration; the current fixture does not qualify gateway reporting.
+
+Under [ADR-0029](../docs/adr/0029-use-deployment-clocks-and-preserve-event-times.md), `clock_uncertainty_ms` in `MovementObservationTime` and `ReportContext` is optional nullable compatibility metadata; Core computes no freshness or age budget from it. The [requalified S0 fixtures](../tests/contract/README-98.md#adr-0029-requalification) record the two structural promises that changed. The representative Move To variants similarly do not establish that immediate or Geofeature tasking is implemented; [S1's boundary](../docs/architecture/implementation-sequence.md#s1-implementation-boundary) is queued coordinate-target movement.
 
 Run from the repository root with Python 3.12+, Linux amd64, Node 24.21.0 and npm 11.19.0:
 
@@ -30,14 +32,14 @@ Generation alone, after locked dependencies have been installed:
 python3 scripts/generate.py
 ```
 
-The four generated directories are ignored build artifacts. Delete them freely. Never edit or post-process them. `scripts/generate.py` mechanically merges canonical components with sorted test-only `tests/contract/*.contract.json` fragments, rejects duplicate paths/components, and invokes supported generators with small configurations. Public bindings come from `protocol.json`; fixture bindings come from the assembled test contract; private query bindings come from authored fixture SQL. Fixture declarations cannot replace canonical facts.
+The generated directories that `scripts/generate.py` lists are ignored build artifacts. Delete them freely. Never edit or post-process them. `scripts/generate.py` mechanically merges canonical components with sorted test-only `tests/contract/*.contract.json` fragments, rejects duplicate paths/components, and invokes supported generators with small configurations. Public bindings come from `protocol.json`, including the gorilla strict server for the operational routes; fixture bindings come from the assembled test contract; private query bindings come from each Core module's authored SQL and the fixture SQL. Fixture declarations cannot replace canonical facts.
 
 | Owner | Authored files and locks |
 | --- | --- |
 | Protocol | `protocol.json`, `toolchain.json`, `tools/go.mod`, `tools/go.sum`, generator configuration; exact OpenAPI, generator and Ruff editions |
-| Core | `../Atlas Core/go.mod`, `go.sum`, `httpcontract/`; request-validation integration, nullable/runtime bindings and SQLite dependencies |
+| Core | `../Atlas Core/go.mod`, `go.sum`, `httpcontract/`, module `sql/` directories; request-validation integration, nullable/runtime bindings, SQLite, routing and RFC 8785 dependencies |
 | SDK | `../Atlas SDK/package.json`, `package-lock.json`, `src/`; TypeScript transport, Ajv response-validation integration and local npm tooling locks |
-| Test tooling | `../tests/contract/`; illustrative contracts, expectations, runner, private SQL; `../Atlas Core/tests/contractfixture/` for handwritten fixture handlers |
+| Test tooling | `../tests/contract/`; illustrative contracts, expectations, runner, private SQL; `../Atlas Core/tests/contractfixture/` for handwritten fixture handlers; `../tests/s1/` and `../tests/simulator/` for S1 workflows and the simulated Asset |
 
 ## Exact qualified pins
 
@@ -56,6 +58,8 @@ These preserve the [#69 proof](../docs/research/atlas-reassessment/13-protocol-t
 | Ajv, ajv-formats | 8.20.0, 3.0.1 |
 | TypeScript, tsx, Node types | 5.9.3, 4.23.15, 24.10.1 |
 | Prettier (SDK npm lock), Ruff | 3.9.9, 0.16.10 |
+| S1 Core routing and RFC 8785: gorilla/mux, gowebpki/jcs | 1.8.1, 1.0.1 |
+| S1 SDK RFC 8785 and Node HTTPS trust: canonicalize, undici | 5.1.0, 7.16.0 |
 
 Go archive SHA-256: `63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445`.
 
@@ -71,7 +75,7 @@ Position always supplies both latitude and longitude. Each coordinate explicitly
 
 Ajv keeps strict schema checking except `strictRequired`, a compilation diagnostic that treats a field required by one `allOf` member as undeclared when another member defines it. Runtime `required` validation remains enabled. An independent profile check confirms the composed mutation context rejects an absent commit cursor. This is a supported adapter configuration, not another declaration of that field.
 
-The SDK response adapter qualifies explicit three-digit HTTP status codes from `100` through `599` with inline Response Objects and local Header Object references. Construction rejects `default`, status ranges such as `2XX` and other malformed status keys, including mixed exact/fallback declarations, before requests. Fallback and range matching remain unqualified. Response Object `$ref` resolution remains unqualified; local Header references do not establish general reference resolution.
+The SDK response adapter qualifies explicit three-digit HTTP status codes from `100` through `599` with inline Response Objects and local Header Object references. Construction rejects `default`, status ranges such as `2XX` and other malformed status keys, including mixed exact/fallback declarations, before requests. Fallback and range matching remain unqualified. Local Response Object references (`#/components/responses/...`, including percent-encoded fragments) resolve one level and keep every body, header and context check; chained, missing, external and non-response references fail construction, as `response-reference.test.ts` checks. These and local Header references do not establish general reference resolution.
 
 At each exact status, the adapter qualifies separately declared `application/json`, JSON suffix media such as `application/problem+json`, and binary alternatives. It selects the authored schema by the received media type, refuses colliding normalized JSON declarations and requires an explicit JSON response byte bound; [response coverage](../tests/contract/README-97.md) records the independent HTTP checks.
 
@@ -81,7 +85,7 @@ External references, recursive schemas, other composition profiles, nullable enu
 
 Generated Go UUID and date-time bindings can change a valid string's spelling when re-encoding it. For example, uppercase or UUID URN inputs become bare lowercase UUIDs, and date-times ending in `+00:00` or `.500Z` become `Z` or `.5Z`. These examples retain equivalent UUID identities and time instants, but their original string values are not retained by those bindings.
 
-Slice 0 does not qualify signing or canonicalization. The later [signed-report workflow](../docs/topics/asset-reporting.md#shared-report-context) must canonicalize the validated original facts rather than reconstruct them from re-encoded Go UUID/date-time values.
+Slice 0 does not qualify signing or canonicalization. S1 Core canonicalizes the validated original request bytes (RFC 8785, with `github.com/gowebpki/jcs`) for signed and compared report facts instead of reconstructing them from re-encoded Go values, so original spellings stay in those facts. Reads return the same UUIDs and instants in their normalized form.
 
 ### JSON request representation
 
@@ -89,4 +93,4 @@ A JSON request contains one complete UTF-8 document. Object member names must be
 
 String values and member names must represent Unicode scalar values. Reject invalid UTF-8 and escaped unpaired surrogates such as `"\ud800"` or `"\udc00"` before decoding can replace them with `�`. Valid multibyte text, properly paired surrogate escapes and literal backslash text remain supported. The user selected rejection of unpaired surrogate escapes in the [3 October decision](../docs/planning-reconciliation.md#json-request-representation-3-october-2026).
 
-The Core adapter requires an explicit positive request-body bound and applies it before document or schema checks consume the stream. Oversized bodies use the accepted [`payload_too_large`/413 refusal](../docs/architecture/operating-model.md#workload-fixtures-and-admission-bounds). Fixture limits are qualification values, not production sizing. The [request checks](../tests/contract/README-96.md) verify rejection without persistence effects and valid Unicode round trips.
+The Core adapter requires an explicit positive request-body bound and applies it before document or schema checks consume the stream. Oversized bodies use the accepted [`payload_too_large`/413 refusal](../docs/architecture/operating-model.md#workload-fixtures-and-admission-bounds). S1 applies the bound to both the coded and the decoded body of a gzip request under [timestamp transfer](../docs/topics/sdk.md#timestamp-transfer). Fixture limits are qualification values, not production sizing. The [request checks](../tests/contract/README-96.md) verify rejection without persistence effects and valid Unicode round trips.

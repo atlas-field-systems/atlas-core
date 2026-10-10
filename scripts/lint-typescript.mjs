@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import ts from "../Atlas SDK/node_modules/typescript/lib/typescript.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const scopes = ["Atlas SDK/src", "Atlas SDK/checks", "tests/contract"];
+const scopes = ["Atlas SDK/src", "Atlas SDK/checks", "tests/contract", "tests/s1", "tests/simulator"];
 
 function sources(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

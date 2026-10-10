@@ -1,6 +1,6 @@
 # Atlas Core
 
-Atlas Core is being extracted and simplified from Atlas Modernization. This repository contains Core, Protocol and SDK design, research and a bounded [Slice 0 contract foundation](tests/contract/README.md); the Command Interface is a separate consumer.
+Atlas Core is being extracted and simplified from Atlas Modernization. This repository contains Core, Protocol and SDK design, research, a bounded [Slice 0 contract foundation](tests/contract/README.md) and the [S1 queued Move To workflow](tests/s1/README.md) through real Core, the HTTP-mode SDK and local management; the Command Interface is a separate consumer.
 
 | Read for | Document |
 | --- | --- |
@@ -9,6 +9,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Initial MVP: Move To, Elevation Lookup and Object transfer | [MVP scope](docs/architecture/operating-model.md#initial-mvp) and [integration checks](docs/testing-strategy.md#mvp-integration-checks) |
 | Implementation slices, route/scenario coverage and specification tickets | [Implementation sequence](docs/architecture/implementation-sequence.md) |
 | Delivered foundation and per-ticket qualification | [Slice 0 coverage](tests/contract/README.md) |
+| S1 workflow evidence, the simulator and the runnable local demonstration | [S1 coverage](tests/s1/README.md) and [simulator](tests/simulator/README.md) |
 | Focused Plugin bookkeeping component and its qualification limits | [Component integration](Atlas%20Core/plugins/README.md) |
 | Earlier representative generation and validation research | [Pinned toolchain proof](docs/research/atlas-reassessment/13-protocol-toolchain-proof.md) |
 | Repository boundaries and module responsibilities | [System outline](docs/architecture/system-outline.md) |
@@ -25,7 +26,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Deletion of resources required by unfinished Tasks | [Required Entity references](docs/adr/0023-protect-required-entity-references-during-tasks.md) |
 | Live Geofeature geometry, offline adoption and geometry cutoffs | [Live geometry decision](docs/adr/0024-use-live-geofeature-geometry-in-tasks.md) |
 | Asset-owned completion and independent result availability | [Completion decision](docs/adr/0026-record-asset-completion-independently-of-result-availability.md) |
-| Reference clock for age, freshness and deadlines | [Core time decision](docs/adr/0025-use-core-time-as-the-installation-reference-clock.md) |
+| Deployment clocks and source event/receipt timestamps | [Timestamp decision](docs/adr/0029-use-deployment-clocks-and-preserve-event-times.md) |
 | Current rules by area | [Topic pages](docs/topics/README.md) |
 | Domain vocabulary | [GLOSSARY.md](GLOSSARY.md) |
 | Accepted tradeoffs and their rationale | [ADR index](docs/adr/README.md) |
@@ -33,7 +34,7 @@ Atlas Core is being extracted and simplified from Atlas Modernization. This repo
 | Source evidence, technology alternatives and proposed experiments | [Research index](docs/research/atlas-reassessment/README.md) |
 | Proposed convention improvements from historical PR feedback | [Coding conventions retrospective](docs/research/pr-review-retrospective/README.md) |
 
-The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted. Slice 0 establishes shared contract tooling and an isolated fixture workflow; the [focused Plugin component](Atlas%20Core/plugins/README.md) adds a bookkeeping seam, while public operational Core/SDK workflows remain unimplemented. The original isolated Protocol proof remains executable research evidence.
+The [documentation guide](docs/agents/domain.md) explains which document owns each kind of information and how to keep them consistent. Implementation specifications belong in [GitHub Issues](docs/agents/issue-tracker.md). Research proposals are not implementation commitments. The stack and deployment decisions above are accepted. Slice 0 establishes shared contract tooling and an isolated fixture workflow; the [focused Plugin component](Atlas%20Core/plugins/README.md) adds a bookkeeping seam. S1 implements the first public operational Core/SDK workflow; later slices remain unimplemented. The original isolated Protocol proof remains executable research evidence.
 
 ## API and SDK behavior
 

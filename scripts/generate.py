@@ -6,9 +6,12 @@ import shutil
 
 from toolchain import ROOT, prepare, run
 
+# Core modules that own private SQLite storage generate their own queries.
+CORE_STORAGE_MODULES = ["plugins", "system", "identity", "entities", "tasks"]
+
 OUTPUTS = [
     ROOT / "Atlas Core/generated",
-    ROOT / "Atlas Core/plugins/generated",
+    *(ROOT / "Atlas Core" / module / "generated" for module in CORE_STORAGE_MODULES),
     ROOT / "Atlas Core/tests/contractfixture/generated",
     ROOT / "Atlas SDK/generated",
     ROOT / "tests/contract/generated",
@@ -18,6 +21,10 @@ OUTPUTS = [
 def assemble_contract():
     contract = json.loads((ROOT / "Atlas Protocol/protocol.json").read_text())
     contract["info"] = {"title": "Slice 0 test-only contract", "version": "0.2.0"}
+    # Fixtures reuse canonical definitions, not the operational routes or their
+    # authentication requirement, which have their own generated public server.
+    contract["paths"] = {}
+    contract.pop("security", None)
     for source in sorted((ROOT / "tests/contract").glob("*.contract.json")):
         fragment = json.loads(source.read_text())
         for path, value in fragment.get("paths", {}).items():
@@ -67,7 +74,8 @@ def generate(env, go, sqlc):
             timeout=120,
         )
     run([sqlc, "generate"], env, cwd=ROOT / "tests/contract", timeout=120)
-    run([sqlc, "generate"], env, cwd=ROOT / "Atlas Core/plugins", timeout=120)
+    for module in CORE_STORAGE_MODULES:
+        run([sqlc, "generate"], env, cwd=ROOT / "Atlas Core" / module, timeout=120)
     run(["npm", "run", "generate"], env, cwd=ROOT / "Atlas SDK", timeout=120)
     openapi_typescript = ROOT / "Atlas SDK/node_modules/.bin/openapi-typescript"
     for source, output in [

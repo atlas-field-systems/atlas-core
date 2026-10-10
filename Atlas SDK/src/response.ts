@@ -20,6 +20,7 @@ export class ResponseValidationError extends Error {
 }
 
 interface ResponseDefinition {
+  $ref?: string;
   content?: Record<string, unknown>;
   headers?: Record<string, HeaderDefinition>;
 }
@@ -41,7 +42,10 @@ type PathItem = Partial<Record<HTTPMethod, OperationDefinition>> & {
   servers?: unknown;
 };
 interface ResponseContract extends ContractDocument {
-  components: ContractDocument["components"] & { headers?: Record<string, HeaderDefinition> };
+  components: ContractDocument["components"] & {
+    headers?: Record<string, HeaderDefinition>;
+    responses?: Record<string, ResponseDefinition>;
+  };
   paths: Record<string, PathItem>;
 }
 
@@ -57,12 +61,16 @@ interface DeclaredResponse {
   headers: DeclaredHeader[];
 }
 
+// An absent datasetId is discovery: Dataset context is validated but not yet
+// known, so it is not compared.
 export function responseValidation(
   document: ResponseContract,
-  context: { datasetId: string; protocolVersion: string },
+  context: { datasetId: string | undefined; protocolVersion: string },
   options: { maxJSONBytes: number },
 ): Middleware {
   const maxJSONBytes = options.maxJSONBytes;
+  const expected = context.datasetId;
+  const datasetAgrees = (value: string) => expected === undefined || sameDataset(value, expected);
   if (!Number.isSafeInteger(maxJSONBytes) || maxJSONBytes <= 0) {
     throw new Error("Response JSON byte bound must be a positive safe integer");
   }
@@ -86,7 +94,7 @@ export function responseValidation(
           continue;
         }
         if (!header.validate(value)) throw refuse(failure);
-        if (header.role === "dataset" && !sameDataset(value, context.datasetId)) throw refuse("context");
+        if (header.role === "dataset" && !datasetAgrees(value)) throw refuse("context");
         if (header.role === "version" && value !== context.protocolVersion) throw refuse("context");
       }
       const media = mediaType(response.headers.get("Content-Type") ?? "");
@@ -115,7 +123,7 @@ export function responseValidation(
         typeof body === "object" &&
         body !== null &&
         "dataset_id" in body &&
-        (typeof body.dataset_id !== "string" || !sameDataset(body.dataset_id, context.datasetId))
+        (typeof body.dataset_id !== "string" || !datasetAgrees(body.dataset_id))
       ) {
         throw refuse("context");
       }
@@ -138,12 +146,36 @@ function declareResponses(document: ResponseContract) {
             `Unsupported response status declaration "${status}" for ${method.toUpperCase()} ${path}; use exact status codes`,
           );
         }
-        const location = `#/paths/${pointer(path)}/${method}/responses/${status}`;
-        responses.set(`${method.toUpperCase()} ${path} ${status}`, declareResponse(document, ajv, location, response));
+        const [location, definition] = resolveResponse(
+          document,
+          `#/paths/${pointer(path)}/${method}/responses/${status}`,
+          response,
+        );
+        responses.set(
+          `${method.toUpperCase()} ${path} ${status}`,
+          declareResponse(document, ajv, location, definition),
+        );
       }
     }
   }
   return responses;
+}
+
+// A Response Object may be a local component reference. Its schemas and
+// headers then compile from the component's own location.
+function resolveResponse(
+  document: ResponseContract,
+  location: string,
+  response: ResponseDefinition,
+): [string, ResponseDefinition] {
+  if (response.$ref === undefined) return [location, response];
+  const prefix = "#/components/responses/";
+  const reference = response.$ref.startsWith("#") ? decodeURIComponent(response.$ref) : "";
+  if (!reference.startsWith(prefix)) throw new Error("Responses require local component references");
+  const component = reference.slice(prefix.length).replaceAll("~1", "/").replaceAll("~0", "~");
+  const resolved = document.components.responses?.[component];
+  if (!resolved || resolved.$ref !== undefined) throw new Error("Response reference is unresolved");
+  return [`${prefix}${pointer(component)}`, resolved];
 }
 
 function declareResponse(

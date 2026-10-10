@@ -1,6 +1,6 @@
 # API endpoint map
 
-The endpoint map follows the accepted API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, with subsequent changes linked to their decisions. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. The delivered [Slice 0 foundation](../tests/contract/README.md) has no public routes; its test-only operations do not implement this map. Production schemas and behavior follow the [owning workflows](architecture/implementation-sequence.md#public-api-and-sdk-inventory).
+The endpoint map follows the accepted API planning decisions and Atlas Modernization commit `8edee4e2743fbf0f85c16dfe638d9222141cf279`, with subsequent changes linked to their decisions. The methods, paths, and described behavior are accepted as the design baseline. Items explicitly left open still need detailed contracts. The delivered [Slice 0 foundation](../tests/contract/README.md) has no public routes; its test-only operations do not implement this map. [S1](../tests/s1/README.md#routes) implements 19 of these method/path pairs for its Asset and Move To scope. Production schemas and behavior follow the [owning workflows](architecture/implementation-sequence.md#public-api-and-sdk-inventory).
 
 [Asset retirement](topics/identity-and-access.md#asset-retirement) and independent result declarations now have concrete bindings below. Route specification is not evidence of implementation.
 
@@ -193,7 +193,7 @@ Feed authentication follows [connection setup](topics/sdk.md#connection-setup): 
 
 | Method and path | Expected caller / purpose | Input → result | Effects | Basis |
 | --- | --- | --- | --- | --- |
-| `GET /health` | Authenticated clients discover Core state; Assets obtain contact proof | Credentials, optional bound Asset/generation challenge request → liveness, Dataset/Core time/version discovery, finite [snapshot allocation context](topics/sdk.md#snapshot-allocation-retries), advisory Open enrollment status and optional contact challenge | No operational mutation or Contact refresh; challenge is proof for a later accepted report | Adapt: [freshness exchange](topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
+| `GET /health` | Authenticated clients discover Core state; Assets obtain contact proof | Credentials, optional bound Asset/generation challenge request → liveness, Dataset/version discovery and Core-authored response timestamp, S4 finite [snapshot allocation context](topics/sdk.md#snapshot-allocation-retries), advisory Open enrollment status and optional contact challenge | No operational mutation or Contact refresh; challenge is proof for a later accepted report | Adapt: [freshness exchange](topics/asset-reporting.md#contact-proof-and-clock-uncertainty) |
 | `GET /readiness` | Monitors check required dependencies | Caller credentials → readiness status and dependency checks | None | Adapt: now authenticated |
 | `GET /docs` | Developers browse interactive documentation | Caller credentials → documentation interface | None | New |
 | `GET /openapi.json` | SDK/tooling and docs read the HTTP contract | Caller credentials → OpenAPI document | None | New |

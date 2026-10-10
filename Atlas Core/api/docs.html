@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas Core documentation</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
+form { display: flex; gap: .5rem; }
+input { flex: 1; font: inherit; padding: .4rem; }
+code { background: #eee; padding: .1rem .3rem; }
+li { margin: .2rem 0; }
+</style>
+</head>
+<body>
+<h1>Atlas Core documentation</h1>
+<p>Enter an API key to load the protected contract. The key stays in this page's memory and is discarded when the page closes.</p>
+<form id="key-form"><input id="key" type="password" autocomplete="off" aria-label="API key"><button>Load</button></form>
+<p id="status" role="status"></p>
+<div id="contract"></div>
+<script>
+"use strict";
+document.getElementById("key-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const key = document.getElementById("key").value;
+  const status = document.getElementById("status");
+  const contract = document.getElementById("contract");
+  contract.replaceChildren();
+  status.textContent = "Loading…";
+  try {
+    const response = await fetch("openapi.json", { headers: { Authorization: "Bearer " + key }, cache: "no-store" });
+    if (!response.ok) { status.textContent = "The key was not accepted (" + response.status + ")."; return; }
+    const document_ = await response.json();
+    status.textContent = document_.info.title + " " + document_.info.version;
+    const list = document.createElement("ul");
+    for (const [path, item] of Object.entries(document_.paths)) {
+      for (const [method, operation] of Object.entries(item)) {
+        if (typeof operation !== "object" || !operation.responses) continue;
+        const entry = document.createElement("li");
+        const code = document.createElement("code");
+        code.textContent = method.toUpperCase() + " " + path;
+        entry.append(code, " " + (operation.summary || ""));
+        list.append(entry);
+      }
+    }
+    contract.append(list);
+  } catch {
+    status.textContent = "The contract could not be loaded.";
+  }
+});
+</script>
+</body>
+</html>
