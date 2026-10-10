@@ -253,6 +253,20 @@ export class Connection {
     return this.current;
   }
 
+  // changedDataset rediscovers after a response refused for its Dataset or
+  // edition context, returning Core's current Dataset when it differs from
+  // the session's. A failed rediscovery establishes nothing.
+  private async changedDataset(session: Session, error: unknown): Promise<string | undefined> {
+    if (!(error instanceof ResponseValidationError) || error.reason !== "context") return undefined;
+    let current: Discovery;
+    try {
+      current = await this.discover();
+    } catch {
+      return undefined;
+    }
+    return sameDataset(current.datasetId, session.datasetId) ? undefined : current.datasetId;
+  }
+
   // invalidate discards the session after a known Dataset change. Old
   // descriptors are then rejected before transmission.
   invalidate() {
@@ -270,6 +284,12 @@ export class Connection {
     try {
       result = await perform(session, this.signal());
     } catch (error) {
+      const changed = await this.changedDataset(session, error);
+      if (changed !== undefined) {
+        throw new AtlasError("dataset_invalidated", "The Dataset changed; old reads and cursors are invalid", 409, {
+          current_dataset_id: changed,
+        });
+      }
       throw transportError(error);
     }
     if (result.error !== undefined || result.data === undefined) {
@@ -309,6 +329,10 @@ export class Connection {
     try {
       result = await perform(session, this.signal());
     } catch (error) {
+      // A known Dataset change makes the descriptor obsolete whatever
+      // happened: the old Dataset and any commit in it are gone.
+      const changed = await this.changedDataset(session, error);
+      if (changed !== undefined) return { outcome: "dataset_invalidated", currentDatasetId: changed };
       // A timeout, connection loss, abort after transmission or an
       // uninterpretable response can hide a commit.
       return {

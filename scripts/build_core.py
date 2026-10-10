@@ -10,6 +10,8 @@ from toolchain import ROOT, prepare, run
 ARTIFACTS = ROOT / ".artifacts"
 MANAGE = ARTIFACTS / "atlas-manage"
 IMAGE = "atlas-core:dev"
+# The same Core under another writing release, for incompatible-release refusal.
+RELEASE_PROBE_IMAGE = "atlas-core:release-probe"
 
 
 def build_core(env, go):
@@ -17,13 +19,15 @@ def build_core(env, go):
     core = ROOT / "Atlas Core"
     ARTIFACTS.mkdir(exist_ok=True)
     run([go, "build", "-trimpath", "-o", MANAGE, "./cmd/atlas-manage"], env, cwd=core)
-    with tempfile.TemporaryDirectory(prefix="atlas-core-image-") as context:
-        static = {**env, "CGO_ENABLED": "0"}
-        run([go, "build", "-trimpath", "-o", Path(context) / "atlas-core", "./cmd/atlas-core"], static, cwd=core)
-        shutil.copyfile(core / "Dockerfile", Path(context) / "Dockerfile")
-        # The image is built from the local binary only; nothing is pulled.
-        run(["docker", "build", "--pull=false", "--tag", IMAGE, context], env, timeout=300)
-    print(f"PASS built {MANAGE.relative_to(ROOT)} and loaded image {IMAGE}", flush=True)
+    for image, flags in [(IMAGE, []), (RELEASE_PROBE_IMAGE, ["-ldflags", "-X main.release=0.0.0-release-probe"])]:
+        with tempfile.TemporaryDirectory(prefix="atlas-core-image-") as context:
+            static = {**env, "CGO_ENABLED": "0"}
+            binary = Path(context) / "atlas-core"
+            run([go, "build", "-trimpath", *flags, "-o", binary, "./cmd/atlas-core"], static, cwd=core)
+            shutil.copyfile(core / "Dockerfile", Path(context) / "Dockerfile")
+            # The image is built from the local binary only; nothing is pulled.
+            run(["docker", "build", "--pull=false", "--tag", image, context], env, timeout=300)
+    print(f"PASS built {MANAGE.relative_to(ROOT)} and loaded images {IMAGE} and {RELEASE_PROBE_IMAGE}", flush=True)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,8 @@ const root = resolve(import.meta.dirname, "../..");
 // The runner builds this from the shared management implementation.
 const manageBinary = join(root, ".artifacts/atlas-manage");
 export const coreImage = "atlas-core:dev";
+// The same Core built under another writing release.
+export const releaseProbeImage = "atlas-core:release-probe";
 // Every request in these tests has a finite deadline.
 export const requestTimeoutMs = 15_000;
 
@@ -42,11 +44,22 @@ export class ManageError extends Error {
 // manage runs the same CLI an administrator uses, over the shared private
 // host-management implementation.
 export function manage(installation: { root: string; recovery: string }, command: string, ...args: string[]) {
+  return manageWith(installation, {}, command, ...args);
+}
+
+// manageWith runs the CLI with extra environment, such as a private fault
+// adapter ahead of the real docker client on PATH.
+export function manageWith(
+  installation: { root: string; recovery: string },
+  env: Readonly<Record<string, string>>,
+  command: string,
+  ...args: string[]
+) {
   return new Promise<unknown>((resolveCall, reject) => {
     execFile(
       manageBinary,
       [command, "--root", installation.root, "--recovery", installation.recovery, ...args],
-      { timeout: 180_000, maxBuffer: 4 << 20 },
+      { timeout: 180_000, maxBuffer: 4 << 20, env: { ...process.env, ...env } },
       (error, stdout, stderr) => {
         let result: unknown;
         try {
@@ -205,12 +218,12 @@ export class Installation {
     return { baseUrl: this.baseUrl, fetch: await this.fetch(), requestTimeoutMs };
   }
 
-  async operator(baseUrl = this.baseUrl, fetch?: (request: Request) => Promise<Response>) {
+  async operator(baseUrl = this.baseUrl, options: { timeoutMs?: number } = {}) {
     const key = await this.adminKey();
     return new AtlasClient({
       baseUrl,
-      fetch: fetch ?? (await this.fetch()),
-      requestTimeoutMs,
+      fetch: await this.fetch(),
+      requestTimeoutMs: options.timeoutMs ?? requestTimeoutMs,
       authentication: () => ({ bearer: key }),
     });
   }

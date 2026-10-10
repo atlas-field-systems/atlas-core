@@ -1,7 +1,7 @@
 // S1 runner. It is the surviving cleanup owner: each test worker receives a
 // private run directory, and after the worker exits for any reason the runner
-// removes every Core container of installations set up below that directory,
-// then the directory itself.
+// removes every Core container and Compose network of installations set up
+// below that directory, then the directory itself.
 import { execFile, spawn } from "node:child_process";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -54,6 +54,13 @@ async function cleanup(root) {
       ]);
       const containers = stdout.split("\n").filter(Boolean);
       if (containers.length > 0) await run("docker", ["rm", "--force", ...containers]);
+      // Compose creates one project network per installation.
+      const networks = (
+        await run("docker", ["network", "ls", "--quiet", "--filter", `label=com.docker.compose.project=atlas-${id}`])
+      ).stdout
+        .split("\n")
+        .filter(Boolean);
+      if (networks.length > 0) await run("docker", ["network", "rm", ...networks]);
     } catch (error) {
       failures.push(error);
     }
