@@ -59,6 +59,6 @@ must not contain secrets. Same-effect retries do not duplicate activity.
 Stopped-state local actions need a durable journal imported once by Core before
 serving. Keep its event identity and outcomes separate from destructive management
 authority. Reset clears pre-boundary activity; a damaged journal is not an empty
-successful import. Its exact durability format remains a delivery prerequisite.
+successful import. Its exact durability format remains unspecified.
 
 [Next: lifecycle](lifecycle.md)

@@ -28,6 +28,13 @@ contracts. SDK supplies connection setup, runtime response validation, safe prep
 requests, replayable file inputs, Asset-report helpers, and optional picture upkeep.
 Use a stock typed HTTP client before adding generated wrappers for every endpoint.
 
+Expose typed helpers for Protocol's reusable components and concrete resources so
+consumers can supply values without assembling or decoding raw JSON. Preserve the
+same fields, precision, and omission/null rules. Reuse Protocol schemas for runtime
+validation of caller inputs and responses before exposing typed values. Generated
+types alone do not validate runtime data. Core independently validates incoming
+requests, including requests made without SDK; SDK does not replace that boundary.
+
 The Command Catalog is available locally from the installed Protocol artifact.
 Asset helpers prepare registration, process/report identity, and reconciliation;
 they do not execute or schedule physical work. Asset software must retain its own
@@ -36,8 +43,10 @@ identity and execution evidence. Gateway firmware and radio encoding remain exte
 ## Connection behavior
 
 Configure base URL, credential provider, explicit mode, timeouts, limits, and normal
-TLS trust. Discover Dataset and mutually supported Protocol edition. Validate actual
-response context rather than silently accepting a different Dataset or edition.
+TLS trust. Use Protocol's authenticated discovery exchange to learn Dataset and
+Core's one Protocol version. Require an exact version match before ordinary work.
+Validate response context rather than silently accepting a different Dataset or
+version. No compatibility-range negotiation or automatic downgrade is needed.
 
 WebSocket authentication precedes data, with a bounded authentication window.
 Transport failures can reconnect with bounded backoff; authorization failures pause

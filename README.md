@@ -38,6 +38,4 @@ folder to reconcile. Earlier explanations remain in Git history, not as a second
 active specification.
 
 These pages are the current design baseline, not a complete executable wire
-specification. Before implementing a workflow, finish its concrete schemas and
-acceptance examples in their owning layer. Do not resurrect old implementation
-plans, claimed test results, or superseded rules by default.
+specification. Concrete schemas and independent acceptance examples remain incomplete.

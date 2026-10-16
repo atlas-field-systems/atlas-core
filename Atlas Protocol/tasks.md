@@ -64,9 +64,9 @@ result upload is missing. Append result declarations before or after termination
 including before upload. Invalid declarations do not block a separately valid
 completion report. Declared required Objects remain protected until Reset.
 
-## First Command
+## Move To
 
-Queued coordinate **Move To** is the first execution workflow, with no deadline.
+Queued coordinate **Move To** has no deadline.
 Its target is a complete position or a point Geofeature; optional altitude names
 its reference. The Asset decides arrival and reports completion. Core cannot infer
 success from a map position. Immediate Move To requires advertised support.

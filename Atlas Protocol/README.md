@@ -26,9 +26,11 @@ mistaken for a submission to a fresh system.
 ## Contract ownership
 
 Author public schemas and Command metadata once in a language-neutral OpenAPI
-artifact. HTTP and non-HTTP messages reuse those definitions. The Command Catalog
-is available locally; it is not a network discovery service. Plugins may define
-specialized Operation payloads, but cannot invent Entity components or Asset Commands.
+artifact. Define reusable JSON components and their permitted compositions in
+[Entities](entities.md#component-composition). HTTP and non-HTTP messages reuse
+those definitions. The Command Catalog is available locally; it is not a network
+discovery service. Plugins may define specialized Operation payloads, but cannot
+invent Entity components or Asset Commands.
 
 Use standard generation for Go and TypeScript declarations and ordinary HTTP
 bindings. Runtime validation must be integrated explicitly. Keep algorithms,
@@ -37,8 +39,9 @@ schemas and generator templates.
 
 Keep this folder self-contained so it can become its own repository. A separate
 repository does not itself change compatibility policy: initially Core, SDK, and
-Protocol share a release number. Peers negotiate explicitly supported editions;
-equal major versions are not sufficient proof. Plugins release independently.
+Protocol share one exact version string. Each Core and SDK release supports that
+one Protocol version; a mismatch is refused. There is no version-range negotiation,
+automatic downgrade, or translation between versions. Plugins release independently.
 
 ## Reading order
 
@@ -47,4 +50,4 @@ equal major versions are not sufficient proof. Plugins release independently.
 [API](api.md) → [Synchronization](synchronization.md).
 
 These pages specify behavior. Exact schemas, supported generator features, and
-cross-language fixtures must be qualified as each workflow is implemented.
+cross-language fixtures remain incomplete and unqualified.

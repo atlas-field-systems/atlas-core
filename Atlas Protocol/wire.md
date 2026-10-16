@@ -11,9 +11,14 @@ canonical decimal strings, not JavaScript numbers. Validate their numeric range,
 not only their spelling. Preserve double precision for spatial values.
 
 Requests identify `Atlas-Dataset-ID` and `Atlas-Protocol-Version`. Responses carry
-the actual Dataset and selected edition, including declared error responses.
-Negotiate the highest mutually supported released edition; reject unsupported
-combinations rather than guessing from a version number.
+the actual Dataset and Core's Protocol version, including declared error responses.
+Require the exact version shared by Core, SDK, and Protocol for that release.
+A mismatch returns `409 protocol_mismatch`; do not negotiate ranges or downgrade.
+
+Authenticated `GET /health` is the discovery exception: it accepts requests without
+Dataset or version headers. Its normal JSON envelope includes the current
+`dataset_id` and `data.protocol_version`. SDK discovers these values, requires its
+own exact Protocol version, and then supplies both headers on ordinary requests.
 
 JSON success uses `{dataset_id, data, commit_cursor?}`. Mutations with public
 changes include their committed cursor. Errors use

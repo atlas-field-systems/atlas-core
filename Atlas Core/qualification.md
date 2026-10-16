@@ -9,8 +9,9 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 
 | Workflow | Essential failure evidence |
 | --- | --- |
-| Wire and identity | Absent/null, exact counters and identifiers; equal API permissions across keys; wrong Dataset/edition; lost enrollment reply; revoked-key rejection |
-| Reports and Tracks | API-key-only direct/relayed reports; deduplication, ordering, and history; contact; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
+| Shared components | Independent valid/invalid examples; allowed Entity compositions; Go/TypeScript agreement; SDK input/response validation and direct-HTTP refusal of malformed input |
+| Wire and identity | Absent/null, exact counters and identifiers; authenticated discovery and exact-version refusal; equal API permissions across keys; wrong Dataset; lost enrollment reply; revoked-key rejection |
+| Reports and Tracks | API-key-only direct/relayed reports; deduplication across keys/gateways, ordering, and history; contact expiry without new packets; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
 | Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, retirement without invented outcomes |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |

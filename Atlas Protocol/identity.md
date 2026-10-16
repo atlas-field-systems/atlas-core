@@ -25,12 +25,16 @@ identity without making the new credential a different observation source.
 ## Enrollment and credentials
 
 Prepare stable registration/request IDs and recoverable credential material before
-sending. Registration atomically creates the Entity, principal, credential binding,
-and retry record. A lost reply must not lose the only usable secret. Retrying the
-same original facts returns the existing identity and current resource, not defaults.
+sending. The registering client prepares and retains its new credential secret;
+Core retains its verifier. Registration atomically creates the Entity, principal,
+credential binding, and retry record. A lost reply must not lose the only usable
+secret. Retrying the same original facts returns the existing identity and current
+resource, not defaults, and does not replace or reveal the secret.
 
-Deployment authorization gates first enrollment. Open enrollment is local-only and
-off by default. Record its provenance; warn while it is enabled or unrevoked open
+Local administration provisions the first API key before public-API use. An existing
+valid key authorizes public enrollment under the same permissions as other writes.
+Open enrollment is local-only and off by default. Record its provenance; warn
+while it is enabled or unrevoked open
 enrollments remain. Turning it off does not revoke existing bindings. Cleanup must
 identify and confirm the exact bindings, including bindings whose Entities were
 cleared by Reset, without affecting a later replacement.

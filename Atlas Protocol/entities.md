@@ -4,6 +4,24 @@
 Deleted IDs remain reserved for the Dataset. Optional aliases are unique across
 Entity types, ignoring case.
 
+## Component composition
+
+Protocol owns the JSON structure, types, and meaning of each reusable component.
+Define Position once and reference it wherever a named position appears, including
+Telemetry and Command inputs. Define Telemetry, Communications, Heartbeat, and
+Geometry as named schemas with documented fields, units, required values,
+omission/null rules, bounds, and independent valid and invalid examples.
+
+Concrete Asset, Track, and Geofeature schemas select their allowed and required
+components through named properties. Assets require status, communications, and
+heartbeat information; Geofeatures require geometry. Assets and Tracks reuse the
+same applicable Telemetry definitions. The Entity type determines which components
+are legal; composition does not permit arbitrary fields or a dynamic component registry.
+
+Use ordinary schema references rather than copying field definitions. Generated
+Go and TypeScript declarations come from these schemas. SDK helpers construct and
+read the defined JSON; they do not own a second definition of its structure.
+
 ## Data ownership
 
 Descriptions use explicit edits. Asset execution and telemetry use reports,
@@ -16,10 +34,9 @@ Keep these mutation classes separate. Descriptive Entity edits carry
 `expected_edit_revision`; telemetry does not invalidate that revision. A competing
 description edit does. Validate the complete candidate and commit all or nothing.
 
-Assets require status, communications, and heartbeat information. Geofeatures
-require geometry. Telemetry applies to Assets and Tracks; optional Track geometry,
-media references, military display data, and sensor references use defined
-components, not arbitrary Plugin fields. Task state is not an Entity component.
+Optional Track geometry, media references, military display data, and sensor
+references use defined components, not arbitrary Plugin fields. Task state is not
+an Entity component.
 
 ## Tracks
 

@@ -40,6 +40,7 @@ Task cancellation requests according to [Task rules](tasks.md), not arbitrary st
 Health and reference data require authentication. An unauthenticated docs page may
 show only a minimal key-entry shell, without exposing the schema. Keep keys in
 memory, not URLs or browser persistent storage.
+Authenticated `/health` supports [Dataset and version discovery](wire.md#common-representation).
 
 Core configuration, Start/Stop/Restart/Reset/Hard Reset, Plugin installation,
 updates, and runtime configuration are **local administration**, not public routes.

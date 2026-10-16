@@ -47,13 +47,20 @@ Use stock configuration; no custom schema language, endpoint-specific templates,
 patched generated files, or duplicate wrapper API. A narrow handwritten binding
 is preferable when generation makes an exceptional route harder to understand.
 
-Pin and qualify tools with the first implemented workflow. This repo contains no
-qualified locks or generated packages yet. Measure saved maintenance, not generated
-line count. Removing repeated declarations is the goal; generating most of Core is not.
+Tool versions and the supported schema profile are not yet pinned or qualified.
+This repo contains no qualified locks or generated packages. Measure saved
+maintenance, not generated line count. Removing repeated declarations is the goal;
+generating most of Core is not.
+
+## Scope
+
+This baseline covers one installation. Clustering, federation, operational
+backup/restore, operational-data migrations, and automatic mission recovery across
+Core restart are outside scope.
 
 ## Reading order
 
 [Storage](storage.md) → [Lifecycle](lifecycle.md) → [Plugins](plugins.md) →
-[Delivery](delivery.md) → [Qualification](qualification.md).
+[Qualification](qualification.md).
 
 Shared behavior remains in [Protocol](../Atlas%20Protocol/README.md).

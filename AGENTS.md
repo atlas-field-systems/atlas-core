@@ -1,7 +1,6 @@
 # Working on Atlas
 
-Read the [overview](README.md), the owning layer, and
-[delivery](Atlas%20Core/delivery.md) before changing behavior.
+Read the [overview](README.md) and the owning layer before changing behavior.
 
 ## Documentation first
 
