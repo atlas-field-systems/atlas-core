@@ -24,9 +24,9 @@ invoke it, cancel or interrupt it, and remove it without affecting Core or publi
 results. A Plugin lookup does not need an Asset Task or Object merely to exist.
 
 Exercise real local management and durable recovery with those owners in place.
-Then extend the Task workflow to queue changes, Pause/Resume, live geometry, result
-declarations, retirement, and relevant administration. Split each outcome into a
-reviewable change rather than treating this paragraph as one large implementation task.
+Then extend the Task workflow to queue changes, Pause/Resume, Geofeature references,
+result declarations, retirement, and relevant administration. Split each outcome
+into a reviewable change rather than treating this paragraph as one large implementation task.
 
 ## Add the maintained picture last
 

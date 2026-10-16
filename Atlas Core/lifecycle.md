@@ -12,9 +12,11 @@
 
 Hard Reset needs explicit destructive confirmation, keeps Core software and unrelated
 host resources, and returns to first-use setup. A new Core release requires an
-explicit update with Reset. There is no operational-data migration or backup/restore
-feature. Installation-format conversion must be deliberate and preserve identity,
-revocation, and credentials; incompatible retained formats cannot be silently wiped.
+explicit update with Reset. Updates happen between missions; updating during a
+mission or retaining mission data across an update is outside scope. There is no
+operational-data migration or backup/restore feature. Installation-format conversion
+must be deliberate and preserve identity, revocation, and credentials; incompatible
+retained formats cannot be silently wiped.
 
 ## One surviving owner
 

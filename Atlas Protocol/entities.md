@@ -39,17 +39,17 @@ identity reuse; an older observation cannot overwrite newer state.
 
 ## Geometry and references
 
-A geometry edit increments its own revision. Active Tasks follow live Geofeature
-geometry until the Command's cutoff: normally termination, or completion of scan
-collection. Reject edits that invalidate those Tasks. Saving geometry is not proof
-that an Asset applied it. Record the revision actually used; delayed completion
-must not redo finished collection against a newer shape.
+A geometry edit increments its own revision. A Task can reference a Geofeature
+by ID; editing its geometry leaves that reference intact. Core stores the edit.
+The external Asset runtime decides whether and how to apply changed geometry.
+Saving geometry is not proof that an Asset applied it. If execution evidence
+identifies the revision used, retain that evidence.
 
-Retain proof of issued geometry revisions until Reset, not necessarily every old
+Retain reported geometry-revision evidence until Reset, not necessarily every old
 polygon. Historical geometry reconstruction is not promised.
 
 Required Track/Geofeature references prevent deletion while a relevant Task is
-nonterminal, including paused, cancellation-pending, or retired-Asset work.
+nonterminal, including paused, cancellation-requested, or retired-Asset work.
 Terminal Tasks release these guards. File protection follows different rules.
 
 ## Spatial conventions

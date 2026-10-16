@@ -25,7 +25,8 @@ stock tools help. Write Core behavior and SDK workflows as ordinary code.
 ## Read in this order
 
 Start with the [operating environment](operating-environment.md) for deployment
-expectations and remaining assumptions.
+expectations and remaining assumptions. The [draft mission example](mission-example.md)
+shows how an operator, Atlas Mission, Core, and external Assets could work together.
 
 1. [Protocol](Atlas%20Protocol/README.md): what Atlas means and promises.
 2. [Core](Atlas%20Core/README.md): how the server provides those promises.

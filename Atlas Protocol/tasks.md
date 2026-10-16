@@ -14,13 +14,23 @@ acceptance. Exact retries allocate neither another Task nor another sequence.
 States are `pending`, `acknowledged`, `in_progress`, `paused`,
 `cancellation_requested`, `completed`, `failed`, and `cancelled`.
 The last three are terminal and immutable. Reading an instruction is not an
-acknowledgment. Only accepted execution reports establish its outcome;
+acknowledgment. Accepted execution reports establish progress, completion, or failure;
 valid reports may skip intermediate states. There is no generic Task edit/delete.
 
-Cancellation records an operator request, even when an Asset is offline or cannot
-cancel. It becomes `cancelled` only when confirmed. A refusal restores the evidenced
-execution state; progress alone cannot erase cancellation intent. Valid completion
-or failure may win before cancellation is confirmed. Never invent a stopping outcome.
+An operator's cancellation request changes a nonterminal Task to
+`cancellation_requested`. The external Asset runtime discovers the request, handles
+cancellation, and reports `cancelled` once cancellation has taken effect. Core records
+`cancelled` only after accepting that report. Receipt alone is not cancellation.
+
+While awaiting confirmation, the Task remains nonterminal, including when the Asset
+is offline. Progress reports cannot erase the request. If the Asset completes work
+before receiving cancellation, it reports `completed`; Core accepts that outcome
+even after recording `cancellation_requested`. Completion supersedes the outstanding
+request. Valid failure may also finish the Task before cancellation takes effect.
+Core never infers cancellation or completion from a timeout or disconnection.
+
+An explicit cancellation refusal clears the request and restores the last evidenced
+execution state. Ordinary progress does not count as refusal.
 
 ## Scheduling and controls
 
@@ -29,10 +39,10 @@ concurrently. Delayed reports can temporarily make Core's view look different.
 Queue edits submit the complete eligible, unstarted order with retry identity and
 a revision precondition. Requested order and Asset-confirmed adoption are distinct.
 
-Started, paused-started, cancellation-pending, and terminal Tasks are not reorderable.
-An unstarted cancellation-pending Task retains its internal queue slot so refusal
-can restore it amid the latest eligible edits. Assigned-work pagination pins the
-queue revision and refuses a changed page sequence.
+Started, paused-started, cancellation-requested, and terminal Tasks are not
+reorderable. An unstarted cancellation-requested Task retains its internal queue
+slot so refusal can restore it amid the latest eligible edits. Assigned-work
+pagination pins the queue revision and refuses a changed page sequence.
 
 Pause and Resume are immediate Tasks, not an emergency-stop guarantee. Pause
 requires actual suspension and keeps queue order. Resume continues the same Task
@@ -45,9 +55,9 @@ fall back to an older control. Command-specific deadlines remain explicit.
 
 ## References and results
 
-Live geometry and deletion guards follow [Entity rules](entities.md). An Asset
-records the geometry revision actually used. Removing advertised support does not
-delete existing Tasks; the Asset reports an honest unsupported outcome.
+Geofeature references and deletion guards follow [Entity rules](entities.md).
+Removing advertised support does not delete existing Tasks; the Asset reports
+an honest unsupported outcome.
 
 **Completion is independent of file availability.** A scan can complete while a
 result upload is missing. Append result declarations before or after termination,

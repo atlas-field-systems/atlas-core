@@ -23,8 +23,8 @@ belong in Protocol. The tables are a compact scope map, not another field defini
 | Operation cancellation | `POST /plugins/{plugin_id}/operations/{operation_id}/cancel` |
 
 Registration uses Entity creation; it is not a separate enrollment service.
-Pause and Resume use Task creation. Task status handles execution
-reports and cancellation intent, not arbitrary state assignment.
+Pause and Resume use Task creation. Task status handles execution reports and
+Task cancellation requests according to [Task rules](tasks.md), not arbitrary state assignment.
 
 ## Administration and synchronization
 

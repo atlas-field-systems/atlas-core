@@ -12,7 +12,8 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Wire and identity | Absent/null, exact counters and identifiers; equal API permissions across keys; wrong Dataset/edition; lost enrollment reply; revoked-key rejection |
 | Reports and Tracks | API-key-only direct/relayed reports; deduplication, ordering, and history; contact; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
-| Tasks | Lost reply, cancellation refusal, queue revisions, Pause/Resume ordering, live geometry, late results, retirement without invented outcomes |
+| Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, retirement without invented outcomes |
+| Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
 | Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry, holds versus deletion, disk-full and integrity faults |
 | Plugins | Disconnect versus runtime loss, same-runtime redelivery, receipt exhaustion, protected drain/force, recovered evidence, removal and retained results |
 | Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
