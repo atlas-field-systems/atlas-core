@@ -42,8 +42,7 @@ one-shot source fails explicitly as non-replayable; do not buffer an arbitrary f
 or promise resume to hide that limitation.
 
 Keep progress, upload publication, Asset completion, and Plugin outcome distinct.
-A Plugin Operation keeps running when its invoking client disconnects. Explicit
-cancellation is a separate request. Late evidence for Interrupted processing is a
-recovered outcome, not ordinary successful execution or permission to retry it.
+Expose [Protocol's Operation states and recovery rules](../Atlas%20Protocol/operations.md)
+without treating an aborted SDK wait as an Operation outcome.
 
 [Next: the local picture](picture.md)

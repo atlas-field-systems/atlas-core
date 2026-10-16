@@ -16,6 +16,7 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
 | Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry, holds versus deletion, disk-full and integrity faults |
 | Plugins | Disconnect versus runtime loss, same-runtime redelivery, receipt exhaustion, protected drain/force, recovered evidence, removal and retained results |
+| Operation recovery | Plugin loss before possible delivery keeps pending work; loss after possible delivery interrupts it; Core restart interrupts both |
 | Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
 | Full synchronization | Whole-message interruption, fixed handoff, capture retry/release, replay expiry, slow clients, rebuild, Dataset change and capacity pause |
 

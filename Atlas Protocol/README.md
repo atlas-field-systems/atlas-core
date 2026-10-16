@@ -43,7 +43,7 @@ equal major versions are not sufficient proof. Plugins release independently.
 ## Reading order
 
 [Entities](entities.md) → [Identity](identity.md) → [Reports](reports.md) →
-[Tasks](tasks.md) → [Objects](objects.md) → [Wire](wire.md) →
+[Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) → [Wire](wire.md) →
 [API](api.md) → [Synchronization](synchronization.md).
 
 These pages specify behavior. Exact schemas, supported generator features, and

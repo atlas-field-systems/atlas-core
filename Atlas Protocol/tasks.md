@@ -71,4 +71,4 @@ Its target is a complete position or a point Geofeature; optional altitude names
 its reference. The Asset decides arrival and reports completion. Core cannot infer
 success from a map position. Immediate Move To requires advertised support.
 
-[Next: objects](objects.md)
+[Next: Operations](operations.md)

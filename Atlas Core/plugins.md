@@ -21,23 +21,10 @@ Updates preserve installation identity; reinstallations get a new installation a
 principal. Reinstallation names an existing publisher explicitly. Publisher identity
 does not depend on the submitting API key.
 
-## Operation lifecycle
-
-An Operation has durable identity, original capability/release/input, queryable state,
-and explicit cancellation. Validate input, availability, and capacity before accepting
-new work. Resolve an exact retry before requiring the Plugin to still be available.
-
-States are `pending`, `in_progress`, `cancellation_requested`, `completed`, `failed`,
-`cancelled`, and `interrupted`. The last four are terminal. Caller disconnection or
-an aborted SDK wait does not cancel processing. Do not retry or roll back external
-effects automatically.
-
-Confirmed runtime loss makes unfinished work Interrupted. Preserve known effects.
-Later valid evidence is a separately recorded recovered outcome; it does not turn
-Interrupted into ordinary success or authorize another execution. A channel outage
-with the same verified live process is not itself runtime loss.
-
 ## Delivery without accidental reruns
+
+Protocol defines [Operation admission, state, and recovery](../Atlas%20Protocol/operations.md).
+Core enforces that contract through durable exposure records and runtime verification.
 
 Use authenticated Plugin-initiated long polling over a private Unix channel. Bind
 runtime identity to installation, principal, Dataset, Core run, and process generation.
@@ -56,8 +43,7 @@ This prevents duplicate dispatch; it does not promise exactly-once external effe
 
 Persist unacknowledged terminal evidence and known effects before reporting. Core
 acknowledges its exact accepted revision. Evidence cleanup must not remove live
-receipt protection. After replacement, old exposed work cannot be executed anew;
-confirmed never-exposed work may receive its first dispatch within the same Core run.
+receipt protection. Use the durable exposure records to apply Protocol's recovery rules.
 
 ## Independent lifecycle and storage
 

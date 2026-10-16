@@ -51,7 +51,8 @@ and expose repair. Record a Plugin's explicit startup fault rather than leaving
 Reset permanently pending because that Plugin cannot become ready.
 
 Ordinary retained startup preserves Task evidence and unresolved execution.
-Unfinished Plugin Operations become Interrupted before new Plugin execution.
+Apply [Operation recovery rules](../Atlas%20Protocol/operations.md#runtime-loss-and-recovery)
+before new Plugin execution.
 Partial uploads restart from zero. Mission continuity across whole-Core restart
 is not promised.
 
