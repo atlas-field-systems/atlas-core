@@ -1,24 +1,26 @@
 # Identity and authority
 
-**Permission to read state is not permission to claim that an Asset did something.**
+**Each participant has its own API key. All valid keys have identical public-API
+permissions.**
 
 ## Principals
 
-| Principal | Authority |
-| --- | --- |
-| Operator | Operational control and public administration; no fabricated Asset reports |
-| Asset | Its own registration, current state, and execution evidence |
-| Gateway | Reports for explicitly bound Assets, preserving their identities |
-| Plugin | Operational reads/writes and Task requests; no Asset impersonation or administration |
+Operators, Assets, gateways, and Plugins use the same API permission model. Any
+valid key may read, write, use public administration, or submit reports for any
+Asset or publisher. There are no role tiers or per-Asset API-key scopes. Local
+host administration still requires local access.
 
-Authenticated principals have broad operational reads, including Objects and
-synchronization. There is no separate viewer/approval hierarchy for the initial
-one-or-two-operator deployment. Profile names do not prove which person used a key.
+A valid API key is sufficient to authenticate direct-IP and gateway reports.
+No separate Asset signing or recovery secret is required.
 
-A trusted gateway can translate radio evidence; the drone need not speak Core's
-signed IP format over radio. Core checks the gateway's binding, not physical truth.
-A faulty gateway can lie for its bound Assets. Binding withdrawal denies further
-writes; gateway replacement must preserve source-scoped observation identity.
+Core records the submitting key separately from the reported source. Credential
+associations describe attribution and lifecycle, not API permissions. Profile names
+do not prove which person used a key. Equal permissions do not bypass Dataset,
+identity, ordering, or state-transition validation.
+
+A trusted gateway can translate radio evidence. Core validates the reported facts,
+not physical truth. Gateway or key replacement preserves source-scoped observation
+identity without making the new credential a different observation source.
 
 ## Enrollment and credentials
 
@@ -47,7 +49,8 @@ Normal Asset deletion is blocked by nonterminal Tasks. Allowed deletion atomical
 removes the Entity, revokes its credentials, and publishes the deletion.
 
 Retirement handles an unreachable Asset with unresolved work. It preserves the
-Entity and evidence, revokes authority, and rejects new Tasks. It does **not** claim
+Entity and evidence, revokes associated credentials, and rejects new Tasks and
+reports for that Asset regardless of submitting key. It does **not** claim
 that physical work stopped, finish Tasks, or release their reference guards.
 
 Deleted or retired Asset identities cannot reenroll until Hard Reset. Ordinary Reset

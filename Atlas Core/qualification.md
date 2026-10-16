@@ -9,8 +9,9 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 
 | Workflow | Essential failure evidence |
 | --- | --- |
-| Wire and identity | Absent/null, exact counters and signed text; wrong authority/Dataset/edition; lost enrollment reply; revocation |
-| Reports and Tracks | Duplicate/out-of-order/historical evidence, separate contact, process replacement, gateway withdrawal, stable publisher, correction age |
+| Wire and identity | Absent/null, exact counters and identifiers; equal API permissions across keys; wrong Dataset/edition; lost enrollment reply; revoked-key rejection |
+| Reports and Tracks | API-key-only direct/relayed reports; deduplication, ordering, and history; contact; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
+| Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
 | Tasks | Lost reply, cancellation refusal, queue revisions, Pause/Resume ordering, live geometry, late results, retirement without invented outcomes |
 | Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry, holds versus deletion, disk-full and integrity faults |
 | Plugins | Disconnect versus runtime loss, same-runtime redelivery, receipt exhaustion, protected drain/force, recovered evidence, removal and retained results |

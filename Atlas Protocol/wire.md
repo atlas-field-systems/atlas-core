@@ -29,7 +29,7 @@ may follow a real commit, so it cannot establish rejection.
 
 Accept one bounded UTF-8 JSON document. Reject duplicate decoded member names at
 any depth, malformed UTF-8, unpaired surrogates, and nonfinite numbers. Validate
-original text before normalizing typed values or verifying signatures.
+original text before normalizing typed values.
 
 Patches leave omitted fields unchanged, replace scalars and arrays, merge defined
 objects, and use null only for permitted removal/clearing. Validate the complete

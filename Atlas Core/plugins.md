@@ -18,7 +18,8 @@ it is not a second public API or a Plugin-defined Command Catalog.
 
 Keep stable publisher identity separate from installation ID and credential.
 Updates preserve installation identity; reinstallations get a new installation and
-principal. Only verified rebinding can continue an existing publisher's Tracks.
+principal. Reinstallation names an existing publisher explicitly. Publisher identity
+does not depend on the submitting API key.
 
 ## Operation lifecycle
 

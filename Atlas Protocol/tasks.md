@@ -14,7 +14,7 @@ acceptance. Exact retries allocate neither another Task nor another sequence.
 States are `pending`, `acknowledged`, `in_progress`, `paused`,
 `cancellation_requested`, `completed`, `failed`, and `cancelled`.
 The last three are terminal and immutable. Reading an instruction is not an
-acknowledgment. Only authorized Asset execution evidence establishes its outcome;
+acknowledgment. Only accepted execution reports establish its outcome;
 valid reports may skip intermediate states. There is no generic Task edit/delete.
 
 Cancellation records an operator request, even when an Asset is offline or cannot

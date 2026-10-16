@@ -6,11 +6,11 @@ Entity types, ignoring case.
 
 ## Data ownership
 
-Descriptions are edited by authorized operators or Plugins. Asset execution and
-telemetry are reported by that Asset or its bound gateway. Track observations
-belong to their publisher. Core derives contact and ordering information.
+Descriptions use explicit edits. Asset execution and telemetry use reports,
+directly or through a gateway. Any valid API key can submit either kind of change.
+Track observations retain their publisher identity. Core derives contact and ordering.
 Registration may supply an initial description and capability manifest; later
-reports cannot quietly edit operator-owned descriptions.
+reports cannot quietly edit descriptions.
 
 Keep these mutation classes separate. Descriptive Entity edits carry
 `expected_edit_revision`; telemetry does not invalidate that revision. A competing
@@ -25,8 +25,8 @@ components, not arbitrary Plugin fields. Task state is not an Entity component.
 
 Each Track has one stable publisher identity, separate from an API credential or
 Plugin installation. A drone owns its detections even when a gateway delivers them.
-Changing gateways does not change the publisher. A verified reinstallation can
-rebind credentials to an existing publisher; matching a name is not proof.
+Changing gateways or API keys does not change the publisher. Reinstallation names
+an existing publisher explicitly; matching a display name does not establish identity.
 
 There is no automatic publisher transfer, Track fusion, or expiry. Silent Tracks
 remain last-known observations until deletion or Reset. A fusion process publishes

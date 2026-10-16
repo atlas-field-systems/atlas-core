@@ -11,26 +11,25 @@ original evidence identity, per-quantity observation times, and contact proof.
 Unknown original time stays null. Retained historical evidence keeps its identity;
 a new packet ID cannot turn the same fact into fresh evidence.
 
-Validate identity, current authority, original facts, and all effects atomically.
+Validate identity, API-key validity, original facts, and all effects atomically.
 Classify reports as accepted, duplicate, or rejected, separately from freshness.
 Duplicates cannot refresh contact, append movement, repeat activity, or allocate
 another public change. Order each quantity and Task/queue stream independently:
 new telemetry must not discard a previously unseen earlier Task outcome.
 
-## Process ownership
+## Process generations
 
-Direct-IP Assets prove process ownership with Ed25519 over the defined canonical
-JSON representation. Preserve original validated identifier and timestamp spellings;
-typed decoder normalization must not change the signed document. The signing profile
-uses RFC 8785 and unpadded base64url, with independent vectors before deployment.
+Direct-IP and gateway reports use the [shared API-key permissions](identity.md#principals).
+Keep the reported Asset and process separate from the submitting key. Preserve
+original validated identifier and timestamp spellings in retained report facts.
 
-Replacing a process requires recovery-key proof, a current challenge, and an atomic
-compare-and-swap of the expected generation with its first check-in. Only one
-replacement wins. Reconnect is not replacement; an obsolete generation cannot
-publish new execution state. A gateway restart is not an Asset restart.
+Replacing a process uses a current challenge and an atomic compare-and-swap of the
+expected generation with its first check-in. Any valid API key may request this
+replacement. Only one replacement wins. Reconnect is not replacement; an obsolete
+generation cannot publish new execution state. A gateway restart is not an Asset restart.
 
-Gateway relay proof and binding-change fields must be finalized before their first
-workflow. Do not substitute direct-IP signatures for that separate boundary.
+Gateway relay representation and source-identity fields must be finalized before
+their first workflow. Preserve the originating Asset's identity through the relay.
 
 ## Time and contact
 

@@ -7,11 +7,12 @@ to execute every milestone. The full target remains documented across the three 
 ## First useful system
 
 Start with a simulated external gateway and operator using SDK HTTP mode. Register
-an Asset, accept a report, read its state, and reject a duplicate or wrong authority.
-Prove a separate direct-IP signed report as well; neither path substitutes for the other.
+an Asset, accept a report, and read its state. Repeat through a second valid API key,
+deduplicate the report, and reject a revoked key.
+Prove a separate direct-IP report as well; neither path substitutes for the other.
 
-Then publish a drone-owned Track through the gateway, preserving ownership across
-binding changes. Execute one queued coordinate Move To and reconcile its outcome
+Then publish a drone-owned Track through the gateway, preserving its publisher across
+gateway and key changes. Execute one queued coordinate Move To and reconcile its outcome
 after lost or delayed delivery. Do not require Objects or full synchronization to
 prove this Task workflow. Real radio and flight firmware remain external qualification.
 
@@ -38,8 +39,8 @@ a separate product decision.
 
 | Before | Engineering decision or proof still needed |
 | --- | --- |
-| First enrollment/report | Bootstrap authorization, recoverable credential exchange, exact report schemas and signed vectors |
-| First gateway Track | Relay representation, binding changes, process evidence, and contact interaction |
+| First enrollment/report | Bootstrap authorization, recoverable credential exchange, exact report schemas and independent examples |
+| First gateway Track | Relay representation, source identity, process evidence, and contact interaction |
 | Growing Tasks/queues | Aggregate resource and combined-message bounds that leave room for terminal transitions |
 | Stopped-state administration | Local activity's durable acceptance point, damage handling, and repeat-safe import |
 | Capacity claims | Whole-installation disk isolation, cumulative Plugin receipts, decoded SDK memory, and storage growth |

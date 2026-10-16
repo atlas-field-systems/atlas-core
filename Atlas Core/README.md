@@ -12,15 +12,17 @@ containers on a Linux host. A small host manager survives Core for local lifecyc
 control. These are selected implementation choices, not Protocol requirements.
 
 Operators and field integrations connect over adequate IP using the SDK. Gateway
-software and constrained-radio transport are separate projects. The UI is another
-client; closing it does not stop Core. Installed local operation needs no internet,
-although an individual integration may depend on an external service.
+software and constrained-radio transport are separate projects. The operator UI is
+a separate Atlas project outside Core and Protocol; closing it does not stop Core.
+The [operating environment](../operating-environment.md) assumes host internet
+access while allowing interruptions on field links. Local Core work does not
+require a cloud service.
 
 ## Ownership inside the server
 
 | Owner | Responsibility |
 | --- | --- |
-| Identity | Authenticate principals and enforce their bindings |
+| Identity | Authenticate keys, record attribution, and enforce revocation |
 | Entities/reporting | Descriptions, accepted observations, contact, and movement |
 | Tasks | Command admission, intent, requested order, and reported execution |
 | Objects | Complete content publication, metadata, holds, and cleanup |

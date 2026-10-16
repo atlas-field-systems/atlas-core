@@ -16,12 +16,16 @@ an implemented API, generated package, passing runtime, or qualified deployment.
 
 Protocol is foundational. Core implements it; SDK speaks it. Applications use
 SDK to reach Core. A gateway translates radio traffic; the Asset runtime executes.
-Both remain outside Core. Adequate IP connectivity is the SDK boundary.
+Both remain outside Core. The operator UI is a separate Atlas project outside
+Core and Protocol. Adequate IP connectivity is the SDK boundary.
 
 **Contract-first, not generator-first.** Generate repetitive declarations where
 stock tools help. Write Core behavior and SDK workflows as ordinary code.
 
 ## Read in this order
+
+Start with the [operating environment](operating-environment.md) for deployment
+expectations and remaining assumptions.
 
 1. [Protocol](Atlas%20Protocol/README.md): what Atlas means and promises.
 2. [Core](Atlas%20Core/README.md): how the server provides those promises.
