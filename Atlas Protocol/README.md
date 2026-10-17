@@ -4,6 +4,15 @@
 It defines resource shapes, messages, commands, errors, and externally observable
 behavior. An implementation can conform without using Core's language or database.
 
+## Design priorities
+
+Atlas Protocol prioritizes readability, strong typing, and versatility. Use
+descriptive JSON field names and structures people can inspect. Reusable schemas
+provide precise contracts across Asset types, implementation languages, and links.
+
+Compact encodings can improve bandwidth efficiency while preserving the readable
+public contract. The compaction method remains an open design choice.
+
 ## Vocabulary
 
 | Term | Meaning |
