@@ -1,8 +1,8 @@
 # Status
 
-**Status is the Asset's reported assessment of its overall condition.**
+Status is the Asset's reported assessment of its overall condition.
 A camera can report a fault while Core still has healthy contact with it.
-[Communications](communications.md) describes contact; Task execution has its own
+[Communications](communications.md) describes contact. Task execution has its own
 state. The condition vocabulary and field layout below are proposals.
 
 ## Proposed fields
@@ -13,7 +13,7 @@ state. The condition vocabulary and field layout below are proposals.
 
 Include the [shared reported-section fields](README.md#shared-proposed-section-fields).
 `unknown` is the initial lack of an assessment, not an error. Actual reported
-failures use error information when present; healthy sections omit it.
+failures use error information when present. Healthy sections omit it.
 The exact relationship between a faulted condition and its error details remains open.
 
 Status uses `UpdateAsset` and the [source evidence and ordering rules](../reports.md#shared-context).
@@ -41,7 +41,7 @@ Invalid because a Task execution state is not a condition value:
 ## Decisions to settle
 
 Confirm the condition vocabulary and how an Asset explains a degraded or faulted
-assessment. Per-section errors remain attached to their affected results; Status
+assessment. Per-section errors remain attached to their affected results. Status
 does not require a duplicate fault entry for every field.
 
 [Component index](README.md)

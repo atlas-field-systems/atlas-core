@@ -1,6 +1,6 @@
 # Capabilities
 
-**Capabilities declares which Protocol Commands an Asset supports.**
+Capabilities declares which Protocol Commands an Asset supports.
 An operator application uses this to offer suitable controls. A tracker can
 advertise no Commands. Support and execution follow [Task rules](../tasks.md).
 The manifest layout below is a proposal.
@@ -11,7 +11,7 @@ The manifest layout below is a proposal.
 | --- | --- | --- | --- |
 | `commands` | Array of Command support values | Required, non-null | One entry per supported Protocol Command; `[]` means none |
 
-Each Command support value has:
+Each Command support value has these fields:
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -19,13 +19,13 @@ Each Command support value has:
 | `scheduling` | Array of scheduling identifiers | Required, non-null | Nonempty unique subset of `queued` and `immediate`, restricted by that Command |
 
 Reuse the Catalog's identifiers and allowed scheduling choices in the schemas.
-Examples use proposed wire names `move_to`, `pause`, and `resume`; the Catalog's
+Examples use proposed wire names `move_to`, `pause`, and `resume`. The Catalog's
 machine-readable names remain incomplete. Plugins cannot add Asset Commands.
 
 Capabilities is descriptive data, updated through `UpdateAsset` with the
 descriptive revision precondition. It does not require periodic reporting.
 Removing support does not rewrite existing Tasks. Current faults belong in
-[Status](status.md); support is not proof that a Command can succeed now.
+[Status](status.md). Support is not proof that a Command can succeed now.
 
 ## Examples
 

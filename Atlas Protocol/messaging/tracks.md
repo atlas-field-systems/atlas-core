@@ -1,9 +1,9 @@
 # Track messages
 
-**Track messages publish observations about something, under one stable publisher.**
+Track messages publish observations about something, under one stable publisher.
 Creation identifies that publisher and accepts Track components. It does not enroll
-an Asset or establish Asset contact. Shared message context and the proposal status
-of exact names and payloads follow the [messaging index](../messaging.md).
+an Asset or establish Asset contact. The [messaging index](../messaging.md) defines
+shared message context. Exact names and payloads remain proposals.
 
 ## Creation and descriptions
 
@@ -18,7 +18,7 @@ of exact names and payloads follow the [messaging index](../messaging.md).
 
 Track schemas select their allowed components from the shared definitions,
 including applicable [Telemetry](../components/telemetry.md). Initial descriptions
-and observations must remain distinguishable; exact creation fields are undecided.
+and observations must remain distinguishable. Exact creation fields are undecided.
 Reported [Type](../components/type.md#track-type) describes the observed subject and
 follows the Track's source-observation rules.
 
@@ -26,13 +26,13 @@ follows the Track's source-observation rules.
 
 | Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
-| `ReportTrackObservations` | Sensor runtime or publishing integration adds an observation or corrects earlier evidence | Track and publisher identities, complete applicable sections, and original observation/correction evidence | Accepted, duplicate, or rejected observations under [Track rules](../entities.md#tracks) |
+| `ReportTrackObservations` | Sensor runtime or publishing integration adds an observation or corrects earlier evidence | Track and publisher identities, complete applicable sections, and original observation or correction evidence | Accepted, duplicate, or rejected observations under [Track rules](../entities.md#tracks) |
 | `GetTrackMovementHistory` | Analysis tool or operator app reviews observed motion over time | Track ID and bounded history query | Retained movement evidence |
 | `GetTrackObjects` | Operator app finds images or other files associated with a detection | Track ID and bounded query | Associated Object metadata |
 
 Preserve publisher identity separately from the delivering gateway or credential.
-Apply Track observation ordering, not Asset process/contact requirements.
+Apply Track observation ordering, not Asset process and contact requirements.
 The exact observation envelope and its relationship to complete section updates
-remain to be specified; this catalog does not redefine the owning Track rules.
+remain unspecified. This catalog does not redefine the owning Track rules.
 
 [Messaging index](../messaging.md)

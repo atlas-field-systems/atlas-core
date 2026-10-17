@@ -1,11 +1,10 @@
 # Component field reference
 
-**Start here to review the fields and JSON layout proposed for Atlas resources.**
-The selected component families are listed below. Each page proposes concrete
-fields, types, units, bounds, null/omission choices, and examples. Exact field
-details remain proposals unless explicitly agreed.
+This reference proposes fields, types, units, bounds, null and omission rules,
+and JSON examples for Atlas resources. Exact field details remain proposals
+unless explicitly agreed.
 
-## Descriptions and Type
+## Descriptions and type
 
 | Component | Purpose | Used by |
 | --- | --- | --- |
@@ -25,7 +24,7 @@ details remain proposals unless explicitly agreed.
 | [Camera](camera.md) | Live zoom and capture activity | Assets with a camera |
 | [Camera Optics](camera-optics.md) | Baseline field of view at 1x zoom | Assets with a camera |
 
-## Contact and Geometry
+## Contact and geometry
 
 | Component | Purpose | Used by |
 | --- | --- | --- |
@@ -36,7 +35,7 @@ details remain proposals unless explicitly agreed.
 Telemetry documents the reusable [Position](telemetry.md#position) and
 [Altitude](telemetry.md#altitude) values inline. Command inputs can reference those
 same definitions without adopting the complete Telemetry section. Position quality
-remains deferred; no field contract is added for it here.
+remains deferred. This reference adds no field contract for it.
 
 These are component proposals, not new Entity types or an arbitrary field registry.
 Exact permitted Entity compositions still need schemas. Reference Asset examples
@@ -53,7 +52,7 @@ Those rules apply to the proposed sections below without being redefined here.
 ## Shared proposed section fields
 
 These fields apply to complete reported sections. Reusable values and authored
-sections do not inherit them; contact evidence has its own linked representation.
+sections do not inherit them. Contact evidence has its own linked representation.
 
 | Field | Type | Presence | Proposed meaning |
 | --- | --- | --- | --- |
@@ -62,7 +61,7 @@ sections do not inherit them; contact evidence has its own linked representation
 
 Propose an error object with a required string `code` and optional string `message`.
 The allowed codes and handling of failures affecting only part of a section remain
-undecided. A single `observed_at` works for a coherent observation; representation
+undecided. A single `observed_at` works for a coherent observation. The representation
 of mixed source times is also undecided. Bundling must preserve original ages.
 
 Examples show values or section snapshots, not full authenticated API requests.
@@ -72,5 +71,5 @@ The proposed `state` and `measurements` group names remain undecided.
 
 These pages are the human-readable place to refine field proposals. Accepted
 machine-readable definitions belong in the [OpenAPI artifact](../README.md#contract-ownership).
-Once authored, its schemas own exact structure and validation; these pages explain
+Once authored, its schemas own exact structure and validation. These pages explain
 them. There is no executable schema or generated package here yet.

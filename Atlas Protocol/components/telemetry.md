@@ -1,6 +1,6 @@
 # Telemetry
 
-**Telemetry is the proposed complete section for an Entity's location and motion.**
+Telemetry is the proposed complete section for an Entity's location and motion.
 The name and exact field layout remain proposals. A report supplies this whole
 section, including defined null values, rather than a single-value update.
 
@@ -15,7 +15,7 @@ section, including defined null values, rather than a single-value update.
 
 Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
 All presence and null choices in this table are proposals. Unknown readings do
-not imply an error; actual failures use the shared error representation.
+not imply an error. Actual failures use the shared error representation.
 Body heading is defined once in [Attitude](attitude.md), separately from direction
 of travel. It is not duplicated in Telemetry.
 
@@ -31,7 +31,7 @@ complete pairs, valid zero coordinates, and double precision.
 | `longitude` | Number | Required, non-null | -180 through 180 inclusive |
 
 These bounds and null rules remain proposals. Numbers must be finite under
-[Wire](../wire.md#parsing-and-edits); preserve precision without rounding.
+[Wire](../wire.md#parsing-and-edits). Preserve precision without rounding.
 
 - Valid: `{"latitude": 0, "longitude": 0}`.
 - Invalid latitude: `{"latitude": 91, "longitude": 0}`.
@@ -82,8 +82,8 @@ A mounted camera can retain a complete Telemetry section as state until changed.
 Aircraft and a commandless vehicle tracker can report it as dated measurements.
 This does not require every Entity to have Telemetry.
 
-This Asset section is carried by the proposed
-[`UpdateAsset`](../messaging/assets.md#updating-sections) message.
+The proposed [`UpdateAsset`](../messaging/assets.md#updating-sections) message
+carries this Asset section.
 An illustrative SDK helper, `prepareAssetUpdate(assetId, update)`, would validate the
 complete section and prepare retry facts. That helper name and signature are proposals.
 

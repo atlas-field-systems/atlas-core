@@ -1,6 +1,6 @@
 # Power
 
-**Power groups supply state and remaining energy reserves in one dedicated section.**
+Power groups supply state and remaining energy reserves in one section.
 A glider can report its avionics battery without having propulsion. A camera can
 report an external supply. The fields, limits, and reserve layout below are proposals.
 
@@ -11,7 +11,7 @@ report an external supply. The fields, limits, and reserve layout below are prop
 | `external_power` | Boolean or null | Required | External supply is present; null when unknown |
 | `reserves` | Array of typed reserves | Required, non-null | At most 16 entries, with unique IDs; empty when no reserves are declared |
 
-Each reserve uses common fields:
+Each reserve has these common fields:
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -19,9 +19,9 @@ Each reserve uses common fields:
 | `kind` | String | Required, non-null | Proposed closed set: `battery` or `fuel` |
 | `remaining_percent` | Number or null | Required | Remaining reserve, 0 through 100 inclusive; null when unknown |
 
-Battery reserves additionally require `voltage_volts` and `current_amperes`, each
-a finite number or null when unknown. Voltage is nonnegative. Current is signed:
-positive means discharge, negative means charging. Fuel reserves omit both fields.
+Battery reserves also require `voltage_volts` and `current_amperes`, each
+a finite number or null when unknown. Voltage is nonnegative. Current is signed.
+Positive means discharge, negative means charging. Fuel reserves omit both fields.
 The variants use named schemas, not a dictionary of arbitrary measurements.
 
 Include the [shared section fields](README.md#shared-proposed-section-fields).

@@ -7,8 +7,8 @@ Plugins are not Task targets and cannot add Asset Commands.
 ## Creation and state
 
 One Task has immutable Asset, Command, inputs, scheduling choice, and validity
-terms. Creation validates support, references, and the target Asset's existence, then assigns
-a stable per-Asset submission sequence. Offline or busy does not itself prevent
+terms. Core validates support, references, and the target Asset's existence. It then
+assigns a stable per-Asset submission sequence. Offline or busy does not itself prevent
 acceptance. Exact retries allocate neither another Task nor another sequence.
 
 States are `pending`, `acknowledged`, `in_progress`, `paused`,

@@ -3,8 +3,8 @@
 **An accepted change must survive, and its related facts must agree.**
 One SQLite database holds operational and installation-lifetime tables. Core is
 its exclusive writer; the host manager does not edit live SQL behind its back.
-Core persists accepted Asset sections with their source and ordering facts, and
-assembles the public Asset JSON from those values.
+Core stores accepted Asset sections with their source and ordering facts. It
+builds the public Asset JSON from those values.
 
 ## One commit boundary
 

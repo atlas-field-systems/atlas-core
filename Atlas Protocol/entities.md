@@ -1,8 +1,8 @@
 # Entities and observations
 
-**An Entity has one immutable ID and Entity type: Asset, Track, or Geofeature.**
+An Entity has one immutable ID and Entity type: Asset, Track, or Geofeature.
 Resource [Type](components/type.md) is separate. Deleted IDs stay reserved for
-the Dataset; optional aliases are unique across Entity types, ignoring case.
+the Dataset. Optional aliases are unique across Entity types, ignoring case.
 
 ## Component composition
 
@@ -25,17 +25,17 @@ read the defined JSON; they do not own a second definition of its structure.
 ## Reported sections
 
 A reportable section groups related fields, such as gimbal bearing and elevation.
-Protocol defines each section once; [field proposals](components/README.md) refine it.
-Healthy sections omit error information; it appears only for actual errors.
+Protocol defines each section once. The [field proposals](components/README.md)
+describe its fields. Sections include error information only for actual errors.
 
 An Asset classifies each complete section as either:
 
-- **State until changed.** Remains applicable until explicitly replaced or withdrawn.
+- **State until changed.** The section remains applicable until explicitly replaced or withdrawn.
   Repeated reports are not required to keep it applicable.
-- **Dated measurement.** Describes observations at their source times.
-  Reporting frequency may adapt; infrequent updates do not change classification.
+- **Dated measurement.** The section describes observations at their source times.
+  Reporting frequency may adapt. Infrequent updates do not change classification.
 
-The same section schema is reused in either category. Classification changes are
+Both classifications use the same section schema. Classification changes are
 explicit. A mounted camera can keep position and baseline FOV as state and report
 its complete gimbal section as measurements. A section containing position,
 altitude, and speed reports them together. Stopping does not change classification.
@@ -43,15 +43,15 @@ Core-derived contact follows [report rules](reports.md#time-and-contact).
 
 ## Data ownership
 
-Assets use [UpdateAsset](messaging/assets.md#messages) for supplied complete sections:
-descriptions, Type, capabilities, status, and observations. Any valid API key may
+Assets use [UpdateAsset](messaging/assets.md#messages) to supply complete sections
+for descriptions, Type, capabilities, status, and observations. Any valid API key may
 submit updates directly or through a gateway. Core-derived contact is read-only.
-Track observations retain their publisher; Task execution uses its own messages.
+Track observations retain their publisher. Task execution uses its own messages.
 
 Descriptive changes carry `expected_edit_revision`. Other descriptive changes
-invalidate it; observations do not. Reported sections also require [source evidence](reports.md#shared-context).
-Updates may explicitly include both kinds. Validate the complete candidate and
-commit all or nothing. Registration may supply initial descriptions and capabilities.
+invalidate it, but observations do not. Reported sections also require [source evidence](reports.md#shared-context).
+One update may explicitly include both kinds. Core validates the complete candidate
+and commits all or nothing. Registration may supply initial descriptions and capabilities.
 
 Optional Track geometry, media references, military display data, and sensor
 references use defined components, not arbitrary Plugin fields. Task state is not

@@ -1,6 +1,6 @@
 # Gimbal
 
-**Gimbal groups bearing and elevation into one complete pointing section.**
+Gimbal groups bearing and elevation into one complete pointing section.
 Whole-section reporting is agreed. The fields and coordinate frame below are proposals.
 
 ## Proposed fields
@@ -15,8 +15,8 @@ Propose null for an unknown required angle. Actual failures need error informati
 rather than a silent unknown reading.
 
 The proposed angles describe world-relative viewing direction. Raw mechanical
-pan/tilt coordinates would require an explicit mounting transform.
-Live zoom belongs in [Camera](camera.md); baseline field of view belongs in
+pan and tilt coordinates would require an explicit mounting transform.
+Live zoom belongs in [Camera](camera.md). Baseline field of view belongs in
 [Camera Optics](camera-optics.md).
 
 ## Examples
@@ -39,7 +39,8 @@ Invalid as a section replacement because elevation is missing:
 
 ## Decisions to settle
 
-Confirm angle bounds and unknown/error representation. Raw mechanical pan/tilt
-readings still need conversion to this proposed world-relative representation.
+Confirm angle bounds and the representation of unknown readings and errors.
+Raw mechanical pan and tilt readings still need conversion to this proposed
+world-relative representation.
 
 [Component index](README.md)

@@ -1,8 +1,9 @@
 # Plugin and Operation messages
 
-**Applications invoke Plugin capabilities through Operations, separately from Asset Tasks.**
-The Plugin performs the requested processing. Shared message context, expected-user
-conventions, and the proposal status of names and payloads follow the [messaging index](../messaging.md).
+Applications invoke Plugin capabilities through Operations, separately from Asset Tasks.
+The Plugin performs the requested processing. The [messaging index](../messaging.md)
+defines shared message context and expected-user conventions. Names and payloads
+remain proposals.
 
 ## Messages
 

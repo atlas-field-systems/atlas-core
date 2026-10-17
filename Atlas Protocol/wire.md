@@ -1,8 +1,8 @@
 # Wire conventions
 
-**Core's IP binding carries Protocol messages over HTTP/JSON and WebSocket.**
-[Messaging](messaging.md) defines the exchanges independently of their carrier.
-This page defines their IP representation, over authenticated TLS in deployment.
+Core's IP binding carries Protocol messages over HTTP/JSON and WebSocket.
+[Messaging](messaging.md) defines the exchanges independently of their transport.
+This page defines their IP representation. Deployments use authenticated TLS.
 Binary content remains binary, not JSON-encoded bytes.
 
 ## Common representation
@@ -22,7 +22,7 @@ Dataset or version headers. Its normal JSON envelope includes the current
 own exact Protocol version, and then supplies both headers on ordinary requests.
 
 Health and reference data require authentication. A public documentation page may
-show only a minimal key-entry shell without exposing schemas. Keep keys in memory,
+show only a key-entry form without exposing schemas. Keep keys in memory,
 not URLs or browser persistent storage.
 
 JSON success uses `{dataset_id, data, commit_cursor?}`. Mutations with public

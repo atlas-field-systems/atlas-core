@@ -1,6 +1,6 @@
 # Camera Optics
 
-**Camera Optics is a proposed section for baseline field of view at 1x zoom.**
+Camera Optics is a proposed section for baseline field of view at 1x zoom.
 A mounted camera can supply it once as state until changed. Changing calibration
 would replace the whole section.
 Current magnification belongs in [Camera](camera.md), independently of this calibration.
@@ -14,7 +14,7 @@ Current magnification belongs in [Camera](camera.md), independently of this cali
 
 Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
 The names, null choices, and initial optical-model restriction remain proposals.
-Both fields are present in every replacement; null means unknown calibration.
+Both fields are present in every replacement. Null means unknown calibration.
 
 ## Examples
 
@@ -41,7 +41,7 @@ Invalid under the proposed rectilinear bounds:
 ## Decisions to settle
 
 Settle the section name, optical models, and definition of 1x zoom. Baseline
-calibration plus a vendor's raw zoom setting is not a universal projection model;
+calibration plus a vendor's raw zoom setting is not a universal projection model.
 [ONVIF](https://www.onvif.org/specs/srv/ptz/ONVIF-PTZ-Service-Spec-v1612.pdf)
 does not require generic zoom positions to map to physical magnification or FOV.
 Consumer tools own derived viewing geometry. Atlas does not promise an exact

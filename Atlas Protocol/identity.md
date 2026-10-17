@@ -51,7 +51,7 @@ First-key provisioning and credential replacement are local administration.
 
 Asset deletion atomically removes the Entity, revokes associated credentials, and
 publishes the deletion. Unfinished Tasks do not block it. Their records, original
-Asset references, and accepted evidence remain; deletion does not change their
+Asset references, and accepted evidence remain. Deletion does not change their
 execution state or release their reference guards. Deletion closes reporting for
 the Asset ID. Core refuses new Tasks and updates for that identity, regardless of
 submitting key. This includes `UpdateAsset`, `ReportTaskExecution`,
@@ -59,7 +59,7 @@ submitting key. This includes `UpdateAsset`, `ReportTaskExecution`,
 deletion.
 
 For example, delete Asset A while Task T is running. A gateway with a valid key
-later delivers T's previously unseen completion evidence. Core refuses the report;
+later delivers T's previously unseen completion evidence. Core refuses the report.
 T retains its last accepted execution state and reference guards.
 
 Updates and registration retries cannot recreate a deleted Asset. Deleted IDs follow

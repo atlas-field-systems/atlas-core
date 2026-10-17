@@ -8,7 +8,7 @@ the picture, its cursor, journal, or subscriptions.
 
 Retain the original Dataset, operation kind, retry identity, submitted facts, and
 required edit precondition. Preparation happens before network transmission. Changes
-to Entity descriptions use their descriptive revision; observation-only Asset
+to Entity descriptions use their descriptive revision. Observation-only Asset
 updates do not depend on it. Follow [UpdateAsset](../Atlas%20Protocol/messaging/assets.md#updating-sections)
 for section replacement and evidence requirements.
 

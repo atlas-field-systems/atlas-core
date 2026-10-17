@@ -1,26 +1,27 @@
 # Protocol messaging
 
-**Protocol defines what a message means. Its link defines how it is carried.**
+Protocol defines what a message means. Its link defines how it is carried.
 Requests, results, reports, and notifications reuse Protocol's component schemas.
-Core independently validates the contract regardless of the delivering link.
+Core validates the contract independently of the link that delivers the message.
 Message names, exact payloads, type identifiers, and reply envelopes remain
 proposals. The catalog preserves the intended operation scope.
 
 ## Message contracts
 
 Each message defines its participants, target, inputs, result, errors, and effects.
-Required values, null/omission behavior, bounds, and component references belong
-in shared OpenAPI schemas. Bindings define the link's representation and exchange.
+Required values, behavior for null and omitted values, bounds, and component
+references belong in shared OpenAPI schemas. Bindings define how the link represents
+and exchanges messages.
 
 Expected users and purposes are proposed workflows for discussion, not permissions.
 Any valid key has the same public permissions under [Identity](identity.md).
-The named caller originates the request or report; a gateway may carry it on their behalf.
+The named caller originates the request or report. A gateway may carry it on their behalf.
 
 Dataset, exact Protocol version, authorization, and source identity follow
 [Identity](identity.md), [Reports](reports.md), and [Wire](wire.md).
 Each mutation identifies its original facts and retry identity. Link delivery,
 Core commitment, and Asset execution evidence are distinct outcomes.
-A lost result leaves uncertainty; another link must not silently create new work.
+A lost result leaves uncertainty. Another link must not silently create new work.
 
 ## Resource message families
 
@@ -79,7 +80,7 @@ resumable-upload exchange, or remote Core-configuration message.
 
 | Proposed message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
-| `GetHealth` | Connecting application discovers the Dataset, exact Protocol version, and health | Authenticated health/discovery request | Dataset/version and health under [Wire](wire.md) |
+| `GetHealth` | Connecting application discovers the Dataset, exact Protocol version, and health | Authenticated health and discovery request | Dataset, exact Protocol version, and health under [Wire](wire.md) |
 | `GetReadiness` | Deployment monitor checks whether Core is ready to serve requests | Authenticated readiness request | Readiness information |
 | `GetReference` | Developer or documentation UI reads the contract and schema reference | Authenticated reference request | Documentation or schema information |
 
@@ -93,6 +94,6 @@ resumable-upload exchange, or remote Core-configuration message.
 | `ReleaseSnapshot` | Loading application frees its capture after paging or cancellation | Capture identity | Release acknowledgment or explicit refusal |
 
 Core sends synchronization replies for release, handoff, replay, gaps, and recovery
-as defined by [Synchronization](synchronization.md); exact reply message names remain open.
+as defined by [Synchronization](synchronization.md). Exact reply message names remain open.
 
 [Next: wire conventions](wire.md)

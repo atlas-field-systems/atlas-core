@@ -1,6 +1,6 @@
 # Heartbeat
 
-**Heartbeat carries contact evidence and exposes the contact Core has accepted.**
+Heartbeat carries contact evidence and exposes the contact Core has accepted.
 It can establish fresh contact without resending unchanged position or camera
 calibration. [Reports](../reports.md#time-and-contact) owns proof acceptance and
 expiry. The input and output layouts below are proposals.
@@ -45,8 +45,8 @@ Invalid proof fragment because a submitted health flag is not contact evidence:
 
 ## Decisions to settle
 
-Confirm evidence fields, challenge/result messages, and exact binding of the read
-timestamp to retained receipt facts. The accepted discovery and process rules
-remain authoritative; this page does not introduce another heartbeat timer.
+Confirm evidence fields, challenge and result messages, and exactly how the read
+timestamp relates to retained receipt facts. The accepted discovery and process rules
+remain authoritative. This page does not introduce another heartbeat timer.
 
 [Component index](README.md)

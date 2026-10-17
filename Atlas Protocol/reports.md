@@ -1,39 +1,39 @@
 # Reports, time, and contact
 
-**UpdateAsset changes descriptions, status, and observations through one path.**
+`UpdateAsset` changes an Asset's descriptions, status, and observations.
 Accepting evidence and establishing fresh contact remain distinct outcomes.
 
 ## Shared context
 
-Updates identify Dataset and Asset. Reported sections also identify the process
-generation and positive sequence. Their context includes `generated_at`, original
-evidence identity, current/historical kind, per-quantity source times, and contact proof.
-Unknown original time stays null. Retained historical evidence keeps its identity;
-a new packet ID cannot turn the same fact into fresh evidence.
+Updates identify the Dataset and Asset. Reported sections also identify the process
+generation and a positive sequence number. Their context includes `generated_at`,
+original evidence identity, whether the evidence is current or historical,
+source times for each quantity, and contact proof. Unknown original time stays null.
+Historical evidence retains its identity. A new packet ID cannot make it fresh.
 
 Apply [reported section classifications](entities.md#reported-sections) independently.
 An omitted section preserves its accepted result, classification, and source times.
-A supplied section is a complete replacement, validated against its full schema.
+A supplied section is a complete replacement. Core validates it against its full schema.
 Never merge its subfields with the prior section. Missing required fields reject
-the update; omitted optional fields do not retain old values. Null subfields are
+the update. Omitted optional fields do not retain old values. Null subfields are
 valid only where their schemas permit them.
 
-An accepted reported error becomes the affected current result; reads expose it
-without fallback to a prior value. Error reports follow normal validation and ordering.
+An accepted error report becomes the affected section's current result. Reads expose
+the error without falling back to a prior value. Error reports follow normal validation and ordering.
 Preserve original observation times within complete sections. Fresh contact or
 bundling fields together does not make older observations fresh.
 
 Validate identity, API-key validity, original facts, and all effects atomically.
 Classify evidence as accepted, duplicate, or rejected, separately from freshness.
 Duplicate evidence alone cannot refresh contact, append movement, repeat activity,
-or allocate a public change. Order each section and Task/queue stream independently:
-new telemetry must not discard a previously unseen earlier Task outcome.
+or produce a public change. Order each section, Task stream, and queue stream independently.
+New telemetry must not discard a previously unseen earlier Task outcome.
 
-Core's IP-facing update boundary owns authoritative deduplication for both direct
-and relayed submissions. Original evidence identity excludes the submitting key,
-gateway, and delivery-packet identity. The same evidence arriving through a second
-key or gateway remains the same evidence. Edge connections and data links may
-deduplicate independently; Core does not depend on them to prevent repeated effects.
+Core deduplicates direct and relayed submissions at its IP-facing update boundary.
+Original evidence identity excludes the submitting key, gateway, and delivery-packet
+identity. Delivering the same evidence through another key or gateway does not
+change its identity. Edge connections and data links may deduplicate independently.
+Core does not depend on them to prevent repeated effects.
 
 ## Process generations
 

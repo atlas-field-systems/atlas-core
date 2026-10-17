@@ -1,9 +1,9 @@
 # Geofeature messages
 
-**Geofeature messages create and edit authored points, lines, and polygons.**
+Geofeature messages create and edit authored points, lines, and polygons.
 Creation requires Geometry and accepts permitted Description and [Type](../components/type.md#geofeature-type) values.
-It has no Asset enrollment or Track publisher inputs. Shared message context and
-the proposal status of exact names and payloads follow the [messaging index](../messaging.md).
+It has no Asset enrollment or Track publisher inputs. The [messaging index](../messaging.md)
+defines shared message context. Exact names and payloads remain proposals.
 
 ## Messages
 
@@ -13,7 +13,7 @@ the proposal status of exact names and payloads follow the [messaging index](../
 | `ListGeofeatures` | Operator app browses authored geometry for display or Task selection | Bounded filters | Matching Geofeature views |
 | `GetGeofeature` | Operator app or Asset runtime reads geometry referenced by a Task | Geofeature ID | Current Geofeature view |
 | `GetGeofeatureByAlias` | Planning integration resolves a configured alias to a Geofeature | Geofeature alias | Matching Geofeature view |
-| `EditGeofeature` | Operator app or import tool revises geometry or its description | Geofeature ID, permitted description/geometry edits, retry identity, and `expected_edit_revision` | Committed Geofeature; a geometry change advances its geometry revision |
+| `EditGeofeature` | Operator app or import tool revises geometry or its description | Geofeature ID, permitted edits to description and geometry, retry identity, and `expected_edit_revision` | Committed Geofeature. A geometry change advances its geometry revision |
 | `DeleteGeofeature` | Operator app removes authored geometry that is no longer needed | Geofeature ID and retry identity | Deletion or an explicit refusal under [reference guards](../entities.md#geometry-and-references) |
 | `GetGeofeatureObjects` | Operator app finds reference files associated with a point, line, or area | Geofeature ID and bounded query | Associated Object metadata |
 

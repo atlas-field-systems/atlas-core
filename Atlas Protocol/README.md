@@ -6,12 +6,12 @@ behavior. An implementation can conform without using Core's language or databas
 
 ## Design priorities
 
-Atlas Protocol prioritizes readability, strong typing, and versatility. Use
-descriptive JSON field names and structures people can inspect. Reusable schemas
-provide precise contracts across Asset types, implementation languages, and links.
+Protocol favors readable, strongly typed contracts that apply across Asset types,
+implementation languages, and links. Use descriptive JSON field names and reusable
+schemas that people can inspect.
 
-Compact encodings can improve bandwidth efficiency while preserving the readable
-public contract. The compaction method remains an open design choice.
+Compact encodings can reduce bandwidth use without changing the readable public
+contract. The compaction method remains undecided.
 
 ## Vocabulary
 

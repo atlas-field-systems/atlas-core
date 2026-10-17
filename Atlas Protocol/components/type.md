@@ -1,6 +1,6 @@
 # Type
 
-**Type describes what a resource represents, for display and explicit system behavior.**
+Type describes what a resource represents, for display and explicit system behavior.
 The Entity category remains Asset, Track, or Geofeature. Geometry's `type` remains
 Point, LineString, or Polygon. This separate Type value describes an Asset family,
 a Track's reported kind, or a Geofeature's purpose. Wire names and enums are proposals.
@@ -16,15 +16,15 @@ Define named AssetType, TrackType, and GeofeatureType schemas using these shared
 value definitions and their own allowed fields. Plugins cannot register arbitrary
 values. Exact initial enum sets still need review.
 
-## Asset Type
+## Asset type
 
 Proposed kinds are `drone`, `security_camera`, `tracker`, and `other`.
 Drone variants are `powered_fixed_wing`, `fixed_wing_glider`, and `quadcopter`.
-A camera or tracker omits `variant`; it does not supply `variant: null`.
+A camera or tracker omits `variant`. It does not supply `variant: null`.
 
 Type is descriptive Asset data changed through `UpdateAsset` and the descriptive
 revision precondition. Applications can choose icons or handling by Type. Supported
-Commands still come from [Capabilities](capabilities.md); Type alone grants none.
+Commands still come from [Capabilities](capabilities.md). Type alone grants none.
 Any additional type-specific Core rule must be explicit in Protocol.
 
 Valid proposed glider value:
@@ -33,7 +33,7 @@ Valid proposed glider value:
 {"kind": "drone", "variant": "fixed_wing_glider"}
 ```
 
-## Track Type
+## Track type
 
 Proposed kinds are `person`, `ground_vehicle`, `aircraft`, `animal`, and `other`.
 These values describe the observed subject, not its publisher. Updates are source
@@ -47,7 +47,7 @@ Valid proposed value for a vehicle detection:
 {"kind": "ground_vehicle"}
 ```
 
-## Geofeature Type
+## Geofeature type
 
 Proposed kinds are `point_of_interest`, `route`, `search_area`, `boundary`, and `other`.
 This is authored purpose, changed through the Geofeature's descriptive edit rules.
@@ -68,8 +68,9 @@ Invalid Asset Type because a security camera cannot carry a drone variant:
 {"kind": "security_camera", "variant": "quadcopter"}
 ```
 
-Confirm `kind`/`variant` names, initial enum sets, and purpose/geometry compatibility
-rules. These examples are reusable values; reported Track sections additionally
-carry their source evidence. The exact enclosing layout remains incomplete.
+Confirm `kind` and `variant` names, initial enum sets, and compatibility rules
+between purpose and geometry. These examples are reusable values. Reported Track
+sections also carry their source evidence. The exact enclosing layout remains
+incomplete.
 
 [Component index](README.md)

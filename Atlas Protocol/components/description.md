@@ -1,7 +1,7 @@
 # Description
 
-**Description supplies the human-readable name and details shown for an Entity.**
-It is authored data. Asset descriptions use `UpdateAsset`; Track and Geofeature
+Description supplies the human-readable name and details shown for an Entity.
+It is authored data. Asset descriptions use `UpdateAsset`. Track and Geofeature
 descriptions use their respective edit messages and descriptive revision checks.
 The fields and bounds below are proposals.
 
@@ -15,7 +15,7 @@ The fields and bounds below are proposals.
 | `model` | String | Optional, non-null; Assets only | Nonblank hardware model, at most 128 characters |
 
 Names need not be unique. Stable IDs and unique aliases follow [Entity rules](../entities.md).
-[Type](type.md) describes what the Entity is; a model name does not establish Type.
+[Type](type.md) describes what the Entity is. A model name does not establish Type.
 Description does not contain observation timestamps or a standing error field.
 Asset updates replace the complete supplied section under [update rules](../reports.md#shared-context).
 

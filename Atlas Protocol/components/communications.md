@@ -1,6 +1,6 @@
 # Communications
 
-**Communications presents contact health separately from link capacity.**
+Communications presents contact health separately from link capacity.
 Core derives contact health under [Reports](../reports.md#time-and-contact).
 The field names and numeric capacity representation below are proposals.
 
@@ -13,7 +13,7 @@ The field names and numeric capacity representation below are proposals.
 
 Reported capacity uses the [shared reported-section fields](README.md#shared-proposed-section-fields).
 Their timestamp describes capacity evidence, not the age of Core's contact proof.
-The source or a gateway may declare capacity through `UpdateAsset`; the writable
+The source or a gateway may declare capacity through `UpdateAsset`. The writable
 schema omits `health`. Replacing reported information never sets derived health.
 
 A high-capacity link can be offline. Gateway IP connectivity alone supplies neither
@@ -40,7 +40,7 @@ Invalid update fragment because health is Core-owned:
 
 ## Decisions to settle
 
-Confirm whether capacity should be numeric or a defined class. The update/read
+Confirm whether capacity should be numeric or a defined class. The update and read
 schemas must keep reported capacity and Core-derived fields distinct. Exact
 capacity attribution and partial-error layout still need definitions.
 
