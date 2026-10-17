@@ -1,8 +1,8 @@
 # Entities and observations
 
-**An Entity has one immutable ID and type: Asset, Track, or Geofeature.**
-Deleted IDs remain reserved for the Dataset. Optional aliases are unique across
-Entity types, ignoring case.
+**An Entity has one immutable ID and Entity type: Asset, Track, or Geofeature.**
+Resource [Type](components/type.md) is separate. Deleted IDs stay reserved for
+the Dataset; optional aliases are unique across Entity types, ignoring case.
 
 ## Component composition
 
@@ -38,13 +38,13 @@ An Asset classifies each complete section as either:
 The same section schema is reused in either category. Classification changes are
 explicit. A mounted camera can keep position and baseline FOV as state and report
 its complete gimbal section as measurements. A section containing position,
-altitude, and heading reports them together. Stopping does not change classification.
+altitude, and speed reports them together. Stopping does not change classification.
 Core-derived contact follows [report rules](reports.md#time-and-contact).
 
 ## Data ownership
 
 Assets use [UpdateAsset](messaging/assets.md#messages) for supplied complete sections:
-descriptions, capabilities, reported status, and observations. Any valid API key may
+descriptions, Type, capabilities, status, and observations. Any valid API key may
 submit updates directly or through a gateway. Core-derived contact is read-only.
 Track observations retain their publisher; Task execution uses its own messages.
 

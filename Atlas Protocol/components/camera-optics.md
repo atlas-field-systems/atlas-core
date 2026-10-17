@@ -3,6 +3,7 @@
 **Camera Optics is a proposed section for baseline field of view at 1x zoom.**
 A mounted camera can supply it once as state until changed. Changing calibration
 would replace the whole section.
+Current magnification belongs in [Camera](camera.md), independently of this calibration.
 
 ## Proposed fields
 

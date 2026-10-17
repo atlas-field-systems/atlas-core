@@ -13,7 +13,7 @@ names and payloads follow the [messaging index](../messaging.md).
 | `ListAssets` | Operator app browses or searches available Assets | Bounded filters | Matching Asset views |
 | `GetAsset` | Operator app or integration inspects a known Asset | Asset ID | Current Asset view |
 | `GetAssetByAlias` | Integration resolves a configured alias to an Asset | Asset alias | Matching Asset view |
-| `UpdateAsset` | Operator app, provisioning tool, or Asset runtime changes descriptions, capabilities, status, Telemetry, or gimbal sections | Asset ID, complete writable sections, retry identity, and applicable [revision/source-evidence conditions](../entities.md#data-ownership) | Committed Asset view and evidence disposition, or an explicit refusal |
+| `UpdateAsset` | Operator app, provisioning tool, or Asset runtime replaces complete writable Asset sections | Asset ID, complete writable sections, retry identity, and applicable [revision/source-evidence conditions](../entities.md#data-ownership) | Committed Asset view and evidence disposition, or an explicit refusal |
 | `DeleteAsset` | Operator app removes an Asset that is no longer needed | Asset ID and retry identity | Removed Asset under [deletion rules](../identity.md#deletion-and-revocation) |
 | `GetAssetStatus` | Operator app displays reported status alongside Core-derived contact information | Asset ID | Current status and derived contact information |
 | `GetAssetMovementHistory` | Operator app or analysis tool reviews where an Asset has been | Asset ID and bounded history query | Retained movement evidence |
@@ -29,6 +29,7 @@ contact fields remain read-only under [Entity rules](../entities.md#data-ownersh
 
 Supply the sections you intend to replace under the [update rules](../reports.md#shared-context).
 Each section keeps its applicable revision, source evidence, and ordering rules.
+The [component reference](../components/README.md) lists descriptions and reported data.
 Concrete contact-challenge and process-replacement messages remain unspecified.
 
 Assigned work, queue ordering, and adoption confirmations are defined with

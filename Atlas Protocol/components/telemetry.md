@@ -2,7 +2,7 @@
 
 **Telemetry is the proposed complete section for an Entity's location and motion.**
 The name and exact field layout remain proposals. A report supplies this whole
-section, including defined null values, rather than a heading-only update.
+section, including defined null values, rather than a single-value update.
 
 ## Proposed fields
 
@@ -11,13 +11,13 @@ section, including defined null values, rather than a heading-only update.
 | `position` | [Position](#position) or null | Required | Complete WGS84 coordinate pair; null when unknown |
 | `altitude` | [Altitude](#altitude) or null | Required | Height with explicit reference; null when unknown |
 | `ground_speed` | Number or null | Required | Horizontal metres per second, at least zero; null when unknown |
-| `heading` | Number or null | Required | Asset forward-axis angle clockwise from true north, 0 inclusive to 360 exclusive; null when unknown |
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
 Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
 All presence and null choices in this table are proposals. Unknown readings do
 not imply an error; actual failures use the shared error representation.
-Body heading and direction of travel must not be conflated.
+Body heading is defined once in [Attitude](attitude.md), separately from direction
+of travel. It is not duplicated in Telemetry.
 
 ## Position
 
@@ -63,18 +63,17 @@ Valid under the proposed field contract:
 	"position": {"latitude": 51.5074, "longitude": -0.1278},
 	"altitude": {"metres": 142.6, "reference": "wgs84_ellipsoid"},
 	"ground_speed": 0,
-	"heading": null,
 	"observed_at": "2026-10-16T12:00:00Z"
 }
 ```
 
-`heading: null` declares an unknown heading. Omitted `airspeed` is allowed by
-this proposal. Neither omission nor null substitutes an older subfield value.
+Omitted `airspeed` is allowed by this proposal. Neither omission nor null
+substitutes an older subfield value.
 
 This fragment is an invalid replacement because required fields are missing:
 
 ```json
-{"heading": 90, "observed_at": "2026-10-16T12:00:00Z"}
+{"ground_speed": 0, "observed_at": "2026-10-16T12:00:00Z"}
 ```
 
 ## Use and decisions

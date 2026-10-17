@@ -19,6 +19,8 @@ of exact names and payloads follow the [messaging index](../messaging.md).
 Track schemas select their allowed components from the shared definitions,
 including applicable [Telemetry](../components/telemetry.md). Initial descriptions
 and observations must remain distinguishable; exact creation fields are undecided.
+Reported [Type](../components/type.md#track-type) describes the observed subject and
+follows the Track's source-observation rules.
 
 ## Observations and evidence
 

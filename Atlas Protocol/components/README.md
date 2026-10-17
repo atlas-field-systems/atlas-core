@@ -1,18 +1,42 @@
 # Component field reference
 
 **Start here to review the fields and JSON layout proposed for Atlas resources.**
-Each page lists intended fields, types, units, bounds, null/omission choices,
-examples, and decisions still open. Proposed details are not approved contracts.
+The selected component families are listed below. Each page proposes concrete
+fields, types, units, bounds, null/omission choices, and examples. Exact field
+details remain proposals unless explicitly agreed.
 
-| Reportable section | Purpose | Used by |
+## Descriptions and Type
+
+| Component | Purpose | Used by |
 | --- | --- | --- |
+| [Description](description.md) | Human-readable name and details | Entities |
+| [Type](type.md) | Asset family, observed subject kind, or authored purpose | Assets, Tracks, Geofeatures |
+| [Capabilities](capabilities.md) | Supported Protocol Commands and scheduling | Assets, including commandless trackers |
+
+## Reported sections
+
+| Section | Purpose | Used by |
+| --- | --- | --- |
+| [Status](status.md) | Reported overall condition | Assets |
 | [Telemetry](telemetry.md) | One complete location and motion section | Assets and applicable Track observations |
+| [Attitude](attitude.md) | True-north body heading, pitch, and roll | Applicable Assets and Track observations |
+| [Power](power.md) | Supply state and energy reserves | Applicable Assets |
 | [Gimbal](gimbal.md) | One complete pointing section | Assets with a gimbal |
+| [Camera](camera.md) | Live zoom and capture activity | Assets with a camera |
 | [Camera Optics](camera-optics.md) | Baseline field of view at 1x zoom | Assets with a camera |
+
+## Contact and Geometry
+
+| Component | Purpose | Used by |
+| --- | --- | --- |
+| [Communications](communications.md) | Declared link information and Core-derived contact health | Assets |
+| [Heartbeat](heartbeat.md) | Contact evidence and its accepted read metadata | Assets |
+| [Geometry](geometry.md) | Reusable point, line, or polygon | Geofeatures and applicable Tracks |
 
 Telemetry documents the reusable [Position](telemetry.md#position) and
 [Altitude](telemetry.md#altitude) values inline. Command inputs can reference those
-same definitions without adopting the complete Telemetry section.
+same definitions without adopting the complete Telemetry section. Position quality
+remains deferred; no field contract is added for it here.
 
 These are component proposals, not new Entity types or an arbitrary field registry.
 Exact permitted Entity compositions still need schemas. Reference Asset examples
@@ -28,8 +52,8 @@ Those rules apply to the proposed sections below without being redefined here.
 
 ## Shared proposed section fields
 
-These fields apply to complete reported sections. Reusable value types do not
-include reporting metadata.
+These fields apply to complete reported sections. Reusable values and authored
+sections do not inherit them; contact evidence has its own linked representation.
 
 | Field | Type | Presence | Proposed meaning |
 | --- | --- | --- | --- |
