@@ -40,8 +40,7 @@ Invalid update fragment because health is Core-owned:
 
 ## Decisions to settle
 
-Confirm whether capacity should be numeric or a defined class. The update and read
-schemas must keep reported capacity and Core-derived fields distinct. Exact
-capacity attribution and partial-error layout still need definitions.
+Confirm whether capacity should be numeric or a defined class. Exact capacity
+attribution and partial-error layout still need definitions.
 
 [Component index](README.md)

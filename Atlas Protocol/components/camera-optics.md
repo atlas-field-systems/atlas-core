@@ -9,11 +9,10 @@ Current magnification belongs in [Camera](camera.md), independently of this cali
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
-| `horizontal_fov` | Number or null | Required | Full horizontal angle at 1x, in degrees; propose greater than 0 and less than 180 for rectilinear optics |
-| `vertical_fov` | Number or null | Required | Full vertical angle at 1x, in degrees; propose greater than 0 and less than 180 for rectilinear optics |
+| `horizontal_fov` | Number or null | Required | Full horizontal angle at 1x, in degrees; greater than 0 and less than 180 for rectilinear optics |
+| `vertical_fov` | Number or null | Required | Full vertical angle at 1x, in degrees; greater than 0 and less than 180 for rectilinear optics |
 
 Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
-The names, null choices, and initial optical-model restriction remain proposals.
 Both fields are present in every replacement. Null means unknown calibration.
 
 ## Examples

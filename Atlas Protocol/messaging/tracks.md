@@ -2,8 +2,7 @@
 
 Track messages publish observations about something, under one stable publisher.
 Creation identifies that publisher and accepts Track components. It does not enroll
-an Asset or establish Asset contact. The [messaging index](../messaging.md) defines
-shared message context. Exact names and payloads remain proposals.
+an Asset or establish Asset contact.
 
 ## Creation and descriptions
 
@@ -33,6 +32,6 @@ follows the Track's source-observation rules.
 Preserve publisher identity separately from the delivering gateway or credential.
 Apply Track observation ordering, not Asset process and contact requirements.
 The exact observation envelope and its relationship to complete section updates
-remain unspecified. This catalog does not redefine the owning Track rules.
+remain unspecified.
 
 [Messaging index](../messaging.md)

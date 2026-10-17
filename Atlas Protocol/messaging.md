@@ -4,7 +4,7 @@ Protocol defines what a message means. Its link defines how it is carried.
 Requests, results, reports, and notifications reuse Protocol's component schemas.
 Core validates the contract independently of the link that delivers the message.
 Message names, exact payloads, type identifiers, and reply envelopes remain
-proposals. The catalog preserves the intended operation scope.
+proposals.
 
 ## Message contracts
 
@@ -13,7 +13,7 @@ Required values, behavior for null and omitted values, bounds, and component
 references belong in shared OpenAPI schemas. Bindings define how the link represents
 and exchanges messages.
 
-Expected users and purposes are proposed workflows for discussion, not permissions.
+Expected users describe proposed workflows, not permissions.
 Any valid key has the same public permissions under [Identity](identity.md).
 The named caller originates the request or report. A gateway may carry it on their behalf.
 
@@ -33,12 +33,11 @@ A lost result leaves uncertainty. Another link must not silently create new work
 
 `RegisterAsset`, `CreateTrack`, and `CreateGeofeature` have distinct input schemas.
 Each exposes only the fields and components permitted for its Entity type under
-[Entities](entities.md#component-composition). Shared Entity rules still apply.
-The public catalog names each Entity type explicitly.
+[Entities](entities.md#component-composition).
 
 Different public messages may share a Core API operation or internal mechanism.
 That mapping does not merge their public input contracts or require one HTTP
-endpoint per message. Concrete Core API mapping is outside this catalog.
+endpoint per message.
 
 ## Plugin and Operation messages
 

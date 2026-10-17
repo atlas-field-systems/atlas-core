@@ -46,7 +46,6 @@ Invalid proof fragment because a submitted health flag is not contact evidence:
 ## Decisions to settle
 
 Confirm evidence fields, challenge and result messages, and exactly how the read
-timestamp relates to retained receipt facts. The accepted discovery and process rules
-remain authoritative. This page does not introduce another heartbeat timer.
+timestamp relates to retained receipt facts.
 
 [Component index](README.md)

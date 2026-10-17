@@ -14,10 +14,9 @@ section, including defined null values, rather than a single-value update.
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
 Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
-All presence and null choices in this table are proposals. Unknown readings do
-not imply an error. Actual failures use the shared error representation.
-Body heading is defined once in [Attitude](attitude.md), separately from direction
-of travel. It is not duplicated in Telemetry.
+Unknown readings do not imply an error. Actual failures use the shared error
+representation. Body heading belongs in [Attitude](attitude.md), separately from
+direction of travel.
 
 ## Position
 
@@ -30,8 +29,8 @@ complete pairs, valid zero coordinates, and double precision.
 | `latitude` | Number | Required, non-null | -90 through 90 inclusive |
 | `longitude` | Number | Required, non-null | -180 through 180 inclusive |
 
-These bounds and null rules remain proposals. Numbers must be finite under
-[Wire](../wire.md#parsing-and-edits). Preserve precision without rounding.
+Numbers must be finite under [Wire](../wire.md#parsing-and-edits).
+Preserve precision without rounding.
 
 - Valid: `{"latitude": 0, "longitude": 0}`.
 - Invalid latitude: `{"latitude": 91, "longitude": 0}`.
@@ -84,8 +83,6 @@ This does not require every Entity to have Telemetry.
 
 The proposed [`UpdateAsset`](../messaging/assets.md#updating-sections) message
 carries this Asset section.
-An illustrative SDK helper, `prepareAssetUpdate(assetId, update)`, would validate the
-complete section and prepare retry facts. That helper name and signature are proposals.
 
 Settle the section name, required nullable fields, optional airspeed, and source-time
 layout. A single section timestamp must not conceal older constituent readings.

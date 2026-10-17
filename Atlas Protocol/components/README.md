@@ -47,7 +47,7 @@ and a commandless tracker that reports its own telemetry.
 [Entities](../entities.md#reported-sections) owns the distinction between state
 until changed and dated measurements. [Reports](../reports.md#shared-context)
 owns complete-section replacement, errors, ordering, and sparse report behavior.
-Those rules apply to the proposed sections below without being redefined here.
+Those rules apply to all proposed sections.
 
 ## Shared proposed section fields
 

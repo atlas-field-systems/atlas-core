@@ -1,9 +1,7 @@
 # Task messages
 
 Task messages record requested Commands and the Asset's execution evidence.
-They expose work as Tasks rather than arbitrary resource state edits. The
-[messaging index](../messaging.md) defines shared message context. Exact names and
-payloads remain proposals.
+They expose work as Tasks rather than arbitrary resource state edits.
 
 ## Work and execution
 

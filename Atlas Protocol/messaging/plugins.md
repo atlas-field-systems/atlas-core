@@ -1,9 +1,7 @@
 # Plugin and Operation messages
 
 Applications invoke Plugin capabilities through Operations, separately from Asset Tasks.
-The Plugin performs the requested processing. The [messaging index](../messaging.md)
-defines shared message context and expected-user conventions. Names and payloads
-remain proposals.
+The Plugin performs the requested processing.
 
 ## Messages
 

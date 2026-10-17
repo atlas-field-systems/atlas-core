@@ -2,8 +2,7 @@
 
 One Asset view, with one message for updating its writable sections.
 Creation includes enrollment and process facts. A telemetry-only tracker can
-advertise no Commands. The [messaging index](../messaging.md) defines shared message
-context. Exact names and payloads remain proposals.
+advertise no Commands.
 
 ## Messages
 

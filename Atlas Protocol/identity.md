@@ -28,8 +28,8 @@ Prepare stable registration/request IDs and recoverable credential material befo
 sending. The registering client prepares and retains its new credential secret;
 Core retains its verifier. Registration atomically creates the Entity, principal,
 credential binding, and retry record. A lost reply must not lose the only usable
-secret. Retrying the same original facts returns the existing identity and current
-resource, not defaults, and does not replace or reveal the secret.
+secret. While the Entity exists, retrying the same original facts returns its
+identity and current resource, not defaults, and does not replace or reveal the secret.
 
 Local administration provisions the first API key before public-API use. An existing
 valid key authorizes public enrollment under the same permissions as other writes.

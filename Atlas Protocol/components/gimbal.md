@@ -37,10 +37,4 @@ Invalid as a section replacement because elevation is missing:
 {"bearing": 135, "observed_at": "2026-10-16T12:00:00Z"}
 ```
 
-## Decisions to settle
-
-Confirm angle bounds and the representation of unknown readings and errors.
-Raw mechanical pan and tilt readings still need conversion to this proposed
-world-relative representation.
-
 [Component index](README.md)

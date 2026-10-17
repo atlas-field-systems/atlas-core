@@ -1,8 +1,7 @@
 # Object messages
 
 Object messages publish complete file content and manage its metadata.
-An Object becomes public only after verified publication. The [messaging index](../messaging.md)
-defines shared message context. Exact names and payloads remain proposals.
+An Object becomes public only after verified publication.
 
 ## Messages
 

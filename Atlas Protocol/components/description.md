@@ -36,10 +36,4 @@ Invalid because the display name is blank:
 {"name": ""}
 ```
 
-## Decisions to settle
-
-Confirm field names and text limits. Manufacturer and model are proposed Asset
-fields, not a hardware inventory service. Removing optional description fields
-from an Asset replacement removes their previous values.
-
 [Component index](README.md)
