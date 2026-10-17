@@ -10,9 +10,9 @@ an implemented API, generated package, passing runtime, or qualified deployment.
 
 | Layer | Owns | Does not own |
 | --- | --- | --- |
-| **Atlas Protocol** | Shared vocabulary, data, messages, API contracts, observable rules | Databases, processes, implementation |
+| **Atlas Protocol** | Shared vocabulary, schemas, message contracts, observable rules | Databases, processes, implementation |
 | **Atlas Core** | A running server that enforces Protocol and retains state | Physical execution on a drone |
-| **Atlas SDK** | A convenient TypeScript client for Protocol | Server policy or private Core internals |
+| **Atlas SDK** | An IP-specific TypeScript client for Protocol | Server policy or private Core internals |
 
 Protocol is foundational. Core implements it; SDK speaks it. Applications use
 SDK to reach Core. A gateway translates radio traffic; the Asset runtime executes.

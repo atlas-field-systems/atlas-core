@@ -7,8 +7,8 @@ Plugins are not Task targets and cannot add Asset Commands.
 ## Creation and state
 
 One Task has immutable Asset, Command, inputs, scheduling choice, and validity
-terms. Creation validates support, references, and retirement status, then assigns
-a stable per-Asset submission sequence. Offline or busy does not itself prevent
+terms. Core validates support, references, and the target Asset's existence. It then
+assigns a stable per-Asset submission sequence. Offline or busy does not itself prevent
 acceptance. Exact retries allocate neither another Task nor another sequence.
 
 States are `pending`, `acknowledged`, `in_progress`, `paused`,
@@ -56,6 +56,7 @@ fall back to an older control. Command-specific deadlines remain explicit.
 ## References and results
 
 Geofeature references and deletion guards follow [Entity rules](entities.md).
+Asset deletion and retained Tasks follow [Identity](identity.md#deletion-and-revocation).
 Removing advertised support does not delete existing Tasks; the Asset reports
 an honest unsupported outcome.
 

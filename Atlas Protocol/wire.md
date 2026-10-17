@@ -1,8 +1,9 @@
 # Wire conventions
 
-**One authored contract must mean the same thing in every language.**
-Use HTTP/JSON for requests and WebSocket for the change feed, over authenticated
-TLS in deployment. Binary content remains binary, not JSON-encoded bytes.
+Core's IP binding carries Protocol messages over HTTP/JSON and WebSocket.
+[Messaging](messaging.md) defines the exchanges independently of their transport.
+This page defines their IP representation. Deployments use authenticated TLS.
+Binary content remains binary, not JSON-encoded bytes.
 
 ## Common representation
 
@@ -19,6 +20,10 @@ Authenticated `GET /health` is the discovery exception: it accepts requests with
 Dataset or version headers. Its normal JSON envelope includes the current
 `dataset_id` and `data.protocol_version`. SDK discovers these values, requires its
 own exact Protocol version, and then supplies both headers on ordinary requests.
+
+Health and reference data require authentication. A public documentation page may
+show only a key-entry form without exposing schemas. Keep keys in memory,
+not URLs or browser persistent storage.
 
 JSON success uses `{dataset_id, data, commit_cursor?}`. Mutations with public
 changes include their committed cursor. Errors use
@@ -40,6 +45,8 @@ Patches leave omitted fields unchanged, replace scalars and arrays, merge define
 objects, and use null only for permitted removal/clearing. Validate the complete
 merged result atomically. Never insert defaults, coerce values, or drop unknown
 input properties to make validation pass. Complete positions remain complete pairs.
+Asset updates use [whole-section replacement](reports.md#shared-context) instead
+of subfield merging, including on bindings that use PATCH.
 
 ## Retry and Dataset rules
 
@@ -62,4 +69,4 @@ views, not frozen snapshots; IDs sort bytewise. Default pages contain 100 items,
 maximum 1,000. Tokens bind source, Dataset, kind, filters, size, and continuation;
 ordinary tokens expire after 60 seconds. Assigned-work lists also bind queue revision.
 
-[Next: API](api.md)
+[Next: synchronization](synchronization.md)

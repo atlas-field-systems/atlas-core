@@ -41,4 +41,4 @@ Missing or damaged committed content is an explicit integrity fault, not an empt
 successful download. Preserve metadata and unrelated operations; do not fabricate
 results or rewrite a completed Task. Late file availability never reopens a Task.
 
-[Next: wire conventions](wire.md)
+[Next: messaging](messaging.md)

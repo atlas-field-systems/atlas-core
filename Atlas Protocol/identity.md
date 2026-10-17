@@ -28,8 +28,8 @@ Prepare stable registration/request IDs and recoverable credential material befo
 sending. The registering client prepares and retains its new credential secret;
 Core retains its verifier. Registration atomically creates the Entity, principal,
 credential binding, and retry record. A lost reply must not lose the only usable
-secret. Retrying the same original facts returns the existing identity and current
-resource, not defaults, and does not replace or reveal the secret.
+secret. While the Entity exists, retrying the same original facts returns its
+identity and current resource, not defaults, and does not replace or reveal the secret.
 
 Local administration provisions the first API key before public-API use. An existing
 valid key authorizes public enrollment under the same permissions as other writes.
@@ -47,19 +47,28 @@ API-key creation uses caller-prepared secrets with at least 32 random bytes and 
 Core stores verifiers, not retrievable secrets. Creation identity survives Reset.
 First-key provisioning and credential replacement are local administration.
 
-## Deletion, retirement, and revocation
+## Deletion and revocation
 
-Normal Asset deletion is blocked by nonterminal Tasks. Allowed deletion atomically
-removes the Entity, revokes its credentials, and publishes the deletion.
+Asset deletion atomically removes the Entity, revokes associated credentials, and
+publishes the deletion. Unfinished Tasks do not block it. Their records, original
+Asset references, and accepted evidence remain. Deletion does not change their
+execution state or release their reference guards. Deletion closes reporting for
+the Asset ID. Core refuses new Tasks and updates for that identity, regardless of
+submitting key. This includes `UpdateAsset`, `ReportTaskExecution`,
+`ReportTaskResults`, and `ConfirmTaskOrder`, even for evidence generated before
+deletion.
 
-Retirement handles an unreachable Asset with unresolved work. It preserves the
-Entity and evidence, revokes associated credentials, and rejects new Tasks and
-reports for that Asset regardless of submitting key. It does **not** claim
-that physical work stopped, finish Tasks, or release their reference guards.
+For example, delete Asset A while Task T is running. A gateway with a valid key
+later delivers T's previously unseen completion evidence. Core refuses the report.
+T retains its last accepted execution state and reference guards.
 
-Deleted or retired Asset identities cannot reenroll until Hard Reset. Ordinary Reset
-does not remove that denial. Credential replacement revokes the previous binding;
-old actions cannot revoke a newly created binding by accidentally reusing an ID.
+Updates and registration retries cannot recreate a deleted Asset. Deleted IDs follow
+[Entity lifetime rules](entities.md). The physical system may register again with
+a new Asset ID and credentials under the normal [enrollment rules](#enrollment-and-credentials).
+Previous Tasks remain attached to their original Asset ID.
+
+Credential replacement revokes the previous binding; old actions cannot revoke a
+newly created binding by accidentally reusing an ID.
 
 Revocation takes effect at commit, including open feeds and uploads awaiting
 publication. Recheck authorization at the final effect boundary. Refusal after
