@@ -1,8 +1,8 @@
 # Atlas SDK
 
-**SDK is the TypeScript way to use Atlas, not another source of server policy.**
-It consumes [Protocol](../Atlas%20Protocol/README.md), communicates with Core, and
-provides a small set of handwritten client workflows over generated declarations.
+**SDK is the IP-specific TypeScript client for Atlas Core.**
+It consumes [Protocol](../Atlas%20Protocol/README.md), exchanges messages with Core
+over HTTP/JSON and WebSocket, and provides handwritten workflows over generated declarations.
 It must not import Core's database, private types, or internal service interfaces.
 
 ## Two explicit read modes
@@ -23,9 +23,10 @@ queue, hybrid/selective mode, or shared cross-tab replica.
 
 ## Package boundary
 
-Protocol supplies shared types, schemas, errors, Command definitions, and transport
-contracts. SDK supplies connection setup, runtime response validation, safe prepared
-requests, replayable file inputs, Asset-report helpers, and optional picture upkeep.
+Protocol supplies shared types, schemas, errors, Command definitions, and
+[message contracts](../Atlas%20Protocol/messaging.md). SDK implements Core's IP binding
+and supplies connection setup, runtime response validation, safe prepared
+requests, replayable file inputs, Asset-update helpers, and optional picture upkeep.
 Use a stock typed HTTP client before adding generated wrappers for every endpoint.
 
 Expose typed helpers for Protocol's reusable components and concrete resources so
@@ -36,7 +37,7 @@ types alone do not validate runtime data. Core independently validates incoming
 requests, including requests made without SDK; SDK does not replace that boundary.
 
 The Command Catalog is available locally from the installed Protocol artifact.
-Asset helpers prepare registration, process/report identity, and reconciliation;
+Asset helpers prepare registration, section updates, source identity, and reconciliation;
 they do not execute or schedule physical work. Asset software must retain its own
 identity and execution evidence. Gateway firmware and radio encoding remain external.
 

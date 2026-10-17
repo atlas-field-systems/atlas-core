@@ -3,6 +3,8 @@
 **An accepted change must survive, and its related facts must agree.**
 One SQLite database holds operational and installation-lifetime tables. Core is
 its exclusive writer; the host manager does not edit live SQL behind its back.
+Core persists accepted Asset sections with their source and ordering facts, and
+assembles the public Asset JSON from those values.
 
 ## One commit boundary
 
@@ -52,7 +54,7 @@ already implemented guarantee.
 ## History and activity
 
 Movement is sparse accepted evidence, not a sampled copy of the current picture.
-Activity records selected Task, retirement, Plugin, credential, and configuration
+Activity records selected Task, Asset deletion, Plugin, credential, and configuration
 actions with credential attribution. It is not a log of every packet or read and
 must not contain secrets. Same-effect retries do not duplicate activity.
 

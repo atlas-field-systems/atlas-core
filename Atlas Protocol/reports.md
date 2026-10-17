@@ -1,23 +1,35 @@
 # Reports, time, and contact
 
-**Receiving a packet, accepting evidence, and establishing fresh contact are
-three different things.** One report-acceptance path applies to all Asset routes.
+**UpdateAsset changes descriptions, status, and observations through one path.**
+Accepting evidence and establishing fresh contact remain distinct outcomes.
 
 ## Shared context
 
-Reports identify the Dataset, Asset, process generation, and positive sequence.
-The common context includes `generated_at`, current/historical evidence kind,
-original evidence identity, per-quantity observation times, and contact proof.
+Updates identify Dataset and Asset. Reported sections also identify the process
+generation and positive sequence. Their context includes `generated_at`, original
+evidence identity, current/historical kind, per-quantity source times, and contact proof.
 Unknown original time stays null. Retained historical evidence keeps its identity;
 a new packet ID cannot turn the same fact into fresh evidence.
 
+Apply [reported section classifications](entities.md#reported-sections) independently.
+An omitted section preserves its accepted result, classification, and source times.
+A supplied section is a complete replacement, validated against its full schema.
+Never merge its subfields with the prior section. Missing required fields reject
+the update; omitted optional fields do not retain old values. Null subfields are
+valid only where their schemas permit them.
+
+An accepted reported error becomes the affected current result; reads expose it
+without fallback to a prior value. Error reports follow normal validation and ordering.
+Preserve original observation times within complete sections. Fresh contact or
+bundling fields together does not make older observations fresh.
+
 Validate identity, API-key validity, original facts, and all effects atomically.
-Classify reports as accepted, duplicate, or rejected, separately from freshness.
-Duplicates cannot refresh contact, append movement, repeat activity, or allocate
-another public change. Order each quantity and Task/queue stream independently:
+Classify evidence as accepted, duplicate, or rejected, separately from freshness.
+Duplicate evidence alone cannot refresh contact, append movement, repeat activity,
+or allocate a public change. Order each section and Task/queue stream independently:
 new telemetry must not discard a previously unseen earlier Task outcome.
 
-Core's IP-facing report boundary owns authoritative deduplication for both direct
+Core's IP-facing update boundary owns authoritative deduplication for both direct
 and relayed submissions. Original evidence identity excludes the submitting key,
 gateway, and delivery-packet identity. The same evidence arriving through a second
 key or gateway remains the same evidence. Edge connections and data links may
@@ -58,8 +70,8 @@ process, and Core run; Restart invalidates it. The initial challenge window is
 10 seconds, subject to field qualification.
 
 Historical reports, duplicates, Track-only observations, open connections, and
-operator edits do not establish contact. Gateway IP health does not prove that its
-downstream Asset is reachable.
+description changes alone do not establish contact. Gateway IP health does not
+prove a downstream Asset is reachable.
 
 Communications health is `healthy` for less than 15 seconds after accepted fresh
 contact, `degraded` from 15 seconds until 60 seconds, and `offline` at 60 seconds.

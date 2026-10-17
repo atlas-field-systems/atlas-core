@@ -11,9 +11,9 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | --- | --- |
 | Shared components | Independent valid/invalid examples; allowed Entity compositions; Go/TypeScript agreement; SDK input/response validation and direct-HTTP refusal of malformed input |
 | Wire and identity | Absent/null, exact counters and identifiers; authenticated discovery and exact-version refusal; equal API permissions across keys; wrong Dataset; lost enrollment reply; revoked-key rejection |
-| Reports and Tracks | API-key-only direct/relayed reports; deduplication across keys/gateways, ordering, and history; contact expiry without new packets; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
+| Asset updates and Tracks | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; deduplication across keys/gateways, ordering, and history; contact expiry without new packets; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
-| Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, retirement without invented outcomes |
+| Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, Asset deletion without invented outcomes or transferred Tasks |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
 | Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry, holds versus deletion, disk-full and integrity faults |
 | Plugins | Disconnect versus runtime loss, same-runtime redelivery, receipt exhaustion, protected drain/force, recovered evidence, removal and retained results |

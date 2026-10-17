@@ -28,9 +28,12 @@ mistaken for a submission to a fresh system.
 Author public schemas and Command metadata once in a language-neutral OpenAPI
 artifact. Define reusable JSON components and their permitted compositions in
 [Entities](entities.md#component-composition). HTTP and non-HTTP messages reuse
-those definitions. The Command Catalog is available locally; it is not a network
-discovery service. Plugins may define specialized Operation payloads, but cannot
-invent Entity components or Asset Commands.
+those definitions. [Messaging](messaging.md) describes the supported exchanges;
+[Wire](wire.md) defines Core's IP binding. The Command Catalog is available locally;
+it is not a network discovery service. Plugins may define specialized Operation
+payloads, but cannot invent Entity components or Asset Commands.
+
+Review concrete field proposals in the [component field reference](components/README.md).
 
 Use standard generation for Go and TypeScript declarations and ordinary HTTP
 bindings. Runtime validation must be integrated explicitly. Keep algorithms,
@@ -46,8 +49,8 @@ automatic downgrade, or translation between versions. Plugins release independen
 ## Reading order
 
 [Entities](entities.md) → [Identity](identity.md) → [Reports](reports.md) →
-[Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) → [Wire](wire.md) →
-[API](api.md) → [Synchronization](synchronization.md).
+[Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
+[Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
 
 These pages specify behavior. Exact schemas, supported generator features, and
 cross-language fixtures remain incomplete and unqualified.
