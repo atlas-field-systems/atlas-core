@@ -13,7 +13,7 @@ Asset history and synchronization use [location reading rules](../location-histo
 | `ground_speed` | Number or null | Required | Horizontal metres per second, at least zero; null when unknown |
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
-Successful sections also include the [shared fields](README.md#shared-proposed-section-fields).
+All results include the [shared fields](README.md#shared-proposed-section-fields).
 Asset reports require [quantity sources](../reports.md#quantity-sources) in their
 shared report context. `observed_at` dates the other telemetry values, including
 speed. It never refreshes the position or altitude source times.
@@ -94,8 +94,10 @@ commandless trackers can report dated measurements. Telemetry is not universal.
 HTTP Asset reads and public SDK values keep expanded `position` and `altitude`.
 Successful Asset reads also expose `telemetry.quantity_sources.position` and
 `.altitude`. Each contains the selected reading's `id`, `revision`,
-`original_evidence`, `observed_at`, and `time_usability`. This read-only metadata
-is distinct from the producer's enclosing report context. Errors expose neither.
+`original_evidence`, `observed_at`, and `time_usability`. Response schemas add this
+read-only metadata separately from the producer's enclosing report context.
+Writable telemetry excludes it. `UpdateAsset` rejects nested
+`telemetry.quantity_sources` with a validation error. Errors expose neither.
 Sync replaces expanded values and this metadata with [references](../synchronization.md#complete-changes).
 Longitude endpoint canonicalization and Altitude's object layout remain proposals.
 Uncertainty fields and exact Track field applicability remain undefined.

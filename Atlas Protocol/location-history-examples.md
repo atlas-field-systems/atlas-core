@@ -40,8 +40,9 @@ sends no reading images. HTTP and public SDK reads expand both referenced values
 
 ## Backfill, correction, and replay
 
-A historical P39 observed at 09:59 arrives after P42. It adds one reading and one
-ordinary journal commit. Current remains P42 and A40, with no Asset change.
+A historical P39 observed at 09:59 arrives after P42 and repeats A40's altitude
+context. It adds one reading and one ordinary journal commit. Current remains
+P42 and A40, with no Asset change.
 Correct P42 to revision 2 with longitude -0.2. The same commit replaces P42's
 accepted revision, advances Asset version 42 to 43, and selects P42 revision 2.
 P42 retains its original process, evidence identity, and 10:05 source time.
@@ -53,7 +54,8 @@ An exact replay adds no reading or journal event. Reusing revision 2 with longit
 A new current P44 with null value and null source time is a retained `unknown`
 reading. Telemetry selects P44 revision 1 through a non-null reference and keeps
 the A40 altitude reference. Expanded position is null. A telemetry error exposes only
-the error, with no usable location references or fallback to P42. Readings remain.
+`observed_at` and the error, with no usable location references or fallback to P42.
+Readings remain.
 
 An image referencing A40 as position, another Asset's reading, a missing reading,
 or an absent revision fails the entire commit. The prior picture, applied Core
@@ -78,5 +80,6 @@ retrying whole-commit capacity. A commit that then fits proceeds without a gap.
 
 For exact-time ordering, a reading with ID suffix 09 at `.0000001Z` precedes one
 with suffix 01 at `.0000002Z`. Equal instants `.1Z` and `.100Z` order by exact ID.
+Reject `.0000000001Z` rather than truncating its fractional precision.
 Unknown and uncertain readings occupy the separate group in ID order, regardless
 of timestamp spelling. Preserve all original spellings in results.

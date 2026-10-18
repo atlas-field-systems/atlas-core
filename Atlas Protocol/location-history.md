@@ -12,7 +12,7 @@ One authoritative collection has two fixed variants. Each image contains these f
 
 | Field | Contract |
 | --- | --- |
-| `id` | Stable Dataset-scoped reading UUID, bound to one original evidence identity |
+| `id` | Core-assigned UUID at first acceptance, stable within the Dataset and bound to one original evidence identity |
 | `asset_id` | Owning Asset UUID, retained after deletion |
 | `kind` | Exactly `position` or `altitude` |
 | `revision` | Positive exact correction counter under [Wire](wire.md#common-representation) |
@@ -61,11 +61,11 @@ and page size under [Wire's page bounds](wire.md#lists). Unsupported filters fai
 explicitly. Known-time bounds include the start and exclude the end.
 No bounds means all retained matching evidence.
 
-Known-time readings sort by parsed source instant at all Protocol-accepted
-fractional precision, then exact sample ID bytewise. Timestamp string order and
+Known-time readings sort by exact source instant under [Wire's timestamp rules](wire.md#common-representation),
+then by reading `id` bytewise. Timestamp string order and
 rounded milliseconds are invalid substitutes. Equal instants retain their
 original spellings. Unknown and uncertain readings form a separate labelled group
-ordered by exact sample ID. A query selects either group or both. When both are
+ordered by reading `id`. A query selects either group or both. When both are
 selected, the known-time group comes first. Time bounds apply only to known times.
 
 The first page freezes the finite set of matching immutable reading references

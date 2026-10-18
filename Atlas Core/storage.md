@@ -9,8 +9,8 @@ It owns admission and [current selection](../Atlas%20Protocol/location-history.m
 ## One commit boundary
 
 Under one transaction, recheck authorization, Dataset, revisions, retry identity,
-and reference guards. Commit resource changes, retry facts, required readings,
-activity, and the complete public batch together. A rollback publishes nothing.
+and reference guards. Commit resource changes, retry facts, required Asset readings,
+Track movement, activity, and the complete public batch together. A rollback publishes nothing.
 Return success after commit, not after a client receives the change feed.
 
 A retry distinguishes first execution, exact replay, conflicting facts, and an ended

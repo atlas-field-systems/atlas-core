@@ -11,6 +11,10 @@ Use UUID identifiers and snake_case wire fields. Encode 64-bit counters as
 canonical decimal strings, not JavaScript numbers. Validate their numeric range,
 not only their spelling. Preserve double precision for spatial values.
 
+UTC timestamps use `YYYY-MM-DDTHH:mm:ss[.fraction]Z` with valid calendar fields.
+Seconds range from `00` through `59`. An optional fraction has one to nine digits.
+Reject finer precision. Preserve accepted spelling and compare exact nanoseconds.
+
 Requests identify `Atlas-Dataset-ID` and `Atlas-Protocol-Version`. Responses carry
 the actual Dataset and Core's Protocol version, including declared error responses.
 Require the exact version shared by Core, SDK, and Protocol for that release.

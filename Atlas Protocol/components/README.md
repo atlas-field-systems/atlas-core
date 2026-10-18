@@ -61,7 +61,8 @@ sections do not inherit them. Contact evidence has its own linked representation
 
 Propose an error object with a required string `code` and optional string `message`.
 The allowed codes and handling of failures affecting only part of a section remain
-undecided. An error replaces the entire result without prior good values.
+undecided. An error result contains only `observed_at` and `error`.
+It replaces the entire result without prior good values.
 A single `observed_at` works for a coherent observation. Asset Telemetry uses
 [quantity sources](../reports.md#quantity-sources) for independent position and
 altitude identity, correction revision, and source time. Other mixed-time layouts
