@@ -4,8 +4,27 @@
 package atlas
 
 import (
+	"encoding/json"
+	"errors"
+
 	"github.com/oapi-codegen/nullable"
+	"github.com/oapi-codegen/runtime"
 )
+
+// Defines values for AcknowledgmentAccepted.
+const (
+	Committed AcknowledgmentAccepted = "committed"
+)
+
+// Valid indicates whether the value is a known member of the AcknowledgmentAccepted enum.
+func (e AcknowledgmentAccepted) Valid() bool {
+	switch e {
+	case Committed:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for AltitudeReference.
 const (
@@ -22,6 +41,3077 @@ func (e AltitudeReference) Valid() bool {
 	}
 }
 
+// Defines values for AssetEntityType.
+const (
+	AssetEntityTypeAsset AssetEntityType = "asset"
+)
+
+// Valid indicates whether the value is a known member of the AssetEntityType enum.
+func (e AssetEntityType) Valid() bool {
+	switch e {
+	case AssetEntityTypeAsset:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssetSourceKind.
+const (
+	AssetSourceKindAsset AssetSourceKind = "asset"
+)
+
+// Valid indicates whether the value is a known member of the AssetSourceKind enum.
+func (e AssetSourceKind) Valid() bool {
+	switch e {
+	case AssetSourceKindAsset:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttitudeErrorClassification.
+const (
+	AttitudeErrorClassificationDatedMeasurement  AttitudeErrorClassification = "dated_measurement"
+	AttitudeErrorClassificationStateUntilChanged AttitudeErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the AttitudeErrorClassification enum.
+func (e AttitudeErrorClassification) Valid() bool {
+	switch e {
+	case AttitudeErrorClassificationDatedMeasurement:
+		return true
+	case AttitudeErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttitudeErrorState.
+const (
+	AttitudeErrorStateError AttitudeErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the AttitudeErrorState enum.
+func (e AttitudeErrorState) Valid() bool {
+	switch e {
+	case AttitudeErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttitudeValueClassification.
+const (
+	AttitudeValueClassificationDatedMeasurement  AttitudeValueClassification = "dated_measurement"
+	AttitudeValueClassificationStateUntilChanged AttitudeValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the AttitudeValueClassification enum.
+func (e AttitudeValueClassification) Valid() bool {
+	switch e {
+	case AttitudeValueClassificationDatedMeasurement:
+		return true
+	case AttitudeValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttitudeValueState.
+const (
+	AttitudeValueStateValue AttitudeValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the AttitudeValueState enum.
+func (e AttitudeValueState) Valid() bool {
+	switch e {
+	case AttitudeValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttitudeWithdrawnClassification.
+const (
+	AttitudeWithdrawnClassificationStateUntilChanged AttitudeWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the AttitudeWithdrawnClassification enum.
+func (e AttitudeWithdrawnClassification) Valid() bool {
+	switch e {
+	case AttitudeWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttitudeWithdrawnState.
+const (
+	AttitudeWithdrawnStateWithdrawn AttitudeWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the AttitudeWithdrawnState enum.
+func (e AttitudeWithdrawnState) Valid() bool {
+	switch e {
+	case AttitudeWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthenticateFrameType.
+const (
+	Authenticate AuthenticateFrameType = "authenticate"
+)
+
+// Valid indicates whether the value is a known member of the AuthenticateFrameType enum.
+func (e AuthenticateFrameType) Valid() bool {
+	switch e {
+	case Authenticate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthenticatedFrameType.
+const (
+	Authenticated AuthenticatedFrameType = "authenticated"
+)
+
+// Valid indicates whether the value is a known member of the AuthenticatedFrameType enum.
+func (e AuthenticatedFrameType) Valid() bool {
+	switch e {
+	case Authenticated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BatteryReserveKind.
+const (
+	Battery BatteryReserveKind = "battery"
+)
+
+// Valid indicates whether the value is a known member of the BatteryReserveKind enum.
+func (e BatteryReserveKind) Valid() bool {
+	switch e {
+	case Battery:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraErrorClassification.
+const (
+	CameraErrorClassificationDatedMeasurement  CameraErrorClassification = "dated_measurement"
+	CameraErrorClassificationStateUntilChanged CameraErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CameraErrorClassification enum.
+func (e CameraErrorClassification) Valid() bool {
+	switch e {
+	case CameraErrorClassificationDatedMeasurement:
+		return true
+	case CameraErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraErrorState.
+const (
+	CameraErrorStateError CameraErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the CameraErrorState enum.
+func (e CameraErrorState) Valid() bool {
+	switch e {
+	case CameraErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraOpticsErrorClassification.
+const (
+	CameraOpticsErrorClassificationDatedMeasurement  CameraOpticsErrorClassification = "dated_measurement"
+	CameraOpticsErrorClassificationStateUntilChanged CameraOpticsErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CameraOpticsErrorClassification enum.
+func (e CameraOpticsErrorClassification) Valid() bool {
+	switch e {
+	case CameraOpticsErrorClassificationDatedMeasurement:
+		return true
+	case CameraOpticsErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraOpticsErrorState.
+const (
+	CameraOpticsErrorStateError CameraOpticsErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the CameraOpticsErrorState enum.
+func (e CameraOpticsErrorState) Valid() bool {
+	switch e {
+	case CameraOpticsErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraOpticsValueClassification.
+const (
+	CameraOpticsValueClassificationDatedMeasurement  CameraOpticsValueClassification = "dated_measurement"
+	CameraOpticsValueClassificationStateUntilChanged CameraOpticsValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CameraOpticsValueClassification enum.
+func (e CameraOpticsValueClassification) Valid() bool {
+	switch e {
+	case CameraOpticsValueClassificationDatedMeasurement:
+		return true
+	case CameraOpticsValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraOpticsValueState.
+const (
+	CameraOpticsValueStateValue CameraOpticsValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the CameraOpticsValueState enum.
+func (e CameraOpticsValueState) Valid() bool {
+	switch e {
+	case CameraOpticsValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraOpticsWithdrawnClassification.
+const (
+	CameraOpticsWithdrawnClassificationStateUntilChanged CameraOpticsWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CameraOpticsWithdrawnClassification enum.
+func (e CameraOpticsWithdrawnClassification) Valid() bool {
+	switch e {
+	case CameraOpticsWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraOpticsWithdrawnState.
+const (
+	CameraOpticsWithdrawnStateWithdrawn CameraOpticsWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the CameraOpticsWithdrawnState enum.
+func (e CameraOpticsWithdrawnState) Valid() bool {
+	switch e {
+	case CameraOpticsWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraValueClassification.
+const (
+	CameraValueClassificationDatedMeasurement  CameraValueClassification = "dated_measurement"
+	CameraValueClassificationStateUntilChanged CameraValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CameraValueClassification enum.
+func (e CameraValueClassification) Valid() bool {
+	switch e {
+	case CameraValueClassificationDatedMeasurement:
+		return true
+	case CameraValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraValueState.
+const (
+	CameraValueStateValue CameraValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the CameraValueState enum.
+func (e CameraValueState) Valid() bool {
+	switch e {
+	case CameraValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraWithdrawnClassification.
+const (
+	CameraWithdrawnClassificationStateUntilChanged CameraWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CameraWithdrawnClassification enum.
+func (e CameraWithdrawnClassification) Valid() bool {
+	switch e {
+	case CameraWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CameraWithdrawnState.
+const (
+	CameraWithdrawnStateWithdrawn CameraWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the CameraWithdrawnState enum.
+func (e CameraWithdrawnState) Valid() bool {
+	switch e {
+	case CameraWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CancellationRefusedState.
+const (
+	CancellationRefusedStateCancellationRefused CancellationRefusedState = "cancellation_refused"
+)
+
+// Valid indicates whether the value is a known member of the CancellationRefusedState enum.
+func (e CancellationRefusedState) Valid() bool {
+	switch e {
+	case CancellationRefusedStateCancellationRefused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CatalogEntryScheduling.
+const (
+	CatalogEntrySchedulingImmediate CatalogEntryScheduling = "immediate"
+	CatalogEntrySchedulingQueued    CatalogEntryScheduling = "queued"
+)
+
+// Valid indicates whether the value is a known member of the CatalogEntryScheduling enum.
+func (e CatalogEntryScheduling) Valid() bool {
+	switch e {
+	case CatalogEntrySchedulingImmediate:
+		return true
+	case CatalogEntrySchedulingQueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CatalogEntryTargetGeometry.
+const (
+	CatalogEntryTargetGeometryPoint CatalogEntryTargetGeometry = "Point"
+)
+
+// Valid indicates whether the value is a known member of the CatalogEntryTargetGeometry enum.
+func (e CatalogEntryTargetGeometry) Valid() bool {
+	switch e {
+	case CatalogEntryTargetGeometryPoint:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChangesFrameType.
+const (
+	Changes ChangesFrameType = "changes"
+)
+
+// Valid indicates whether the value is a known member of the ChangesFrameType enum.
+func (e ChangesFrameType) Valid() bool {
+	switch e {
+	case Changes:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommandName.
+const (
+	CommandNameMoveTo CommandName = "move_to"
+	CommandNamePause  CommandName = "pause"
+	CommandNameResume CommandName = "resume"
+)
+
+// Valid indicates whether the value is a known member of the CommandName enum.
+func (e CommandName) Valid() bool {
+	switch e {
+	case CommandNameMoveTo:
+		return true
+	case CommandNamePause:
+		return true
+	case CommandNameResume:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationsErrorClassification.
+const (
+	CommunicationsErrorClassificationDatedMeasurement  CommunicationsErrorClassification = "dated_measurement"
+	CommunicationsErrorClassificationStateUntilChanged CommunicationsErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationsErrorClassification enum.
+func (e CommunicationsErrorClassification) Valid() bool {
+	switch e {
+	case CommunicationsErrorClassificationDatedMeasurement:
+		return true
+	case CommunicationsErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationsErrorState.
+const (
+	CommunicationsErrorStateError CommunicationsErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationsErrorState enum.
+func (e CommunicationsErrorState) Valid() bool {
+	switch e {
+	case CommunicationsErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationsValueClassification.
+const (
+	CommunicationsValueClassificationDatedMeasurement  CommunicationsValueClassification = "dated_measurement"
+	CommunicationsValueClassificationStateUntilChanged CommunicationsValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationsValueClassification enum.
+func (e CommunicationsValueClassification) Valid() bool {
+	switch e {
+	case CommunicationsValueClassificationDatedMeasurement:
+		return true
+	case CommunicationsValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationsValueState.
+const (
+	CommunicationsValueStateValue CommunicationsValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationsValueState enum.
+func (e CommunicationsValueState) Valid() bool {
+	switch e {
+	case CommunicationsValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationsWithdrawnClassification.
+const (
+	CommunicationsWithdrawnClassificationStateUntilChanged CommunicationsWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationsWithdrawnClassification enum.
+func (e CommunicationsWithdrawnClassification) Valid() bool {
+	switch e {
+	case CommunicationsWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CommunicationsWithdrawnState.
+const (
+	CommunicationsWithdrawnStateWithdrawn CommunicationsWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationsWithdrawnState enum.
+func (e CommunicationsWithdrawnState) Valid() bool {
+	switch e {
+	case CommunicationsWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactChallengeExpiresInSeconds.
+const (
+	N10 ContactChallengeExpiresInSeconds = 10
+)
+
+// Valid indicates whether the value is a known member of the ContactChallengeExpiresInSeconds enum.
+func (e ContactChallengeExpiresInSeconds) Valid() bool {
+	switch e {
+	case N10:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DeleteChangeKind.
+const (
+	Delete DeleteChangeKind = "delete"
+)
+
+// Valid indicates whether the value is a known member of the DeleteChangeKind enum.
+func (e DeleteChangeKind) Valid() bool {
+	switch e {
+	case Delete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DeletionKind.
+const (
+	DeletionKindAsset      DeletionKind = "asset"
+	DeletionKindGeofeature DeletionKind = "geofeature"
+	DeletionKindObject     DeletionKind = "object"
+	DeletionKindTask       DeletionKind = "task"
+	DeletionKindTrack      DeletionKind = "track"
+)
+
+// Valid indicates whether the value is a known member of the DeletionKind enum.
+func (e DeletionKind) Valid() bool {
+	switch e {
+	case DeletionKindAsset:
+		return true
+	case DeletionKindGeofeature:
+		return true
+	case DeletionKindObject:
+		return true
+	case DeletionKindTask:
+		return true
+	case DeletionKindTrack:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DroneTypeKind.
+const (
+	Drone DroneTypeKind = "drone"
+)
+
+// Valid indicates whether the value is a known member of the DroneTypeKind enum.
+func (e DroneTypeKind) Valid() bool {
+	switch e {
+	case Drone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DroneTypeVariant.
+const (
+	DroneTypeVariantFixedWingGlider  DroneTypeVariant = "fixed_wing_glider"
+	DroneTypeVariantLessThannil      DroneTypeVariant = "<nil>"
+	DroneTypeVariantPoweredFixedWing DroneTypeVariant = "powered_fixed_wing"
+	DroneTypeVariantQuadcopter       DroneTypeVariant = "quadcopter"
+)
+
+// Valid indicates whether the value is a known member of the DroneTypeVariant enum.
+func (e DroneTypeVariant) Valid() bool {
+	switch e {
+	case DroneTypeVariantFixedWingGlider:
+		return true
+	case DroneTypeVariantLessThannil:
+		return true
+	case DroneTypeVariantPoweredFixedWing:
+		return true
+	case DroneTypeVariantQuadcopter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error400ErrorCode.
+const (
+	DatasetRequired       Error400ErrorCode = "dataset_required"
+	GeometryLimitExceeded Error400ErrorCode = "geometry_limit_exceeded"
+	InvalidGeometry       Error400ErrorCode = "invalid_geometry"
+	InvalidJson           Error400ErrorCode = "invalid_json"
+	InvalidRequest        Error400ErrorCode = "invalid_request"
+	UnsupportedFilter     Error400ErrorCode = "unsupported_filter"
+	UnsupportedGeometry   Error400ErrorCode = "unsupported_geometry"
+)
+
+// Valid indicates whether the value is a known member of the Error400ErrorCode enum.
+func (e Error400ErrorCode) Valid() bool {
+	switch e {
+	case DatasetRequired:
+		return true
+	case GeometryLimitExceeded:
+		return true
+	case InvalidGeometry:
+		return true
+	case InvalidJson:
+		return true
+	case InvalidRequest:
+		return true
+	case UnsupportedFilter:
+		return true
+	case UnsupportedGeometry:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error401ErrorCode.
+const (
+	Unauthenticated Error401ErrorCode = "unauthenticated"
+)
+
+// Valid indicates whether the value is a known member of the Error401ErrorCode enum.
+func (e Error401ErrorCode) Valid() bool {
+	switch e {
+	case Unauthenticated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error403ErrorCode.
+const (
+	CredentialRevoked Error403ErrorCode = "credential_revoked"
+)
+
+// Valid indicates whether the value is a known member of the Error403ErrorCode enum.
+func (e Error403ErrorCode) Valid() bool {
+	switch e {
+	case CredentialRevoked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error404ErrorCode.
+const (
+	NotFound Error404ErrorCode = "not_found"
+)
+
+// Valid indicates whether the value is a known member of the Error404ErrorCode enum.
+func (e Error404ErrorCode) Valid() bool {
+	switch e {
+	case NotFound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error409ErrorCode.
+const (
+	Error409ErrorCodeAssetDeleted       Error409ErrorCode = "asset_deleted"
+	Error409ErrorCodeCapacityChanged    Error409ErrorCode = "capacity_changed"
+	Error409ErrorCodeChallengeExpired   Error409ErrorCode = "challenge_expired"
+	Error409ErrorCodeChallengeInvalid   Error409ErrorCode = "challenge_invalid"
+	Error409ErrorCodeDatasetMismatch    Error409ErrorCode = "dataset_mismatch"
+	Error409ErrorCodeGenerationConflict Error409ErrorCode = "generation_conflict"
+	Error409ErrorCodeIdentityConflict   Error409ErrorCode = "identity_conflict"
+	Error409ErrorCodeInvalidTransition  Error409ErrorCode = "invalid_transition"
+	Error409ErrorCodeObjectHeld         Error409ErrorCode = "object_held"
+	Error409ErrorCodePluginUnavailable  Error409ErrorCode = "plugin_unavailable"
+	Error409ErrorCodeProtocolMismatch   Error409ErrorCode = "protocol_mismatch"
+	Error409ErrorCodeQueueChanged       Error409ErrorCode = "queue_changed"
+	Error409ErrorCodeReferenceGuard     Error409ErrorCode = "reference_guard"
+	Error409ErrorCodeReplayGap          Error409ErrorCode = "replay_gap"
+	Error409ErrorCodeRevisionConflict   Error409ErrorCode = "revision_conflict"
+	Error409ErrorCodeSnapshotExpired    Error409ErrorCode = "snapshot_expired"
+	Error409ErrorCodeSnapshotReleased   Error409ErrorCode = "snapshot_released"
+	Error409ErrorCodeStaleEvidence      Error409ErrorCode = "stale_evidence"
+	Error409ErrorCodeUnsupportedCommand Error409ErrorCode = "unsupported_command"
+)
+
+// Valid indicates whether the value is a known member of the Error409ErrorCode enum.
+func (e Error409ErrorCode) Valid() bool {
+	switch e {
+	case Error409ErrorCodeAssetDeleted:
+		return true
+	case Error409ErrorCodeCapacityChanged:
+		return true
+	case Error409ErrorCodeChallengeExpired:
+		return true
+	case Error409ErrorCodeChallengeInvalid:
+		return true
+	case Error409ErrorCodeDatasetMismatch:
+		return true
+	case Error409ErrorCodeGenerationConflict:
+		return true
+	case Error409ErrorCodeIdentityConflict:
+		return true
+	case Error409ErrorCodeInvalidTransition:
+		return true
+	case Error409ErrorCodeObjectHeld:
+		return true
+	case Error409ErrorCodePluginUnavailable:
+		return true
+	case Error409ErrorCodeProtocolMismatch:
+		return true
+	case Error409ErrorCodeQueueChanged:
+		return true
+	case Error409ErrorCodeReferenceGuard:
+		return true
+	case Error409ErrorCodeReplayGap:
+		return true
+	case Error409ErrorCodeRevisionConflict:
+		return true
+	case Error409ErrorCodeSnapshotExpired:
+		return true
+	case Error409ErrorCodeSnapshotReleased:
+		return true
+	case Error409ErrorCodeStaleEvidence:
+		return true
+	case Error409ErrorCodeUnsupportedCommand:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error410ErrorCode.
+const (
+	IdentityEnded Error410ErrorCode = "identity_ended"
+)
+
+// Valid indicates whether the value is a known member of the Error410ErrorCode enum.
+func (e Error410ErrorCode) Valid() bool {
+	switch e {
+	case IdentityEnded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error413ErrorCode.
+const (
+	PayloadTooLarge Error413ErrorCode = "payload_too_large"
+)
+
+// Valid indicates whether the value is a known member of the Error413ErrorCode enum.
+func (e Error413ErrorCode) Valid() bool {
+	switch e {
+	case PayloadTooLarge:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error415ErrorCode.
+const (
+	UnsupportedMediaType Error415ErrorCode = "unsupported_media_type"
+)
+
+// Valid indicates whether the value is a known member of the Error415ErrorCode enum.
+func (e Error415ErrorCode) Valid() bool {
+	switch e {
+	case UnsupportedMediaType:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error422ErrorCode.
+const (
+	Error422ErrorCodeIntegrityFault Error422ErrorCode = "integrity_fault"
+	Error422ErrorCodeInvalidPayload Error422ErrorCode = "invalid_payload"
+)
+
+// Valid indicates whether the value is a known member of the Error422ErrorCode enum.
+func (e Error422ErrorCode) Valid() bool {
+	switch e {
+	case Error422ErrorCodeIntegrityFault:
+		return true
+	case Error422ErrorCodeInvalidPayload:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error429ErrorCode.
+const (
+	ResourceLimit Error429ErrorCode = "resource_limit"
+)
+
+// Valid indicates whether the value is a known member of the Error429ErrorCode enum.
+func (e Error429ErrorCode) Valid() bool {
+	switch e {
+	case ResourceLimit:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error500ErrorCode.
+const (
+	Error500ErrorCodeIntegrityFault Error500ErrorCode = "integrity_fault"
+	Error500ErrorCodeInternalError  Error500ErrorCode = "internal_error"
+)
+
+// Valid indicates whether the value is a known member of the Error500ErrorCode enum.
+func (e Error500ErrorCode) Valid() bool {
+	switch e {
+	case Error500ErrorCodeIntegrityFault:
+		return true
+	case Error500ErrorCodeInternalError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error503ErrorCode.
+const (
+	Error503ErrorCodeNotReady          Error503ErrorCode = "not_ready"
+	Error503ErrorCodePluginUnavailable Error503ErrorCode = "plugin_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the Error503ErrorCode enum.
+func (e Error503ErrorCode) Valid() bool {
+	switch e {
+	case Error503ErrorCodeNotReady:
+		return true
+	case Error503ErrorCodePluginUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Error507ErrorCode.
+const (
+	StorageLimit Error507ErrorCode = "storage_limit"
+)
+
+// Valid indicates whether the value is a known member of the Error507ErrorCode enum.
+func (e Error507ErrorCode) Valid() bool {
+	switch e {
+	case StorageLimit:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExecutionFailureReason.
+const (
+	CannotResume   ExecutionFailureReason = "cannot_resume"
+	ExecutionError ExecutionFailureReason = "execution_error"
+	Unsupported    ExecutionFailureReason = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the ExecutionFailureReason enum.
+func (e ExecutionFailureReason) Valid() bool {
+	switch e {
+	case CannotResume:
+		return true
+	case ExecutionError:
+		return true
+	case Unsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExecutionFailureState.
+const (
+	ExecutionFailureStateFailed ExecutionFailureState = "failed"
+)
+
+// Valid indicates whether the value is a known member of the ExecutionFailureState enum.
+func (e ExecutionFailureState) Valid() bool {
+	switch e {
+	case ExecutionFailureStateFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExecutionProgressState.
+const (
+	ExecutionProgressStateAcknowledged ExecutionProgressState = "acknowledged"
+	ExecutionProgressStateCancelled    ExecutionProgressState = "cancelled"
+	ExecutionProgressStateCompleted    ExecutionProgressState = "completed"
+	ExecutionProgressStateInProgress   ExecutionProgressState = "in_progress"
+	ExecutionProgressStatePaused       ExecutionProgressState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the ExecutionProgressState enum.
+func (e ExecutionProgressState) Valid() bool {
+	switch e {
+	case ExecutionProgressStateAcknowledged:
+		return true
+	case ExecutionProgressStateCancelled:
+		return true
+	case ExecutionProgressStateCompleted:
+		return true
+	case ExecutionProgressStateInProgress:
+		return true
+	case ExecutionProgressStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FuelReserveKind.
+const (
+	Fuel FuelReserveKind = "fuel"
+)
+
+// Valid indicates whether the value is a known member of the FuelReserveKind enum.
+func (e FuelReserveKind) Valid() bool {
+	switch e {
+	case Fuel:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GapFrameType.
+const (
+	Gap GapFrameType = "gap"
+)
+
+// Valid indicates whether the value is a known member of the GapFrameType enum.
+func (e GapFrameType) Valid() bool {
+	switch e {
+	case Gap:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeofeatureEntityType.
+const (
+	GeofeatureEntityTypeGeofeature GeofeatureEntityType = "geofeature"
+)
+
+// Valid indicates whether the value is a known member of the GeofeatureEntityType enum.
+func (e GeofeatureEntityType) Valid() bool {
+	switch e {
+	case GeofeatureEntityTypeGeofeature:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeofeatureTypeKind.
+const (
+	GeofeatureTypeKindBoundary        GeofeatureTypeKind = "boundary"
+	GeofeatureTypeKindLessThannil     GeofeatureTypeKind = "<nil>"
+	GeofeatureTypeKindOther           GeofeatureTypeKind = "other"
+	GeofeatureTypeKindPointOfInterest GeofeatureTypeKind = "point_of_interest"
+	GeofeatureTypeKindRoute           GeofeatureTypeKind = "route"
+	GeofeatureTypeKindSearchArea      GeofeatureTypeKind = "search_area"
+)
+
+// Valid indicates whether the value is a known member of the GeofeatureTypeKind enum.
+func (e GeofeatureTypeKind) Valid() bool {
+	switch e {
+	case GeofeatureTypeKindBoundary:
+		return true
+	case GeofeatureTypeKindLessThannil:
+		return true
+	case GeofeatureTypeKindOther:
+		return true
+	case GeofeatureTypeKindPointOfInterest:
+		return true
+	case GeofeatureTypeKindRoute:
+		return true
+	case GeofeatureTypeKindSearchArea:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeometryObservationErrorClassification.
+const (
+	GeometryObservationErrorClassificationDatedMeasurement  GeometryObservationErrorClassification = "dated_measurement"
+	GeometryObservationErrorClassificationStateUntilChanged GeometryObservationErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the GeometryObservationErrorClassification enum.
+func (e GeometryObservationErrorClassification) Valid() bool {
+	switch e {
+	case GeometryObservationErrorClassificationDatedMeasurement:
+		return true
+	case GeometryObservationErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeometryObservationErrorState.
+const (
+	GeometryObservationErrorStateError GeometryObservationErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the GeometryObservationErrorState enum.
+func (e GeometryObservationErrorState) Valid() bool {
+	switch e {
+	case GeometryObservationErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeometryObservationValueClassification.
+const (
+	GeometryObservationValueClassificationDatedMeasurement  GeometryObservationValueClassification = "dated_measurement"
+	GeometryObservationValueClassificationStateUntilChanged GeometryObservationValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the GeometryObservationValueClassification enum.
+func (e GeometryObservationValueClassification) Valid() bool {
+	switch e {
+	case GeometryObservationValueClassificationDatedMeasurement:
+		return true
+	case GeometryObservationValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeometryObservationValueState.
+const (
+	GeometryObservationValueStateValue GeometryObservationValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the GeometryObservationValueState enum.
+func (e GeometryObservationValueState) Valid() bool {
+	switch e {
+	case GeometryObservationValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeometryObservationWithdrawnClassification.
+const (
+	GeometryObservationWithdrawnClassificationStateUntilChanged GeometryObservationWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the GeometryObservationWithdrawnClassification enum.
+func (e GeometryObservationWithdrawnClassification) Valid() bool {
+	switch e {
+	case GeometryObservationWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GeometryObservationWithdrawnState.
+const (
+	GeometryObservationWithdrawnStateWithdrawn GeometryObservationWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the GeometryObservationWithdrawnState enum.
+func (e GeometryObservationWithdrawnState) Valid() bool {
+	switch e {
+	case GeometryObservationWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GimbalErrorClassification.
+const (
+	GimbalErrorClassificationDatedMeasurement  GimbalErrorClassification = "dated_measurement"
+	GimbalErrorClassificationStateUntilChanged GimbalErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the GimbalErrorClassification enum.
+func (e GimbalErrorClassification) Valid() bool {
+	switch e {
+	case GimbalErrorClassificationDatedMeasurement:
+		return true
+	case GimbalErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GimbalErrorState.
+const (
+	GimbalErrorStateError GimbalErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the GimbalErrorState enum.
+func (e GimbalErrorState) Valid() bool {
+	switch e {
+	case GimbalErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GimbalValueClassification.
+const (
+	GimbalValueClassificationDatedMeasurement  GimbalValueClassification = "dated_measurement"
+	GimbalValueClassificationStateUntilChanged GimbalValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the GimbalValueClassification enum.
+func (e GimbalValueClassification) Valid() bool {
+	switch e {
+	case GimbalValueClassificationDatedMeasurement:
+		return true
+	case GimbalValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GimbalValueState.
+const (
+	GimbalValueStateValue GimbalValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the GimbalValueState enum.
+func (e GimbalValueState) Valid() bool {
+	switch e {
+	case GimbalValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GimbalWithdrawnClassification.
+const (
+	GimbalWithdrawnClassificationStateUntilChanged GimbalWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the GimbalWithdrawnClassification enum.
+func (e GimbalWithdrawnClassification) Valid() bool {
+	switch e {
+	case GimbalWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GimbalWithdrawnState.
+const (
+	GimbalWithdrawnStateWithdrawn GimbalWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the GimbalWithdrawnState enum.
+func (e GimbalWithdrawnState) Valid() bool {
+	switch e {
+	case GimbalWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HandoffCompleteFrameType.
+const (
+	HandoffComplete HandoffCompleteFrameType = "handoff_complete"
+)
+
+// Valid indicates whether the value is a known member of the HandoffCompleteFrameType enum.
+func (e HandoffCompleteFrameType) Valid() bool {
+	switch e {
+	case HandoffComplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Health.
+const (
+	HealthDegraded Health = "degraded"
+	HealthHealthy  Health = "healthy"
+	HealthOffline  Health = "offline"
+)
+
+// Valid indicates whether the value is a known member of the Health enum.
+func (e Health) Valid() bool {
+	switch e {
+	case HealthDegraded:
+		return true
+	case HealthHealthy:
+		return true
+	case HealthOffline:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthDataHealth.
+const (
+	HealthDataHealthDegraded HealthDataHealth = "degraded"
+	HealthDataHealthHealthy  HealthDataHealth = "healthy"
+)
+
+// Valid indicates whether the value is a known member of the HealthDataHealth enum.
+func (e HealthDataHealth) Valid() bool {
+	switch e {
+	case HealthDataHealthDegraded:
+		return true
+	case HealthDataHealthHealthy:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImmediateMoveToCommand.
+const (
+	ImmediateMoveToCommandMoveTo ImmediateMoveToCommand = "move_to"
+)
+
+// Valid indicates whether the value is a known member of the ImmediateMoveToCommand enum.
+func (e ImmediateMoveToCommand) Valid() bool {
+	switch e {
+	case ImmediateMoveToCommandMoveTo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImmediateMoveToScheduling.
+const (
+	ImmediateMoveToSchedulingImmediate ImmediateMoveToScheduling = "immediate"
+)
+
+// Valid indicates whether the value is a known member of the ImmediateMoveToScheduling enum.
+func (e ImmediateMoveToScheduling) Valid() bool {
+	switch e {
+	case ImmediateMoveToSchedulingImmediate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LineGeometryType.
+const (
+	LineString LineGeometryType = "LineString"
+)
+
+// Valid indicates whether the value is a known member of the LineGeometryType enum.
+func (e LineGeometryType) Valid() bool {
+	switch e {
+	case LineString:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaObservationErrorClassification.
+const (
+	MediaObservationErrorClassificationDatedMeasurement  MediaObservationErrorClassification = "dated_measurement"
+	MediaObservationErrorClassificationStateUntilChanged MediaObservationErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the MediaObservationErrorClassification enum.
+func (e MediaObservationErrorClassification) Valid() bool {
+	switch e {
+	case MediaObservationErrorClassificationDatedMeasurement:
+		return true
+	case MediaObservationErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaObservationErrorState.
+const (
+	MediaObservationErrorStateError MediaObservationErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the MediaObservationErrorState enum.
+func (e MediaObservationErrorState) Valid() bool {
+	switch e {
+	case MediaObservationErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaObservationValueClassification.
+const (
+	MediaObservationValueClassificationDatedMeasurement  MediaObservationValueClassification = "dated_measurement"
+	MediaObservationValueClassificationStateUntilChanged MediaObservationValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the MediaObservationValueClassification enum.
+func (e MediaObservationValueClassification) Valid() bool {
+	switch e {
+	case MediaObservationValueClassificationDatedMeasurement:
+		return true
+	case MediaObservationValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaObservationValueState.
+const (
+	MediaObservationValueStateValue MediaObservationValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the MediaObservationValueState enum.
+func (e MediaObservationValueState) Valid() bool {
+	switch e {
+	case MediaObservationValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaObservationWithdrawnClassification.
+const (
+	MediaObservationWithdrawnClassificationStateUntilChanged MediaObservationWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the MediaObservationWithdrawnClassification enum.
+func (e MediaObservationWithdrawnClassification) Valid() bool {
+	switch e {
+	case MediaObservationWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MediaObservationWithdrawnState.
+const (
+	MediaObservationWithdrawnStateWithdrawn MediaObservationWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the MediaObservationWithdrawnState enum.
+func (e MediaObservationWithdrawnState) Valid() bool {
+	switch e {
+	case MediaObservationWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MilitaryDisplayErrorClassification.
+const (
+	MilitaryDisplayErrorClassificationDatedMeasurement  MilitaryDisplayErrorClassification = "dated_measurement"
+	MilitaryDisplayErrorClassificationStateUntilChanged MilitaryDisplayErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the MilitaryDisplayErrorClassification enum.
+func (e MilitaryDisplayErrorClassification) Valid() bool {
+	switch e {
+	case MilitaryDisplayErrorClassificationDatedMeasurement:
+		return true
+	case MilitaryDisplayErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MilitaryDisplayErrorState.
+const (
+	MilitaryDisplayErrorStateError MilitaryDisplayErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the MilitaryDisplayErrorState enum.
+func (e MilitaryDisplayErrorState) Valid() bool {
+	switch e {
+	case MilitaryDisplayErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MilitaryDisplayValueClassification.
+const (
+	MilitaryDisplayValueClassificationDatedMeasurement  MilitaryDisplayValueClassification = "dated_measurement"
+	MilitaryDisplayValueClassificationStateUntilChanged MilitaryDisplayValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the MilitaryDisplayValueClassification enum.
+func (e MilitaryDisplayValueClassification) Valid() bool {
+	switch e {
+	case MilitaryDisplayValueClassificationDatedMeasurement:
+		return true
+	case MilitaryDisplayValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MilitaryDisplayValueState.
+const (
+	MilitaryDisplayValueStateValue MilitaryDisplayValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the MilitaryDisplayValueState enum.
+func (e MilitaryDisplayValueState) Valid() bool {
+	switch e {
+	case MilitaryDisplayValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MilitaryDisplayWithdrawnClassification.
+const (
+	MilitaryDisplayWithdrawnClassificationStateUntilChanged MilitaryDisplayWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the MilitaryDisplayWithdrawnClassification enum.
+func (e MilitaryDisplayWithdrawnClassification) Valid() bool {
+	switch e {
+	case MilitaryDisplayWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MilitaryDisplayWithdrawnState.
+const (
+	MilitaryDisplayWithdrawnStateWithdrawn MilitaryDisplayWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the MilitaryDisplayWithdrawnState enum.
+func (e MilitaryDisplayWithdrawnState) Valid() bool {
+	switch e {
+	case MilitaryDisplayWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoveToGeofeatureKind.
+const (
+	MoveToGeofeatureKindGeofeature MoveToGeofeatureKind = "geofeature"
+)
+
+// Valid indicates whether the value is a known member of the MoveToGeofeatureKind enum.
+func (e MoveToGeofeatureKind) Valid() bool {
+	switch e {
+	case MoveToGeofeatureKindGeofeature:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoveToPositionKind.
+const (
+	MoveToPositionKindPosition MoveToPositionKind = "position"
+)
+
+// Valid indicates whether the value is a known member of the MoveToPositionKind enum.
+func (e MoveToPositionKind) Valid() bool {
+	switch e {
+	case MoveToPositionKindPosition:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoveToSupportCommand.
+const (
+	MoveToSupportCommandMoveTo MoveToSupportCommand = "move_to"
+)
+
+// Valid indicates whether the value is a known member of the MoveToSupportCommand enum.
+func (e MoveToSupportCommand) Valid() bool {
+	switch e {
+	case MoveToSupportCommandMoveTo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoveToSupportScheduling.
+const (
+	MoveToSupportSchedulingImmediate MoveToSupportScheduling = "immediate"
+	MoveToSupportSchedulingQueued    MoveToSupportScheduling = "queued"
+)
+
+// Valid indicates whether the value is a known member of the MoveToSupportScheduling enum.
+func (e MoveToSupportScheduling) Valid() bool {
+	switch e {
+	case MoveToSupportSchedulingImmediate:
+		return true
+	case MoveToSupportSchedulingQueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeverAppliedFailureNeverApplied.
+const (
+	Confirmed NeverAppliedFailureNeverApplied = "confirmed"
+)
+
+// Valid indicates whether the value is a known member of the NeverAppliedFailureNeverApplied enum.
+func (e NeverAppliedFailureNeverApplied) Valid() bool {
+	switch e {
+	case Confirmed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeverAppliedFailureReason.
+const (
+	Expired    NeverAppliedFailureReason = "expired"
+	Superseded NeverAppliedFailureReason = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the NeverAppliedFailureReason enum.
+func (e NeverAppliedFailureReason) Valid() bool {
+	switch e {
+	case Expired:
+		return true
+	case Superseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NeverAppliedFailureState.
+const (
+	NeverAppliedFailureStateFailed NeverAppliedFailureState = "failed"
+)
+
+// Valid indicates whether the value is a known member of the NeverAppliedFailureState enum.
+func (e NeverAppliedFailureState) Valid() bool {
+	switch e {
+	case NeverAppliedFailureStateFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OperationState.
+const (
+	OperationStateCancellationRequested OperationState = "cancellation_requested"
+	OperationStateCancelled             OperationState = "cancelled"
+	OperationStateCompleted             OperationState = "completed"
+	OperationStateFailed                OperationState = "failed"
+	OperationStateInProgress            OperationState = "in_progress"
+	OperationStateInterrupted           OperationState = "interrupted"
+	OperationStatePending               OperationState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the OperationState enum.
+func (e OperationState) Valid() bool {
+	switch e {
+	case OperationStateCancellationRequested:
+		return true
+	case OperationStateCancelled:
+		return true
+	case OperationStateCompleted:
+		return true
+	case OperationStateFailed:
+		return true
+	case OperationStateInProgress:
+		return true
+	case OperationStateInterrupted:
+		return true
+	case OperationStatePending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OtherAssetTypeKind.
+const (
+	OtherAssetTypeKindLessThannil    OtherAssetTypeKind = "<nil>"
+	OtherAssetTypeKindOther          OtherAssetTypeKind = "other"
+	OtherAssetTypeKindSecurityCamera OtherAssetTypeKind = "security_camera"
+	OtherAssetTypeKindTracker        OtherAssetTypeKind = "tracker"
+)
+
+// Valid indicates whether the value is a known member of the OtherAssetTypeKind enum.
+func (e OtherAssetTypeKind) Valid() bool {
+	switch e {
+	case OtherAssetTypeKindLessThannil:
+		return true
+	case OtherAssetTypeKindOther:
+		return true
+	case OtherAssetTypeKindSecurityCamera:
+		return true
+	case OtherAssetTypeKindTracker:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PauseCommandCommand.
+const (
+	PauseCommandCommandPause PauseCommandCommand = "pause"
+)
+
+// Valid indicates whether the value is a known member of the PauseCommandCommand enum.
+func (e PauseCommandCommand) Valid() bool {
+	switch e {
+	case PauseCommandCommandPause:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PauseCommandScheduling.
+const (
+	PauseCommandSchedulingImmediate PauseCommandScheduling = "immediate"
+)
+
+// Valid indicates whether the value is a known member of the PauseCommandScheduling enum.
+func (e PauseCommandScheduling) Valid() bool {
+	switch e {
+	case PauseCommandSchedulingImmediate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PauseSupportCommand.
+const (
+	PauseSupportCommandPause PauseSupportCommand = "pause"
+)
+
+// Valid indicates whether the value is a known member of the PauseSupportCommand enum.
+func (e PauseSupportCommand) Valid() bool {
+	switch e {
+	case PauseSupportCommandPause:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PauseSupportScheduling.
+const (
+	PauseSupportSchedulingImmediate PauseSupportScheduling = "immediate"
+)
+
+// Valid indicates whether the value is a known member of the PauseSupportScheduling enum.
+func (e PauseSupportScheduling) Valid() bool {
+	switch e {
+	case PauseSupportSchedulingImmediate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PointGeometryType.
+const (
+	PointGeometryTypePoint PointGeometryType = "Point"
+)
+
+// Valid indicates whether the value is a known member of the PointGeometryType enum.
+func (e PointGeometryType) Valid() bool {
+	switch e {
+	case PointGeometryTypePoint:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PolygonGeometryType.
+const (
+	Polygon PolygonGeometryType = "Polygon"
+)
+
+// Valid indicates whether the value is a known member of the PolygonGeometryType enum.
+func (e PolygonGeometryType) Valid() bool {
+	switch e {
+	case Polygon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PowerErrorClassification.
+const (
+	PowerErrorClassificationDatedMeasurement  PowerErrorClassification = "dated_measurement"
+	PowerErrorClassificationStateUntilChanged PowerErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the PowerErrorClassification enum.
+func (e PowerErrorClassification) Valid() bool {
+	switch e {
+	case PowerErrorClassificationDatedMeasurement:
+		return true
+	case PowerErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PowerErrorState.
+const (
+	PowerErrorStateError PowerErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the PowerErrorState enum.
+func (e PowerErrorState) Valid() bool {
+	switch e {
+	case PowerErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PowerValueClassification.
+const (
+	PowerValueClassificationDatedMeasurement  PowerValueClassification = "dated_measurement"
+	PowerValueClassificationStateUntilChanged PowerValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the PowerValueClassification enum.
+func (e PowerValueClassification) Valid() bool {
+	switch e {
+	case PowerValueClassificationDatedMeasurement:
+		return true
+	case PowerValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PowerValueState.
+const (
+	PowerValueStateValue PowerValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the PowerValueState enum.
+func (e PowerValueState) Valid() bool {
+	switch e {
+	case PowerValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PowerWithdrawnClassification.
+const (
+	PowerWithdrawnClassificationStateUntilChanged PowerWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the PowerWithdrawnClassification enum.
+func (e PowerWithdrawnClassification) Valid() bool {
+	switch e {
+	case PowerWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PowerWithdrawnState.
+const (
+	PowerWithdrawnStateWithdrawn PowerWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the PowerWithdrawnState enum.
+func (e PowerWithdrawnState) Valid() bool {
+	switch e {
+	case PowerWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProtocolVersion.
+const (
+	N010 ProtocolVersion = "0.1.0"
+)
+
+// Valid indicates whether the value is a known member of the ProtocolVersion enum.
+func (e ProtocolVersion) Valid() bool {
+	switch e {
+	case N010:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublisherSourceKind.
+const (
+	Publisher PublisherSourceKind = "publisher"
+)
+
+// Valid indicates whether the value is a known member of the PublisherSourceKind enum.
+func (e PublisherSourceKind) Valid() bool {
+	switch e {
+	case Publisher:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for QueuedMoveToCommand.
+const (
+	QueuedMoveToCommandMoveTo QueuedMoveToCommand = "move_to"
+)
+
+// Valid indicates whether the value is a known member of the QueuedMoveToCommand enum.
+func (e QueuedMoveToCommand) Valid() bool {
+	switch e {
+	case QueuedMoveToCommandMoveTo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for QueuedMoveToScheduling.
+const (
+	QueuedMoveToSchedulingQueued QueuedMoveToScheduling = "queued"
+)
+
+// Valid indicates whether the value is a known member of the QueuedMoveToScheduling enum.
+func (e QueuedMoveToScheduling) Valid() bool {
+	switch e {
+	case QueuedMoveToSchedulingQueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReadObjectContentQueryDisposition.
+const (
+	ReadObjectContentQueryDispositionAttachment ReadObjectContentQueryDisposition = "attachment"
+	ReadObjectContentQueryDispositionInline     ReadObjectContentQueryDisposition = "inline"
+)
+
+// Valid indicates whether the value is a known member of the ReadObjectContentQueryDisposition enum.
+func (e ReadObjectContentQueryDisposition) Valid() bool {
+	switch e {
+	case ReadObjectContentQueryDispositionAttachment:
+		return true
+	case ReadObjectContentQueryDispositionInline:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecoveredOutcomeState.
+const (
+	RecoveredOutcomeStateCancelled RecoveredOutcomeState = "cancelled"
+	RecoveredOutcomeStateCompleted RecoveredOutcomeState = "completed"
+	RecoveredOutcomeStateFailed    RecoveredOutcomeState = "failed"
+)
+
+// Valid indicates whether the value is a known member of the RecoveredOutcomeState enum.
+func (e RecoveredOutcomeState) Valid() bool {
+	switch e {
+	case RecoveredOutcomeStateCancelled:
+		return true
+	case RecoveredOutcomeStateCompleted:
+		return true
+	case RecoveredOutcomeStateFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecoveryRequiredFrameReason.
+const (
+	RecoveryRequiredFrameReasonCapacityChanged RecoveryRequiredFrameReason = "capacity_changed"
+	RecoveryRequiredFrameReasonCoreRestarted   RecoveryRequiredFrameReason = "core_restarted"
+	RecoveryRequiredFrameReasonDatasetChanged  RecoveryRequiredFrameReason = "dataset_changed"
+	RecoveryRequiredFrameReasonReplayExpired   RecoveryRequiredFrameReason = "replay_expired"
+)
+
+// Valid indicates whether the value is a known member of the RecoveryRequiredFrameReason enum.
+func (e RecoveryRequiredFrameReason) Valid() bool {
+	switch e {
+	case RecoveryRequiredFrameReasonCapacityChanged:
+		return true
+	case RecoveryRequiredFrameReasonCoreRestarted:
+		return true
+	case RecoveryRequiredFrameReasonDatasetChanged:
+		return true
+	case RecoveryRequiredFrameReasonReplayExpired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecoveryRequiredFrameType.
+const (
+	RecoveryRequired RecoveryRequiredFrameType = "recovery_required"
+)
+
+// Valid indicates whether the value is a known member of the RecoveryRequiredFrameType enum.
+func (e RecoveryRequiredFrameType) Valid() bool {
+	switch e {
+	case RecoveryRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReferenceDocumentationPath.
+const (
+	ReferenceDocumentationPathReference ReferenceDocumentationPath = "/reference"
+)
+
+// Valid indicates whether the value is a known member of the ReferenceDocumentationPath enum.
+func (e ReferenceDocumentationPath) Valid() bool {
+	switch e {
+	case ReferenceDocumentationPathReference:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReferenceOpenapiPath.
+const (
+	ReferenceopenapiJson ReferenceOpenapiPath = "/reference/openapi.json"
+)
+
+// Valid indicates whether the value is a known member of the ReferenceOpenapiPath enum.
+func (e ReferenceOpenapiPath) Valid() bool {
+	switch e {
+	case ReferenceopenapiJson:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReleaseSnapshotFrameType.
+const (
+	ReleaseSnapshot ReleaseSnapshotFrameType = "release_snapshot"
+)
+
+// Valid indicates whether the value is a known member of the ReleaseSnapshotFrameType enum.
+func (e ReleaseSnapshotFrameType) Valid() bool {
+	switch e {
+	case ReleaseSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResourceUsageKind.
+const (
+	Database ResourceUsageKind = "database"
+	Logs     ResourceUsageKind = "logs"
+	Objects  ResourceUsageKind = "objects"
+	Plugins  ResourceUsageKind = "plugins"
+	Staging  ResourceUsageKind = "staging"
+)
+
+// Valid indicates whether the value is a known member of the ResourceUsageKind enum.
+func (e ResourceUsageKind) Valid() bool {
+	switch e {
+	case Database:
+		return true
+	case Logs:
+		return true
+	case Objects:
+		return true
+	case Plugins:
+		return true
+	case Staging:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResumeCommandCommand.
+const (
+	ResumeCommandCommandResume ResumeCommandCommand = "resume"
+)
+
+// Valid indicates whether the value is a known member of the ResumeCommandCommand enum.
+func (e ResumeCommandCommand) Valid() bool {
+	switch e {
+	case ResumeCommandCommandResume:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResumeCommandScheduling.
+const (
+	ResumeCommandSchedulingImmediate ResumeCommandScheduling = "immediate"
+)
+
+// Valid indicates whether the value is a known member of the ResumeCommandScheduling enum.
+func (e ResumeCommandScheduling) Valid() bool {
+	switch e {
+	case ResumeCommandSchedulingImmediate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResumeSupportCommand.
+const (
+	ResumeSupportCommandResume ResumeSupportCommand = "resume"
+)
+
+// Valid indicates whether the value is a known member of the ResumeSupportCommand enum.
+func (e ResumeSupportCommand) Valid() bool {
+	switch e {
+	case ResumeSupportCommandResume:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResumeSupportScheduling.
+const (
+	ResumeSupportSchedulingImmediate ResumeSupportScheduling = "immediate"
+)
+
+// Valid indicates whether the value is a known member of the ResumeSupportScheduling enum.
+func (e ResumeSupportScheduling) Valid() bool {
+	switch e {
+	case ResumeSupportSchedulingImmediate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedAttitudeReportState.
+const (
+	RetainedAttitudeReportStateReported RetainedAttitudeReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedAttitudeReportState enum.
+func (e RetainedAttitudeReportState) Valid() bool {
+	switch e {
+	case RetainedAttitudeReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedCameraOpticsReportState.
+const (
+	RetainedCameraOpticsReportStateReported RetainedCameraOpticsReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedCameraOpticsReportState enum.
+func (e RetainedCameraOpticsReportState) Valid() bool {
+	switch e {
+	case RetainedCameraOpticsReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedCameraReportState.
+const (
+	RetainedCameraReportStateReported RetainedCameraReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedCameraReportState enum.
+func (e RetainedCameraReportState) Valid() bool {
+	switch e {
+	case RetainedCameraReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedCommunicationsReportState.
+const (
+	RetainedCommunicationsReportStateReported RetainedCommunicationsReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedCommunicationsReportState enum.
+func (e RetainedCommunicationsReportState) Valid() bool {
+	switch e {
+	case RetainedCommunicationsReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedGeometryObservationReportState.
+const (
+	RetainedGeometryObservationReportStateReported RetainedGeometryObservationReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedGeometryObservationReportState enum.
+func (e RetainedGeometryObservationReportState) Valid() bool {
+	switch e {
+	case RetainedGeometryObservationReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedGimbalReportState.
+const (
+	RetainedGimbalReportStateReported RetainedGimbalReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedGimbalReportState enum.
+func (e RetainedGimbalReportState) Valid() bool {
+	switch e {
+	case RetainedGimbalReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedMediaObservationReportState.
+const (
+	RetainedMediaObservationReportStateReported RetainedMediaObservationReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedMediaObservationReportState enum.
+func (e RetainedMediaObservationReportState) Valid() bool {
+	switch e {
+	case RetainedMediaObservationReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedMilitaryDisplayReportState.
+const (
+	RetainedMilitaryDisplayReportStateReported RetainedMilitaryDisplayReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedMilitaryDisplayReportState enum.
+func (e RetainedMilitaryDisplayReportState) Valid() bool {
+	switch e {
+	case RetainedMilitaryDisplayReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedPowerReportState.
+const (
+	RetainedPowerReportStateReported RetainedPowerReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedPowerReportState enum.
+func (e RetainedPowerReportState) Valid() bool {
+	switch e {
+	case RetainedPowerReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedSensorReferencesReportState.
+const (
+	RetainedSensorReferencesReportStateReported RetainedSensorReferencesReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedSensorReferencesReportState enum.
+func (e RetainedSensorReferencesReportState) Valid() bool {
+	switch e {
+	case RetainedSensorReferencesReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedStatusReportState.
+const (
+	RetainedStatusReportStateReported RetainedStatusReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedStatusReportState enum.
+func (e RetainedStatusReportState) Valid() bool {
+	switch e {
+	case RetainedStatusReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedTelemetryReportState.
+const (
+	RetainedTelemetryReportStateReported RetainedTelemetryReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedTelemetryReportState enum.
+func (e RetainedTelemetryReportState) Valid() bool {
+	switch e {
+	case RetainedTelemetryReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetainedTrackTypeObservationReportState.
+const (
+	RetainedTrackTypeObservationReportStateReported RetainedTrackTypeObservationReportState = "reported"
+)
+
+// Valid indicates whether the value is a known member of the RetainedTrackTypeObservationReportState enum.
+func (e RetainedTrackTypeObservationReportState) Valid() bool {
+	switch e {
+	case RetainedTrackTypeObservationReportStateReported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SectionDispositionDisposition.
+const (
+	Accepted  SectionDispositionDisposition = "accepted"
+	Duplicate SectionDispositionDisposition = "duplicate"
+)
+
+// Valid indicates whether the value is a known member of the SectionDispositionDisposition enum.
+func (e SectionDispositionDisposition) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Duplicate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SectionDispositionSection.
+const (
+	SectionDispositionSectionAttitude         SectionDispositionSection = "attitude"
+	SectionDispositionSectionCamera           SectionDispositionSection = "camera"
+	SectionDispositionSectionCameraOptics     SectionDispositionSection = "camera_optics"
+	SectionDispositionSectionCommunications   SectionDispositionSection = "communications"
+	SectionDispositionSectionGeometry         SectionDispositionSection = "geometry"
+	SectionDispositionSectionGimbal           SectionDispositionSection = "gimbal"
+	SectionDispositionSectionMedia            SectionDispositionSection = "media"
+	SectionDispositionSectionMilitaryDisplay  SectionDispositionSection = "military_display"
+	SectionDispositionSectionPower            SectionDispositionSection = "power"
+	SectionDispositionSectionSensorReferences SectionDispositionSection = "sensor_references"
+	SectionDispositionSectionStatus           SectionDispositionSection = "status"
+	SectionDispositionSectionTelemetry        SectionDispositionSection = "telemetry"
+	SectionDispositionSectionType             SectionDispositionSection = "type"
+)
+
+// Valid indicates whether the value is a known member of the SectionDispositionSection enum.
+func (e SectionDispositionSection) Valid() bool {
+	switch e {
+	case SectionDispositionSectionAttitude:
+		return true
+	case SectionDispositionSectionCamera:
+		return true
+	case SectionDispositionSectionCameraOptics:
+		return true
+	case SectionDispositionSectionCommunications:
+		return true
+	case SectionDispositionSectionGeometry:
+		return true
+	case SectionDispositionSectionGimbal:
+		return true
+	case SectionDispositionSectionMedia:
+		return true
+	case SectionDispositionSectionMilitaryDisplay:
+		return true
+	case SectionDispositionSectionPower:
+		return true
+	case SectionDispositionSectionSensorReferences:
+		return true
+	case SectionDispositionSectionStatus:
+		return true
+	case SectionDispositionSectionTelemetry:
+		return true
+	case SectionDispositionSectionType:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SensorReferencesErrorClassification.
+const (
+	SensorReferencesErrorClassificationDatedMeasurement  SensorReferencesErrorClassification = "dated_measurement"
+	SensorReferencesErrorClassificationStateUntilChanged SensorReferencesErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the SensorReferencesErrorClassification enum.
+func (e SensorReferencesErrorClassification) Valid() bool {
+	switch e {
+	case SensorReferencesErrorClassificationDatedMeasurement:
+		return true
+	case SensorReferencesErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SensorReferencesErrorState.
+const (
+	SensorReferencesErrorStateError SensorReferencesErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the SensorReferencesErrorState enum.
+func (e SensorReferencesErrorState) Valid() bool {
+	switch e {
+	case SensorReferencesErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SensorReferencesValueClassification.
+const (
+	SensorReferencesValueClassificationDatedMeasurement  SensorReferencesValueClassification = "dated_measurement"
+	SensorReferencesValueClassificationStateUntilChanged SensorReferencesValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the SensorReferencesValueClassification enum.
+func (e SensorReferencesValueClassification) Valid() bool {
+	switch e {
+	case SensorReferencesValueClassificationDatedMeasurement:
+		return true
+	case SensorReferencesValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SensorReferencesValueState.
+const (
+	SensorReferencesValueStateValue SensorReferencesValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the SensorReferencesValueState enum.
+func (e SensorReferencesValueState) Valid() bool {
+	switch e {
+	case SensorReferencesValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SensorReferencesWithdrawnClassification.
+const (
+	SensorReferencesWithdrawnClassificationStateUntilChanged SensorReferencesWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the SensorReferencesWithdrawnClassification enum.
+func (e SensorReferencesWithdrawnClassification) Valid() bool {
+	switch e {
+	case SensorReferencesWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SensorReferencesWithdrawnState.
+const (
+	SensorReferencesWithdrawnStateWithdrawn SensorReferencesWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the SensorReferencesWithdrawnState enum.
+func (e SensorReferencesWithdrawnState) Valid() bool {
+	switch e {
+	case SensorReferencesWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SnapshotReleasedFrameType.
+const (
+	SnapshotReleasedFrameTypeSnapshotReleased SnapshotReleasedFrameType = "snapshot_released"
+)
+
+// Valid indicates whether the value is a known member of the SnapshotReleasedFrameType enum.
+func (e SnapshotReleasedFrameType) Valid() bool {
+	switch e {
+	case SnapshotReleasedFrameTypeSnapshotReleased:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceEvidenceEvidenceKind.
+const (
+	Current    SourceEvidenceEvidenceKind = "current"
+	Historical SourceEvidenceEvidenceKind = "historical"
+)
+
+// Valid indicates whether the value is a known member of the SourceEvidenceEvidenceKind enum.
+func (e SourceEvidenceEvidenceKind) Valid() bool {
+	switch e {
+	case Current:
+		return true
+	case Historical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusCondition.
+const (
+	StatusConditionDegraded StatusCondition = "degraded"
+	StatusConditionFaulted  StatusCondition = "faulted"
+	StatusConditionHealthy  StatusCondition = "healthy"
+	StatusConditionUnknown  StatusCondition = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the StatusCondition enum.
+func (e StatusCondition) Valid() bool {
+	switch e {
+	case StatusConditionDegraded:
+		return true
+	case StatusConditionFaulted:
+		return true
+	case StatusConditionHealthy:
+		return true
+	case StatusConditionUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusErrorClassification.
+const (
+	StatusErrorClassificationDatedMeasurement  StatusErrorClassification = "dated_measurement"
+	StatusErrorClassificationStateUntilChanged StatusErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the StatusErrorClassification enum.
+func (e StatusErrorClassification) Valid() bool {
+	switch e {
+	case StatusErrorClassificationDatedMeasurement:
+		return true
+	case StatusErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusErrorState.
+const (
+	StatusErrorStateError StatusErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the StatusErrorState enum.
+func (e StatusErrorState) Valid() bool {
+	switch e {
+	case StatusErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusValueClassification.
+const (
+	StatusValueClassificationDatedMeasurement  StatusValueClassification = "dated_measurement"
+	StatusValueClassificationStateUntilChanged StatusValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the StatusValueClassification enum.
+func (e StatusValueClassification) Valid() bool {
+	switch e {
+	case StatusValueClassificationDatedMeasurement:
+		return true
+	case StatusValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusValueState.
+const (
+	StatusValueStateValue StatusValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the StatusValueState enum.
+func (e StatusValueState) Valid() bool {
+	switch e {
+	case StatusValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusWithdrawnClassification.
+const (
+	StatusWithdrawnClassificationStateUntilChanged StatusWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the StatusWithdrawnClassification enum.
+func (e StatusWithdrawnClassification) Valid() bool {
+	switch e {
+	case StatusWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StatusWithdrawnState.
+const (
+	StatusWithdrawnStateWithdrawn StatusWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the StatusWithdrawnState enum.
+func (e StatusWithdrawnState) Valid() bool {
+	switch e {
+	case StatusWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscribeChangesFrameType.
+const (
+	SubscribeChanges SubscribeChangesFrameType = "subscribe_changes"
+)
+
+// Valid indicates whether the value is a known member of the SubscribeChangesFrameType enum.
+func (e SubscribeChangesFrameType) Valid() bool {
+	switch e {
+	case SubscribeChanges:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionAckFrameType.
+const (
+	SubscriptionAck SubscriptionAckFrameType = "subscription_ack"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionAckFrameType enum.
+func (e SubscriptionAckFrameType) Valid() bool {
+	switch e {
+	case SubscriptionAck:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SyncErrorFrameType.
+const (
+	SyncErrorFrameTypeError SyncErrorFrameType = "error"
+)
+
+// Valid indicates whether the value is a known member of the SyncErrorFrameType enum.
+func (e SyncErrorFrameType) Valid() bool {
+	switch e {
+	case SyncErrorFrameTypeError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskState.
+const (
+	TaskStateAcknowledged          TaskState = "acknowledged"
+	TaskStateCancellationRequested TaskState = "cancellation_requested"
+	TaskStateCancelled             TaskState = "cancelled"
+	TaskStateCompleted             TaskState = "completed"
+	TaskStateFailed                TaskState = "failed"
+	TaskStateInProgress            TaskState = "in_progress"
+	TaskStatePaused                TaskState = "paused"
+	TaskStatePending               TaskState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the TaskState enum.
+func (e TaskState) Valid() bool {
+	switch e {
+	case TaskStateAcknowledged:
+		return true
+	case TaskStateCancellationRequested:
+		return true
+	case TaskStateCancelled:
+		return true
+	case TaskStateCompleted:
+		return true
+	case TaskStateFailed:
+		return true
+	case TaskStateInProgress:
+		return true
+	case TaskStatePaused:
+		return true
+	case TaskStatePending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelemetryErrorClassification.
+const (
+	TelemetryErrorClassificationDatedMeasurement  TelemetryErrorClassification = "dated_measurement"
+	TelemetryErrorClassificationStateUntilChanged TelemetryErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the TelemetryErrorClassification enum.
+func (e TelemetryErrorClassification) Valid() bool {
+	switch e {
+	case TelemetryErrorClassificationDatedMeasurement:
+		return true
+	case TelemetryErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelemetryErrorState.
+const (
+	TelemetryErrorStateError TelemetryErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the TelemetryErrorState enum.
+func (e TelemetryErrorState) Valid() bool {
+	switch e {
+	case TelemetryErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelemetryValueClassification.
+const (
+	TelemetryValueClassificationDatedMeasurement  TelemetryValueClassification = "dated_measurement"
+	TelemetryValueClassificationStateUntilChanged TelemetryValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the TelemetryValueClassification enum.
+func (e TelemetryValueClassification) Valid() bool {
+	switch e {
+	case TelemetryValueClassificationDatedMeasurement:
+		return true
+	case TelemetryValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelemetryValueState.
+const (
+	TelemetryValueStateValue TelemetryValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the TelemetryValueState enum.
+func (e TelemetryValueState) Valid() bool {
+	switch e {
+	case TelemetryValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelemetryWithdrawnClassification.
+const (
+	TelemetryWithdrawnClassificationStateUntilChanged TelemetryWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the TelemetryWithdrawnClassification enum.
+func (e TelemetryWithdrawnClassification) Valid() bool {
+	switch e {
+	case TelemetryWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelemetryWithdrawnState.
+const (
+	TelemetryWithdrawnStateWithdrawn TelemetryWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the TelemetryWithdrawnState enum.
+func (e TelemetryWithdrawnState) Valid() bool {
+	switch e {
+	case TelemetryWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackEntityType.
+const (
+	TrackEntityTypeTrack TrackEntityType = "track"
+)
+
+// Valid indicates whether the value is a known member of the TrackEntityType enum.
+func (e TrackEntityType) Valid() bool {
+	switch e {
+	case TrackEntityTypeTrack:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackTypeKind.
+const (
+	TrackTypeKindAircraft      TrackTypeKind = "aircraft"
+	TrackTypeKindAnimal        TrackTypeKind = "animal"
+	TrackTypeKindGroundVehicle TrackTypeKind = "ground_vehicle"
+	TrackTypeKindLessThannil   TrackTypeKind = "<nil>"
+	TrackTypeKindOther         TrackTypeKind = "other"
+	TrackTypeKindPerson        TrackTypeKind = "person"
+)
+
+// Valid indicates whether the value is a known member of the TrackTypeKind enum.
+func (e TrackTypeKind) Valid() bool {
+	switch e {
+	case TrackTypeKindAircraft:
+		return true
+	case TrackTypeKindAnimal:
+		return true
+	case TrackTypeKindGroundVehicle:
+		return true
+	case TrackTypeKindLessThannil:
+		return true
+	case TrackTypeKindOther:
+		return true
+	case TrackTypeKindPerson:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackTypeObservationErrorClassification.
+const (
+	TrackTypeObservationErrorClassificationDatedMeasurement  TrackTypeObservationErrorClassification = "dated_measurement"
+	TrackTypeObservationErrorClassificationStateUntilChanged TrackTypeObservationErrorClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the TrackTypeObservationErrorClassification enum.
+func (e TrackTypeObservationErrorClassification) Valid() bool {
+	switch e {
+	case TrackTypeObservationErrorClassificationDatedMeasurement:
+		return true
+	case TrackTypeObservationErrorClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackTypeObservationErrorState.
+const (
+	TrackTypeObservationErrorStateError TrackTypeObservationErrorState = "error"
+)
+
+// Valid indicates whether the value is a known member of the TrackTypeObservationErrorState enum.
+func (e TrackTypeObservationErrorState) Valid() bool {
+	switch e {
+	case TrackTypeObservationErrorStateError:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackTypeObservationValueClassification.
+const (
+	TrackTypeObservationValueClassificationDatedMeasurement  TrackTypeObservationValueClassification = "dated_measurement"
+	TrackTypeObservationValueClassificationStateUntilChanged TrackTypeObservationValueClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the TrackTypeObservationValueClassification enum.
+func (e TrackTypeObservationValueClassification) Valid() bool {
+	switch e {
+	case TrackTypeObservationValueClassificationDatedMeasurement:
+		return true
+	case TrackTypeObservationValueClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackTypeObservationValueState.
+const (
+	TrackTypeObservationValueStateValue TrackTypeObservationValueState = "value"
+)
+
+// Valid indicates whether the value is a known member of the TrackTypeObservationValueState enum.
+func (e TrackTypeObservationValueState) Valid() bool {
+	switch e {
+	case TrackTypeObservationValueStateValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackTypeObservationWithdrawnClassification.
+const (
+	TrackTypeObservationWithdrawnClassificationStateUntilChanged TrackTypeObservationWithdrawnClassification = "state_until_changed"
+)
+
+// Valid indicates whether the value is a known member of the TrackTypeObservationWithdrawnClassification enum.
+func (e TrackTypeObservationWithdrawnClassification) Valid() bool {
+	switch e {
+	case TrackTypeObservationWithdrawnClassificationStateUntilChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TrackTypeObservationWithdrawnState.
+const (
+	TrackTypeObservationWithdrawnStateWithdrawn TrackTypeObservationWithdrawnState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the TrackTypeObservationWithdrawnState enum.
+func (e TrackTypeObservationWithdrawnState) Valid() bool {
+	switch e {
+	case TrackTypeObservationWithdrawnStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UnreportedSectionState.
+const (
+	UnreportedSectionStateUnknown UnreportedSectionState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the UnreportedSectionState enum.
+func (e UnreportedSectionState) Valid() bool {
+	switch e {
+	case UnreportedSectionStateUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpsertChangeKind.
+const (
+	Upsert UpsertChangeKind = "upsert"
+)
+
+// Valid indicates whether the value is a known member of the UpsertChangeKind enum.
+func (e UpsertChangeKind) Valid() bool {
+	switch e {
+	case Upsert:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReadObjectContentParamsDisposition.
+const (
+	ReadObjectContentParamsDispositionAttachment ReadObjectContentParamsDisposition = "attachment"
+	ReadObjectContentParamsDispositionInline     ReadObjectContentParamsDisposition = "inline"
+)
+
+// Valid indicates whether the value is a known member of the ReadObjectContentParamsDisposition enum.
+func (e ReadObjectContentParamsDisposition) Valid() bool {
+	switch e {
+	case ReadObjectContentParamsDispositionAttachment:
+		return true
+	case ReadObjectContentParamsDispositionInline:
+		return true
+	default:
+		return false
+	}
+}
+
+// Acknowledgment defines model for Acknowledgment.
+type Acknowledgment struct {
+	Accepted AcknowledgmentAccepted `json:"accepted"`
+}
+
+// AcknowledgmentAccepted defines model for Acknowledgment.Accepted.
+type AcknowledgmentAccepted string
+
+// ActivityRecord defines model for ActivityRecord.
+type ActivityRecord struct {
+	Id              Identifier  `json:"id"`
+	Kind            string      `json:"kind"`
+	Message         string      `json:"message"`
+	RecordedAt      Timestamp   `json:"recorded_at"`
+	ResourceId      *Identifier `json:"resource_id,omitempty"`
+	SubmittingKeyId *Identifier `json:"submitting_key_id,omitempty"`
+}
+
+// ActivityRecordPage defines model for ActivityRecordPage.
+type ActivityRecordPage struct {
+	Items         []ActivityRecord `json:"items"`
+	NextPageToken *PageToken       `json:"next_page_token,omitempty"`
+}
+
+// Alias defines model for Alias.
+type Alias = string
+
+// AliasQuery defines model for AliasQuery.
+type AliasQuery struct {
+	Alias Alias `json:"alias"`
+}
+
 // Altitude defines model for Altitude.
 type Altitude struct {
 	Metres    float64           `json:"metres"`
@@ -31,23 +3121,2851 @@ type Altitude struct {
 // AltitudeReference defines model for Altitude.Reference.
 type AltitudeReference string
 
-// Counter defines model for Counter.
+// ApiKey defines model for ApiKey.
+type ApiKey struct {
+	AssociatedAssetId nullable.Nullable[NullableIdentifier] `json:"associated_asset_id"`
+	CreatedAt         Timestamp                             `json:"created_at"`
+	Id                Identifier                            `json:"id"`
+	Name              Name                                  `json:"name"`
+	RevokedAt         nullable.Nullable[string]             `json:"revoked_at"`
+}
+
+// ApiKeyPage defines model for ApiKeyPage.
+type ApiKeyPage struct {
+	Items         []ApiKey   `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+}
+
+// Asset defines model for Asset.
+type Asset struct {
+	Alias          nullable.Nullable[string]    `json:"alias"`
+	Attitude       *RetainedAttitudeSection     `json:"attitude,omitempty"`
+	Camera         *RetainedCameraSection       `json:"camera,omitempty"`
+	CameraOptics   *RetainedCameraOpticsSection `json:"camera_optics,omitempty"`
+	Capabilities   Capabilities                 `json:"capabilities"`
+	Communications struct {
+		Health   Health                        `json:"health"`
+		Reported RetainedCommunicationsSection `json:"reported"`
+	} `json:"communications"`
+	Description AssetDescription `json:"description"`
+
+	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	EditRevision      PositiveCounter           `json:"edit_revision"`
+	EntityType        AssetEntityType           `json:"entity_type"`
+	Gimbal            *RetainedGimbalSection    `json:"gimbal,omitempty"`
+	Heartbeat         Heartbeat                 `json:"heartbeat"`
+	Id                Identifier                `json:"id"`
+	Power             *RetainedPowerSection     `json:"power,omitempty"`
+	ProcessGeneration Identifier                `json:"process_generation"`
+	Status            RetainedStatusSection     `json:"status"`
+	Telemetry         *RetainedTelemetrySection `json:"telemetry,omitempty"`
+	Type              AssetType                 `json:"type"`
+
+	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Version PositiveCounter `json:"version"`
+}
+
+// AssetEntityType defines model for Asset.EntityType.
+type AssetEntityType string
+
+// AssetDescription defines model for AssetDescription.
+type AssetDescription struct {
+	Description  *string `json:"description,omitempty"`
+	Manufacturer *Name   `json:"manufacturer,omitempty"`
+	Model        *Name   `json:"model,omitempty"`
+	Name         Name    `json:"name"`
+}
+
+// AssetDescriptionUpdate defines model for AssetDescriptionUpdate.
+type AssetDescriptionUpdate struct {
+	Alias        nullable.Nullable[NullableAlias] `json:"alias,omitempty"`
+	Capabilities *Capabilities                    `json:"capabilities,omitempty"`
+	Description  *AssetDescription                `json:"description,omitempty"`
+	Type         *AssetType                       `json:"type,omitempty"`
+}
+
+// AssetDescriptiveChange defines model for AssetDescriptiveChange.
+type AssetDescriptiveChange struct {
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ExpectedEditRevision PositiveCounter        `json:"expected_edit_revision"`
+	Sections             AssetDescriptionUpdate `json:"sections"`
+}
+
+// AssetPage defines model for AssetPage.
+type AssetPage struct {
+	Items         []Asset    `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+}
+
+// AssetReport defines model for AssetReport.
+type AssetReport struct {
+	Heartbeat *ContactProof  `json:"heartbeat,omitempty"`
+	Sections  *AssetSections `json:"sections,omitempty"`
+	Source    AssetSource    `json:"source"`
+}
+
+// AssetSections defines model for AssetSections.
+type AssetSections struct {
+	Attitude       *AttitudeSection       `json:"attitude,omitempty"`
+	Camera         *CameraSection         `json:"camera,omitempty"`
+	CameraOptics   *CameraOpticsSection   `json:"camera_optics,omitempty"`
+	Communications *CommunicationsSection `json:"communications,omitempty"`
+	Gimbal         *GimbalSection         `json:"gimbal,omitempty"`
+	Power          *PowerSection          `json:"power,omitempty"`
+	Status         *StatusSection         `json:"status,omitempty"`
+	Telemetry      *TelemetrySection      `json:"telemetry,omitempty"`
+}
+
+// AssetSource defines model for AssetSource.
+type AssetSource struct {
+	AssetId           Identifier      `json:"asset_id"`
+	Kind              AssetSourceKind `json:"kind"`
+	ProcessGeneration Identifier      `json:"process_generation"`
+}
+
+// AssetSourceKind defines model for AssetSource.Kind.
+type AssetSourceKind string
+
+// AssetStatus defines model for AssetStatus.
+type AssetStatus struct {
+	AssetId        Identifier `json:"asset_id"`
+	Communications struct {
+		Health   Health                        `json:"health"`
+		Reported RetainedCommunicationsSection `json:"reported"`
+	} `json:"communications"`
+	Heartbeat Heartbeat             `json:"heartbeat"`
+	Status    RetainedStatusSection `json:"status"`
+}
+
+// AssetType defines model for AssetType.
+type AssetType struct {
+	union json.RawMessage
+}
+
+// AssetUpdateResult defines model for AssetUpdateResult.
+type AssetUpdateResult struct {
+	Asset        Asset                `json:"asset"`
+	Dispositions []SectionDisposition `json:"dispositions"`
+	FreshContact bool                 `json:"fresh_contact"`
+}
+
+// AssignedTaskPage defines model for AssignedTaskPage.
+type AssignedTaskPage struct {
+	Items         []Task     `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+
+	// QueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	QueueRevision PositiveCounter `json:"queue_revision"`
+}
+
+// AssignedTaskQuery defines model for AssignedTaskQuery.
+type AssignedTaskQuery struct {
+	PageSize  *int       `json:"page_size,omitempty"`
+	PageToken *PageToken `json:"page_token,omitempty"`
+
+	// QueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	QueueRevision *PositiveCounter `json:"queue_revision,omitempty"`
+}
+
+// Attitude defines model for Attitude.
+type Attitude struct {
+	Heading           nullable.Nullable[float64] `json:"heading"`
+	HeadingObservedAt nullable.Nullable[string]  `json:"heading_observed_at,omitempty"`
+	ObservedAt        nullable.Nullable[string]  `json:"observed_at"`
+	Pitch             nullable.Nullable[float64] `json:"pitch"`
+	PitchObservedAt   nullable.Nullable[string]  `json:"pitch_observed_at,omitempty"`
+	Roll              nullable.Nullable[float64] `json:"roll"`
+	RollObservedAt    nullable.Nullable[string]  `json:"roll_observed_at,omitempty"`
+}
+
+// AttitudeError defines model for AttitudeError.
+type AttitudeError struct {
+	Classification AttitudeErrorClassification `json:"classification"`
+	Error          SectionFault                `json:"error"`
+	Evidence       SourceEvidence              `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]   `json:"observed_at"`
+	State          AttitudeErrorState          `json:"state"`
+}
+
+// AttitudeErrorClassification defines model for AttitudeError.Classification.
+type AttitudeErrorClassification string
+
+// AttitudeErrorState defines model for AttitudeError.State.
+type AttitudeErrorState string
+
+// AttitudeSection defines model for AttitudeSection.
+type AttitudeSection struct {
+	union json.RawMessage
+}
+
+// AttitudeValue defines model for AttitudeValue.
+type AttitudeValue struct {
+	Classification AttitudeValueClassification `json:"classification"`
+	Evidence       SourceEvidence              `json:"evidence"`
+	State          AttitudeValueState          `json:"state"`
+	Value          Attitude                    `json:"value"`
+}
+
+// AttitudeValueClassification defines model for AttitudeValue.Classification.
+type AttitudeValueClassification string
+
+// AttitudeValueState defines model for AttitudeValue.State.
+type AttitudeValueState string
+
+// AttitudeWithdrawn defines model for AttitudeWithdrawn.
+type AttitudeWithdrawn struct {
+	Classification AttitudeWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                  `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]       `json:"observed_at"`
+	State          AttitudeWithdrawnState          `json:"state"`
+}
+
+// AttitudeWithdrawnClassification defines model for AttitudeWithdrawn.Classification.
+type AttitudeWithdrawnClassification string
+
+// AttitudeWithdrawnState defines model for AttitudeWithdrawn.State.
+type AttitudeWithdrawnState string
+
+// AuthenticateFrame defines model for AuthenticateFrame.
+type AuthenticateFrame struct {
+	ApiKey          string                `json:"api_key"`
+	DatasetId       Identifier            `json:"dataset_id"`
+	ProtocolVersion ProtocolVersion       `json:"protocol_version"`
+	Type            AuthenticateFrameType `json:"type"`
+}
+
+// AuthenticateFrameType defines model for AuthenticateFrame.Type.
+type AuthenticateFrameType string
+
+// AuthenticatedFrame defines model for AuthenticatedFrame.
+type AuthenticatedFrame struct {
+	CoreRunId       Identifier             `json:"core_run_id"`
+	DatasetId       Identifier             `json:"dataset_id"`
+	ProtocolVersion ProtocolVersion        `json:"protocol_version"`
+	Type            AuthenticatedFrameType `json:"type"`
+}
+
+// AuthenticatedFrameType defines model for AuthenticatedFrame.Type.
+type AuthenticatedFrameType string
+
+// BatchLimits defines model for BatchLimits.
+type BatchLimits struct {
+	// MaxBatchBytes Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	MaxBatchBytes PositiveCounter `json:"max_batch_bytes"`
+	MaxChanges    int             `json:"max_changes"`
+}
+
+// BatteryReserve defines model for BatteryReserve.
+type BatteryReserve struct {
+	CurrentAmperes   nullable.Nullable[float64] `json:"current_amperes"`
+	Id               Identifier                 `json:"id"`
+	Kind             BatteryReserveKind         `json:"kind"`
+	ObservedAt       nullable.Nullable[string]  `json:"observed_at"`
+	RemainingPercent nullable.Nullable[float64] `json:"remaining_percent"`
+	VoltageVolts     nullable.Nullable[float64] `json:"voltage_volts"`
+}
+
+// BatteryReserveKind defines model for BatteryReserve.Kind.
+type BatteryReserveKind string
+
+// Camera defines model for Camera.
+type Camera struct {
+	Capturing  nullable.Nullable[bool]    `json:"capturing,omitempty"`
+	ObservedAt nullable.Nullable[string]  `json:"observed_at"`
+	Recording  nullable.Nullable[bool]    `json:"recording,omitempty"`
+	ZoomRatio  nullable.Nullable[float64] `json:"zoom_ratio"`
+}
+
+// CameraError defines model for CameraError.
+type CameraError struct {
+	Classification CameraErrorClassification `json:"classification"`
+	Error          SectionFault              `json:"error"`
+	Evidence       SourceEvidence            `json:"evidence"`
+	ObservedAt     nullable.Nullable[string] `json:"observed_at"`
+	State          CameraErrorState          `json:"state"`
+}
+
+// CameraErrorClassification defines model for CameraError.Classification.
+type CameraErrorClassification string
+
+// CameraErrorState defines model for CameraError.State.
+type CameraErrorState string
+
+// CameraOptics defines model for CameraOptics.
+type CameraOptics struct {
+	HorizontalFov nullable.Nullable[float64] `json:"horizontal_fov"`
+	ObservedAt    nullable.Nullable[string]  `json:"observed_at"`
+	VerticalFov   nullable.Nullable[float64] `json:"vertical_fov"`
+}
+
+// CameraOpticsError defines model for CameraOpticsError.
+type CameraOpticsError struct {
+	Classification CameraOpticsErrorClassification `json:"classification"`
+	Error          SectionFault                    `json:"error"`
+	Evidence       SourceEvidence                  `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]       `json:"observed_at"`
+	State          CameraOpticsErrorState          `json:"state"`
+}
+
+// CameraOpticsErrorClassification defines model for CameraOpticsError.Classification.
+type CameraOpticsErrorClassification string
+
+// CameraOpticsErrorState defines model for CameraOpticsError.State.
+type CameraOpticsErrorState string
+
+// CameraOpticsSection defines model for CameraOpticsSection.
+type CameraOpticsSection struct {
+	union json.RawMessage
+}
+
+// CameraOpticsValue defines model for CameraOpticsValue.
+type CameraOpticsValue struct {
+	Classification CameraOpticsValueClassification `json:"classification"`
+	Evidence       SourceEvidence                  `json:"evidence"`
+	State          CameraOpticsValueState          `json:"state"`
+	Value          CameraOptics                    `json:"value"`
+}
+
+// CameraOpticsValueClassification defines model for CameraOpticsValue.Classification.
+type CameraOpticsValueClassification string
+
+// CameraOpticsValueState defines model for CameraOpticsValue.State.
+type CameraOpticsValueState string
+
+// CameraOpticsWithdrawn defines model for CameraOpticsWithdrawn.
+type CameraOpticsWithdrawn struct {
+	Classification CameraOpticsWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                      `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]           `json:"observed_at"`
+	State          CameraOpticsWithdrawnState          `json:"state"`
+}
+
+// CameraOpticsWithdrawnClassification defines model for CameraOpticsWithdrawn.Classification.
+type CameraOpticsWithdrawnClassification string
+
+// CameraOpticsWithdrawnState defines model for CameraOpticsWithdrawn.State.
+type CameraOpticsWithdrawnState string
+
+// CameraSection defines model for CameraSection.
+type CameraSection struct {
+	union json.RawMessage
+}
+
+// CameraValue defines model for CameraValue.
+type CameraValue struct {
+	Classification CameraValueClassification `json:"classification"`
+	Evidence       SourceEvidence            `json:"evidence"`
+	State          CameraValueState          `json:"state"`
+	Value          Camera                    `json:"value"`
+}
+
+// CameraValueClassification defines model for CameraValue.Classification.
+type CameraValueClassification string
+
+// CameraValueState defines model for CameraValue.State.
+type CameraValueState string
+
+// CameraWithdrawn defines model for CameraWithdrawn.
+type CameraWithdrawn struct {
+	Classification CameraWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]     `json:"observed_at"`
+	State          CameraWithdrawnState          `json:"state"`
+}
+
+// CameraWithdrawnClassification defines model for CameraWithdrawn.Classification.
+type CameraWithdrawnClassification string
+
+// CameraWithdrawnState defines model for CameraWithdrawn.State.
+type CameraWithdrawnState string
+
+// CancelOperationRequest defines model for CancelOperationRequest.
+type CancelOperationRequest struct {
+	OperationId Identifier `json:"operation_id"`
+	RequestId   Identifier `json:"request_id"`
+}
+
+// CancelOperationResponse defines model for CancelOperationResponse.
+type CancelOperationResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Operation  `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// CancellationRefused defines model for CancellationRefused.
+type CancellationRefused struct {
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+	Reason     string                    `json:"reason"`
+	State      CancellationRefusedState  `json:"state"`
+}
+
+// CancellationRefusedState defines model for CancellationRefused.State.
+type CancellationRefusedState string
+
+// Capabilities defines model for Capabilities.
+type Capabilities struct {
+	Commands []CommandSupport `json:"commands"`
+}
+
+// CatalogEntry defines model for CatalogEntry.
+type CatalogEntry struct {
+	Command                  CommandName                 `json:"command"`
+	Expires                  *bool                       `json:"expires,omitempty"`
+	ImmediateRequiresSupport *bool                       `json:"immediate_requires_support,omitempty"`
+	Name                     string                      `json:"name"`
+	QueuedDeadline           *bool                       `json:"queued_deadline,omitempty"`
+	Scheduling               []CatalogEntryScheduling    `json:"scheduling"`
+	Schema                   string                      `json:"schema"`
+	TargetGeometry           *CatalogEntryTargetGeometry `json:"target_geometry,omitempty"`
+}
+
+// CatalogEntryScheduling defines model for CatalogEntry.Scheduling.
+type CatalogEntryScheduling string
+
+// CatalogEntryTargetGeometry defines model for CatalogEntry.TargetGeometry.
+type CatalogEntryTargetGeometry string
+
+// ChangeBatch defines model for ChangeBatch.
+type ChangeBatch struct {
+	Changes []ResourceChange `json:"changes"`
+	Cursor  Cursor           `json:"cursor"`
+}
+
+// ChangePage defines model for ChangePage.
+type ChangePage struct {
+	Batches        []ChangeBatch `json:"batches"`
+	EarliestCursor Cursor        `json:"earliest_cursor"`
+	NextPageToken  *PageToken    `json:"next_page_token,omitempty"`
+	ReplayBoundary Cursor        `json:"replay_boundary"`
+}
+
+// ChangesFrame defines model for ChangesFrame.
+type ChangesFrame struct {
+	Batch           ChangeBatch      `json:"batch"`
+	CoreRunId       Identifier       `json:"core_run_id"`
+	DatasetId       Identifier       `json:"dataset_id"`
+	ProtocolVersion ProtocolVersion  `json:"protocol_version"`
+	Type            ChangesFrameType `json:"type"`
+}
+
+// ChangesFrameType defines model for ChangesFrame.Type.
+type ChangesFrameType string
+
+// ClientFrame defines model for ClientFrame.
+type ClientFrame struct {
+	union json.RawMessage
+}
+
+// CommandName defines model for CommandName.
+type CommandName string
+
+// CommandSupport defines model for CommandSupport.
+type CommandSupport struct {
+	union json.RawMessage
+}
+
+// Communications defines model for Communications.
+type Communications struct {
+	BandwidthBps nullable.Nullable[float64] `json:"bandwidth_bps"`
+	ObservedAt   nullable.Nullable[string]  `json:"observed_at"`
+}
+
+// CommunicationsError defines model for CommunicationsError.
+type CommunicationsError struct {
+	Classification CommunicationsErrorClassification `json:"classification"`
+	Error          SectionFault                      `json:"error"`
+	Evidence       SourceEvidence                    `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]         `json:"observed_at"`
+	State          CommunicationsErrorState          `json:"state"`
+}
+
+// CommunicationsErrorClassification defines model for CommunicationsError.Classification.
+type CommunicationsErrorClassification string
+
+// CommunicationsErrorState defines model for CommunicationsError.State.
+type CommunicationsErrorState string
+
+// CommunicationsSection defines model for CommunicationsSection.
+type CommunicationsSection struct {
+	union json.RawMessage
+}
+
+// CommunicationsValue defines model for CommunicationsValue.
+type CommunicationsValue struct {
+	Classification CommunicationsValueClassification `json:"classification"`
+	Evidence       SourceEvidence                    `json:"evidence"`
+	State          CommunicationsValueState          `json:"state"`
+	Value          Communications                    `json:"value"`
+}
+
+// CommunicationsValueClassification defines model for CommunicationsValue.Classification.
+type CommunicationsValueClassification string
+
+// CommunicationsValueState defines model for CommunicationsValue.State.
+type CommunicationsValueState string
+
+// CommunicationsWithdrawn defines model for CommunicationsWithdrawn.
+type CommunicationsWithdrawn struct {
+	Classification CommunicationsWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                        `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]             `json:"observed_at"`
+	State          CommunicationsWithdrawnState          `json:"state"`
+}
+
+// CommunicationsWithdrawnClassification defines model for CommunicationsWithdrawn.Classification.
+type CommunicationsWithdrawnClassification string
+
+// CommunicationsWithdrawnState defines model for CommunicationsWithdrawn.State.
+type CommunicationsWithdrawnState string
+
+// ConfirmTaskOrderRequest defines model for ConfirmTaskOrderRequest.
+type ConfirmTaskOrderRequest struct {
+	Evidence SourceEvidence `json:"evidence"`
+
+	// QueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	QueueRevision PositiveCounter `json:"queue_revision"`
+	RequestId     Identifier      `json:"request_id"`
+	Source        AssetSource     `json:"source"`
+	TaskIds       []Identifier    `json:"task_ids"`
+}
+
+// ConfirmTaskOrderResponse defines model for ConfirmTaskOrderResponse.
+type ConfirmTaskOrderResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         TaskQueue  `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// ContactChallenge Exact retry recovers original expiry. Restart invalidates proof. Replacement binds expected_generation and commits its first check-in atomically.
+type ContactChallenge struct {
+	AssetId            Identifier                       `json:"asset_id"`
+	ChallengeId        Identifier                       `json:"challenge_id"`
+	CoreRunId          Identifier                       `json:"core_run_id"`
+	DatasetId          Identifier                       `json:"dataset_id"`
+	ExpectedGeneration *Identifier                      `json:"expected_generation,omitempty"`
+	ExpiresAt          Timestamp                        `json:"expires_at"`
+	ExpiresInSeconds   ContactChallengeExpiresInSeconds `json:"expires_in_seconds"`
+	IssuedAt           Timestamp                        `json:"issued_at"`
+	ProcessGeneration  Identifier                       `json:"process_generation"`
+	RequestId          Identifier                       `json:"request_id"`
+}
+
+// ContactChallengeExpiresInSeconds defines model for ContactChallenge.ExpiresInSeconds.
+type ContactChallengeExpiresInSeconds int
+
+// ContactChallengeRequest defines model for ContactChallengeRequest.
+type ContactChallengeRequest struct {
+	AssetId            Identifier  `json:"asset_id"`
+	ExpectedGeneration *Identifier `json:"expected_generation,omitempty"`
+	ProcessGeneration  Identifier  `json:"process_generation"`
+	RequestId          Identifier  `json:"request_id"`
+}
+
+// ContactProof defines model for ContactProof.
+type ContactProof struct {
+	ChallengeId Identifier     `json:"challenge_id"`
+	Evidence    SourceEvidence `json:"evidence"`
+}
+
+// ContentType defines model for ContentType.
+type ContentType = string
+
+// Coordinate defines model for Coordinate.
+type Coordinate = []float64
+
+// Counter Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
 type Counter = string
+
+// CreateApiKeyRequest defines model for CreateApiKeyRequest.
+type CreateApiKeyRequest struct {
+	CreationId Identifier `json:"creation_id"`
+
+	// Credential Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields.
+	Credential CredentialFacts `json:"credential"`
+	Name       Name            `json:"name"`
+	RequestId  Identifier      `json:"request_id"`
+}
+
+// CreateApiKeyResponse defines model for CreateApiKeyResponse.
+type CreateApiKeyResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         ApiKey     `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// CreateGeofeatureRequest defines model for CreateGeofeatureRequest.
+type CreateGeofeatureRequest struct {
+	Alias        *Alias      `json:"alias,omitempty"`
+	Description  Description `json:"description"`
+	GeofeatureId Identifier  `json:"geofeature_id"`
+
+	// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid.
+	Geometry  Geometry       `json:"geometry"`
+	RequestId Identifier     `json:"request_id"`
+	Type      GeofeatureType `json:"type"`
+}
+
+// CreateGeofeatureResponse defines model for CreateGeofeatureResponse.
+type CreateGeofeatureResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Geofeature `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// CreateOperationRequest defines model for CreateOperationRequest.
+type CreateOperationRequest struct {
+	Capability Name `json:"capability"`
+
+	// Input Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+	Input       PluginPayload `json:"input"`
+	OperationId Identifier    `json:"operation_id"`
+	PluginId    Identifier    `json:"plugin_id"`
+	Release     string        `json:"release"`
+	RequestId   Identifier    `json:"request_id"`
+}
+
+// CreateOperationResponse defines model for CreateOperationResponse.
+type CreateOperationResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Operation  `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// CreateOperatorRequest defines model for CreateOperatorRequest.
+type CreateOperatorRequest struct {
+	Description *string    `json:"description,omitempty"`
+	Name        Name       `json:"name"`
+	OperatorId  Identifier `json:"operator_id"`
+	RequestId   Identifier `json:"request_id"`
+}
+
+// CreateOperatorResponse defines model for CreateOperatorResponse.
+type CreateOperatorResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Operator   `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// CreateTaskRequest defines model for CreateTaskRequest.
+type CreateTaskRequest struct {
+	AssetId   Identifier  `json:"asset_id"`
+	Command   TaskCommand `json:"command"`
+	RequestId Identifier  `json:"request_id"`
+	TaskId    Identifier  `json:"task_id"`
+}
+
+// CreateTaskResponse defines model for CreateTaskResponse.
+type CreateTaskResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Task       `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// CreateTrackRequest defines model for CreateTrackRequest.
+type CreateTrackRequest struct {
+	Alias        *Alias         `json:"alias,omitempty"`
+	Description  Description    `json:"description"`
+	Observations *TrackSections `json:"observations,omitempty"`
+	PublisherId  Identifier     `json:"publisher_id"`
+	RequestId    Identifier     `json:"request_id"`
+	TrackId      Identifier     `json:"track_id"`
+}
+
+// CreateTrackResponse defines model for CreateTrackResponse.
+type CreateTrackResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Track      `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// CredentialFacts Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields.
+type CredentialFacts struct {
+	KeyId  Identifier `json:"key_id"`
+	Secret string     `json:"secret"`
+}
+
+// Cursor defines model for Cursor.
+type Cursor = string
+
+// DeleteAssetRequest defines model for DeleteAssetRequest.
+type DeleteAssetRequest struct {
+	AssetId   Identifier `json:"asset_id"`
+	RequestId Identifier `json:"request_id"`
+}
+
+// DeleteAssetResponse defines model for DeleteAssetResponse.
+type DeleteAssetResponse struct {
+	CommitCursor Cursor         `json:"commit_cursor"`
+	Data         Acknowledgment `json:"data"`
+	DatasetId    Identifier     `json:"dataset_id"`
+}
+
+// DeleteChange defines model for DeleteChange.
+type DeleteChange struct {
+	Kind     DeleteChangeKind `json:"kind"`
+	Resource Deletion         `json:"resource"`
+}
+
+// DeleteChangeKind defines model for DeleteChange.Kind.
+type DeleteChangeKind string
+
+// DeleteGeofeatureRequest defines model for DeleteGeofeatureRequest.
+type DeleteGeofeatureRequest struct {
+	GeofeatureId Identifier `json:"geofeature_id"`
+	RequestId    Identifier `json:"request_id"`
+}
+
+// DeleteGeofeatureResponse defines model for DeleteGeofeatureResponse.
+type DeleteGeofeatureResponse struct {
+	CommitCursor Cursor         `json:"commit_cursor"`
+	Data         Acknowledgment `json:"data"`
+	DatasetId    Identifier     `json:"dataset_id"`
+}
+
+// DeleteObjectRequest defines model for DeleteObjectRequest.
+type DeleteObjectRequest struct {
+	ObjectId  Identifier `json:"object_id"`
+	RequestId Identifier `json:"request_id"`
+}
+
+// DeleteObjectResponse defines model for DeleteObjectResponse.
+type DeleteObjectResponse struct {
+	CommitCursor Cursor         `json:"commit_cursor"`
+	Data         Acknowledgment `json:"data"`
+	DatasetId    Identifier     `json:"dataset_id"`
+}
+
+// DeleteOperatorRequest defines model for DeleteOperatorRequest.
+type DeleteOperatorRequest struct {
+	OperatorId Identifier `json:"operator_id"`
+	RequestId  Identifier `json:"request_id"`
+}
+
+// DeleteOperatorResponse defines model for DeleteOperatorResponse.
+type DeleteOperatorResponse struct {
+	CommitCursor Cursor         `json:"commit_cursor"`
+	Data         Acknowledgment `json:"data"`
+	DatasetId    Identifier     `json:"dataset_id"`
+}
+
+// DeleteTrackRequest defines model for DeleteTrackRequest.
+type DeleteTrackRequest struct {
+	RequestId Identifier `json:"request_id"`
+	TrackId   Identifier `json:"track_id"`
+}
+
+// DeleteTrackResponse defines model for DeleteTrackResponse.
+type DeleteTrackResponse struct {
+	CommitCursor Cursor         `json:"commit_cursor"`
+	Data         Acknowledgment `json:"data"`
+	DatasetId    Identifier     `json:"dataset_id"`
+}
+
+// Deletion defines model for Deletion.
+type Deletion struct {
+	Id   Identifier   `json:"id"`
+	Kind DeletionKind `json:"kind"`
+
+	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Version PositiveCounter `json:"version"`
+}
+
+// DeletionKind defines model for Deletion.Kind.
+type DeletionKind string
+
+// Description defines model for Description.
+type Description struct {
+	Description *string `json:"description,omitempty"`
+	Name        Name    `json:"name"`
+}
+
+// DescriptionPatch defines model for DescriptionPatch.
+type DescriptionPatch struct {
+	Description nullable.Nullable[string] `json:"description,omitempty"`
+	Name        *Name                     `json:"name,omitempty"`
+}
+
+// Digest defines model for Digest.
+type Digest = string
+
+// DroneType defines model for DroneType.
+type DroneType struct {
+	Kind    DroneTypeKind                       `json:"kind"`
+	Variant nullable.Nullable[DroneTypeVariant] `json:"variant"`
+}
+
+// DroneTypeKind defines model for DroneType.Kind.
+type DroneTypeKind string
+
+// DroneTypeVariant defines model for DroneType.Variant.
+type DroneTypeVariant string
+
+// EditGeofeatureRequest defines model for EditGeofeatureRequest.
+type EditGeofeatureRequest struct {
+	Alias       nullable.Nullable[NullableAlias] `json:"alias,omitempty"`
+	Description *DescriptionPatch                `json:"description,omitempty"`
+
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
+	GeofeatureId         Identifier      `json:"geofeature_id"`
+
+	// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid.
+	Geometry  *Geometry       `json:"geometry,omitempty"`
+	RequestId Identifier      `json:"request_id"`
+	Type      *GeofeatureType `json:"type,omitempty"`
+}
+
+// EditGeofeatureResponse defines model for EditGeofeatureResponse.
+type EditGeofeatureResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Geofeature `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// EditObjectRequest defines model for EditObjectRequest.
+type EditObjectRequest struct {
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
+	Metadata             ObjectMetadata  `json:"metadata"`
+	ObjectId             Identifier      `json:"object_id"`
+	RequestId            Identifier      `json:"request_id"`
+}
+
+// EditObjectResponse defines model for EditObjectResponse.
+type EditObjectResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Object     `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// EditOperatorRequest defines model for EditOperatorRequest.
+type EditOperatorRequest struct {
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ExpectedEditRevision PositiveCounter  `json:"expected_edit_revision"`
+	OperatorId           Identifier       `json:"operator_id"`
+	Profile              DescriptionPatch `json:"profile"`
+	RequestId            Identifier       `json:"request_id"`
+}
+
+// EditOperatorResponse defines model for EditOperatorResponse.
+type EditOperatorResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Operator   `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// EditTrackRequest defines model for EditTrackRequest.
+type EditTrackRequest struct {
+	Alias       nullable.Nullable[NullableAlias] `json:"alias,omitempty"`
+	Description *DescriptionPatch                `json:"description,omitempty"`
+
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
+	RequestId            Identifier      `json:"request_id"`
+	TrackId              Identifier      `json:"track_id"`
+}
+
+// EditTrackResponse defines model for EditTrackResponse.
+type EditTrackResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Track      `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// EmptyQuery defines model for EmptyQuery.
+type EmptyQuery = map[string]interface{}
+
+// Entity defines model for Entity.
+type Entity struct {
+	union json.RawMessage
+}
+
+// EntityListQuery defines model for EntityListQuery.
+type EntityListQuery struct {
+	Aliases   *[]Alias      `json:"aliases,omitempty"`
+	Ids       *[]Identifier `json:"ids,omitempty"`
+	Names     *[]Name       `json:"names,omitempty"`
+	PageSize  *int          `json:"page_size,omitempty"`
+	PageToken *PageToken    `json:"page_token,omitempty"`
+}
+
+// Error400 defines model for Error400.
+type Error400 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error400ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error400ErrorCode defines model for Error400.Error.Code.
+type Error400ErrorCode string
+
+// Error401 defines model for Error401.
+type Error401 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error401ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error401ErrorCode defines model for Error401.Error.Code.
+type Error401ErrorCode string
+
+// Error403 defines model for Error403.
+type Error403 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error403ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error403ErrorCode defines model for Error403.Error.Code.
+type Error403ErrorCode string
+
+// Error404 defines model for Error404.
+type Error404 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error404ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error404ErrorCode defines model for Error404.Error.Code.
+type Error404ErrorCode string
+
+// Error409 defines model for Error409.
+type Error409 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error409ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error409ErrorCode defines model for Error409.Error.Code.
+type Error409ErrorCode string
+
+// Error410 defines model for Error410.
+type Error410 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error410ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error410ErrorCode defines model for Error410.Error.Code.
+type Error410ErrorCode string
+
+// Error413 defines model for Error413.
+type Error413 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error413ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error413ErrorCode defines model for Error413.Error.Code.
+type Error413ErrorCode string
+
+// Error415 defines model for Error415.
+type Error415 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error415ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error415ErrorCode defines model for Error415.Error.Code.
+type Error415ErrorCode string
+
+// Error422 defines model for Error422.
+type Error422 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error422ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error422ErrorCode defines model for Error422.Error.Code.
+type Error422ErrorCode string
+
+// Error429 defines model for Error429.
+type Error429 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error429ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error429ErrorCode defines model for Error429.Error.Code.
+type Error429ErrorCode string
+
+// Error500 defines model for Error500.
+type Error500 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error500ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error500ErrorCode defines model for Error500.Error.Code.
+type Error500ErrorCode string
+
+// Error503 defines model for Error503.
+type Error503 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error503ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error503ErrorCode defines model for Error503.Error.Code.
+type Error503ErrorCode string
+
+// Error507 defines model for Error507.
+type Error507 struct {
+	DatasetId *Identifier `json:"dataset_id,omitempty"`
+	Error     struct {
+		Code      Error507ErrorCode `json:"code"`
+		Details   *ErrorDetails     `json:"details,omitempty"`
+		Message   string            `json:"message"`
+		RequestId Identifier        `json:"request_id"`
+	} `json:"error"`
+}
+
+// Error507ErrorCode defines model for Error507.Error.Code.
+type Error507ErrorCode string
+
+// ErrorDetails defines model for ErrorDetails.
+type ErrorDetails struct {
+	ActualDatasetId       *Identifier `json:"actual_dataset_id,omitempty"`
+	ActualProtocolVersion *string     `json:"actual_protocol_version,omitempty"`
+
+	// ActualRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ActualRevision          *Counter         `json:"actual_revision,omitempty"`
+	EarliestCursor          *Cursor          `json:"earliest_cursor,omitempty"`
+	ExpectedDatasetId       *Identifier      `json:"expected_dataset_id,omitempty"`
+	ExpectedProtocolVersion *ProtocolVersion `json:"expected_protocol_version,omitempty"`
+
+	// ExpectedRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ExpectedRevision  *Counter     `json:"expected_revision,omitempty"`
+	Field             *string      `json:"field,omitempty"`
+	RequiredLimits    *BatchLimits `json:"required_limits,omitempty"`
+	RetryAfterSeconds *int         `json:"retry_after_seconds,omitempty"`
+}
+
+// ErrorResponse defines model for ErrorResponse.
+type ErrorResponse struct {
+	union json.RawMessage
+}
+
+// ExecutionFailure defines model for ExecutionFailure.
+type ExecutionFailure struct {
+	Error      ExecutionFault            `json:"error"`
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+	Reason     ExecutionFailureReason    `json:"reason"`
+	State      ExecutionFailureState     `json:"state"`
+}
+
+// ExecutionFailureReason defines model for ExecutionFailure.Reason.
+type ExecutionFailureReason string
+
+// ExecutionFailureState defines model for ExecutionFailure.State.
+type ExecutionFailureState string
+
+// ExecutionFault defines model for ExecutionFault.
+type ExecutionFault struct {
+	Code    string  `json:"code"`
+	Message *string `json:"message,omitempty"`
+}
+
+// ExecutionOutcome defines model for ExecutionOutcome.
+type ExecutionOutcome struct {
+	union json.RawMessage
+}
+
+// ExecutionProgress defines model for ExecutionProgress.
+type ExecutionProgress struct {
+	GeometryRevisions *[]struct {
+		GeofeatureId Identifier `json:"geofeature_id"`
+
+		// Revision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+		Revision PositiveCounter `json:"revision"`
+	} `json:"geometry_revisions,omitempty"`
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+	State      ExecutionProgressState    `json:"state"`
+}
+
+// ExecutionProgressState defines model for ExecutionProgress.State.
+type ExecutionProgressState string
+
+// ExecutionReport defines model for ExecutionReport.
+type ExecutionReport struct {
+	Evidence SourceEvidence   `json:"evidence"`
+	Outcome  ExecutionOutcome `json:"outcome"`
+	Source   AssetSource      `json:"source"`
+}
+
+// FuelReserve defines model for FuelReserve.
+type FuelReserve struct {
+	Id               Identifier                 `json:"id"`
+	Kind             FuelReserveKind            `json:"kind"`
+	ObservedAt       nullable.Nullable[string]  `json:"observed_at"`
+	RemainingPercent nullable.Nullable[float64] `json:"remaining_percent"`
+}
+
+// FuelReserveKind defines model for FuelReserve.Kind.
+type FuelReserveKind string
+
+// GapFrame defines model for GapFrame.
+type GapFrame struct {
+	CoreRunId          Identifier      `json:"core_run_id"`
+	DatasetId          Identifier      `json:"dataset_id"`
+	EarliestCursor     Cursor          `json:"earliest_cursor"`
+	LastCompleteCursor Cursor          `json:"last_complete_cursor"`
+	ProtocolVersion    ProtocolVersion `json:"protocol_version"`
+	Type               GapFrameType    `json:"type"`
+}
+
+// GapFrameType defines model for GapFrame.Type.
+type GapFrameType string
+
+// Geofeature defines model for Geofeature.
+type Geofeature struct {
+	Alias       nullable.Nullable[string] `json:"alias"`
+	Description Description               `json:"description"`
+
+	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	EditRevision PositiveCounter      `json:"edit_revision"`
+	EntityType   GeofeatureEntityType `json:"entity_type"`
+
+	// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid.
+	Geometry Geometry `json:"geometry"`
+
+	// GeometryRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	GeometryRevision PositiveCounter `json:"geometry_revision"`
+	Id               Identifier      `json:"id"`
+	Type             GeofeatureType  `json:"type"`
+
+	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Version PositiveCounter `json:"version"`
+}
+
+// GeofeatureEntityType defines model for Geofeature.EntityType.
+type GeofeatureEntityType string
+
+// GeofeaturePage defines model for GeofeaturePage.
+type GeofeaturePage struct {
+	Items         []Geofeature `json:"items"`
+	NextPageToken *PageToken   `json:"next_page_token,omitempty"`
+}
+
+// GeofeatureType defines model for GeofeatureType.
+type GeofeatureType struct {
+	Kind nullable.Nullable[GeofeatureTypeKind] `json:"kind"`
+}
+
+// GeofeatureTypeKind defines model for GeofeatureType.Kind.
+type GeofeatureTypeKind string
+
+// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid.
+type Geometry struct {
+	union json.RawMessage
+}
+
+// GeometryObservation defines model for GeometryObservation.
+type GeometryObservation struct {
+	// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid.
+	Geometry   Geometry                  `json:"geometry"`
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+}
+
+// GeometryObservationError defines model for GeometryObservationError.
+type GeometryObservationError struct {
+	Classification GeometryObservationErrorClassification `json:"classification"`
+	Error          SectionFault                           `json:"error"`
+	Evidence       SourceEvidence                         `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]              `json:"observed_at"`
+	State          GeometryObservationErrorState          `json:"state"`
+}
+
+// GeometryObservationErrorClassification defines model for GeometryObservationError.Classification.
+type GeometryObservationErrorClassification string
+
+// GeometryObservationErrorState defines model for GeometryObservationError.State.
+type GeometryObservationErrorState string
+
+// GeometryObservationSection defines model for GeometryObservationSection.
+type GeometryObservationSection struct {
+	union json.RawMessage
+}
+
+// GeometryObservationValue defines model for GeometryObservationValue.
+type GeometryObservationValue struct {
+	Classification GeometryObservationValueClassification `json:"classification"`
+	Evidence       SourceEvidence                         `json:"evidence"`
+	State          GeometryObservationValueState          `json:"state"`
+	Value          GeometryObservation                    `json:"value"`
+}
+
+// GeometryObservationValueClassification defines model for GeometryObservationValue.Classification.
+type GeometryObservationValueClassification string
+
+// GeometryObservationValueState defines model for GeometryObservationValue.State.
+type GeometryObservationValueState string
+
+// GeometryObservationWithdrawn defines model for GeometryObservationWithdrawn.
+type GeometryObservationWithdrawn struct {
+	Classification GeometryObservationWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                             `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]                  `json:"observed_at"`
+	State          GeometryObservationWithdrawnState          `json:"state"`
+}
+
+// GeometryObservationWithdrawnClassification defines model for GeometryObservationWithdrawn.Classification.
+type GeometryObservationWithdrawnClassification string
+
+// GeometryObservationWithdrawnState defines model for GeometryObservationWithdrawn.State.
+type GeometryObservationWithdrawnState string
+
+// GetAssetByAliasResponse defines model for GetAssetByAliasResponse.
+type GetAssetByAliasResponse struct {
+	Data      Asset      `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetAssetMovementHistoryResponse defines model for GetAssetMovementHistoryResponse.
+type GetAssetMovementHistoryResponse struct {
+	Data      MovementSamplePage `json:"data"`
+	DatasetId Identifier         `json:"dataset_id"`
+}
+
+// GetAssetObjectsResponse defines model for GetAssetObjectsResponse.
+type GetAssetObjectsResponse struct {
+	Data      ObjectPage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetAssetResponse defines model for GetAssetResponse.
+type GetAssetResponse struct {
+	Data      Asset      `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetAssetStatusResponse defines model for GetAssetStatusResponse.
+type GetAssetStatusResponse struct {
+	Data      AssetStatus `json:"data"`
+	DatasetId Identifier  `json:"dataset_id"`
+}
+
+// GetAssignedTasksResponse defines model for GetAssignedTasksResponse.
+type GetAssignedTasksResponse struct {
+	Data      AssignedTaskPage `json:"data"`
+	DatasetId Identifier       `json:"dataset_id"`
+}
+
+// GetGeofeatureByAliasResponse defines model for GetGeofeatureByAliasResponse.
+type GetGeofeatureByAliasResponse struct {
+	Data      Geofeature `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetGeofeatureObjectsResponse defines model for GetGeofeatureObjectsResponse.
+type GetGeofeatureObjectsResponse struct {
+	Data      ObjectPage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetGeofeatureResponse defines model for GetGeofeatureResponse.
+type GetGeofeatureResponse struct {
+	Data      Geofeature `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetHealthResponse defines model for GetHealthResponse.
+type GetHealthResponse struct {
+	Data      HealthData `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetObjectResponse defines model for GetObjectResponse.
+type GetObjectResponse struct {
+	Data      Object     `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetOperationResponse defines model for GetOperationResponse.
+type GetOperationResponse struct {
+	Data      Operation  `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetOperatorResponse defines model for GetOperatorResponse.
+type GetOperatorResponse struct {
+	Data      Operator   `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetPluginResponse defines model for GetPluginResponse.
+type GetPluginResponse struct {
+	Data      Plugin     `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetReadinessResponse defines model for GetReadinessResponse.
+type GetReadinessResponse struct {
+	Data      Readiness  `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetReferenceResponse defines model for GetReferenceResponse.
+type GetReferenceResponse struct {
+	Data      Reference  `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetTaskObjectsResponse defines model for GetTaskObjectsResponse.
+type GetTaskObjectsResponse struct {
+	Data      ObjectPage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetTaskResponse defines model for GetTaskResponse.
+type GetTaskResponse struct {
+	Data      Task       `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetTrackByAliasResponse defines model for GetTrackByAliasResponse.
+type GetTrackByAliasResponse struct {
+	Data      Track      `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetTrackMovementHistoryResponse defines model for GetTrackMovementHistoryResponse.
+type GetTrackMovementHistoryResponse struct {
+	Data      MovementSamplePage `json:"data"`
+	DatasetId Identifier         `json:"dataset_id"`
+}
+
+// GetTrackObjectsResponse defines model for GetTrackObjectsResponse.
+type GetTrackObjectsResponse struct {
+	Data      ObjectPage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// GetTrackResponse defines model for GetTrackResponse.
+type GetTrackResponse struct {
+	Data      Track      `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// Gimbal defines model for Gimbal.
+type Gimbal struct {
+	Bearing             nullable.Nullable[float64] `json:"bearing"`
+	BearingObservedAt   nullable.Nullable[string]  `json:"bearing_observed_at,omitempty"`
+	Elevation           nullable.Nullable[float64] `json:"elevation"`
+	ElevationObservedAt nullable.Nullable[string]  `json:"elevation_observed_at,omitempty"`
+	ObservedAt          nullable.Nullable[string]  `json:"observed_at"`
+}
+
+// GimbalError defines model for GimbalError.
+type GimbalError struct {
+	Classification GimbalErrorClassification `json:"classification"`
+	Error          SectionFault              `json:"error"`
+	Evidence       SourceEvidence            `json:"evidence"`
+	ObservedAt     nullable.Nullable[string] `json:"observed_at"`
+	State          GimbalErrorState          `json:"state"`
+}
+
+// GimbalErrorClassification defines model for GimbalError.Classification.
+type GimbalErrorClassification string
+
+// GimbalErrorState defines model for GimbalError.State.
+type GimbalErrorState string
+
+// GimbalSection defines model for GimbalSection.
+type GimbalSection struct {
+	union json.RawMessage
+}
+
+// GimbalValue defines model for GimbalValue.
+type GimbalValue struct {
+	Classification GimbalValueClassification `json:"classification"`
+	Evidence       SourceEvidence            `json:"evidence"`
+	State          GimbalValueState          `json:"state"`
+	Value          Gimbal                    `json:"value"`
+}
+
+// GimbalValueClassification defines model for GimbalValue.Classification.
+type GimbalValueClassification string
+
+// GimbalValueState defines model for GimbalValue.State.
+type GimbalValueState string
+
+// GimbalWithdrawn defines model for GimbalWithdrawn.
+type GimbalWithdrawn struct {
+	Classification GimbalWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]     `json:"observed_at"`
+	State          GimbalWithdrawnState          `json:"state"`
+}
+
+// GimbalWithdrawnClassification defines model for GimbalWithdrawn.Classification.
+type GimbalWithdrawnClassification string
+
+// GimbalWithdrawnState defines model for GimbalWithdrawn.State.
+type GimbalWithdrawnState string
+
+// HandoffCompleteFrame defines model for HandoffCompleteFrame.
+type HandoffCompleteFrame struct {
+	CoreRunId       Identifier               `json:"core_run_id"`
+	DatasetId       Identifier               `json:"dataset_id"`
+	Handoff         Cursor                   `json:"handoff"`
+	ProtocolVersion ProtocolVersion          `json:"protocol_version"`
+	Type            HandoffCompleteFrameType `json:"type"`
+}
+
+// HandoffCompleteFrameType defines model for HandoffCompleteFrame.Type.
+type HandoffCompleteFrameType string
+
+// Health defines model for Health.
+type Health string
+
+// HealthData defines model for HealthData.
+type HealthData struct {
+	CoreRunId       Identifier       `json:"core_run_id"`
+	Health          HealthDataHealth `json:"health"`
+	ProtocolVersion ProtocolVersion  `json:"protocol_version"`
+}
+
+// HealthDataHealth defines model for HealthData.Health.
+type HealthDataHealth string
+
+// Heartbeat defines model for Heartbeat.
+type Heartbeat struct {
+	CoreRunId     Identifier                `json:"core_run_id"`
+	LastContactAt nullable.Nullable[string] `json:"last_contact_at"`
+}
+
+// HistoryQuery defines model for HistoryQuery.
+type HistoryQuery struct {
+	EndAt     *Timestamp `json:"end_at,omitempty"`
+	PageSize  *int       `json:"page_size,omitempty"`
+	PageToken *PageToken `json:"page_token,omitempty"`
+	StartAt   *Timestamp `json:"start_at,omitempty"`
+}
+
+// IdQuery defines model for IdQuery.
+type IdQuery struct {
+	Id Identifier `json:"id"`
+}
 
 // Identifier defines model for Identifier.
 type Identifier = string
 
+// ImmediateMoveTo defines model for ImmediateMoveTo.
+type ImmediateMoveTo struct {
+	Altitude   *Altitude                 `json:"altitude,omitempty"`
+	Command    ImmediateMoveToCommand    `json:"command"`
+	ExpiresAt  *Timestamp                `json:"expires_at,omitempty"`
+	Scheduling ImmediateMoveToScheduling `json:"scheduling"`
+	Target     MoveToTarget              `json:"target"`
+}
+
+// ImmediateMoveToCommand defines model for ImmediateMoveTo.Command.
+type ImmediateMoveToCommand string
+
+// ImmediateMoveToScheduling defines model for ImmediateMoveTo.Scheduling.
+type ImmediateMoveToScheduling string
+
+// Latitude defines model for Latitude.
+type Latitude = float64
+
+// LineGeometry defines model for LineGeometry.
+type LineGeometry struct {
+	Coordinates []Coordinate     `json:"coordinates"`
+	Type        LineGeometryType `json:"type"`
+}
+
+// LineGeometryType defines model for LineGeometry.Type.
+type LineGeometryType string
+
+// ListApiKeysResponse defines model for ListApiKeysResponse.
+type ListApiKeysResponse struct {
+	Data      ApiKeyPage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// ListAssetsResponse defines model for ListAssetsResponse.
+type ListAssetsResponse struct {
+	Data      AssetPage  `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// ListGeofeaturesResponse defines model for ListGeofeaturesResponse.
+type ListGeofeaturesResponse struct {
+	Data      GeofeaturePage `json:"data"`
+	DatasetId Identifier     `json:"dataset_id"`
+}
+
+// ListObjectsResponse defines model for ListObjectsResponse.
+type ListObjectsResponse struct {
+	Data      ObjectPage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// ListOperationsResponse defines model for ListOperationsResponse.
+type ListOperationsResponse struct {
+	Data      OperationPage `json:"data"`
+	DatasetId Identifier    `json:"dataset_id"`
+}
+
+// ListOperatorsResponse defines model for ListOperatorsResponse.
+type ListOperatorsResponse struct {
+	Data      OperatorPage `json:"data"`
+	DatasetId Identifier   `json:"dataset_id"`
+}
+
+// ListPluginsResponse defines model for ListPluginsResponse.
+type ListPluginsResponse struct {
+	Data      PluginPage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// ListQuery defines model for ListQuery.
+type ListQuery struct {
+	PageSize  *int       `json:"page_size,omitempty"`
+	PageToken *PageToken `json:"page_token,omitempty"`
+}
+
+// ListResourcesResponse defines model for ListResourcesResponse.
+type ListResourcesResponse struct {
+	Data      ResourceUsagePage `json:"data"`
+	DatasetId Identifier        `json:"dataset_id"`
+}
+
+// ListTasksResponse defines model for ListTasksResponse.
+type ListTasksResponse struct {
+	Data      TaskPage   `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// ListTracksResponse defines model for ListTracksResponse.
+type ListTracksResponse struct {
+	Data      TrackPage  `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// Longitude defines model for Longitude.
+type Longitude = float64
+
+// MediaObservation defines model for MediaObservation.
+type MediaObservation struct {
+	Media      MediaReferences           `json:"media"`
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+}
+
+// MediaObservationError defines model for MediaObservationError.
+type MediaObservationError struct {
+	Classification MediaObservationErrorClassification `json:"classification"`
+	Error          SectionFault                        `json:"error"`
+	Evidence       SourceEvidence                      `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]           `json:"observed_at"`
+	State          MediaObservationErrorState          `json:"state"`
+}
+
+// MediaObservationErrorClassification defines model for MediaObservationError.Classification.
+type MediaObservationErrorClassification string
+
+// MediaObservationErrorState defines model for MediaObservationError.State.
+type MediaObservationErrorState string
+
+// MediaObservationSection defines model for MediaObservationSection.
+type MediaObservationSection struct {
+	union json.RawMessage
+}
+
+// MediaObservationValue defines model for MediaObservationValue.
+type MediaObservationValue struct {
+	Classification MediaObservationValueClassification `json:"classification"`
+	Evidence       SourceEvidence                      `json:"evidence"`
+	State          MediaObservationValueState          `json:"state"`
+	Value          MediaObservation                    `json:"value"`
+}
+
+// MediaObservationValueClassification defines model for MediaObservationValue.Classification.
+type MediaObservationValueClassification string
+
+// MediaObservationValueState defines model for MediaObservationValue.State.
+type MediaObservationValueState string
+
+// MediaObservationWithdrawn defines model for MediaObservationWithdrawn.
+type MediaObservationWithdrawn struct {
+	Classification MediaObservationWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                          `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]               `json:"observed_at"`
+	State          MediaObservationWithdrawnState          `json:"state"`
+}
+
+// MediaObservationWithdrawnClassification defines model for MediaObservationWithdrawn.Classification.
+type MediaObservationWithdrawnClassification string
+
+// MediaObservationWithdrawnState defines model for MediaObservationWithdrawn.State.
+type MediaObservationWithdrawnState string
+
+// MediaReferences defines model for MediaReferences.
+type MediaReferences struct {
+	ObjectIds []Identifier `json:"object_ids"`
+}
+
+// MilitaryDisplay defines model for MilitaryDisplay.
+type MilitaryDisplay struct {
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+	SymbolCode string                    `json:"symbol_code"`
+}
+
+// MilitaryDisplayError defines model for MilitaryDisplayError.
+type MilitaryDisplayError struct {
+	Classification MilitaryDisplayErrorClassification `json:"classification"`
+	Error          SectionFault                       `json:"error"`
+	Evidence       SourceEvidence                     `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]          `json:"observed_at"`
+	State          MilitaryDisplayErrorState          `json:"state"`
+}
+
+// MilitaryDisplayErrorClassification defines model for MilitaryDisplayError.Classification.
+type MilitaryDisplayErrorClassification string
+
+// MilitaryDisplayErrorState defines model for MilitaryDisplayError.State.
+type MilitaryDisplayErrorState string
+
+// MilitaryDisplaySection defines model for MilitaryDisplaySection.
+type MilitaryDisplaySection struct {
+	union json.RawMessage
+}
+
+// MilitaryDisplayValue defines model for MilitaryDisplayValue.
+type MilitaryDisplayValue struct {
+	Classification MilitaryDisplayValueClassification `json:"classification"`
+	Evidence       SourceEvidence                     `json:"evidence"`
+	State          MilitaryDisplayValueState          `json:"state"`
+	Value          MilitaryDisplay                    `json:"value"`
+}
+
+// MilitaryDisplayValueClassification defines model for MilitaryDisplayValue.Classification.
+type MilitaryDisplayValueClassification string
+
+// MilitaryDisplayValueState defines model for MilitaryDisplayValue.State.
+type MilitaryDisplayValueState string
+
+// MilitaryDisplayWithdrawn defines model for MilitaryDisplayWithdrawn.
+type MilitaryDisplayWithdrawn struct {
+	Classification MilitaryDisplayWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                         `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]              `json:"observed_at"`
+	State          MilitaryDisplayWithdrawnState          `json:"state"`
+}
+
+// MilitaryDisplayWithdrawnClassification defines model for MilitaryDisplayWithdrawn.Classification.
+type MilitaryDisplayWithdrawnClassification string
+
+// MilitaryDisplayWithdrawnState defines model for MilitaryDisplayWithdrawn.State.
+type MilitaryDisplayWithdrawnState string
+
+// MoveToGeofeature Must resolve to a Point geometry at admission. Revision use is reported by the Asset, never inferred.
+type MoveToGeofeature struct {
+	GeofeatureId Identifier           `json:"geofeature_id"`
+	Kind         MoveToGeofeatureKind `json:"kind"`
+}
+
+// MoveToGeofeatureKind defines model for MoveToGeofeature.Kind.
+type MoveToGeofeatureKind string
+
+// MoveToPosition defines model for MoveToPosition.
+type MoveToPosition struct {
+	Kind     MoveToPositionKind `json:"kind"`
+	Position Position           `json:"position"`
+}
+
+// MoveToPositionKind defines model for MoveToPosition.Kind.
+type MoveToPositionKind string
+
+// MoveToSupport defines model for MoveToSupport.
+type MoveToSupport struct {
+	Command    MoveToSupportCommand      `json:"command"`
+	Scheduling []MoveToSupportScheduling `json:"scheduling"`
+}
+
+// MoveToSupportCommand defines model for MoveToSupport.Command.
+type MoveToSupportCommand string
+
+// MoveToSupportScheduling defines model for MoveToSupport.Scheduling.
+type MoveToSupportScheduling string
+
+// MoveToTarget defines model for MoveToTarget.
+type MoveToTarget struct {
+	union json.RawMessage
+}
+
+// MovementSample defines model for MovementSample.
+type MovementSample struct {
+	EntityId  Identifier       `json:"entity_id"`
+	Receipt   Receipt          `json:"receipt"`
+	Telemetry TelemetrySection `json:"telemetry"`
+}
+
+// MovementSamplePage defines model for MovementSamplePage.
+type MovementSamplePage struct {
+	Items         []MovementSample `json:"items"`
+	NextPageToken *PageToken       `json:"next_page_token,omitempty"`
+}
+
+// Name defines model for Name.
+type Name = string
+
+// NeverAppliedFailure defines model for NeverAppliedFailure.
+type NeverAppliedFailure struct {
+	NeverApplied NeverAppliedFailureNeverApplied `json:"never_applied"`
+	ObservedAt   nullable.Nullable[string]       `json:"observed_at"`
+	Reason       NeverAppliedFailureReason       `json:"reason"`
+	State        NeverAppliedFailureState        `json:"state"`
+}
+
+// NeverAppliedFailureNeverApplied defines model for NeverAppliedFailure.NeverApplied.
+type NeverAppliedFailureNeverApplied string
+
+// NeverAppliedFailureReason defines model for NeverAppliedFailure.Reason.
+type NeverAppliedFailureReason string
+
+// NeverAppliedFailureState defines model for NeverAppliedFailure.State.
+type NeverAppliedFailureState string
+
+// NullableAlias defines model for NullableAlias.
+type NullableAlias = Alias
+
 // NullableAltitude defines model for NullableAltitude.
 type NullableAltitude = Altitude
+
+// NullableIdentifier defines model for NullableIdentifier.
+type NullableIdentifier = Identifier
 
 // NullablePosition defines model for NullablePosition.
 type NullablePosition = Position
 
+// NullablePositiveCounter defines model for NullablePositiveCounter.
+type NullablePositiveCounter = PositiveCounter
+
+// Object defines model for Object.
+type Object struct {
+	// ByteLength Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ByteLength  Counter     `json:"byte_length"`
+	ContentType ContentType `json:"content_type"`
+
+	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	EditRevision PositiveCounter `json:"edit_revision"`
+	Id           Identifier      `json:"id"`
+	Metadata     ObjectMetadata  `json:"metadata"`
+	PublishedAt  Timestamp       `json:"published_at"`
+	Sha256       Digest          `json:"sha256"`
+
+	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Version PositiveCounter `json:"version"`
+}
+
+// ObjectListQuery defines model for ObjectListQuery.
+type ObjectListQuery struct {
+	EntityIds *[]Identifier `json:"entity_ids,omitempty"`
+	PageSize  *int          `json:"page_size,omitempty"`
+	PageToken *PageToken    `json:"page_token,omitempty"`
+	TaskIds   *[]Identifier `json:"task_ids,omitempty"`
+}
+
+// ObjectMetadata defines model for ObjectMetadata.
+type ObjectMetadata struct {
+	Description *string      `json:"description,omitempty"`
+	EntityIds   []Identifier `json:"entity_ids"`
+	Name        Name         `json:"name"`
+	TaskIds     []Identifier `json:"task_ids"`
+}
+
+// ObjectPage defines model for ObjectPage.
+type ObjectPage struct {
+	Items         []Object   `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+}
+
+// Operation defines model for Operation.
+type Operation struct {
+	Capability Name          `json:"capability"`
+	Error      *SectionFault `json:"error,omitempty"`
+	Id         Identifier    `json:"id"`
+
+	// Input Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+	Input PluginPayload `json:"input"`
+
+	// KnownEffects Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+	KnownEffects *PluginPayload `json:"known_effects,omitempty"`
+	ObjectIds    []Identifier   `json:"object_ids"`
+
+	// Output Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+	Output           *PluginPayload    `json:"output,omitempty"`
+	PluginId         Identifier        `json:"plugin_id"`
+	RecoveredOutcome *RecoveredOutcome `json:"recovered_outcome,omitempty"`
+	Release          string            `json:"release"`
+	State            OperationState    `json:"state"`
+
+	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Version PositiveCounter `json:"version"`
+}
+
+// OperationListQuery defines model for OperationListQuery.
+type OperationListQuery struct {
+	PageSize  *int              `json:"page_size,omitempty"`
+	PageToken *PageToken        `json:"page_token,omitempty"`
+	PluginIds *[]Identifier     `json:"plugin_ids,omitempty"`
+	States    *[]OperationState `json:"states,omitempty"`
+}
+
+// OperationPage defines model for OperationPage.
+type OperationPage struct {
+	Items         []Operation `json:"items"`
+	NextPageToken *PageToken  `json:"next_page_token,omitempty"`
+}
+
+// OperationState defines model for OperationState.
+type OperationState string
+
+// Operator defines model for Operator.
+type Operator struct {
+	Description *string `json:"description,omitempty"`
+
+	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	EditRevision PositiveCounter `json:"edit_revision"`
+	Id           Identifier      `json:"id"`
+	Name         Name            `json:"name"`
+}
+
+// OperatorPage defines model for OperatorPage.
+type OperatorPage struct {
+	Items         []Operator `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+}
+
+// OtherAssetType defines model for OtherAssetType.
+type OtherAssetType struct {
+	Kind nullable.Nullable[OtherAssetTypeKind] `json:"kind"`
+}
+
+// OtherAssetTypeKind defines model for OtherAssetType.Kind.
+type OtherAssetTypeKind string
+
+// PageToken defines model for PageToken.
+type PageToken = string
+
+// PauseCommand defines model for PauseCommand.
+type PauseCommand struct {
+	Command    PauseCommandCommand    `json:"command"`
+	Scheduling PauseCommandScheduling `json:"scheduling"`
+}
+
+// PauseCommandCommand defines model for PauseCommand.Command.
+type PauseCommandCommand string
+
+// PauseCommandScheduling defines model for PauseCommand.Scheduling.
+type PauseCommandScheduling string
+
+// PauseSupport defines model for PauseSupport.
+type PauseSupport struct {
+	Command    PauseSupportCommand      `json:"command"`
+	Scheduling []PauseSupportScheduling `json:"scheduling"`
+}
+
+// PauseSupportCommand defines model for PauseSupport.Command.
+type PauseSupportCommand string
+
+// PauseSupportScheduling defines model for PauseSupport.Scheduling.
+type PauseSupportScheduling string
+
+// Plugin defines model for Plugin.
+type Plugin struct {
+	Available    bool               `json:"available"`
+	Capabilities []PluginCapability `json:"capabilities"`
+	Id           Identifier         `json:"id"`
+	Name         Name               `json:"name"`
+	Release      string             `json:"release"`
+}
+
+// PluginCapability defines model for PluginCapability.
+type PluginCapability struct {
+	EffectsSchema *PluginSchemaReference `json:"effects_schema,omitempty"`
+	InputSchema   PluginSchemaReference  `json:"input_schema"`
+	Name          Name                   `json:"name"`
+	OutputSchema  PluginSchemaReference  `json:"output_schema"`
+}
+
+// PluginPage defines model for PluginPage.
+type PluginPage struct {
+	Items         []Plugin   `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+}
+
+// PluginPayload Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+type PluginPayload = json.RawMessage
+
+// PluginSchemaReference defines model for PluginSchemaReference.
+type PluginSchemaReference struct {
+	Sha256 Digest `json:"sha256"`
+	Uri    string `json:"uri"`
+}
+
+// PointGeometry defines model for PointGeometry.
+type PointGeometry struct {
+	Coordinates Coordinate        `json:"coordinates"`
+	Type        PointGeometryType `json:"type"`
+}
+
+// PointGeometryType defines model for PointGeometry.Type.
+type PointGeometryType string
+
+// PolygonGeometry defines model for PolygonGeometry.
+type PolygonGeometry struct {
+	Coordinates [][]Coordinate      `json:"coordinates"`
+	Type        PolygonGeometryType `json:"type"`
+}
+
+// PolygonGeometryType defines model for PolygonGeometry.Type.
+type PolygonGeometryType string
+
 // Position defines model for Position.
 type Position struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	Latitude  Latitude  `json:"latitude"`
+	Longitude Longitude `json:"longitude"`
 }
+
+// PositiveCounter Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+type PositiveCounter = string
+
+// Power defines model for Power.
+type Power struct {
+	ExternalPower nullable.Nullable[bool]   `json:"external_power"`
+	ObservedAt    nullable.Nullable[string] `json:"observed_at"`
+	Reserves      []PowerReserve            `json:"reserves"`
+}
+
+// PowerError defines model for PowerError.
+type PowerError struct {
+	Classification PowerErrorClassification  `json:"classification"`
+	Error          SectionFault              `json:"error"`
+	Evidence       SourceEvidence            `json:"evidence"`
+	ObservedAt     nullable.Nullable[string] `json:"observed_at"`
+	State          PowerErrorState           `json:"state"`
+}
+
+// PowerErrorClassification defines model for PowerError.Classification.
+type PowerErrorClassification string
+
+// PowerErrorState defines model for PowerError.State.
+type PowerErrorState string
+
+// PowerReserve defines model for PowerReserve.
+type PowerReserve struct {
+	union json.RawMessage
+}
+
+// PowerSection defines model for PowerSection.
+type PowerSection struct {
+	union json.RawMessage
+}
+
+// PowerValue defines model for PowerValue.
+type PowerValue struct {
+	Classification PowerValueClassification `json:"classification"`
+	Evidence       SourceEvidence           `json:"evidence"`
+	State          PowerValueState          `json:"state"`
+	Value          Power                    `json:"value"`
+}
+
+// PowerValueClassification defines model for PowerValue.Classification.
+type PowerValueClassification string
+
+// PowerValueState defines model for PowerValue.State.
+type PowerValueState string
+
+// PowerWithdrawn defines model for PowerWithdrawn.
+type PowerWithdrawn struct {
+	Classification PowerWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence               `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]    `json:"observed_at"`
+	State          PowerWithdrawnState          `json:"state"`
+}
+
+// PowerWithdrawnClassification defines model for PowerWithdrawn.Classification.
+type PowerWithdrawnClassification string
+
+// PowerWithdrawnState defines model for PowerWithdrawn.State.
+type PowerWithdrawnState string
+
+// ProtocolVersion defines model for ProtocolVersion.
+type ProtocolVersion string
+
+// PublisherSource defines model for PublisherSource.
+type PublisherSource struct {
+	Kind        PublisherSourceKind `json:"kind"`
+	PublisherId Identifier          `json:"publisher_id"`
+}
+
+// PublisherSourceKind defines model for PublisherSource.Kind.
+type PublisherSourceKind string
+
+// QueuedMoveTo defines model for QueuedMoveTo.
+type QueuedMoveTo struct {
+	Altitude   *Altitude              `json:"altitude,omitempty"`
+	Command    QueuedMoveToCommand    `json:"command"`
+	Scheduling QueuedMoveToScheduling `json:"scheduling"`
+	Target     MoveToTarget           `json:"target"`
+}
+
+// QueuedMoveToCommand defines model for QueuedMoveTo.Command.
+type QueuedMoveToCommand string
+
+// QueuedMoveToScheduling defines model for QueuedMoveTo.Scheduling.
+type QueuedMoveToScheduling string
+
+// ReadActivityResponse defines model for ReadActivityResponse.
+type ReadActivityResponse struct {
+	Data      ActivityRecordPage `json:"data"`
+	DatasetId Identifier         `json:"dataset_id"`
+}
+
+// ReadChangesRequest defines model for ReadChangesRequest.
+type ReadChangesRequest struct {
+	After          Cursor      `json:"after"`
+	Limits         BatchLimits `json:"limits"`
+	PageToken      *PageToken  `json:"page_token,omitempty"`
+	ReplayBoundary *Cursor     `json:"replay_boundary,omitempty"`
+}
+
+// ReadChangesResponse defines model for ReadChangesResponse.
+type ReadChangesResponse struct {
+	Data      ChangePage `json:"data"`
+	DatasetId Identifier `json:"dataset_id"`
+}
+
+// ReadObjectContentQuery defines model for ReadObjectContentQuery.
+type ReadObjectContentQuery struct {
+	Disposition *ReadObjectContentQueryDisposition `json:"disposition,omitempty"`
+}
+
+// ReadObjectContentQueryDisposition defines model for ReadObjectContentQuery.Disposition.
+type ReadObjectContentQueryDisposition string
+
+// ReadSnapshotRequest defines model for ReadSnapshotRequest.
+type ReadSnapshotRequest struct {
+	Context    SnapshotContext `json:"context"`
+	PageToken  *PageToken      `json:"page_token,omitempty"`
+	RequestId  Identifier      `json:"request_id"`
+	SnapshotId *Identifier     `json:"snapshot_id,omitempty"`
+}
+
+// ReadSnapshotResponse defines model for ReadSnapshotResponse.
+type ReadSnapshotResponse struct {
+	Data      SnapshotPage `json:"data"`
+	DatasetId Identifier   `json:"dataset_id"`
+}
+
+// Readiness defines model for Readiness.
+type Readiness struct {
+	Ready  bool    `json:"ready"`
+	Reason *string `json:"reason,omitempty"`
+}
+
+// Receipt defines model for Receipt.
+type Receipt struct {
+	CoreRunId       Identifier     `json:"core_run_id"`
+	ReceivedAt      Timestamp      `json:"received_at"`
+	Source          ReportedSource `json:"source"`
+	SubmittingKeyId Identifier     `json:"submitting_key_id"`
+}
+
+// RecoveredOutcome defines model for RecoveredOutcome.
+type RecoveredOutcome struct {
+	Error *SectionFault `json:"error,omitempty"`
+
+	// KnownEffects Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+	KnownEffects *PluginPayload            `json:"known_effects,omitempty"`
+	ObjectIds    []Identifier              `json:"object_ids"`
+	ObservedAt   nullable.Nullable[string] `json:"observed_at"`
+
+	// Output Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+	Output *PluginPayload        `json:"output,omitempty"`
+	State  RecoveredOutcomeState `json:"state"`
+}
+
+// RecoveredOutcomeState defines model for RecoveredOutcome.State.
+type RecoveredOutcomeState string
+
+// RecoveryRequiredFrame defines model for RecoveryRequiredFrame.
+type RecoveryRequiredFrame struct {
+	CoreRunId       Identifier                  `json:"core_run_id"`
+	DatasetId       Identifier                  `json:"dataset_id"`
+	ProtocolVersion ProtocolVersion             `json:"protocol_version"`
+	Reason          RecoveryRequiredFrameReason `json:"reason"`
+	RequiredLimits  BatchLimits                 `json:"required_limits"`
+	Type            RecoveryRequiredFrameType   `json:"type"`
+}
+
+// RecoveryRequiredFrameReason defines model for RecoveryRequiredFrame.Reason.
+type RecoveryRequiredFrameReason string
+
+// RecoveryRequiredFrameType defines model for RecoveryRequiredFrame.Type.
+type RecoveryRequiredFrameType string
+
+// Reference defines model for Reference.
+type Reference struct {
+	DocumentationPath ReferenceDocumentationPath `json:"documentation_path"`
+	OpenapiPath       ReferenceOpenapiPath       `json:"openapi_path"`
+	ProtocolVersion   ProtocolVersion            `json:"protocol_version"`
+}
+
+// ReferenceDocumentationPath defines model for Reference.DocumentationPath.
+type ReferenceDocumentationPath string
+
+// ReferenceOpenapiPath defines model for Reference.OpenapiPath.
+type ReferenceOpenapiPath string
+
+// RegisterAssetRequest defines model for RegisterAssetRequest.
+type RegisterAssetRequest struct {
+	Alias        *Alias       `json:"alias,omitempty"`
+	AssetId      Identifier   `json:"asset_id"`
+	Capabilities Capabilities `json:"capabilities"`
+
+	// Credential Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields.
+	Credential        CredentialFacts  `json:"credential"`
+	Description       AssetDescription `json:"description"`
+	ProcessGeneration Identifier       `json:"process_generation"`
+	RegistrationId    Identifier       `json:"registration_id"`
+	RequestId         Identifier       `json:"request_id"`
+	Type              AssetType        `json:"type"`
+}
+
+// RegisterAssetResponse defines model for RegisterAssetResponse.
+type RegisterAssetResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Asset      `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// ReleaseSnapshotFrame defines model for ReleaseSnapshotFrame.
+type ReleaseSnapshotFrame struct {
+	CoreRunId       Identifier               `json:"core_run_id"`
+	DatasetId       Identifier               `json:"dataset_id"`
+	ProtocolVersion ProtocolVersion          `json:"protocol_version"`
+	Request         ReleaseSnapshotRequest   `json:"request"`
+	Type            ReleaseSnapshotFrameType `json:"type"`
+}
+
+// ReleaseSnapshotFrameType defines model for ReleaseSnapshotFrame.Type.
+type ReleaseSnapshotFrameType string
+
+// ReleaseSnapshotRequest defines model for ReleaseSnapshotRequest.
+type ReleaseSnapshotRequest struct {
+	CoreRunId  Identifier `json:"core_run_id"`
+	LoadId     Identifier `json:"load_id"`
+	RequestId  Identifier `json:"request_id"`
+	SnapshotId Identifier `json:"snapshot_id"`
+}
+
+// ReleaseSnapshotResponse defines model for ReleaseSnapshotResponse.
+type ReleaseSnapshotResponse struct {
+	Data      SnapshotReleased `json:"data"`
+	DatasetId Identifier       `json:"dataset_id"`
+}
+
+// ReplaceAssetProcessRequest defines model for ReplaceAssetProcessRequest.
+type ReplaceAssetProcessRequest struct {
+	AssetId            Identifier   `json:"asset_id"`
+	CoreRunId          Identifier   `json:"core_run_id"`
+	ExpectedGeneration Identifier   `json:"expected_generation"`
+	FirstCheckIn       ContactProof `json:"first_check_in"`
+	ProcessGeneration  Identifier   `json:"process_generation"`
+	RequestId          Identifier   `json:"request_id"`
+}
+
+// ReplaceAssetProcessResponse defines model for ReplaceAssetProcessResponse.
+type ReplaceAssetProcessResponse struct {
+	CommitCursor Cursor            `json:"commit_cursor"`
+	Data         AssetUpdateResult `json:"data"`
+	DatasetId    Identifier        `json:"dataset_id"`
+}
+
+// ReportTaskExecutionRequest defines model for ReportTaskExecutionRequest.
+type ReportTaskExecutionRequest struct {
+	Report    ExecutionReport `json:"report"`
+	RequestId Identifier      `json:"request_id"`
+	TaskId    Identifier      `json:"task_id"`
+}
+
+// ReportTaskExecutionResponse defines model for ReportTaskExecutionResponse.
+type ReportTaskExecutionResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Task       `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// ReportTaskResultsRequest defines model for ReportTaskResultsRequest.
+type ReportTaskResultsRequest struct {
+	Evidence  SourceEvidence      `json:"evidence"`
+	RequestId Identifier          `json:"request_id"`
+	Results   []ResultDeclaration `json:"results"`
+	Source    AssetSource         `json:"source"`
+	TaskId    Identifier          `json:"task_id"`
+}
+
+// ReportTaskResultsResponse defines model for ReportTaskResultsResponse.
+type ReportTaskResultsResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Task       `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// ReportTrackObservationsRequest defines model for ReportTrackObservationsRequest.
+type ReportTrackObservationsRequest struct {
+	PublisherId Identifier    `json:"publisher_id"`
+	RequestId   Identifier    `json:"request_id"`
+	Sections    TrackSections `json:"sections"`
+	TrackId     Identifier    `json:"track_id"`
+}
+
+// ReportTrackObservationsResponse defines model for ReportTrackObservationsResponse.
+type ReportTrackObservationsResponse struct {
+	CommitCursor Cursor            `json:"commit_cursor"`
+	Data         TrackUpdateResult `json:"data"`
+	DatasetId    Identifier        `json:"dataset_id"`
+}
+
+// ReportedSource defines model for ReportedSource.
+type ReportedSource struct {
+	union json.RawMessage
+}
+
+// RequestContactChallengeResponse defines model for RequestContactChallengeResponse.
+type RequestContactChallengeResponse struct {
+	// Data Exact retry recovers original expiry. Restart invalidates proof. Replacement binds expected_generation and commits its first check-in atomically.
+	Data      ContactChallenge `json:"data"`
+	DatasetId Identifier       `json:"dataset_id"`
+}
+
+// RequestTaskCancellationRequest defines model for RequestTaskCancellationRequest.
+type RequestTaskCancellationRequest struct {
+	RequestId Identifier `json:"request_id"`
+	TaskId    Identifier `json:"task_id"`
+}
+
+// RequestTaskCancellationResponse defines model for RequestTaskCancellationResponse.
+type RequestTaskCancellationResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Task       `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// ResourceChange defines model for ResourceChange.
+type ResourceChange struct {
+	union json.RawMessage
+}
+
+// ResourceImage defines model for ResourceImage.
+type ResourceImage struct {
+	union json.RawMessage
+}
+
+// ResourceUsage defines model for ResourceUsage.
+type ResourceUsage struct {
+	Kind ResourceUsageKind `json:"kind"`
+
+	// LimitBytes Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	LimitBytes Counter `json:"limit_bytes"`
+
+	// UsedBytes Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	UsedBytes Counter `json:"used_bytes"`
+}
+
+// ResourceUsageKind defines model for ResourceUsage.Kind.
+type ResourceUsageKind string
+
+// ResourceUsagePage defines model for ResourceUsagePage.
+type ResourceUsagePage struct {
+	Items         []ResourceUsage `json:"items"`
+	NextPageToken *PageToken      `json:"next_page_token,omitempty"`
+}
+
+// ResultDeclaration defines model for ResultDeclaration.
+type ResultDeclaration struct {
+	Name     *Name      `json:"name,omitempty"`
+	ObjectId Identifier `json:"object_id"`
+	Required bool       `json:"required"`
+}
+
+// ResumeCommand defines model for ResumeCommand.
+type ResumeCommand struct {
+	Command    ResumeCommandCommand    `json:"command"`
+	ExpiresAt  *Timestamp              `json:"expires_at,omitempty"`
+	Scheduling ResumeCommandScheduling `json:"scheduling"`
+}
+
+// ResumeCommandCommand defines model for ResumeCommand.Command.
+type ResumeCommandCommand string
+
+// ResumeCommandScheduling defines model for ResumeCommand.Scheduling.
+type ResumeCommandScheduling string
+
+// ResumeSupport defines model for ResumeSupport.
+type ResumeSupport struct {
+	Command    ResumeSupportCommand      `json:"command"`
+	Scheduling []ResumeSupportScheduling `json:"scheduling"`
+}
+
+// ResumeSupportCommand defines model for ResumeSupport.Command.
+type ResumeSupportCommand string
+
+// ResumeSupportScheduling defines model for ResumeSupport.Scheduling.
+type ResumeSupportScheduling string
+
+// RetainedAttitudeReport defines model for RetainedAttitudeReport.
+type RetainedAttitudeReport struct {
+	Receipt Receipt                     `json:"receipt"`
+	Result  AttitudeSection             `json:"result"`
+	State   RetainedAttitudeReportState `json:"state"`
+}
+
+// RetainedAttitudeReportState defines model for RetainedAttitudeReport.State.
+type RetainedAttitudeReportState string
+
+// RetainedAttitudeSection defines model for RetainedAttitudeSection.
+type RetainedAttitudeSection struct {
+	union json.RawMessage
+}
+
+// RetainedCameraOpticsReport defines model for RetainedCameraOpticsReport.
+type RetainedCameraOpticsReport struct {
+	Receipt Receipt                         `json:"receipt"`
+	Result  CameraOpticsSection             `json:"result"`
+	State   RetainedCameraOpticsReportState `json:"state"`
+}
+
+// RetainedCameraOpticsReportState defines model for RetainedCameraOpticsReport.State.
+type RetainedCameraOpticsReportState string
+
+// RetainedCameraOpticsSection defines model for RetainedCameraOpticsSection.
+type RetainedCameraOpticsSection struct {
+	union json.RawMessage
+}
+
+// RetainedCameraReport defines model for RetainedCameraReport.
+type RetainedCameraReport struct {
+	Receipt Receipt                   `json:"receipt"`
+	Result  CameraSection             `json:"result"`
+	State   RetainedCameraReportState `json:"state"`
+}
+
+// RetainedCameraReportState defines model for RetainedCameraReport.State.
+type RetainedCameraReportState string
+
+// RetainedCameraSection defines model for RetainedCameraSection.
+type RetainedCameraSection struct {
+	union json.RawMessage
+}
+
+// RetainedCommunicationsReport defines model for RetainedCommunicationsReport.
+type RetainedCommunicationsReport struct {
+	Receipt Receipt                           `json:"receipt"`
+	Result  CommunicationsSection             `json:"result"`
+	State   RetainedCommunicationsReportState `json:"state"`
+}
+
+// RetainedCommunicationsReportState defines model for RetainedCommunicationsReport.State.
+type RetainedCommunicationsReportState string
+
+// RetainedCommunicationsSection defines model for RetainedCommunicationsSection.
+type RetainedCommunicationsSection struct {
+	union json.RawMessage
+}
+
+// RetainedGeometryObservationReport defines model for RetainedGeometryObservationReport.
+type RetainedGeometryObservationReport struct {
+	Receipt Receipt                                `json:"receipt"`
+	Result  GeometryObservationSection             `json:"result"`
+	State   RetainedGeometryObservationReportState `json:"state"`
+}
+
+// RetainedGeometryObservationReportState defines model for RetainedGeometryObservationReport.State.
+type RetainedGeometryObservationReportState string
+
+// RetainedGeometryObservationSection defines model for RetainedGeometryObservationSection.
+type RetainedGeometryObservationSection struct {
+	union json.RawMessage
+}
+
+// RetainedGimbalReport defines model for RetainedGimbalReport.
+type RetainedGimbalReport struct {
+	Receipt Receipt                   `json:"receipt"`
+	Result  GimbalSection             `json:"result"`
+	State   RetainedGimbalReportState `json:"state"`
+}
+
+// RetainedGimbalReportState defines model for RetainedGimbalReport.State.
+type RetainedGimbalReportState string
+
+// RetainedGimbalSection defines model for RetainedGimbalSection.
+type RetainedGimbalSection struct {
+	union json.RawMessage
+}
+
+// RetainedMediaObservationReport defines model for RetainedMediaObservationReport.
+type RetainedMediaObservationReport struct {
+	Receipt Receipt                             `json:"receipt"`
+	Result  MediaObservationSection             `json:"result"`
+	State   RetainedMediaObservationReportState `json:"state"`
+}
+
+// RetainedMediaObservationReportState defines model for RetainedMediaObservationReport.State.
+type RetainedMediaObservationReportState string
+
+// RetainedMediaObservationSection defines model for RetainedMediaObservationSection.
+type RetainedMediaObservationSection struct {
+	union json.RawMessage
+}
+
+// RetainedMilitaryDisplayReport defines model for RetainedMilitaryDisplayReport.
+type RetainedMilitaryDisplayReport struct {
+	Receipt Receipt                            `json:"receipt"`
+	Result  MilitaryDisplaySection             `json:"result"`
+	State   RetainedMilitaryDisplayReportState `json:"state"`
+}
+
+// RetainedMilitaryDisplayReportState defines model for RetainedMilitaryDisplayReport.State.
+type RetainedMilitaryDisplayReportState string
+
+// RetainedMilitaryDisplaySection defines model for RetainedMilitaryDisplaySection.
+type RetainedMilitaryDisplaySection struct {
+	union json.RawMessage
+}
+
+// RetainedPowerReport defines model for RetainedPowerReport.
+type RetainedPowerReport struct {
+	Receipt Receipt                  `json:"receipt"`
+	Result  PowerSection             `json:"result"`
+	State   RetainedPowerReportState `json:"state"`
+}
+
+// RetainedPowerReportState defines model for RetainedPowerReport.State.
+type RetainedPowerReportState string
+
+// RetainedPowerSection defines model for RetainedPowerSection.
+type RetainedPowerSection struct {
+	union json.RawMessage
+}
+
+// RetainedSensorReferencesReport defines model for RetainedSensorReferencesReport.
+type RetainedSensorReferencesReport struct {
+	Receipt Receipt                             `json:"receipt"`
+	Result  SensorReferencesSection             `json:"result"`
+	State   RetainedSensorReferencesReportState `json:"state"`
+}
+
+// RetainedSensorReferencesReportState defines model for RetainedSensorReferencesReport.State.
+type RetainedSensorReferencesReportState string
+
+// RetainedSensorReferencesSection defines model for RetainedSensorReferencesSection.
+type RetainedSensorReferencesSection struct {
+	union json.RawMessage
+}
+
+// RetainedStatusReport defines model for RetainedStatusReport.
+type RetainedStatusReport struct {
+	Receipt Receipt                   `json:"receipt"`
+	Result  StatusSection             `json:"result"`
+	State   RetainedStatusReportState `json:"state"`
+}
+
+// RetainedStatusReportState defines model for RetainedStatusReport.State.
+type RetainedStatusReportState string
+
+// RetainedStatusSection defines model for RetainedStatusSection.
+type RetainedStatusSection struct {
+	union json.RawMessage
+}
+
+// RetainedTelemetryReport defines model for RetainedTelemetryReport.
+type RetainedTelemetryReport struct {
+	Receipt Receipt                      `json:"receipt"`
+	Result  TelemetrySection             `json:"result"`
+	State   RetainedTelemetryReportState `json:"state"`
+}
+
+// RetainedTelemetryReportState defines model for RetainedTelemetryReport.State.
+type RetainedTelemetryReportState string
+
+// RetainedTelemetrySection defines model for RetainedTelemetrySection.
+type RetainedTelemetrySection struct {
+	union json.RawMessage
+}
+
+// RetainedTrackTypeObservationReport defines model for RetainedTrackTypeObservationReport.
+type RetainedTrackTypeObservationReport struct {
+	Receipt Receipt                                 `json:"receipt"`
+	Result  TrackTypeObservationSection             `json:"result"`
+	State   RetainedTrackTypeObservationReportState `json:"state"`
+}
+
+// RetainedTrackTypeObservationReportState defines model for RetainedTrackTypeObservationReport.State.
+type RetainedTrackTypeObservationReportState string
+
+// RetainedTrackTypeObservationSection defines model for RetainedTrackTypeObservationSection.
+type RetainedTrackTypeObservationSection struct {
+	union json.RawMessage
+}
+
+// Retry defines model for Retry.
+type Retry struct {
+	RequestId Identifier `json:"request_id"`
+}
+
+// RevokeApiKeyRequest defines model for RevokeApiKeyRequest.
+type RevokeApiKeyRequest struct {
+	KeyId     Identifier `json:"key_id"`
+	RequestId Identifier `json:"request_id"`
+}
+
+// RevokeApiKeyResponse defines model for RevokeApiKeyResponse.
+type RevokeApiKeyResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         ApiKey     `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// SectionDisposition defines model for SectionDisposition.
+type SectionDisposition struct {
+	Disposition SectionDispositionDisposition `json:"disposition"`
+	Section     SectionDispositionSection     `json:"section"`
+}
+
+// SectionDispositionDisposition defines model for SectionDisposition.Disposition.
+type SectionDispositionDisposition string
+
+// SectionDispositionSection defines model for SectionDisposition.Section.
+type SectionDispositionSection string
+
+// SectionFault defines model for SectionFault.
+type SectionFault struct {
+	Code    string  `json:"code"`
+	Message *string `json:"message,omitempty"`
+}
+
+// SensorReferences defines model for SensorReferences.
+type SensorReferences struct {
+	AssetIds   []Identifier              `json:"asset_ids"`
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+}
+
+// SensorReferencesError defines model for SensorReferencesError.
+type SensorReferencesError struct {
+	Classification SensorReferencesErrorClassification `json:"classification"`
+	Error          SectionFault                        `json:"error"`
+	Evidence       SourceEvidence                      `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]           `json:"observed_at"`
+	State          SensorReferencesErrorState          `json:"state"`
+}
+
+// SensorReferencesErrorClassification defines model for SensorReferencesError.Classification.
+type SensorReferencesErrorClassification string
+
+// SensorReferencesErrorState defines model for SensorReferencesError.State.
+type SensorReferencesErrorState string
+
+// SensorReferencesSection defines model for SensorReferencesSection.
+type SensorReferencesSection struct {
+	union json.RawMessage
+}
+
+// SensorReferencesValue defines model for SensorReferencesValue.
+type SensorReferencesValue struct {
+	Classification SensorReferencesValueClassification `json:"classification"`
+	Evidence       SourceEvidence                      `json:"evidence"`
+	State          SensorReferencesValueState          `json:"state"`
+	Value          SensorReferences                    `json:"value"`
+}
+
+// SensorReferencesValueClassification defines model for SensorReferencesValue.Classification.
+type SensorReferencesValueClassification string
+
+// SensorReferencesValueState defines model for SensorReferencesValue.State.
+type SensorReferencesValueState string
+
+// SensorReferencesWithdrawn defines model for SensorReferencesWithdrawn.
+type SensorReferencesWithdrawn struct {
+	Classification SensorReferencesWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                          `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]               `json:"observed_at"`
+	State          SensorReferencesWithdrawnState          `json:"state"`
+}
+
+// SensorReferencesWithdrawnClassification defines model for SensorReferencesWithdrawn.Classification.
+type SensorReferencesWithdrawnClassification string
+
+// SensorReferencesWithdrawnState defines model for SensorReferencesWithdrawn.State.
+type SensorReferencesWithdrawnState string
+
+// ServerFrame defines model for ServerFrame.
+type ServerFrame struct {
+	union json.RawMessage
+}
+
+// SetTaskOrderRequest defines model for SetTaskOrderRequest.
+type SetTaskOrderRequest struct {
+	AssetId Identifier `json:"asset_id"`
+
+	// ExpectedQueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ExpectedQueueRevision PositiveCounter `json:"expected_queue_revision"`
+	RequestId             Identifier      `json:"request_id"`
+	TaskIds               []Identifier    `json:"task_ids"`
+}
+
+// SetTaskOrderResponse defines model for SetTaskOrderResponse.
+type SetTaskOrderResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         TaskQueue  `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// SnapshotContext defines model for SnapshotContext.
+type SnapshotContext struct {
+	CoreRunId Identifier  `json:"core_run_id"`
+	Limits    BatchLimits `json:"limits"`
+	LoadId    Identifier  `json:"load_id"`
+}
+
+// SnapshotPage defines model for SnapshotPage.
+type SnapshotPage struct {
+	Baseline      Cursor          `json:"baseline"`
+	CoreRunId     Identifier      `json:"core_run_id"`
+	ExpiresAt     Timestamp       `json:"expires_at"`
+	Items         []ResourceImage `json:"items"`
+	Limits        BatchLimits     `json:"limits"`
+	LoadId        Identifier      `json:"load_id"`
+	NextPageToken *PageToken      `json:"next_page_token,omitempty"`
+	SnapshotId    Identifier      `json:"snapshot_id"`
+}
+
+// SnapshotReleased defines model for SnapshotReleased.
+type SnapshotReleased struct {
+	CoreRunId  Identifier `json:"core_run_id"`
+	LoadId     Identifier `json:"load_id"`
+	SnapshotId Identifier `json:"snapshot_id"`
+}
+
+// SnapshotReleasedFrame defines model for SnapshotReleasedFrame.
+type SnapshotReleasedFrame struct {
+	CoreRunId       Identifier                `json:"core_run_id"`
+	Data            SnapshotReleased          `json:"data"`
+	DatasetId       Identifier                `json:"dataset_id"`
+	ProtocolVersion ProtocolVersion           `json:"protocol_version"`
+	Type            SnapshotReleasedFrameType `json:"type"`
+}
+
+// SnapshotReleasedFrameType defines model for SnapshotReleasedFrame.Type.
+type SnapshotReleasedFrameType string
+
+// SourceEvidence defines model for SourceEvidence.
+type SourceEvidence struct {
+	// CorrectionRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	CorrectionRevision Counter                    `json:"correction_revision"`
+	EvidenceId         Identifier                 `json:"evidence_id"`
+	EvidenceKind       SourceEvidenceEvidenceKind `json:"evidence_kind"`
+	GeneratedAt        nullable.Nullable[string]  `json:"generated_at"`
+
+	// Sequence Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Sequence PositiveCounter `json:"sequence"`
+}
+
+// SourceEvidenceEvidenceKind defines model for SourceEvidence.EvidenceKind.
+type SourceEvidenceEvidenceKind string
+
+// Status defines model for Status.
+type Status struct {
+	Condition  StatusCondition           `json:"condition"`
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+}
+
+// StatusCondition defines model for Status.Condition.
+type StatusCondition string
+
+// StatusError defines model for StatusError.
+type StatusError struct {
+	Classification StatusErrorClassification `json:"classification"`
+	Error          SectionFault              `json:"error"`
+	Evidence       SourceEvidence            `json:"evidence"`
+	ObservedAt     nullable.Nullable[string] `json:"observed_at"`
+	State          StatusErrorState          `json:"state"`
+}
+
+// StatusErrorClassification defines model for StatusError.Classification.
+type StatusErrorClassification string
+
+// StatusErrorState defines model for StatusError.State.
+type StatusErrorState string
+
+// StatusSection defines model for StatusSection.
+type StatusSection struct {
+	union json.RawMessage
+}
+
+// StatusValue defines model for StatusValue.
+type StatusValue struct {
+	Classification StatusValueClassification `json:"classification"`
+	Evidence       SourceEvidence            `json:"evidence"`
+	State          StatusValueState          `json:"state"`
+	Value          Status                    `json:"value"`
+}
+
+// StatusValueClassification defines model for StatusValue.Classification.
+type StatusValueClassification string
+
+// StatusValueState defines model for StatusValue.State.
+type StatusValueState string
+
+// StatusWithdrawn defines model for StatusWithdrawn.
+type StatusWithdrawn struct {
+	Classification StatusWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]     `json:"observed_at"`
+	State          StatusWithdrawnState          `json:"state"`
+}
+
+// StatusWithdrawnClassification defines model for StatusWithdrawn.Classification.
+type StatusWithdrawnClassification string
+
+// StatusWithdrawnState defines model for StatusWithdrawn.State.
+type StatusWithdrawnState string
+
+// SubscribeChangesFrame defines model for SubscribeChangesFrame.
+type SubscribeChangesFrame struct {
+	After           Cursor                    `json:"after"`
+	CoreRunId       Identifier                `json:"core_run_id"`
+	DatasetId       Identifier                `json:"dataset_id"`
+	Limits          BatchLimits               `json:"limits"`
+	ProtocolVersion ProtocolVersion           `json:"protocol_version"`
+	Type            SubscribeChangesFrameType `json:"type"`
+}
+
+// SubscribeChangesFrameType defines model for SubscribeChangesFrame.Type.
+type SubscribeChangesFrameType string
+
+// SubscriptionAckFrame defines model for SubscriptionAckFrame.
+type SubscriptionAckFrame struct {
+	CoreRunId       Identifier               `json:"core_run_id"`
+	DatasetId       Identifier               `json:"dataset_id"`
+	Handoff         Cursor                   `json:"handoff"`
+	Limits          BatchLimits              `json:"limits"`
+	ProtocolVersion ProtocolVersion          `json:"protocol_version"`
+	Type            SubscriptionAckFrameType `json:"type"`
+}
+
+// SubscriptionAckFrameType defines model for SubscriptionAckFrame.Type.
+type SubscriptionAckFrameType string
+
+// SyncErrorFrame defines model for SyncErrorFrame.
+type SyncErrorFrame struct {
+	Response ErrorResponse      `json:"response"`
+	Type     SyncErrorFrameType `json:"type"`
+}
+
+// SyncErrorFrameType defines model for SyncErrorFrame.Type.
+type SyncErrorFrameType string
+
+// Task defines model for Task.
+type Task struct {
+	AssetId       Identifier          `json:"asset_id"`
+	Command       TaskCommand         `json:"command"`
+	Id            Identifier          `json:"id"`
+	LastExecution *ExecutionReport    `json:"last_execution,omitempty"`
+	LastReceipt   *Receipt            `json:"last_receipt,omitempty"`
+	Results       []ResultDeclaration `json:"results"`
+	State         TaskState           `json:"state"`
+
+	// SubmissionSequence Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	SubmissionSequence PositiveCounter `json:"submission_sequence"`
+
+	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Version PositiveCounter `json:"version"`
+}
+
+// TaskCommand defines model for TaskCommand.
+type TaskCommand struct {
+	union json.RawMessage
+}
+
+// TaskListQuery defines model for TaskListQuery.
+type TaskListQuery struct {
+	AssetIds  *[]Identifier `json:"asset_ids,omitempty"`
+	PageSize  *int          `json:"page_size,omitempty"`
+	PageToken *PageToken    `json:"page_token,omitempty"`
+	States    *[]TaskState  `json:"states,omitempty"`
+}
+
+// TaskPage defines model for TaskPage.
+type TaskPage struct {
+	Items         []Task     `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+}
+
+// TaskQueue defines model for TaskQueue.
+type TaskQueue struct {
+	AssetId           Identifier                                 `json:"asset_id"`
+	ConfirmedRevision nullable.Nullable[NullablePositiveCounter] `json:"confirmed_revision"`
+
+	// Revision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Revision PositiveCounter `json:"revision"`
+	TaskIds  []Identifier    `json:"task_ids"`
+}
+
+// TaskState defines model for TaskState.
+type TaskState string
 
 // Telemetry defines model for Telemetry.
 type Telemetry struct {
@@ -70,5 +5988,5913 @@ type Telemetry struct {
 	PositionObservedAt nullable.Nullable[string] `json:"position_observed_at,omitempty"`
 }
 
+// TelemetryError defines model for TelemetryError.
+type TelemetryError struct {
+	Classification TelemetryErrorClassification `json:"classification"`
+	Error          SectionFault                 `json:"error"`
+	Evidence       SourceEvidence               `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]    `json:"observed_at"`
+	State          TelemetryErrorState          `json:"state"`
+}
+
+// TelemetryErrorClassification defines model for TelemetryError.Classification.
+type TelemetryErrorClassification string
+
+// TelemetryErrorState defines model for TelemetryError.State.
+type TelemetryErrorState string
+
+// TelemetrySection defines model for TelemetrySection.
+type TelemetrySection struct {
+	union json.RawMessage
+}
+
+// TelemetryValue defines model for TelemetryValue.
+type TelemetryValue struct {
+	Classification TelemetryValueClassification `json:"classification"`
+	Evidence       SourceEvidence               `json:"evidence"`
+	State          TelemetryValueState          `json:"state"`
+	Value          Telemetry                    `json:"value"`
+}
+
+// TelemetryValueClassification defines model for TelemetryValue.Classification.
+type TelemetryValueClassification string
+
+// TelemetryValueState defines model for TelemetryValue.State.
+type TelemetryValueState string
+
+// TelemetryWithdrawn defines model for TelemetryWithdrawn.
+type TelemetryWithdrawn struct {
+	Classification TelemetryWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                   `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]        `json:"observed_at"`
+	State          TelemetryWithdrawnState          `json:"state"`
+}
+
+// TelemetryWithdrawnClassification defines model for TelemetryWithdrawn.Classification.
+type TelemetryWithdrawnClassification string
+
+// TelemetryWithdrawnState defines model for TelemetryWithdrawn.State.
+type TelemetryWithdrawnState string
+
 // Timestamp defines model for Timestamp.
 type Timestamp = string
+
+// Track defines model for Track.
+type Track struct {
+	Alias       nullable.Nullable[string] `json:"alias"`
+	Attitude    *RetainedAttitudeSection  `json:"attitude,omitempty"`
+	Description Description               `json:"description"`
+
+	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	EditRevision     PositiveCounter                      `json:"edit_revision"`
+	EntityType       TrackEntityType                      `json:"entity_type"`
+	Geometry         *RetainedGeometryObservationSection  `json:"geometry,omitempty"`
+	Id               Identifier                           `json:"id"`
+	Media            *RetainedMediaObservationSection     `json:"media,omitempty"`
+	MilitaryDisplay  *RetainedMilitaryDisplaySection      `json:"military_display,omitempty"`
+	PublisherId      Identifier                           `json:"publisher_id"`
+	SensorReferences *RetainedSensorReferencesSection     `json:"sensor_references,omitempty"`
+	Telemetry        *RetainedTelemetrySection            `json:"telemetry,omitempty"`
+	Type             *RetainedTrackTypeObservationSection `json:"type,omitempty"`
+
+	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	Version PositiveCounter `json:"version"`
+}
+
+// TrackEntityType defines model for Track.EntityType.
+type TrackEntityType string
+
+// TrackPage defines model for TrackPage.
+type TrackPage struct {
+	Items         []Track    `json:"items"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+}
+
+// TrackSections defines model for TrackSections.
+type TrackSections struct {
+	Attitude         *AttitudeSection             `json:"attitude,omitempty"`
+	Geometry         *GeometryObservationSection  `json:"geometry,omitempty"`
+	Media            *MediaObservationSection     `json:"media,omitempty"`
+	MilitaryDisplay  *MilitaryDisplaySection      `json:"military_display,omitempty"`
+	SensorReferences *SensorReferencesSection     `json:"sensor_references,omitempty"`
+	Telemetry        *TelemetrySection            `json:"telemetry,omitempty"`
+	Type             *TrackTypeObservationSection `json:"type,omitempty"`
+}
+
+// TrackType defines model for TrackType.
+type TrackType struct {
+	Kind nullable.Nullable[TrackTypeKind] `json:"kind"`
+}
+
+// TrackTypeKind defines model for TrackType.Kind.
+type TrackTypeKind string
+
+// TrackTypeObservation defines model for TrackTypeObservation.
+type TrackTypeObservation struct {
+	ObservedAt nullable.Nullable[string] `json:"observed_at"`
+	Type       TrackType                 `json:"type"`
+}
+
+// TrackTypeObservationError defines model for TrackTypeObservationError.
+type TrackTypeObservationError struct {
+	Classification TrackTypeObservationErrorClassification `json:"classification"`
+	Error          SectionFault                            `json:"error"`
+	Evidence       SourceEvidence                          `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]               `json:"observed_at"`
+	State          TrackTypeObservationErrorState          `json:"state"`
+}
+
+// TrackTypeObservationErrorClassification defines model for TrackTypeObservationError.Classification.
+type TrackTypeObservationErrorClassification string
+
+// TrackTypeObservationErrorState defines model for TrackTypeObservationError.State.
+type TrackTypeObservationErrorState string
+
+// TrackTypeObservationSection defines model for TrackTypeObservationSection.
+type TrackTypeObservationSection struct {
+	union json.RawMessage
+}
+
+// TrackTypeObservationValue defines model for TrackTypeObservationValue.
+type TrackTypeObservationValue struct {
+	Classification TrackTypeObservationValueClassification `json:"classification"`
+	Evidence       SourceEvidence                          `json:"evidence"`
+	State          TrackTypeObservationValueState          `json:"state"`
+	Value          TrackTypeObservation                    `json:"value"`
+}
+
+// TrackTypeObservationValueClassification defines model for TrackTypeObservationValue.Classification.
+type TrackTypeObservationValueClassification string
+
+// TrackTypeObservationValueState defines model for TrackTypeObservationValue.State.
+type TrackTypeObservationValueState string
+
+// TrackTypeObservationWithdrawn defines model for TrackTypeObservationWithdrawn.
+type TrackTypeObservationWithdrawn struct {
+	Classification TrackTypeObservationWithdrawnClassification `json:"classification"`
+	Evidence       SourceEvidence                              `json:"evidence"`
+	ObservedAt     nullable.Nullable[string]                   `json:"observed_at"`
+	State          TrackTypeObservationWithdrawnState          `json:"state"`
+}
+
+// TrackTypeObservationWithdrawnClassification defines model for TrackTypeObservationWithdrawn.Classification.
+type TrackTypeObservationWithdrawnClassification string
+
+// TrackTypeObservationWithdrawnState defines model for TrackTypeObservationWithdrawn.State.
+type TrackTypeObservationWithdrawnState string
+
+// TrackUpdateResult defines model for TrackUpdateResult.
+type TrackUpdateResult struct {
+	Dispositions []SectionDisposition `json:"dispositions"`
+	Track        Track                `json:"track"`
+}
+
+// UnreportedSection defines model for UnreportedSection.
+type UnreportedSection struct {
+	State UnreportedSectionState `json:"state"`
+}
+
+// UnreportedSectionState defines model for UnreportedSection.State.
+type UnreportedSectionState string
+
+// UpdateAssetRequest defines model for UpdateAssetRequest.
+type UpdateAssetRequest struct {
+	AssetId     Identifier              `json:"asset_id"`
+	Descriptive *AssetDescriptiveChange `json:"descriptive,omitempty"`
+	Report      *AssetReport            `json:"report,omitempty"`
+	RequestId   Identifier              `json:"request_id"`
+}
+
+// UpdateAssetResponse defines model for UpdateAssetResponse.
+type UpdateAssetResponse struct {
+	CommitCursor Cursor            `json:"commit_cursor"`
+	Data         AssetUpdateResult `json:"data"`
+	DatasetId    Identifier        `json:"dataset_id"`
+}
+
+// UploadObjectDescriptor One descriptor plus the complete binary HTTP body. Byte length and SHA-256 must match streamed bytes. File admission is configurable Core policy, initially 2 GB.
+type UploadObjectDescriptor struct {
+	// ByteLength Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	ByteLength  Counter        `json:"byte_length"`
+	ContentType ContentType    `json:"content_type"`
+	Metadata    ObjectMetadata `json:"metadata"`
+	ObjectId    Identifier     `json:"object_id"`
+	RequestId   Identifier     `json:"request_id"`
+	Sha256      Digest         `json:"sha256"`
+}
+
+// UploadObjectResponse defines model for UploadObjectResponse.
+type UploadObjectResponse struct {
+	CommitCursor Cursor     `json:"commit_cursor"`
+	Data         Object     `json:"data"`
+	DatasetId    Identifier `json:"dataset_id"`
+}
+
+// UpsertChange defines model for UpsertChange.
+type UpsertChange struct {
+	Kind     UpsertChangeKind `json:"kind"`
+	Resource ResourceImage    `json:"resource"`
+}
+
+// UpsertChangeKind defines model for UpsertChange.Kind.
+type UpsertChangeKind string
+
+// Dataset defines model for Dataset.
+type Dataset = Identifier
+
+// Version defines model for Version.
+type Version = ProtocolVersion
+
+// ReadActivityParams defines parameters for ReadActivity.
+type ReadActivityParams struct {
+	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+	StartAt              *Timestamp `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt                *Timestamp `form:"end_at,omitempty" json:"end_at,omitempty"`
+	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+}
+
+// ListApiKeysParams defines parameters for ListApiKeys.
+type ListApiKeysParams struct {
+	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+}
+
+// CreateApiKeyParams defines parameters for CreateApiKey.
+type CreateApiKeyParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// RevokeApiKeyParams defines parameters for RevokeApiKey.
+type RevokeApiKeyParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ListAssetsParams defines parameters for ListAssets.
+type ListAssetsParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	Ids                  *[]Identifier `form:"ids,omitempty" json:"ids,omitempty"`
+	Aliases              *[]Alias      `form:"aliases,omitempty" json:"aliases,omitempty"`
+	Names                *[]Name       `form:"names,omitempty" json:"names,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// RegisterAssetParams defines parameters for RegisterAsset.
+type RegisterAssetParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetAssetByAliasParams defines parameters for GetAssetByAlias.
+type GetAssetByAliasParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// DeleteAssetParams defines parameters for DeleteAsset.
+type DeleteAssetParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetAssetParams defines parameters for GetAsset.
+type GetAssetParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// UpdateAssetParams defines parameters for UpdateAsset.
+type UpdateAssetParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// RequestContactChallengeParams defines parameters for RequestContactChallenge.
+type RequestContactChallengeParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetAssetMovementHistoryParams defines parameters for GetAssetMovementHistory.
+type GetAssetMovementHistoryParams struct {
+	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+	StartAt              *Timestamp `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt                *Timestamp `form:"end_at,omitempty" json:"end_at,omitempty"`
+	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+}
+
+// GetAssetObjectsParams defines parameters for GetAssetObjects.
+type GetAssetObjectsParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// ReplaceAssetProcessParams defines parameters for ReplaceAssetProcess.
+type ReplaceAssetProcessParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetAssetStatusParams defines parameters for GetAssetStatus.
+type GetAssetStatusParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetAssignedTasksParams defines parameters for GetAssignedTasks.
+type GetAssignedTasksParams struct {
+	PageSize             *int             `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken       `form:"page_token,omitempty" json:"page_token,omitempty"`
+	QueueRevision        *PositiveCounter `form:"queue_revision,omitempty" json:"queue_revision,omitempty"`
+	AtlasDatasetID       Dataset          `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version          `json:"Atlas-Protocol-Version"`
+}
+
+// SetTaskOrderParams defines parameters for SetTaskOrder.
+type SetTaskOrderParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ConfirmTaskOrderParams defines parameters for ConfirmTaskOrder.
+type ConfirmTaskOrderParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ReadChangesParams defines parameters for ReadChanges.
+type ReadChangesParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ListGeofeaturesParams defines parameters for ListGeofeatures.
+type ListGeofeaturesParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	Ids                  *[]Identifier `form:"ids,omitempty" json:"ids,omitempty"`
+	Aliases              *[]Alias      `form:"aliases,omitempty" json:"aliases,omitempty"`
+	Names                *[]Name       `form:"names,omitempty" json:"names,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// CreateGeofeatureParams defines parameters for CreateGeofeature.
+type CreateGeofeatureParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetGeofeatureByAliasParams defines parameters for GetGeofeatureByAlias.
+type GetGeofeatureByAliasParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// DeleteGeofeatureParams defines parameters for DeleteGeofeature.
+type DeleteGeofeatureParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetGeofeatureParams defines parameters for GetGeofeature.
+type GetGeofeatureParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// EditGeofeatureParams defines parameters for EditGeofeature.
+type EditGeofeatureParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetGeofeatureObjectsParams defines parameters for GetGeofeatureObjects.
+type GetGeofeatureObjectsParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// ListObjectsParams defines parameters for ListObjects.
+type ListObjectsParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// UploadObjectParams defines parameters for UploadObject.
+type UploadObjectParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+
+	// AtlasObjectDescriptor Unpadded base64url of UTF-8 UploadObjectDescriptor JSON. Bound before decoding. The body is its complete binary stream.
+	AtlasObjectDescriptor string `json:"Atlas-Object-Descriptor"`
+}
+
+// DeleteObjectParams defines parameters for DeleteObject.
+type DeleteObjectParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetObjectParams defines parameters for GetObject.
+type GetObjectParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// EditObjectParams defines parameters for EditObject.
+type EditObjectParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ReadObjectContentParams defines parameters for ReadObjectContent.
+type ReadObjectContentParams struct {
+	Disposition          *ReadObjectContentParamsDisposition `form:"disposition,omitempty" json:"disposition,omitempty"`
+	AtlasDatasetID       Dataset                             `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version                             `json:"Atlas-Protocol-Version"`
+}
+
+// ReadObjectContentParamsDisposition defines parameters for ReadObjectContent.
+type ReadObjectContentParamsDisposition string
+
+// ListOperationsParams defines parameters for ListOperations.
+type ListOperationsParams struct {
+	PageSize             *int              `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken        `form:"page_token,omitempty" json:"page_token,omitempty"`
+	PluginIds            *[]Identifier     `form:"plugin_ids,omitempty" json:"plugin_ids,omitempty"`
+	States               *[]OperationState `form:"states,omitempty" json:"states,omitempty"`
+	AtlasDatasetID       Dataset           `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version           `json:"Atlas-Protocol-Version"`
+}
+
+// ListOperatorsParams defines parameters for ListOperators.
+type ListOperatorsParams struct {
+	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+}
+
+// CreateOperatorParams defines parameters for CreateOperator.
+type CreateOperatorParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// DeleteOperatorParams defines parameters for DeleteOperator.
+type DeleteOperatorParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetOperatorParams defines parameters for GetOperator.
+type GetOperatorParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// EditOperatorParams defines parameters for EditOperator.
+type EditOperatorParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ListPluginsParams defines parameters for ListPlugins.
+type ListPluginsParams struct {
+	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+}
+
+// GetPluginParams defines parameters for GetPlugin.
+type GetPluginParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// CreateOperationParams defines parameters for CreateOperation.
+type CreateOperationParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetOperationParams defines parameters for GetOperation.
+type GetOperationParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// CancelOperationParams defines parameters for CancelOperation.
+type CancelOperationParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetReadinessParams defines parameters for GetReadiness.
+type GetReadinessParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetReferenceParams defines parameters for GetReference.
+type GetReferenceParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetReferenceDocumentParams defines parameters for GetReferenceDocument.
+type GetReferenceDocumentParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ListResourcesParams defines parameters for ListResources.
+type ListResourcesParams struct {
+	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+}
+
+// ReadSnapshotParams defines parameters for ReadSnapshot.
+type ReadSnapshotParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ReleaseSnapshotParams defines parameters for ReleaseSnapshot.
+type ReleaseSnapshotParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ListTasksParams defines parameters for ListTasks.
+type ListTasksParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AssetIds             *[]Identifier `form:"asset_ids,omitempty" json:"asset_ids,omitempty"`
+	States               *[]TaskState  `form:"states,omitempty" json:"states,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// CreateTaskParams defines parameters for CreateTask.
+type CreateTaskParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetTaskParams defines parameters for GetTask.
+type GetTaskParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// RequestTaskCancellationParams defines parameters for RequestTaskCancellation.
+type RequestTaskCancellationParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ReportTaskExecutionParams defines parameters for ReportTaskExecution.
+type ReportTaskExecutionParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetTaskObjectsParams defines parameters for GetTaskObjects.
+type GetTaskObjectsParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// ReportTaskResultsParams defines parameters for ReportTaskResults.
+type ReportTaskResultsParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// ListTracksParams defines parameters for ListTracks.
+type ListTracksParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	Ids                  *[]Identifier `form:"ids,omitempty" json:"ids,omitempty"`
+	Aliases              *[]Alias      `form:"aliases,omitempty" json:"aliases,omitempty"`
+	Names                *[]Name       `form:"names,omitempty" json:"names,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// CreateTrackParams defines parameters for CreateTrack.
+type CreateTrackParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetTrackByAliasParams defines parameters for GetTrackByAlias.
+type GetTrackByAliasParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// DeleteTrackParams defines parameters for DeleteTrack.
+type DeleteTrackParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetTrackParams defines parameters for GetTrack.
+type GetTrackParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// EditTrackParams defines parameters for EditTrack.
+type EditTrackParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// GetTrackMovementHistoryParams defines parameters for GetTrackMovementHistory.
+type GetTrackMovementHistoryParams struct {
+	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+	StartAt              *Timestamp `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt                *Timestamp `form:"end_at,omitempty" json:"end_at,omitempty"`
+	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+}
+
+// GetTrackObjectsParams defines parameters for GetTrackObjects.
+type GetTrackObjectsParams struct {
+	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+}
+
+// ReportTrackObservationsParams defines parameters for ReportTrackObservations.
+type ReportTrackObservationsParams struct {
+	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+}
+
+// CreateApiKeyJSONRequestBody defines body for CreateApiKey for application/json ContentType.
+type CreateApiKeyJSONRequestBody = CreateApiKeyRequest
+
+// RevokeApiKeyJSONRequestBody defines body for RevokeApiKey for application/json ContentType.
+type RevokeApiKeyJSONRequestBody = RevokeApiKeyRequest
+
+// RegisterAssetJSONRequestBody defines body for RegisterAsset for application/json ContentType.
+type RegisterAssetJSONRequestBody = RegisterAssetRequest
+
+// DeleteAssetJSONRequestBody defines body for DeleteAsset for application/json ContentType.
+type DeleteAssetJSONRequestBody = DeleteAssetRequest
+
+// UpdateAssetJSONRequestBody defines body for UpdateAsset for application/json ContentType.
+type UpdateAssetJSONRequestBody = UpdateAssetRequest
+
+// RequestContactChallengeJSONRequestBody defines body for RequestContactChallenge for application/json ContentType.
+type RequestContactChallengeJSONRequestBody = ContactChallengeRequest
+
+// ReplaceAssetProcessJSONRequestBody defines body for ReplaceAssetProcess for application/json ContentType.
+type ReplaceAssetProcessJSONRequestBody = ReplaceAssetProcessRequest
+
+// SetTaskOrderJSONRequestBody defines body for SetTaskOrder for application/json ContentType.
+type SetTaskOrderJSONRequestBody = SetTaskOrderRequest
+
+// ConfirmTaskOrderJSONRequestBody defines body for ConfirmTaskOrder for application/json ContentType.
+type ConfirmTaskOrderJSONRequestBody = ConfirmTaskOrderRequest
+
+// ReadChangesJSONRequestBody defines body for ReadChanges for application/json ContentType.
+type ReadChangesJSONRequestBody = ReadChangesRequest
+
+// CreateGeofeatureJSONRequestBody defines body for CreateGeofeature for application/json ContentType.
+type CreateGeofeatureJSONRequestBody = CreateGeofeatureRequest
+
+// DeleteGeofeatureJSONRequestBody defines body for DeleteGeofeature for application/json ContentType.
+type DeleteGeofeatureJSONRequestBody = DeleteGeofeatureRequest
+
+// EditGeofeatureJSONRequestBody defines body for EditGeofeature for application/json ContentType.
+type EditGeofeatureJSONRequestBody = EditGeofeatureRequest
+
+// DeleteObjectJSONRequestBody defines body for DeleteObject for application/json ContentType.
+type DeleteObjectJSONRequestBody = DeleteObjectRequest
+
+// EditObjectJSONRequestBody defines body for EditObject for application/json ContentType.
+type EditObjectJSONRequestBody = EditObjectRequest
+
+// CreateOperatorJSONRequestBody defines body for CreateOperator for application/json ContentType.
+type CreateOperatorJSONRequestBody = CreateOperatorRequest
+
+// DeleteOperatorJSONRequestBody defines body for DeleteOperator for application/json ContentType.
+type DeleteOperatorJSONRequestBody = DeleteOperatorRequest
+
+// EditOperatorJSONRequestBody defines body for EditOperator for application/json ContentType.
+type EditOperatorJSONRequestBody = EditOperatorRequest
+
+// CreateOperationJSONRequestBody defines body for CreateOperation for application/json ContentType.
+type CreateOperationJSONRequestBody = CreateOperationRequest
+
+// CancelOperationJSONRequestBody defines body for CancelOperation for application/json ContentType.
+type CancelOperationJSONRequestBody = CancelOperationRequest
+
+// ReadSnapshotJSONRequestBody defines body for ReadSnapshot for application/json ContentType.
+type ReadSnapshotJSONRequestBody = ReadSnapshotRequest
+
+// ReleaseSnapshotJSONRequestBody defines body for ReleaseSnapshot for application/json ContentType.
+type ReleaseSnapshotJSONRequestBody = ReleaseSnapshotRequest
+
+// CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
+type CreateTaskJSONRequestBody = CreateTaskRequest
+
+// RequestTaskCancellationJSONRequestBody defines body for RequestTaskCancellation for application/json ContentType.
+type RequestTaskCancellationJSONRequestBody = RequestTaskCancellationRequest
+
+// ReportTaskExecutionJSONRequestBody defines body for ReportTaskExecution for application/json ContentType.
+type ReportTaskExecutionJSONRequestBody = ReportTaskExecutionRequest
+
+// ReportTaskResultsJSONRequestBody defines body for ReportTaskResults for application/json ContentType.
+type ReportTaskResultsJSONRequestBody = ReportTaskResultsRequest
+
+// CreateTrackJSONRequestBody defines body for CreateTrack for application/json ContentType.
+type CreateTrackJSONRequestBody = CreateTrackRequest
+
+// DeleteTrackJSONRequestBody defines body for DeleteTrack for application/json ContentType.
+type DeleteTrackJSONRequestBody = DeleteTrackRequest
+
+// EditTrackJSONRequestBody defines body for EditTrack for application/json ContentType.
+type EditTrackJSONRequestBody = EditTrackRequest
+
+// ReportTrackObservationsJSONRequestBody defines body for ReportTrackObservations for application/json ContentType.
+type ReportTrackObservationsJSONRequestBody = ReportTrackObservationsRequest
+
+// AsDroneType returns the union data inside the AssetType as a DroneType
+func (t AssetType) AsDroneType() (DroneType, error) {
+	var body DroneType
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDroneType overwrites any union data inside the AssetType as the provided DroneType
+func (t *AssetType) FromDroneType(v DroneType) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDroneType performs a merge with any union data inside the AssetType, using the provided DroneType
+func (t *AssetType) MergeDroneType(v DroneType) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsOtherAssetType returns the union data inside the AssetType as a OtherAssetType
+func (t AssetType) AsOtherAssetType() (OtherAssetType, error) {
+	var body OtherAssetType
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromOtherAssetType overwrites any union data inside the AssetType as the provided OtherAssetType
+func (t *AssetType) FromOtherAssetType(v OtherAssetType) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeOtherAssetType performs a merge with any union data inside the AssetType, using the provided OtherAssetType
+func (t *AssetType) MergeOtherAssetType(v OtherAssetType) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AssetType) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AssetType) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAttitudeValue returns the union data inside the AttitudeSection as a AttitudeValue
+func (t AttitudeSection) AsAttitudeValue() (AttitudeValue, error) {
+	var body AttitudeValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAttitudeValue overwrites any union data inside the AttitudeSection as the provided AttitudeValue
+func (t *AttitudeSection) FromAttitudeValue(v AttitudeValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeAttitudeValue performs a merge with any union data inside the AttitudeSection, using the provided AttitudeValue
+func (t *AttitudeSection) MergeAttitudeValue(v AttitudeValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAttitudeError returns the union data inside the AttitudeSection as a AttitudeError
+func (t AttitudeSection) AsAttitudeError() (AttitudeError, error) {
+	var body AttitudeError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAttitudeError overwrites any union data inside the AttitudeSection as the provided AttitudeError
+func (t *AttitudeSection) FromAttitudeError(v AttitudeError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeAttitudeError performs a merge with any union data inside the AttitudeSection, using the provided AttitudeError
+func (t *AttitudeSection) MergeAttitudeError(v AttitudeError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAttitudeWithdrawn returns the union data inside the AttitudeSection as a AttitudeWithdrawn
+func (t AttitudeSection) AsAttitudeWithdrawn() (AttitudeWithdrawn, error) {
+	var body AttitudeWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAttitudeWithdrawn overwrites any union data inside the AttitudeSection as the provided AttitudeWithdrawn
+func (t *AttitudeSection) FromAttitudeWithdrawn(v AttitudeWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeAttitudeWithdrawn performs a merge with any union data inside the AttitudeSection, using the provided AttitudeWithdrawn
+func (t *AttitudeSection) MergeAttitudeWithdrawn(v AttitudeWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AttitudeSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t AttitudeSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsAttitudeError()
+	case "value":
+		return t.AsAttitudeValue()
+	case "withdrawn":
+		return t.AsAttitudeWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t AttitudeSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AttitudeSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCameraOpticsValue returns the union data inside the CameraOpticsSection as a CameraOpticsValue
+func (t CameraOpticsSection) AsCameraOpticsValue() (CameraOpticsValue, error) {
+	var body CameraOpticsValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCameraOpticsValue overwrites any union data inside the CameraOpticsSection as the provided CameraOpticsValue
+func (t *CameraOpticsSection) FromCameraOpticsValue(v CameraOpticsValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeCameraOpticsValue performs a merge with any union data inside the CameraOpticsSection, using the provided CameraOpticsValue
+func (t *CameraOpticsSection) MergeCameraOpticsValue(v CameraOpticsValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCameraOpticsError returns the union data inside the CameraOpticsSection as a CameraOpticsError
+func (t CameraOpticsSection) AsCameraOpticsError() (CameraOpticsError, error) {
+	var body CameraOpticsError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCameraOpticsError overwrites any union data inside the CameraOpticsSection as the provided CameraOpticsError
+func (t *CameraOpticsSection) FromCameraOpticsError(v CameraOpticsError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeCameraOpticsError performs a merge with any union data inside the CameraOpticsSection, using the provided CameraOpticsError
+func (t *CameraOpticsSection) MergeCameraOpticsError(v CameraOpticsError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCameraOpticsWithdrawn returns the union data inside the CameraOpticsSection as a CameraOpticsWithdrawn
+func (t CameraOpticsSection) AsCameraOpticsWithdrawn() (CameraOpticsWithdrawn, error) {
+	var body CameraOpticsWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCameraOpticsWithdrawn overwrites any union data inside the CameraOpticsSection as the provided CameraOpticsWithdrawn
+func (t *CameraOpticsSection) FromCameraOpticsWithdrawn(v CameraOpticsWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeCameraOpticsWithdrawn performs a merge with any union data inside the CameraOpticsSection, using the provided CameraOpticsWithdrawn
+func (t *CameraOpticsSection) MergeCameraOpticsWithdrawn(v CameraOpticsWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CameraOpticsSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t CameraOpticsSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsCameraOpticsError()
+	case "value":
+		return t.AsCameraOpticsValue()
+	case "withdrawn":
+		return t.AsCameraOpticsWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t CameraOpticsSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CameraOpticsSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCameraValue returns the union data inside the CameraSection as a CameraValue
+func (t CameraSection) AsCameraValue() (CameraValue, error) {
+	var body CameraValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCameraValue overwrites any union data inside the CameraSection as the provided CameraValue
+func (t *CameraSection) FromCameraValue(v CameraValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeCameraValue performs a merge with any union data inside the CameraSection, using the provided CameraValue
+func (t *CameraSection) MergeCameraValue(v CameraValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCameraError returns the union data inside the CameraSection as a CameraError
+func (t CameraSection) AsCameraError() (CameraError, error) {
+	var body CameraError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCameraError overwrites any union data inside the CameraSection as the provided CameraError
+func (t *CameraSection) FromCameraError(v CameraError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeCameraError performs a merge with any union data inside the CameraSection, using the provided CameraError
+func (t *CameraSection) MergeCameraError(v CameraError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCameraWithdrawn returns the union data inside the CameraSection as a CameraWithdrawn
+func (t CameraSection) AsCameraWithdrawn() (CameraWithdrawn, error) {
+	var body CameraWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCameraWithdrawn overwrites any union data inside the CameraSection as the provided CameraWithdrawn
+func (t *CameraSection) FromCameraWithdrawn(v CameraWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeCameraWithdrawn performs a merge with any union data inside the CameraSection, using the provided CameraWithdrawn
+func (t *CameraSection) MergeCameraWithdrawn(v CameraWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CameraSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t CameraSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsCameraError()
+	case "value":
+		return t.AsCameraValue()
+	case "withdrawn":
+		return t.AsCameraWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t CameraSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CameraSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAuthenticateFrame returns the union data inside the ClientFrame as a AuthenticateFrame
+func (t ClientFrame) AsAuthenticateFrame() (AuthenticateFrame, error) {
+	var body AuthenticateFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAuthenticateFrame overwrites any union data inside the ClientFrame as the provided AuthenticateFrame
+func (t *ClientFrame) FromAuthenticateFrame(v AuthenticateFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"authenticate"}`))
+	t.union = b
+	return err
+}
+
+// MergeAuthenticateFrame performs a merge with any union data inside the ClientFrame, using the provided AuthenticateFrame
+func (t *ClientFrame) MergeAuthenticateFrame(v AuthenticateFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"authenticate"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSubscribeChangesFrame returns the union data inside the ClientFrame as a SubscribeChangesFrame
+func (t ClientFrame) AsSubscribeChangesFrame() (SubscribeChangesFrame, error) {
+	var body SubscribeChangesFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSubscribeChangesFrame overwrites any union data inside the ClientFrame as the provided SubscribeChangesFrame
+func (t *ClientFrame) FromSubscribeChangesFrame(v SubscribeChangesFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"subscribe_changes"}`))
+	t.union = b
+	return err
+}
+
+// MergeSubscribeChangesFrame performs a merge with any union data inside the ClientFrame, using the provided SubscribeChangesFrame
+func (t *ClientFrame) MergeSubscribeChangesFrame(v SubscribeChangesFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"subscribe_changes"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReleaseSnapshotFrame returns the union data inside the ClientFrame as a ReleaseSnapshotFrame
+func (t ClientFrame) AsReleaseSnapshotFrame() (ReleaseSnapshotFrame, error) {
+	var body ReleaseSnapshotFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReleaseSnapshotFrame overwrites any union data inside the ClientFrame as the provided ReleaseSnapshotFrame
+func (t *ClientFrame) FromReleaseSnapshotFrame(v ReleaseSnapshotFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"release_snapshot"}`))
+	t.union = b
+	return err
+}
+
+// MergeReleaseSnapshotFrame performs a merge with any union data inside the ClientFrame, using the provided ReleaseSnapshotFrame
+func (t *ClientFrame) MergeReleaseSnapshotFrame(v ReleaseSnapshotFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"release_snapshot"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ClientFrame) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ClientFrame) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "authenticate":
+		return t.AsAuthenticateFrame()
+	case "release_snapshot":
+		return t.AsReleaseSnapshotFrame()
+	case "subscribe_changes":
+		return t.AsSubscribeChangesFrame()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ClientFrame) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ClientFrame) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsMoveToSupport returns the union data inside the CommandSupport as a MoveToSupport
+func (t CommandSupport) AsMoveToSupport() (MoveToSupport, error) {
+	var body MoveToSupport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMoveToSupport overwrites any union data inside the CommandSupport as the provided MoveToSupport
+func (t *CommandSupport) FromMoveToSupport(v MoveToSupport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"command":"move_to"}`))
+	t.union = b
+	return err
+}
+
+// MergeMoveToSupport performs a merge with any union data inside the CommandSupport, using the provided MoveToSupport
+func (t *CommandSupport) MergeMoveToSupport(v MoveToSupport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"command":"move_to"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPauseSupport returns the union data inside the CommandSupport as a PauseSupport
+func (t CommandSupport) AsPauseSupport() (PauseSupport, error) {
+	var body PauseSupport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPauseSupport overwrites any union data inside the CommandSupport as the provided PauseSupport
+func (t *CommandSupport) FromPauseSupport(v PauseSupport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"command":"pause"}`))
+	t.union = b
+	return err
+}
+
+// MergePauseSupport performs a merge with any union data inside the CommandSupport, using the provided PauseSupport
+func (t *CommandSupport) MergePauseSupport(v PauseSupport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"command":"pause"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsResumeSupport returns the union data inside the CommandSupport as a ResumeSupport
+func (t CommandSupport) AsResumeSupport() (ResumeSupport, error) {
+	var body ResumeSupport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromResumeSupport overwrites any union data inside the CommandSupport as the provided ResumeSupport
+func (t *CommandSupport) FromResumeSupport(v ResumeSupport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"command":"resume"}`))
+	t.union = b
+	return err
+}
+
+// MergeResumeSupport performs a merge with any union data inside the CommandSupport, using the provided ResumeSupport
+func (t *CommandSupport) MergeResumeSupport(v ResumeSupport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"command":"resume"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CommandSupport) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"command"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t CommandSupport) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "move_to":
+		return t.AsMoveToSupport()
+	case "pause":
+		return t.AsPauseSupport()
+	case "resume":
+		return t.AsResumeSupport()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t CommandSupport) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CommandSupport) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCommunicationsValue returns the union data inside the CommunicationsSection as a CommunicationsValue
+func (t CommunicationsSection) AsCommunicationsValue() (CommunicationsValue, error) {
+	var body CommunicationsValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCommunicationsValue overwrites any union data inside the CommunicationsSection as the provided CommunicationsValue
+func (t *CommunicationsSection) FromCommunicationsValue(v CommunicationsValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeCommunicationsValue performs a merge with any union data inside the CommunicationsSection, using the provided CommunicationsValue
+func (t *CommunicationsSection) MergeCommunicationsValue(v CommunicationsValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCommunicationsError returns the union data inside the CommunicationsSection as a CommunicationsError
+func (t CommunicationsSection) AsCommunicationsError() (CommunicationsError, error) {
+	var body CommunicationsError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCommunicationsError overwrites any union data inside the CommunicationsSection as the provided CommunicationsError
+func (t *CommunicationsSection) FromCommunicationsError(v CommunicationsError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeCommunicationsError performs a merge with any union data inside the CommunicationsSection, using the provided CommunicationsError
+func (t *CommunicationsSection) MergeCommunicationsError(v CommunicationsError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCommunicationsWithdrawn returns the union data inside the CommunicationsSection as a CommunicationsWithdrawn
+func (t CommunicationsSection) AsCommunicationsWithdrawn() (CommunicationsWithdrawn, error) {
+	var body CommunicationsWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCommunicationsWithdrawn overwrites any union data inside the CommunicationsSection as the provided CommunicationsWithdrawn
+func (t *CommunicationsSection) FromCommunicationsWithdrawn(v CommunicationsWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeCommunicationsWithdrawn performs a merge with any union data inside the CommunicationsSection, using the provided CommunicationsWithdrawn
+func (t *CommunicationsSection) MergeCommunicationsWithdrawn(v CommunicationsWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CommunicationsSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t CommunicationsSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsCommunicationsError()
+	case "value":
+		return t.AsCommunicationsValue()
+	case "withdrawn":
+		return t.AsCommunicationsWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t CommunicationsSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CommunicationsSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAsset returns the union data inside the Entity as a Asset
+func (t Entity) AsAsset() (Asset, error) {
+	var body Asset
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAsset overwrites any union data inside the Entity as the provided Asset
+func (t *Entity) FromAsset(v Asset) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"entity_type":"asset"}`))
+	t.union = b
+	return err
+}
+
+// MergeAsset performs a merge with any union data inside the Entity, using the provided Asset
+func (t *Entity) MergeAsset(v Asset) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"entity_type":"asset"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTrack returns the union data inside the Entity as a Track
+func (t Entity) AsTrack() (Track, error) {
+	var body Track
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrack overwrites any union data inside the Entity as the provided Track
+func (t *Entity) FromTrack(v Track) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"entity_type":"track"}`))
+	t.union = b
+	return err
+}
+
+// MergeTrack performs a merge with any union data inside the Entity, using the provided Track
+func (t *Entity) MergeTrack(v Track) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"entity_type":"track"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGeofeature returns the union data inside the Entity as a Geofeature
+func (t Entity) AsGeofeature() (Geofeature, error) {
+	var body Geofeature
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGeofeature overwrites any union data inside the Entity as the provided Geofeature
+func (t *Entity) FromGeofeature(v Geofeature) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"entity_type":"geofeature"}`))
+	t.union = b
+	return err
+}
+
+// MergeGeofeature performs a merge with any union data inside the Entity, using the provided Geofeature
+func (t *Entity) MergeGeofeature(v Geofeature) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"entity_type":"geofeature"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Entity) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"entity_type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t Entity) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "asset":
+		return t.AsAsset()
+	case "geofeature":
+		return t.AsGeofeature()
+	case "track":
+		return t.AsTrack()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t Entity) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Entity) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsError400 returns the union data inside the ErrorResponse as a Error400
+func (t ErrorResponse) AsError400() (Error400, error) {
+	var body Error400
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError400 overwrites any union data inside the ErrorResponse as the provided Error400
+func (t *ErrorResponse) FromError400(v Error400) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError400 performs a merge with any union data inside the ErrorResponse, using the provided Error400
+func (t *ErrorResponse) MergeError400(v Error400) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError401 returns the union data inside the ErrorResponse as a Error401
+func (t ErrorResponse) AsError401() (Error401, error) {
+	var body Error401
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError401 overwrites any union data inside the ErrorResponse as the provided Error401
+func (t *ErrorResponse) FromError401(v Error401) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError401 performs a merge with any union data inside the ErrorResponse, using the provided Error401
+func (t *ErrorResponse) MergeError401(v Error401) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError403 returns the union data inside the ErrorResponse as a Error403
+func (t ErrorResponse) AsError403() (Error403, error) {
+	var body Error403
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError403 overwrites any union data inside the ErrorResponse as the provided Error403
+func (t *ErrorResponse) FromError403(v Error403) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError403 performs a merge with any union data inside the ErrorResponse, using the provided Error403
+func (t *ErrorResponse) MergeError403(v Error403) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError404 returns the union data inside the ErrorResponse as a Error404
+func (t ErrorResponse) AsError404() (Error404, error) {
+	var body Error404
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError404 overwrites any union data inside the ErrorResponse as the provided Error404
+func (t *ErrorResponse) FromError404(v Error404) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError404 performs a merge with any union data inside the ErrorResponse, using the provided Error404
+func (t *ErrorResponse) MergeError404(v Error404) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError409 returns the union data inside the ErrorResponse as a Error409
+func (t ErrorResponse) AsError409() (Error409, error) {
+	var body Error409
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError409 overwrites any union data inside the ErrorResponse as the provided Error409
+func (t *ErrorResponse) FromError409(v Error409) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError409 performs a merge with any union data inside the ErrorResponse, using the provided Error409
+func (t *ErrorResponse) MergeError409(v Error409) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError410 returns the union data inside the ErrorResponse as a Error410
+func (t ErrorResponse) AsError410() (Error410, error) {
+	var body Error410
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError410 overwrites any union data inside the ErrorResponse as the provided Error410
+func (t *ErrorResponse) FromError410(v Error410) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError410 performs a merge with any union data inside the ErrorResponse, using the provided Error410
+func (t *ErrorResponse) MergeError410(v Error410) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError413 returns the union data inside the ErrorResponse as a Error413
+func (t ErrorResponse) AsError413() (Error413, error) {
+	var body Error413
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError413 overwrites any union data inside the ErrorResponse as the provided Error413
+func (t *ErrorResponse) FromError413(v Error413) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError413 performs a merge with any union data inside the ErrorResponse, using the provided Error413
+func (t *ErrorResponse) MergeError413(v Error413) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError415 returns the union data inside the ErrorResponse as a Error415
+func (t ErrorResponse) AsError415() (Error415, error) {
+	var body Error415
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError415 overwrites any union data inside the ErrorResponse as the provided Error415
+func (t *ErrorResponse) FromError415(v Error415) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError415 performs a merge with any union data inside the ErrorResponse, using the provided Error415
+func (t *ErrorResponse) MergeError415(v Error415) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError422 returns the union data inside the ErrorResponse as a Error422
+func (t ErrorResponse) AsError422() (Error422, error) {
+	var body Error422
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError422 overwrites any union data inside the ErrorResponse as the provided Error422
+func (t *ErrorResponse) FromError422(v Error422) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError422 performs a merge with any union data inside the ErrorResponse, using the provided Error422
+func (t *ErrorResponse) MergeError422(v Error422) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError429 returns the union data inside the ErrorResponse as a Error429
+func (t ErrorResponse) AsError429() (Error429, error) {
+	var body Error429
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError429 overwrites any union data inside the ErrorResponse as the provided Error429
+func (t *ErrorResponse) FromError429(v Error429) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError429 performs a merge with any union data inside the ErrorResponse, using the provided Error429
+func (t *ErrorResponse) MergeError429(v Error429) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError500 returns the union data inside the ErrorResponse as a Error500
+func (t ErrorResponse) AsError500() (Error500, error) {
+	var body Error500
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError500 overwrites any union data inside the ErrorResponse as the provided Error500
+func (t *ErrorResponse) FromError500(v Error500) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError500 performs a merge with any union data inside the ErrorResponse, using the provided Error500
+func (t *ErrorResponse) MergeError500(v Error500) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError503 returns the union data inside the ErrorResponse as a Error503
+func (t ErrorResponse) AsError503() (Error503, error) {
+	var body Error503
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError503 overwrites any union data inside the ErrorResponse as the provided Error503
+func (t *ErrorResponse) FromError503(v Error503) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError503 performs a merge with any union data inside the ErrorResponse, using the provided Error503
+func (t *ErrorResponse) MergeError503(v Error503) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsError507 returns the union data inside the ErrorResponse as a Error507
+func (t ErrorResponse) AsError507() (Error507, error) {
+	var body Error507
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromError507 overwrites any union data inside the ErrorResponse as the provided Error507
+func (t *ErrorResponse) FromError507(v Error507) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeError507 performs a merge with any union data inside the ErrorResponse, using the provided Error507
+func (t *ErrorResponse) MergeError507(v Error507) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ErrorResponse) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ErrorResponse) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsExecutionProgress returns the union data inside the ExecutionOutcome as a ExecutionProgress
+func (t ExecutionOutcome) AsExecutionProgress() (ExecutionProgress, error) {
+	var body ExecutionProgress
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromExecutionProgress overwrites any union data inside the ExecutionOutcome as the provided ExecutionProgress
+func (t *ExecutionOutcome) FromExecutionProgress(v ExecutionProgress) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeExecutionProgress performs a merge with any union data inside the ExecutionOutcome, using the provided ExecutionProgress
+func (t *ExecutionOutcome) MergeExecutionProgress(v ExecutionProgress) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsExecutionFailure returns the union data inside the ExecutionOutcome as a ExecutionFailure
+func (t ExecutionOutcome) AsExecutionFailure() (ExecutionFailure, error) {
+	var body ExecutionFailure
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromExecutionFailure overwrites any union data inside the ExecutionOutcome as the provided ExecutionFailure
+func (t *ExecutionOutcome) FromExecutionFailure(v ExecutionFailure) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeExecutionFailure performs a merge with any union data inside the ExecutionOutcome, using the provided ExecutionFailure
+func (t *ExecutionOutcome) MergeExecutionFailure(v ExecutionFailure) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsNeverAppliedFailure returns the union data inside the ExecutionOutcome as a NeverAppliedFailure
+func (t ExecutionOutcome) AsNeverAppliedFailure() (NeverAppliedFailure, error) {
+	var body NeverAppliedFailure
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromNeverAppliedFailure overwrites any union data inside the ExecutionOutcome as the provided NeverAppliedFailure
+func (t *ExecutionOutcome) FromNeverAppliedFailure(v NeverAppliedFailure) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeNeverAppliedFailure performs a merge with any union data inside the ExecutionOutcome, using the provided NeverAppliedFailure
+func (t *ExecutionOutcome) MergeNeverAppliedFailure(v NeverAppliedFailure) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCancellationRefused returns the union data inside the ExecutionOutcome as a CancellationRefused
+func (t ExecutionOutcome) AsCancellationRefused() (CancellationRefused, error) {
+	var body CancellationRefused
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCancellationRefused overwrites any union data inside the ExecutionOutcome as the provided CancellationRefused
+func (t *ExecutionOutcome) FromCancellationRefused(v CancellationRefused) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCancellationRefused performs a merge with any union data inside the ExecutionOutcome, using the provided CancellationRefused
+func (t *ExecutionOutcome) MergeCancellationRefused(v CancellationRefused) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ExecutionOutcome) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ExecutionOutcome) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsPointGeometry returns the union data inside the Geometry as a PointGeometry
+func (t Geometry) AsPointGeometry() (PointGeometry, error) {
+	var body PointGeometry
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPointGeometry overwrites any union data inside the Geometry as the provided PointGeometry
+func (t *Geometry) FromPointGeometry(v PointGeometry) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"Point"}`))
+	t.union = b
+	return err
+}
+
+// MergePointGeometry performs a merge with any union data inside the Geometry, using the provided PointGeometry
+func (t *Geometry) MergePointGeometry(v PointGeometry) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"Point"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsLineGeometry returns the union data inside the Geometry as a LineGeometry
+func (t Geometry) AsLineGeometry() (LineGeometry, error) {
+	var body LineGeometry
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromLineGeometry overwrites any union data inside the Geometry as the provided LineGeometry
+func (t *Geometry) FromLineGeometry(v LineGeometry) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"LineString"}`))
+	t.union = b
+	return err
+}
+
+// MergeLineGeometry performs a merge with any union data inside the Geometry, using the provided LineGeometry
+func (t *Geometry) MergeLineGeometry(v LineGeometry) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"LineString"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPolygonGeometry returns the union data inside the Geometry as a PolygonGeometry
+func (t Geometry) AsPolygonGeometry() (PolygonGeometry, error) {
+	var body PolygonGeometry
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPolygonGeometry overwrites any union data inside the Geometry as the provided PolygonGeometry
+func (t *Geometry) FromPolygonGeometry(v PolygonGeometry) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"Polygon"}`))
+	t.union = b
+	return err
+}
+
+// MergePolygonGeometry performs a merge with any union data inside the Geometry, using the provided PolygonGeometry
+func (t *Geometry) MergePolygonGeometry(v PolygonGeometry) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"Polygon"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Geometry) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t Geometry) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "LineString":
+		return t.AsLineGeometry()
+	case "Point":
+		return t.AsPointGeometry()
+	case "Polygon":
+		return t.AsPolygonGeometry()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t Geometry) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Geometry) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGeometryObservationValue returns the union data inside the GeometryObservationSection as a GeometryObservationValue
+func (t GeometryObservationSection) AsGeometryObservationValue() (GeometryObservationValue, error) {
+	var body GeometryObservationValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGeometryObservationValue overwrites any union data inside the GeometryObservationSection as the provided GeometryObservationValue
+func (t *GeometryObservationSection) FromGeometryObservationValue(v GeometryObservationValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeGeometryObservationValue performs a merge with any union data inside the GeometryObservationSection, using the provided GeometryObservationValue
+func (t *GeometryObservationSection) MergeGeometryObservationValue(v GeometryObservationValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGeometryObservationError returns the union data inside the GeometryObservationSection as a GeometryObservationError
+func (t GeometryObservationSection) AsGeometryObservationError() (GeometryObservationError, error) {
+	var body GeometryObservationError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGeometryObservationError overwrites any union data inside the GeometryObservationSection as the provided GeometryObservationError
+func (t *GeometryObservationSection) FromGeometryObservationError(v GeometryObservationError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeGeometryObservationError performs a merge with any union data inside the GeometryObservationSection, using the provided GeometryObservationError
+func (t *GeometryObservationSection) MergeGeometryObservationError(v GeometryObservationError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGeometryObservationWithdrawn returns the union data inside the GeometryObservationSection as a GeometryObservationWithdrawn
+func (t GeometryObservationSection) AsGeometryObservationWithdrawn() (GeometryObservationWithdrawn, error) {
+	var body GeometryObservationWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGeometryObservationWithdrawn overwrites any union data inside the GeometryObservationSection as the provided GeometryObservationWithdrawn
+func (t *GeometryObservationSection) FromGeometryObservationWithdrawn(v GeometryObservationWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeGeometryObservationWithdrawn performs a merge with any union data inside the GeometryObservationSection, using the provided GeometryObservationWithdrawn
+func (t *GeometryObservationSection) MergeGeometryObservationWithdrawn(v GeometryObservationWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GeometryObservationSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t GeometryObservationSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsGeometryObservationError()
+	case "value":
+		return t.AsGeometryObservationValue()
+	case "withdrawn":
+		return t.AsGeometryObservationWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t GeometryObservationSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GeometryObservationSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGimbalValue returns the union data inside the GimbalSection as a GimbalValue
+func (t GimbalSection) AsGimbalValue() (GimbalValue, error) {
+	var body GimbalValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGimbalValue overwrites any union data inside the GimbalSection as the provided GimbalValue
+func (t *GimbalSection) FromGimbalValue(v GimbalValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeGimbalValue performs a merge with any union data inside the GimbalSection, using the provided GimbalValue
+func (t *GimbalSection) MergeGimbalValue(v GimbalValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGimbalError returns the union data inside the GimbalSection as a GimbalError
+func (t GimbalSection) AsGimbalError() (GimbalError, error) {
+	var body GimbalError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGimbalError overwrites any union data inside the GimbalSection as the provided GimbalError
+func (t *GimbalSection) FromGimbalError(v GimbalError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeGimbalError performs a merge with any union data inside the GimbalSection, using the provided GimbalError
+func (t *GimbalSection) MergeGimbalError(v GimbalError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGimbalWithdrawn returns the union data inside the GimbalSection as a GimbalWithdrawn
+func (t GimbalSection) AsGimbalWithdrawn() (GimbalWithdrawn, error) {
+	var body GimbalWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGimbalWithdrawn overwrites any union data inside the GimbalSection as the provided GimbalWithdrawn
+func (t *GimbalSection) FromGimbalWithdrawn(v GimbalWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeGimbalWithdrawn performs a merge with any union data inside the GimbalSection, using the provided GimbalWithdrawn
+func (t *GimbalSection) MergeGimbalWithdrawn(v GimbalWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GimbalSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t GimbalSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsGimbalError()
+	case "value":
+		return t.AsGimbalValue()
+	case "withdrawn":
+		return t.AsGimbalWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t GimbalSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GimbalSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsMediaObservationValue returns the union data inside the MediaObservationSection as a MediaObservationValue
+func (t MediaObservationSection) AsMediaObservationValue() (MediaObservationValue, error) {
+	var body MediaObservationValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMediaObservationValue overwrites any union data inside the MediaObservationSection as the provided MediaObservationValue
+func (t *MediaObservationSection) FromMediaObservationValue(v MediaObservationValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeMediaObservationValue performs a merge with any union data inside the MediaObservationSection, using the provided MediaObservationValue
+func (t *MediaObservationSection) MergeMediaObservationValue(v MediaObservationValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMediaObservationError returns the union data inside the MediaObservationSection as a MediaObservationError
+func (t MediaObservationSection) AsMediaObservationError() (MediaObservationError, error) {
+	var body MediaObservationError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMediaObservationError overwrites any union data inside the MediaObservationSection as the provided MediaObservationError
+func (t *MediaObservationSection) FromMediaObservationError(v MediaObservationError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeMediaObservationError performs a merge with any union data inside the MediaObservationSection, using the provided MediaObservationError
+func (t *MediaObservationSection) MergeMediaObservationError(v MediaObservationError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMediaObservationWithdrawn returns the union data inside the MediaObservationSection as a MediaObservationWithdrawn
+func (t MediaObservationSection) AsMediaObservationWithdrawn() (MediaObservationWithdrawn, error) {
+	var body MediaObservationWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMediaObservationWithdrawn overwrites any union data inside the MediaObservationSection as the provided MediaObservationWithdrawn
+func (t *MediaObservationSection) FromMediaObservationWithdrawn(v MediaObservationWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeMediaObservationWithdrawn performs a merge with any union data inside the MediaObservationSection, using the provided MediaObservationWithdrawn
+func (t *MediaObservationSection) MergeMediaObservationWithdrawn(v MediaObservationWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t MediaObservationSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t MediaObservationSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsMediaObservationError()
+	case "value":
+		return t.AsMediaObservationValue()
+	case "withdrawn":
+		return t.AsMediaObservationWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t MediaObservationSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *MediaObservationSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsMilitaryDisplayValue returns the union data inside the MilitaryDisplaySection as a MilitaryDisplayValue
+func (t MilitaryDisplaySection) AsMilitaryDisplayValue() (MilitaryDisplayValue, error) {
+	var body MilitaryDisplayValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMilitaryDisplayValue overwrites any union data inside the MilitaryDisplaySection as the provided MilitaryDisplayValue
+func (t *MilitaryDisplaySection) FromMilitaryDisplayValue(v MilitaryDisplayValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeMilitaryDisplayValue performs a merge with any union data inside the MilitaryDisplaySection, using the provided MilitaryDisplayValue
+func (t *MilitaryDisplaySection) MergeMilitaryDisplayValue(v MilitaryDisplayValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMilitaryDisplayError returns the union data inside the MilitaryDisplaySection as a MilitaryDisplayError
+func (t MilitaryDisplaySection) AsMilitaryDisplayError() (MilitaryDisplayError, error) {
+	var body MilitaryDisplayError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMilitaryDisplayError overwrites any union data inside the MilitaryDisplaySection as the provided MilitaryDisplayError
+func (t *MilitaryDisplaySection) FromMilitaryDisplayError(v MilitaryDisplayError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeMilitaryDisplayError performs a merge with any union data inside the MilitaryDisplaySection, using the provided MilitaryDisplayError
+func (t *MilitaryDisplaySection) MergeMilitaryDisplayError(v MilitaryDisplayError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMilitaryDisplayWithdrawn returns the union data inside the MilitaryDisplaySection as a MilitaryDisplayWithdrawn
+func (t MilitaryDisplaySection) AsMilitaryDisplayWithdrawn() (MilitaryDisplayWithdrawn, error) {
+	var body MilitaryDisplayWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMilitaryDisplayWithdrawn overwrites any union data inside the MilitaryDisplaySection as the provided MilitaryDisplayWithdrawn
+func (t *MilitaryDisplaySection) FromMilitaryDisplayWithdrawn(v MilitaryDisplayWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeMilitaryDisplayWithdrawn performs a merge with any union data inside the MilitaryDisplaySection, using the provided MilitaryDisplayWithdrawn
+func (t *MilitaryDisplaySection) MergeMilitaryDisplayWithdrawn(v MilitaryDisplayWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t MilitaryDisplaySection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t MilitaryDisplaySection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsMilitaryDisplayError()
+	case "value":
+		return t.AsMilitaryDisplayValue()
+	case "withdrawn":
+		return t.AsMilitaryDisplayWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t MilitaryDisplaySection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *MilitaryDisplaySection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsMoveToPosition returns the union data inside the MoveToTarget as a MoveToPosition
+func (t MoveToTarget) AsMoveToPosition() (MoveToPosition, error) {
+	var body MoveToPosition
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMoveToPosition overwrites any union data inside the MoveToTarget as the provided MoveToPosition
+func (t *MoveToTarget) FromMoveToPosition(v MoveToPosition) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"position"}`))
+	t.union = b
+	return err
+}
+
+// MergeMoveToPosition performs a merge with any union data inside the MoveToTarget, using the provided MoveToPosition
+func (t *MoveToTarget) MergeMoveToPosition(v MoveToPosition) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"position"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMoveToGeofeature returns the union data inside the MoveToTarget as a MoveToGeofeature
+func (t MoveToTarget) AsMoveToGeofeature() (MoveToGeofeature, error) {
+	var body MoveToGeofeature
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMoveToGeofeature overwrites any union data inside the MoveToTarget as the provided MoveToGeofeature
+func (t *MoveToTarget) FromMoveToGeofeature(v MoveToGeofeature) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"geofeature"}`))
+	t.union = b
+	return err
+}
+
+// MergeMoveToGeofeature performs a merge with any union data inside the MoveToTarget, using the provided MoveToGeofeature
+func (t *MoveToTarget) MergeMoveToGeofeature(v MoveToGeofeature) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"geofeature"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t MoveToTarget) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t MoveToTarget) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "geofeature":
+		return t.AsMoveToGeofeature()
+	case "position":
+		return t.AsMoveToPosition()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t MoveToTarget) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *MoveToTarget) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsBatteryReserve returns the union data inside the PowerReserve as a BatteryReserve
+func (t PowerReserve) AsBatteryReserve() (BatteryReserve, error) {
+	var body BatteryReserve
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBatteryReserve overwrites any union data inside the PowerReserve as the provided BatteryReserve
+func (t *PowerReserve) FromBatteryReserve(v BatteryReserve) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"battery"}`))
+	t.union = b
+	return err
+}
+
+// MergeBatteryReserve performs a merge with any union data inside the PowerReserve, using the provided BatteryReserve
+func (t *PowerReserve) MergeBatteryReserve(v BatteryReserve) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"battery"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFuelReserve returns the union data inside the PowerReserve as a FuelReserve
+func (t PowerReserve) AsFuelReserve() (FuelReserve, error) {
+	var body FuelReserve
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFuelReserve overwrites any union data inside the PowerReserve as the provided FuelReserve
+func (t *PowerReserve) FromFuelReserve(v FuelReserve) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"fuel"}`))
+	t.union = b
+	return err
+}
+
+// MergeFuelReserve performs a merge with any union data inside the PowerReserve, using the provided FuelReserve
+func (t *PowerReserve) MergeFuelReserve(v FuelReserve) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"fuel"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PowerReserve) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t PowerReserve) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "battery":
+		return t.AsBatteryReserve()
+	case "fuel":
+		return t.AsFuelReserve()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t PowerReserve) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PowerReserve) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsPowerValue returns the union data inside the PowerSection as a PowerValue
+func (t PowerSection) AsPowerValue() (PowerValue, error) {
+	var body PowerValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPowerValue overwrites any union data inside the PowerSection as the provided PowerValue
+func (t *PowerSection) FromPowerValue(v PowerValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergePowerValue performs a merge with any union data inside the PowerSection, using the provided PowerValue
+func (t *PowerSection) MergePowerValue(v PowerValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPowerError returns the union data inside the PowerSection as a PowerError
+func (t PowerSection) AsPowerError() (PowerError, error) {
+	var body PowerError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPowerError overwrites any union data inside the PowerSection as the provided PowerError
+func (t *PowerSection) FromPowerError(v PowerError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergePowerError performs a merge with any union data inside the PowerSection, using the provided PowerError
+func (t *PowerSection) MergePowerError(v PowerError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPowerWithdrawn returns the union data inside the PowerSection as a PowerWithdrawn
+func (t PowerSection) AsPowerWithdrawn() (PowerWithdrawn, error) {
+	var body PowerWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPowerWithdrawn overwrites any union data inside the PowerSection as the provided PowerWithdrawn
+func (t *PowerSection) FromPowerWithdrawn(v PowerWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergePowerWithdrawn performs a merge with any union data inside the PowerSection, using the provided PowerWithdrawn
+func (t *PowerSection) MergePowerWithdrawn(v PowerWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PowerSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t PowerSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsPowerError()
+	case "value":
+		return t.AsPowerValue()
+	case "withdrawn":
+		return t.AsPowerWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t PowerSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PowerSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAssetSource returns the union data inside the ReportedSource as a AssetSource
+func (t ReportedSource) AsAssetSource() (AssetSource, error) {
+	var body AssetSource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAssetSource overwrites any union data inside the ReportedSource as the provided AssetSource
+func (t *ReportedSource) FromAssetSource(v AssetSource) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"asset"}`))
+	t.union = b
+	return err
+}
+
+// MergeAssetSource performs a merge with any union data inside the ReportedSource, using the provided AssetSource
+func (t *ReportedSource) MergeAssetSource(v AssetSource) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"asset"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPublisherSource returns the union data inside the ReportedSource as a PublisherSource
+func (t ReportedSource) AsPublisherSource() (PublisherSource, error) {
+	var body PublisherSource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublisherSource overwrites any union data inside the ReportedSource as the provided PublisherSource
+func (t *ReportedSource) FromPublisherSource(v PublisherSource) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"publisher"}`))
+	t.union = b
+	return err
+}
+
+// MergePublisherSource performs a merge with any union data inside the ReportedSource, using the provided PublisherSource
+func (t *ReportedSource) MergePublisherSource(v PublisherSource) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"publisher"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ReportedSource) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ReportedSource) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "asset":
+		return t.AsAssetSource()
+	case "publisher":
+		return t.AsPublisherSource()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ReportedSource) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ReportedSource) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUpsertChange returns the union data inside the ResourceChange as a UpsertChange
+func (t ResourceChange) AsUpsertChange() (UpsertChange, error) {
+	var body UpsertChange
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpsertChange overwrites any union data inside the ResourceChange as the provided UpsertChange
+func (t *ResourceChange) FromUpsertChange(v UpsertChange) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"upsert"}`))
+	t.union = b
+	return err
+}
+
+// MergeUpsertChange performs a merge with any union data inside the ResourceChange, using the provided UpsertChange
+func (t *ResourceChange) MergeUpsertChange(v UpsertChange) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"upsert"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsDeleteChange returns the union data inside the ResourceChange as a DeleteChange
+func (t ResourceChange) AsDeleteChange() (DeleteChange, error) {
+	var body DeleteChange
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDeleteChange overwrites any union data inside the ResourceChange as the provided DeleteChange
+func (t *ResourceChange) FromDeleteChange(v DeleteChange) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"delete"}`))
+	t.union = b
+	return err
+}
+
+// MergeDeleteChange performs a merge with any union data inside the ResourceChange, using the provided DeleteChange
+func (t *ResourceChange) MergeDeleteChange(v DeleteChange) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"kind":"delete"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ResourceChange) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ResourceChange) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "delete":
+		return t.AsDeleteChange()
+	case "upsert":
+		return t.AsUpsertChange()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ResourceChange) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ResourceChange) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAsset returns the union data inside the ResourceImage as a Asset
+func (t ResourceImage) AsAsset() (Asset, error) {
+	var body Asset
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAsset overwrites any union data inside the ResourceImage as the provided Asset
+func (t *ResourceImage) FromAsset(v Asset) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAsset performs a merge with any union data inside the ResourceImage, using the provided Asset
+func (t *ResourceImage) MergeAsset(v Asset) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTrack returns the union data inside the ResourceImage as a Track
+func (t ResourceImage) AsTrack() (Track, error) {
+	var body Track
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrack overwrites any union data inside the ResourceImage as the provided Track
+func (t *ResourceImage) FromTrack(v Track) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTrack performs a merge with any union data inside the ResourceImage, using the provided Track
+func (t *ResourceImage) MergeTrack(v Track) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGeofeature returns the union data inside the ResourceImage as a Geofeature
+func (t ResourceImage) AsGeofeature() (Geofeature, error) {
+	var body Geofeature
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGeofeature overwrites any union data inside the ResourceImage as the provided Geofeature
+func (t *ResourceImage) FromGeofeature(v Geofeature) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGeofeature performs a merge with any union data inside the ResourceImage, using the provided Geofeature
+func (t *ResourceImage) MergeGeofeature(v Geofeature) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTask returns the union data inside the ResourceImage as a Task
+func (t ResourceImage) AsTask() (Task, error) {
+	var body Task
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTask overwrites any union data inside the ResourceImage as the provided Task
+func (t *ResourceImage) FromTask(v Task) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeTask performs a merge with any union data inside the ResourceImage, using the provided Task
+func (t *ResourceImage) MergeTask(v Task) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsObject returns the union data inside the ResourceImage as a Object
+func (t ResourceImage) AsObject() (Object, error) {
+	var body Object
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromObject overwrites any union data inside the ResourceImage as the provided Object
+func (t *ResourceImage) FromObject(v Object) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeObject performs a merge with any union data inside the ResourceImage, using the provided Object
+func (t *ResourceImage) MergeObject(v Object) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ResourceImage) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ResourceImage) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedAttitudeSection as a UnreportedSection
+func (t RetainedAttitudeSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedAttitudeSection as the provided UnreportedSection
+func (t *RetainedAttitudeSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedAttitudeSection, using the provided UnreportedSection
+func (t *RetainedAttitudeSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedAttitudeReport returns the union data inside the RetainedAttitudeSection as a RetainedAttitudeReport
+func (t RetainedAttitudeSection) AsRetainedAttitudeReport() (RetainedAttitudeReport, error) {
+	var body RetainedAttitudeReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedAttitudeReport overwrites any union data inside the RetainedAttitudeSection as the provided RetainedAttitudeReport
+func (t *RetainedAttitudeSection) FromRetainedAttitudeReport(v RetainedAttitudeReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedAttitudeReport performs a merge with any union data inside the RetainedAttitudeSection, using the provided RetainedAttitudeReport
+func (t *RetainedAttitudeSection) MergeRetainedAttitudeReport(v RetainedAttitudeReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedAttitudeSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedAttitudeSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedAttitudeReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedAttitudeSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedAttitudeSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedCameraOpticsSection as a UnreportedSection
+func (t RetainedCameraOpticsSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedCameraOpticsSection as the provided UnreportedSection
+func (t *RetainedCameraOpticsSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedCameraOpticsSection, using the provided UnreportedSection
+func (t *RetainedCameraOpticsSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedCameraOpticsReport returns the union data inside the RetainedCameraOpticsSection as a RetainedCameraOpticsReport
+func (t RetainedCameraOpticsSection) AsRetainedCameraOpticsReport() (RetainedCameraOpticsReport, error) {
+	var body RetainedCameraOpticsReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedCameraOpticsReport overwrites any union data inside the RetainedCameraOpticsSection as the provided RetainedCameraOpticsReport
+func (t *RetainedCameraOpticsSection) FromRetainedCameraOpticsReport(v RetainedCameraOpticsReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedCameraOpticsReport performs a merge with any union data inside the RetainedCameraOpticsSection, using the provided RetainedCameraOpticsReport
+func (t *RetainedCameraOpticsSection) MergeRetainedCameraOpticsReport(v RetainedCameraOpticsReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedCameraOpticsSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedCameraOpticsSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedCameraOpticsReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedCameraOpticsSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedCameraOpticsSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedCameraSection as a UnreportedSection
+func (t RetainedCameraSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedCameraSection as the provided UnreportedSection
+func (t *RetainedCameraSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedCameraSection, using the provided UnreportedSection
+func (t *RetainedCameraSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedCameraReport returns the union data inside the RetainedCameraSection as a RetainedCameraReport
+func (t RetainedCameraSection) AsRetainedCameraReport() (RetainedCameraReport, error) {
+	var body RetainedCameraReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedCameraReport overwrites any union data inside the RetainedCameraSection as the provided RetainedCameraReport
+func (t *RetainedCameraSection) FromRetainedCameraReport(v RetainedCameraReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedCameraReport performs a merge with any union data inside the RetainedCameraSection, using the provided RetainedCameraReport
+func (t *RetainedCameraSection) MergeRetainedCameraReport(v RetainedCameraReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedCameraSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedCameraSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedCameraReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedCameraSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedCameraSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedCommunicationsSection as a UnreportedSection
+func (t RetainedCommunicationsSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedCommunicationsSection as the provided UnreportedSection
+func (t *RetainedCommunicationsSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedCommunicationsSection, using the provided UnreportedSection
+func (t *RetainedCommunicationsSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedCommunicationsReport returns the union data inside the RetainedCommunicationsSection as a RetainedCommunicationsReport
+func (t RetainedCommunicationsSection) AsRetainedCommunicationsReport() (RetainedCommunicationsReport, error) {
+	var body RetainedCommunicationsReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedCommunicationsReport overwrites any union data inside the RetainedCommunicationsSection as the provided RetainedCommunicationsReport
+func (t *RetainedCommunicationsSection) FromRetainedCommunicationsReport(v RetainedCommunicationsReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedCommunicationsReport performs a merge with any union data inside the RetainedCommunicationsSection, using the provided RetainedCommunicationsReport
+func (t *RetainedCommunicationsSection) MergeRetainedCommunicationsReport(v RetainedCommunicationsReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedCommunicationsSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedCommunicationsSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedCommunicationsReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedCommunicationsSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedCommunicationsSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedGeometryObservationSection as a UnreportedSection
+func (t RetainedGeometryObservationSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedGeometryObservationSection as the provided UnreportedSection
+func (t *RetainedGeometryObservationSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedGeometryObservationSection, using the provided UnreportedSection
+func (t *RetainedGeometryObservationSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedGeometryObservationReport returns the union data inside the RetainedGeometryObservationSection as a RetainedGeometryObservationReport
+func (t RetainedGeometryObservationSection) AsRetainedGeometryObservationReport() (RetainedGeometryObservationReport, error) {
+	var body RetainedGeometryObservationReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedGeometryObservationReport overwrites any union data inside the RetainedGeometryObservationSection as the provided RetainedGeometryObservationReport
+func (t *RetainedGeometryObservationSection) FromRetainedGeometryObservationReport(v RetainedGeometryObservationReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedGeometryObservationReport performs a merge with any union data inside the RetainedGeometryObservationSection, using the provided RetainedGeometryObservationReport
+func (t *RetainedGeometryObservationSection) MergeRetainedGeometryObservationReport(v RetainedGeometryObservationReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedGeometryObservationSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedGeometryObservationSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedGeometryObservationReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedGeometryObservationSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedGeometryObservationSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedGimbalSection as a UnreportedSection
+func (t RetainedGimbalSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedGimbalSection as the provided UnreportedSection
+func (t *RetainedGimbalSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedGimbalSection, using the provided UnreportedSection
+func (t *RetainedGimbalSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedGimbalReport returns the union data inside the RetainedGimbalSection as a RetainedGimbalReport
+func (t RetainedGimbalSection) AsRetainedGimbalReport() (RetainedGimbalReport, error) {
+	var body RetainedGimbalReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedGimbalReport overwrites any union data inside the RetainedGimbalSection as the provided RetainedGimbalReport
+func (t *RetainedGimbalSection) FromRetainedGimbalReport(v RetainedGimbalReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedGimbalReport performs a merge with any union data inside the RetainedGimbalSection, using the provided RetainedGimbalReport
+func (t *RetainedGimbalSection) MergeRetainedGimbalReport(v RetainedGimbalReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedGimbalSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedGimbalSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedGimbalReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedGimbalSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedGimbalSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedMediaObservationSection as a UnreportedSection
+func (t RetainedMediaObservationSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedMediaObservationSection as the provided UnreportedSection
+func (t *RetainedMediaObservationSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedMediaObservationSection, using the provided UnreportedSection
+func (t *RetainedMediaObservationSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedMediaObservationReport returns the union data inside the RetainedMediaObservationSection as a RetainedMediaObservationReport
+func (t RetainedMediaObservationSection) AsRetainedMediaObservationReport() (RetainedMediaObservationReport, error) {
+	var body RetainedMediaObservationReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedMediaObservationReport overwrites any union data inside the RetainedMediaObservationSection as the provided RetainedMediaObservationReport
+func (t *RetainedMediaObservationSection) FromRetainedMediaObservationReport(v RetainedMediaObservationReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedMediaObservationReport performs a merge with any union data inside the RetainedMediaObservationSection, using the provided RetainedMediaObservationReport
+func (t *RetainedMediaObservationSection) MergeRetainedMediaObservationReport(v RetainedMediaObservationReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedMediaObservationSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedMediaObservationSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedMediaObservationReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedMediaObservationSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedMediaObservationSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedMilitaryDisplaySection as a UnreportedSection
+func (t RetainedMilitaryDisplaySection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedMilitaryDisplaySection as the provided UnreportedSection
+func (t *RetainedMilitaryDisplaySection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedMilitaryDisplaySection, using the provided UnreportedSection
+func (t *RetainedMilitaryDisplaySection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedMilitaryDisplayReport returns the union data inside the RetainedMilitaryDisplaySection as a RetainedMilitaryDisplayReport
+func (t RetainedMilitaryDisplaySection) AsRetainedMilitaryDisplayReport() (RetainedMilitaryDisplayReport, error) {
+	var body RetainedMilitaryDisplayReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedMilitaryDisplayReport overwrites any union data inside the RetainedMilitaryDisplaySection as the provided RetainedMilitaryDisplayReport
+func (t *RetainedMilitaryDisplaySection) FromRetainedMilitaryDisplayReport(v RetainedMilitaryDisplayReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedMilitaryDisplayReport performs a merge with any union data inside the RetainedMilitaryDisplaySection, using the provided RetainedMilitaryDisplayReport
+func (t *RetainedMilitaryDisplaySection) MergeRetainedMilitaryDisplayReport(v RetainedMilitaryDisplayReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedMilitaryDisplaySection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedMilitaryDisplaySection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedMilitaryDisplayReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedMilitaryDisplaySection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedMilitaryDisplaySection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedPowerSection as a UnreportedSection
+func (t RetainedPowerSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedPowerSection as the provided UnreportedSection
+func (t *RetainedPowerSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedPowerSection, using the provided UnreportedSection
+func (t *RetainedPowerSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedPowerReport returns the union data inside the RetainedPowerSection as a RetainedPowerReport
+func (t RetainedPowerSection) AsRetainedPowerReport() (RetainedPowerReport, error) {
+	var body RetainedPowerReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedPowerReport overwrites any union data inside the RetainedPowerSection as the provided RetainedPowerReport
+func (t *RetainedPowerSection) FromRetainedPowerReport(v RetainedPowerReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedPowerReport performs a merge with any union data inside the RetainedPowerSection, using the provided RetainedPowerReport
+func (t *RetainedPowerSection) MergeRetainedPowerReport(v RetainedPowerReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedPowerSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedPowerSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedPowerReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedPowerSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedPowerSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedSensorReferencesSection as a UnreportedSection
+func (t RetainedSensorReferencesSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedSensorReferencesSection as the provided UnreportedSection
+func (t *RetainedSensorReferencesSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedSensorReferencesSection, using the provided UnreportedSection
+func (t *RetainedSensorReferencesSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedSensorReferencesReport returns the union data inside the RetainedSensorReferencesSection as a RetainedSensorReferencesReport
+func (t RetainedSensorReferencesSection) AsRetainedSensorReferencesReport() (RetainedSensorReferencesReport, error) {
+	var body RetainedSensorReferencesReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedSensorReferencesReport overwrites any union data inside the RetainedSensorReferencesSection as the provided RetainedSensorReferencesReport
+func (t *RetainedSensorReferencesSection) FromRetainedSensorReferencesReport(v RetainedSensorReferencesReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedSensorReferencesReport performs a merge with any union data inside the RetainedSensorReferencesSection, using the provided RetainedSensorReferencesReport
+func (t *RetainedSensorReferencesSection) MergeRetainedSensorReferencesReport(v RetainedSensorReferencesReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedSensorReferencesSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedSensorReferencesSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedSensorReferencesReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedSensorReferencesSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedSensorReferencesSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedStatusSection as a UnreportedSection
+func (t RetainedStatusSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedStatusSection as the provided UnreportedSection
+func (t *RetainedStatusSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedStatusSection, using the provided UnreportedSection
+func (t *RetainedStatusSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedStatusReport returns the union data inside the RetainedStatusSection as a RetainedStatusReport
+func (t RetainedStatusSection) AsRetainedStatusReport() (RetainedStatusReport, error) {
+	var body RetainedStatusReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedStatusReport overwrites any union data inside the RetainedStatusSection as the provided RetainedStatusReport
+func (t *RetainedStatusSection) FromRetainedStatusReport(v RetainedStatusReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedStatusReport performs a merge with any union data inside the RetainedStatusSection, using the provided RetainedStatusReport
+func (t *RetainedStatusSection) MergeRetainedStatusReport(v RetainedStatusReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedStatusSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedStatusSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedStatusReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedStatusSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedStatusSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedTelemetrySection as a UnreportedSection
+func (t RetainedTelemetrySection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedTelemetrySection as the provided UnreportedSection
+func (t *RetainedTelemetrySection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedTelemetrySection, using the provided UnreportedSection
+func (t *RetainedTelemetrySection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedTelemetryReport returns the union data inside the RetainedTelemetrySection as a RetainedTelemetryReport
+func (t RetainedTelemetrySection) AsRetainedTelemetryReport() (RetainedTelemetryReport, error) {
+	var body RetainedTelemetryReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedTelemetryReport overwrites any union data inside the RetainedTelemetrySection as the provided RetainedTelemetryReport
+func (t *RetainedTelemetrySection) FromRetainedTelemetryReport(v RetainedTelemetryReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedTelemetryReport performs a merge with any union data inside the RetainedTelemetrySection, using the provided RetainedTelemetryReport
+func (t *RetainedTelemetrySection) MergeRetainedTelemetryReport(v RetainedTelemetryReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedTelemetrySection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedTelemetrySection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedTelemetryReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedTelemetrySection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedTelemetrySection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUnreportedSection returns the union data inside the RetainedTrackTypeObservationSection as a UnreportedSection
+func (t RetainedTrackTypeObservationSection) AsUnreportedSection() (UnreportedSection, error) {
+	var body UnreportedSection
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUnreportedSection overwrites any union data inside the RetainedTrackTypeObservationSection as the provided UnreportedSection
+func (t *RetainedTrackTypeObservationSection) FromUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	t.union = b
+	return err
+}
+
+// MergeUnreportedSection performs a merge with any union data inside the RetainedTrackTypeObservationSection, using the provided UnreportedSection
+func (t *RetainedTrackTypeObservationSection) MergeUnreportedSection(v UnreportedSection) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"unknown"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRetainedTrackTypeObservationReport returns the union data inside the RetainedTrackTypeObservationSection as a RetainedTrackTypeObservationReport
+func (t RetainedTrackTypeObservationSection) AsRetainedTrackTypeObservationReport() (RetainedTrackTypeObservationReport, error) {
+	var body RetainedTrackTypeObservationReport
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRetainedTrackTypeObservationReport overwrites any union data inside the RetainedTrackTypeObservationSection as the provided RetainedTrackTypeObservationReport
+func (t *RetainedTrackTypeObservationSection) FromRetainedTrackTypeObservationReport(v RetainedTrackTypeObservationReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	t.union = b
+	return err
+}
+
+// MergeRetainedTrackTypeObservationReport performs a merge with any union data inside the RetainedTrackTypeObservationSection, using the provided RetainedTrackTypeObservationReport
+func (t *RetainedTrackTypeObservationSection) MergeRetainedTrackTypeObservationReport(v RetainedTrackTypeObservationReport) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"reported"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RetainedTrackTypeObservationSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t RetainedTrackTypeObservationSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "reported":
+		return t.AsRetainedTrackTypeObservationReport()
+	case "unknown":
+		return t.AsUnreportedSection()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t RetainedTrackTypeObservationSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RetainedTrackTypeObservationSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSensorReferencesValue returns the union data inside the SensorReferencesSection as a SensorReferencesValue
+func (t SensorReferencesSection) AsSensorReferencesValue() (SensorReferencesValue, error) {
+	var body SensorReferencesValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSensorReferencesValue overwrites any union data inside the SensorReferencesSection as the provided SensorReferencesValue
+func (t *SensorReferencesSection) FromSensorReferencesValue(v SensorReferencesValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeSensorReferencesValue performs a merge with any union data inside the SensorReferencesSection, using the provided SensorReferencesValue
+func (t *SensorReferencesSection) MergeSensorReferencesValue(v SensorReferencesValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSensorReferencesError returns the union data inside the SensorReferencesSection as a SensorReferencesError
+func (t SensorReferencesSection) AsSensorReferencesError() (SensorReferencesError, error) {
+	var body SensorReferencesError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSensorReferencesError overwrites any union data inside the SensorReferencesSection as the provided SensorReferencesError
+func (t *SensorReferencesSection) FromSensorReferencesError(v SensorReferencesError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeSensorReferencesError performs a merge with any union data inside the SensorReferencesSection, using the provided SensorReferencesError
+func (t *SensorReferencesSection) MergeSensorReferencesError(v SensorReferencesError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSensorReferencesWithdrawn returns the union data inside the SensorReferencesSection as a SensorReferencesWithdrawn
+func (t SensorReferencesSection) AsSensorReferencesWithdrawn() (SensorReferencesWithdrawn, error) {
+	var body SensorReferencesWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSensorReferencesWithdrawn overwrites any union data inside the SensorReferencesSection as the provided SensorReferencesWithdrawn
+func (t *SensorReferencesSection) FromSensorReferencesWithdrawn(v SensorReferencesWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeSensorReferencesWithdrawn performs a merge with any union data inside the SensorReferencesSection, using the provided SensorReferencesWithdrawn
+func (t *SensorReferencesSection) MergeSensorReferencesWithdrawn(v SensorReferencesWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SensorReferencesSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t SensorReferencesSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsSensorReferencesError()
+	case "value":
+		return t.AsSensorReferencesValue()
+	case "withdrawn":
+		return t.AsSensorReferencesWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t SensorReferencesSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SensorReferencesSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAuthenticatedFrame returns the union data inside the ServerFrame as a AuthenticatedFrame
+func (t ServerFrame) AsAuthenticatedFrame() (AuthenticatedFrame, error) {
+	var body AuthenticatedFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAuthenticatedFrame overwrites any union data inside the ServerFrame as the provided AuthenticatedFrame
+func (t *ServerFrame) FromAuthenticatedFrame(v AuthenticatedFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"authenticated"}`))
+	t.union = b
+	return err
+}
+
+// MergeAuthenticatedFrame performs a merge with any union data inside the ServerFrame, using the provided AuthenticatedFrame
+func (t *ServerFrame) MergeAuthenticatedFrame(v AuthenticatedFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"authenticated"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSubscriptionAckFrame returns the union data inside the ServerFrame as a SubscriptionAckFrame
+func (t ServerFrame) AsSubscriptionAckFrame() (SubscriptionAckFrame, error) {
+	var body SubscriptionAckFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSubscriptionAckFrame overwrites any union data inside the ServerFrame as the provided SubscriptionAckFrame
+func (t *ServerFrame) FromSubscriptionAckFrame(v SubscriptionAckFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"subscription_ack"}`))
+	t.union = b
+	return err
+}
+
+// MergeSubscriptionAckFrame performs a merge with any union data inside the ServerFrame, using the provided SubscriptionAckFrame
+func (t *ServerFrame) MergeSubscriptionAckFrame(v SubscriptionAckFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"subscription_ack"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsChangesFrame returns the union data inside the ServerFrame as a ChangesFrame
+func (t ServerFrame) AsChangesFrame() (ChangesFrame, error) {
+	var body ChangesFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChangesFrame overwrites any union data inside the ServerFrame as the provided ChangesFrame
+func (t *ServerFrame) FromChangesFrame(v ChangesFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"changes"}`))
+	t.union = b
+	return err
+}
+
+// MergeChangesFrame performs a merge with any union data inside the ServerFrame, using the provided ChangesFrame
+func (t *ServerFrame) MergeChangesFrame(v ChangesFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"changes"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsHandoffCompleteFrame returns the union data inside the ServerFrame as a HandoffCompleteFrame
+func (t ServerFrame) AsHandoffCompleteFrame() (HandoffCompleteFrame, error) {
+	var body HandoffCompleteFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromHandoffCompleteFrame overwrites any union data inside the ServerFrame as the provided HandoffCompleteFrame
+func (t *ServerFrame) FromHandoffCompleteFrame(v HandoffCompleteFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"handoff_complete"}`))
+	t.union = b
+	return err
+}
+
+// MergeHandoffCompleteFrame performs a merge with any union data inside the ServerFrame, using the provided HandoffCompleteFrame
+func (t *ServerFrame) MergeHandoffCompleteFrame(v HandoffCompleteFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"handoff_complete"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGapFrame returns the union data inside the ServerFrame as a GapFrame
+func (t ServerFrame) AsGapFrame() (GapFrame, error) {
+	var body GapFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGapFrame overwrites any union data inside the ServerFrame as the provided GapFrame
+func (t *ServerFrame) FromGapFrame(v GapFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"gap"}`))
+	t.union = b
+	return err
+}
+
+// MergeGapFrame performs a merge with any union data inside the ServerFrame, using the provided GapFrame
+func (t *ServerFrame) MergeGapFrame(v GapFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"gap"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRecoveryRequiredFrame returns the union data inside the ServerFrame as a RecoveryRequiredFrame
+func (t ServerFrame) AsRecoveryRequiredFrame() (RecoveryRequiredFrame, error) {
+	var body RecoveryRequiredFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRecoveryRequiredFrame overwrites any union data inside the ServerFrame as the provided RecoveryRequiredFrame
+func (t *ServerFrame) FromRecoveryRequiredFrame(v RecoveryRequiredFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"recovery_required"}`))
+	t.union = b
+	return err
+}
+
+// MergeRecoveryRequiredFrame performs a merge with any union data inside the ServerFrame, using the provided RecoveryRequiredFrame
+func (t *ServerFrame) MergeRecoveryRequiredFrame(v RecoveryRequiredFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"recovery_required"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSnapshotReleasedFrame returns the union data inside the ServerFrame as a SnapshotReleasedFrame
+func (t ServerFrame) AsSnapshotReleasedFrame() (SnapshotReleasedFrame, error) {
+	var body SnapshotReleasedFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSnapshotReleasedFrame overwrites any union data inside the ServerFrame as the provided SnapshotReleasedFrame
+func (t *ServerFrame) FromSnapshotReleasedFrame(v SnapshotReleasedFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"snapshot_released"}`))
+	t.union = b
+	return err
+}
+
+// MergeSnapshotReleasedFrame performs a merge with any union data inside the ServerFrame, using the provided SnapshotReleasedFrame
+func (t *ServerFrame) MergeSnapshotReleasedFrame(v SnapshotReleasedFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"snapshot_released"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncErrorFrame returns the union data inside the ServerFrame as a SyncErrorFrame
+func (t ServerFrame) AsSyncErrorFrame() (SyncErrorFrame, error) {
+	var body SyncErrorFrame
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncErrorFrame overwrites any union data inside the ServerFrame as the provided SyncErrorFrame
+func (t *ServerFrame) FromSyncErrorFrame(v SyncErrorFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeSyncErrorFrame performs a merge with any union data inside the ServerFrame, using the provided SyncErrorFrame
+func (t *ServerFrame) MergeSyncErrorFrame(v SyncErrorFrame) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ServerFrame) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ServerFrame) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "authenticated":
+		return t.AsAuthenticatedFrame()
+	case "changes":
+		return t.AsChangesFrame()
+	case "error":
+		return t.AsSyncErrorFrame()
+	case "gap":
+		return t.AsGapFrame()
+	case "handoff_complete":
+		return t.AsHandoffCompleteFrame()
+	case "recovery_required":
+		return t.AsRecoveryRequiredFrame()
+	case "snapshot_released":
+		return t.AsSnapshotReleasedFrame()
+	case "subscription_ack":
+		return t.AsSubscriptionAckFrame()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ServerFrame) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ServerFrame) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsStatusValue returns the union data inside the StatusSection as a StatusValue
+func (t StatusSection) AsStatusValue() (StatusValue, error) {
+	var body StatusValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromStatusValue overwrites any union data inside the StatusSection as the provided StatusValue
+func (t *StatusSection) FromStatusValue(v StatusValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeStatusValue performs a merge with any union data inside the StatusSection, using the provided StatusValue
+func (t *StatusSection) MergeStatusValue(v StatusValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsStatusError returns the union data inside the StatusSection as a StatusError
+func (t StatusSection) AsStatusError() (StatusError, error) {
+	var body StatusError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromStatusError overwrites any union data inside the StatusSection as the provided StatusError
+func (t *StatusSection) FromStatusError(v StatusError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeStatusError performs a merge with any union data inside the StatusSection, using the provided StatusError
+func (t *StatusSection) MergeStatusError(v StatusError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsStatusWithdrawn returns the union data inside the StatusSection as a StatusWithdrawn
+func (t StatusSection) AsStatusWithdrawn() (StatusWithdrawn, error) {
+	var body StatusWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromStatusWithdrawn overwrites any union data inside the StatusSection as the provided StatusWithdrawn
+func (t *StatusSection) FromStatusWithdrawn(v StatusWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeStatusWithdrawn performs a merge with any union data inside the StatusSection, using the provided StatusWithdrawn
+func (t *StatusSection) MergeStatusWithdrawn(v StatusWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t StatusSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t StatusSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsStatusError()
+	case "value":
+		return t.AsStatusValue()
+	case "withdrawn":
+		return t.AsStatusWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t StatusSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *StatusSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsQueuedMoveTo returns the union data inside the TaskCommand as a QueuedMoveTo
+func (t TaskCommand) AsQueuedMoveTo() (QueuedMoveTo, error) {
+	var body QueuedMoveTo
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromQueuedMoveTo overwrites any union data inside the TaskCommand as the provided QueuedMoveTo
+func (t *TaskCommand) FromQueuedMoveTo(v QueuedMoveTo) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeQueuedMoveTo performs a merge with any union data inside the TaskCommand, using the provided QueuedMoveTo
+func (t *TaskCommand) MergeQueuedMoveTo(v QueuedMoveTo) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsImmediateMoveTo returns the union data inside the TaskCommand as a ImmediateMoveTo
+func (t TaskCommand) AsImmediateMoveTo() (ImmediateMoveTo, error) {
+	var body ImmediateMoveTo
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromImmediateMoveTo overwrites any union data inside the TaskCommand as the provided ImmediateMoveTo
+func (t *TaskCommand) FromImmediateMoveTo(v ImmediateMoveTo) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeImmediateMoveTo performs a merge with any union data inside the TaskCommand, using the provided ImmediateMoveTo
+func (t *TaskCommand) MergeImmediateMoveTo(v ImmediateMoveTo) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPauseCommand returns the union data inside the TaskCommand as a PauseCommand
+func (t TaskCommand) AsPauseCommand() (PauseCommand, error) {
+	var body PauseCommand
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPauseCommand overwrites any union data inside the TaskCommand as the provided PauseCommand
+func (t *TaskCommand) FromPauseCommand(v PauseCommand) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePauseCommand performs a merge with any union data inside the TaskCommand, using the provided PauseCommand
+func (t *TaskCommand) MergePauseCommand(v PauseCommand) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsResumeCommand returns the union data inside the TaskCommand as a ResumeCommand
+func (t TaskCommand) AsResumeCommand() (ResumeCommand, error) {
+	var body ResumeCommand
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromResumeCommand overwrites any union data inside the TaskCommand as the provided ResumeCommand
+func (t *TaskCommand) FromResumeCommand(v ResumeCommand) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeResumeCommand performs a merge with any union data inside the TaskCommand, using the provided ResumeCommand
+func (t *TaskCommand) MergeResumeCommand(v ResumeCommand) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t TaskCommand) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *TaskCommand) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsTelemetryValue returns the union data inside the TelemetrySection as a TelemetryValue
+func (t TelemetrySection) AsTelemetryValue() (TelemetryValue, error) {
+	var body TelemetryValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTelemetryValue overwrites any union data inside the TelemetrySection as the provided TelemetryValue
+func (t *TelemetrySection) FromTelemetryValue(v TelemetryValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeTelemetryValue performs a merge with any union data inside the TelemetrySection, using the provided TelemetryValue
+func (t *TelemetrySection) MergeTelemetryValue(v TelemetryValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTelemetryError returns the union data inside the TelemetrySection as a TelemetryError
+func (t TelemetrySection) AsTelemetryError() (TelemetryError, error) {
+	var body TelemetryError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTelemetryError overwrites any union data inside the TelemetrySection as the provided TelemetryError
+func (t *TelemetrySection) FromTelemetryError(v TelemetryError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeTelemetryError performs a merge with any union data inside the TelemetrySection, using the provided TelemetryError
+func (t *TelemetrySection) MergeTelemetryError(v TelemetryError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTelemetryWithdrawn returns the union data inside the TelemetrySection as a TelemetryWithdrawn
+func (t TelemetrySection) AsTelemetryWithdrawn() (TelemetryWithdrawn, error) {
+	var body TelemetryWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTelemetryWithdrawn overwrites any union data inside the TelemetrySection as the provided TelemetryWithdrawn
+func (t *TelemetrySection) FromTelemetryWithdrawn(v TelemetryWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeTelemetryWithdrawn performs a merge with any union data inside the TelemetrySection, using the provided TelemetryWithdrawn
+func (t *TelemetrySection) MergeTelemetryWithdrawn(v TelemetryWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t TelemetrySection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t TelemetrySection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsTelemetryError()
+	case "value":
+		return t.AsTelemetryValue()
+	case "withdrawn":
+		return t.AsTelemetryWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t TelemetrySection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *TelemetrySection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsTrackTypeObservationValue returns the union data inside the TrackTypeObservationSection as a TrackTypeObservationValue
+func (t TrackTypeObservationSection) AsTrackTypeObservationValue() (TrackTypeObservationValue, error) {
+	var body TrackTypeObservationValue
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrackTypeObservationValue overwrites any union data inside the TrackTypeObservationSection as the provided TrackTypeObservationValue
+func (t *TrackTypeObservationSection) FromTrackTypeObservationValue(v TrackTypeObservationValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	t.union = b
+	return err
+}
+
+// MergeTrackTypeObservationValue performs a merge with any union data inside the TrackTypeObservationSection, using the provided TrackTypeObservationValue
+func (t *TrackTypeObservationSection) MergeTrackTypeObservationValue(v TrackTypeObservationValue) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"value"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTrackTypeObservationError returns the union data inside the TrackTypeObservationSection as a TrackTypeObservationError
+func (t TrackTypeObservationSection) AsTrackTypeObservationError() (TrackTypeObservationError, error) {
+	var body TrackTypeObservationError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrackTypeObservationError overwrites any union data inside the TrackTypeObservationSection as the provided TrackTypeObservationError
+func (t *TrackTypeObservationSection) FromTrackTypeObservationError(v TrackTypeObservationError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	t.union = b
+	return err
+}
+
+// MergeTrackTypeObservationError performs a merge with any union data inside the TrackTypeObservationSection, using the provided TrackTypeObservationError
+func (t *TrackTypeObservationSection) MergeTrackTypeObservationError(v TrackTypeObservationError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"error"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsTrackTypeObservationWithdrawn returns the union data inside the TrackTypeObservationSection as a TrackTypeObservationWithdrawn
+func (t TrackTypeObservationSection) AsTrackTypeObservationWithdrawn() (TrackTypeObservationWithdrawn, error) {
+	var body TrackTypeObservationWithdrawn
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrackTypeObservationWithdrawn overwrites any union data inside the TrackTypeObservationSection as the provided TrackTypeObservationWithdrawn
+func (t *TrackTypeObservationSection) FromTrackTypeObservationWithdrawn(v TrackTypeObservationWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	t.union = b
+	return err
+}
+
+// MergeTrackTypeObservationWithdrawn performs a merge with any union data inside the TrackTypeObservationSection, using the provided TrackTypeObservationWithdrawn
+func (t *TrackTypeObservationSection) MergeTrackTypeObservationWithdrawn(v TrackTypeObservationWithdrawn) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"state":"withdrawn"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t TrackTypeObservationSection) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"state"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t TrackTypeObservationSection) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "error":
+		return t.AsTrackTypeObservationError()
+	case "value":
+		return t.AsTrackTypeObservationValue()
+	case "withdrawn":
+		return t.AsTrackTypeObservationWithdrawn()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t TrackTypeObservationSection) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *TrackTypeObservationSection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}

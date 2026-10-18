@@ -3,7 +3,881 @@
  * Do not make direct changes to the file.
  */
 
-export type paths = Record<string, never>;
+export interface paths {
+    "/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListAssets */
+        get: operations["ListAssets"];
+        put?: never;
+        /** RegisterAsset */
+        post: operations["RegisterAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetAsset */
+        get: operations["GetAsset"];
+        put?: never;
+        post?: never;
+        /** DeleteAsset */
+        delete: operations["DeleteAsset"];
+        options?: never;
+        head?: never;
+        /** UpdateAsset */
+        patch: operations["UpdateAsset"];
+        trace?: never;
+    };
+    "/assets/by-alias/{alias}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetAssetByAlias */
+        get: operations["GetAssetByAlias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetAssetObjects */
+        get: operations["GetAssetObjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/movement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetAssetMovementHistory */
+        get: operations["GetAssetMovementHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListTracks */
+        get: operations["ListTracks"];
+        put?: never;
+        /** CreateTrack */
+        post: operations["CreateTrack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracks/{track_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetTrack */
+        get: operations["GetTrack"];
+        put?: never;
+        post?: never;
+        /** DeleteTrack */
+        delete: operations["DeleteTrack"];
+        options?: never;
+        head?: never;
+        /** EditTrack */
+        patch: operations["EditTrack"];
+        trace?: never;
+    };
+    "/tracks/by-alias/{alias}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetTrackByAlias */
+        get: operations["GetTrackByAlias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracks/{track_id}/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetTrackObjects */
+        get: operations["GetTrackObjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracks/{track_id}/movement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetTrackMovementHistory */
+        get: operations["GetTrackMovementHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/geofeatures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListGeofeatures */
+        get: operations["ListGeofeatures"];
+        put?: never;
+        /** CreateGeofeature */
+        post: operations["CreateGeofeature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/geofeatures/{geofeature_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetGeofeature */
+        get: operations["GetGeofeature"];
+        put?: never;
+        post?: never;
+        /** DeleteGeofeature */
+        delete: operations["DeleteGeofeature"];
+        options?: never;
+        head?: never;
+        /** EditGeofeature */
+        patch: operations["EditGeofeature"];
+        trace?: never;
+    };
+    "/geofeatures/by-alias/{alias}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetGeofeatureByAlias */
+        get: operations["GetGeofeatureByAlias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/geofeatures/{geofeature_id}/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetGeofeatureObjects */
+        get: operations["GetGeofeatureObjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetAssetStatus */
+        get: operations["GetAssetStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracks/{track_id}/observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ReportTrackObservations */
+        post: operations["ReportTrackObservations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/contact-challenge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** RequestContactChallenge */
+        post: operations["RequestContactChallenge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ReplaceAssetProcess */
+        post: operations["ReplaceAssetProcess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListTasks */
+        get: operations["ListTasks"];
+        put?: never;
+        /** CreateTask */
+        post: operations["CreateTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetTask */
+        get: operations["GetTask"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}/execution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ReportTaskExecution */
+        post: operations["ReportTaskExecution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** RequestTaskCancellation */
+        post: operations["RequestTaskCancellation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ReportTaskResults */
+        post: operations["ReportTaskResults"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetTaskObjects */
+        get: operations["GetTaskObjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetAssignedTasks */
+        get: operations["GetAssignedTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/tasks/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** SetTaskOrder */
+        post: operations["SetTaskOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{asset_id}/tasks/order-confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ConfirmTaskOrder */
+        post: operations["ConfirmTaskOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListObjects */
+        get: operations["ListObjects"];
+        put?: never;
+        /** UploadObject */
+        post: operations["UploadObject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects/{object_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetObject */
+        get: operations["GetObject"];
+        put?: never;
+        post?: never;
+        /** DeleteObject */
+        delete: operations["DeleteObject"];
+        options?: never;
+        head?: never;
+        /** EditObject */
+        patch: operations["EditObject"];
+        trace?: never;
+    };
+    "/objects/{object_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ReadObjectContent */
+        get: operations["ReadObjectContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListPlugins */
+        get: operations["ListPlugins"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetPlugin */
+        get: operations["GetPlugin"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** CreateOperation */
+        post: operations["CreateOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListOperations */
+        get: operations["ListOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}/operations/{operation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetOperation */
+        get: operations["GetOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/{plugin_id}/operations/{operation_id}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** CancelOperation */
+        post: operations["CancelOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListResources */
+        get: operations["ListResources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ReadActivity */
+        get: operations["ReadActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListApiKeys */
+        get: operations["ListApiKeys"];
+        put?: never;
+        /** CreateApiKey */
+        post: operations["CreateApiKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api-keys/{key_id}/revocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** RevokeApiKey */
+        post: operations["RevokeApiKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ListOperators */
+        get: operations["ListOperators"];
+        put?: never;
+        /** CreateOperator */
+        post: operations["CreateOperator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operators/{operator_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetOperator */
+        get: operations["GetOperator"];
+        put?: never;
+        post?: never;
+        /** DeleteOperator */
+        delete: operations["DeleteOperator"];
+        options?: never;
+        head?: never;
+        /** EditOperator */
+        patch: operations["EditOperator"];
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GetHealth
+         * @description Authenticated discovery exception. Dataset and version request headers are optional.
+         */
+        get: operations["GetHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetReadiness */
+        get: operations["GetReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetReference */
+        get: operations["GetReference"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference/openapi.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetReference raw OpenAPI representation */
+        get: operations["GetReferenceDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ReadSnapshot */
+        post: operations["ReadSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ReadChanges */
+        post: operations["ReadChanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/snapshots/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** ReleaseSnapshot */
+        post: operations["ReleaseSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/changes/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SubscribeChanges
+         * @description WebSocket upgrade. First frame carries authentication, Dataset and exact version; no public data before authentication.
+         */
+        get: operations["SubscribeChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+}
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
@@ -11,13 +885,14 @@ export interface components {
         Identifier: string;
         /** Format: date-time */
         Timestamp: string;
-        /** Format: uint64-decimal */
+        /**
+         * Format: uint64-decimal
+         * @description Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+         */
         Counter: string;
         Position: {
-            /** Format: double */
-            latitude: number;
-            /** Format: double */
-            longitude: number;
+            latitude: components["schemas"]["Latitude"];
+            longitude: components["schemas"]["Longitude"];
         };
         NullablePosition: components["schemas"]["Position"] | null;
         Telemetry: {
@@ -57,12 +932,5369 @@ export interface components {
             reference: "wgs84_ellipsoid";
         };
         NullableAltitude: components["schemas"]["Altitude"] | null;
+        /** @enum {string} */
+        ProtocolVersion: "0.1.0";
+        /** Format: double */
+        Longitude: number;
+        /** Format: double */
+        Latitude: number;
+        /**
+         * Format: uint64-decimal
+         * @description Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+         */
+        PositiveCounter: string;
+        Alias: string;
+        Name: string;
+        Description: {
+            name: components["schemas"]["Name"];
+            description?: string;
+        };
+        AssetDescription: {
+            name: components["schemas"]["Name"];
+            description?: string;
+            manufacturer?: components["schemas"]["Name"];
+            model?: components["schemas"]["Name"];
+        };
+        DescriptionPatch: {
+            name?: components["schemas"]["Name"];
+            description?: string | null;
+        };
+        DroneType: {
+            /** @enum {string} */
+            kind: "drone";
+            /** @enum {string|null} */
+            variant: "powered_fixed_wing" | "fixed_wing_glider" | "quadcopter" | null;
+        };
+        OtherAssetType: {
+            /** @enum {string|null} */
+            kind: "security_camera" | "tracker" | "other" | null;
+        };
+        AssetType: components["schemas"]["DroneType"] | components["schemas"]["OtherAssetType"];
+        TrackType: {
+            /** @enum {string|null} */
+            kind: "person" | "ground_vehicle" | "aircraft" | "animal" | "other" | null;
+        };
+        GeofeatureType: {
+            /** @enum {string|null} */
+            kind: "point_of_interest" | "route" | "search_area" | "boundary" | "other" | null;
+        };
+        /** @enum {string} */
+        CommandName: "move_to" | "pause" | "resume";
+        MoveToSupport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            command: "move_to";
+            scheduling: [
+            ] | [
+                "queued" | "immediate"
+            ];
+        };
+        PauseSupport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            command: "pause";
+            scheduling: [
+                "immediate"
+            ];
+        };
+        ResumeSupport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            command: "resume";
+            scheduling: [
+                "immediate"
+            ];
+        };
+        CommandSupport: components["schemas"]["MoveToSupport"] | components["schemas"]["PauseSupport"] | components["schemas"]["ResumeSupport"];
+        Capabilities: {
+            commands: [
+            ] | [
+                components["schemas"]["CommandSupport"]
+            ] | [
+                components["schemas"]["CommandSupport"],
+                components["schemas"]["CommandSupport"]
+            ] | [
+                components["schemas"]["CommandSupport"],
+                components["schemas"]["CommandSupport"],
+                components["schemas"]["CommandSupport"]
+            ];
+        };
+        SectionFault: {
+            code: string;
+            message?: string;
+        };
+        SourceEvidence: {
+            evidence_id: components["schemas"]["Identifier"];
+            sequence: components["schemas"]["PositiveCounter"];
+            correction_revision: components["schemas"]["Counter"];
+            /** Format: date-time */
+            generated_at: string | null;
+            /** @enum {string} */
+            evidence_kind: "current" | "historical";
+        };
+        AssetSource: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "asset";
+            asset_id: components["schemas"]["Identifier"];
+            process_generation: components["schemas"]["Identifier"];
+        };
+        PublisherSource: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "publisher";
+            publisher_id: components["schemas"]["Identifier"];
+        };
+        ReportedSource: components["schemas"]["AssetSource"] | components["schemas"]["PublisherSource"];
+        Receipt: {
+            received_at: components["schemas"]["Timestamp"];
+            submitting_key_id: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+            source: components["schemas"]["ReportedSource"];
+        };
+        ContactProof: {
+            challenge_id: components["schemas"]["Identifier"];
+            evidence: components["schemas"]["SourceEvidence"];
+        };
+        Heartbeat: {
+            /** Format: date-time */
+            last_contact_at: string | null;
+            core_run_id: components["schemas"]["Identifier"];
+        };
+        /** @enum {string} */
+        Health: "healthy" | "degraded" | "offline";
+        Status: {
+            /** @enum {string} */
+            condition: "unknown" | "healthy" | "degraded" | "faulted";
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        Communications: {
+            /** Format: double */
+            bandwidth_bps: number | null;
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        Attitude: {
+            /** Format: double */
+            heading: number | null;
+            /** Format: double */
+            pitch: number | null;
+            /** Format: double */
+            roll: number | null;
+            /** Format: date-time */
+            observed_at: string | null;
+            /** Format: date-time */
+            heading_observed_at?: string | null;
+            /** Format: date-time */
+            pitch_observed_at?: string | null;
+            /** Format: date-time */
+            roll_observed_at?: string | null;
+        };
+        Gimbal: {
+            /** Format: double */
+            bearing: number | null;
+            /** Format: double */
+            elevation: number | null;
+            /** Format: date-time */
+            observed_at: string | null;
+            /** Format: date-time */
+            bearing_observed_at?: string | null;
+            /** Format: date-time */
+            elevation_observed_at?: string | null;
+        };
+        BatteryReserve: {
+            id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "battery";
+            /** Format: double */
+            remaining_percent: number | null;
+            /** Format: double */
+            voltage_volts: number | null;
+            /** Format: double */
+            current_amperes: number | null;
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        FuelReserve: {
+            id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "fuel";
+            /** Format: double */
+            remaining_percent: number | null;
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        PowerReserve: components["schemas"]["BatteryReserve"] | components["schemas"]["FuelReserve"];
+        Power: {
+            external_power: boolean | null;
+            reserves: components["schemas"]["PowerReserve"][];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        Camera: {
+            /** Format: double */
+            zoom_ratio: number | null;
+            recording?: boolean | null;
+            capturing?: boolean | null;
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CameraOptics: {
+            /** Format: double */
+            horizontal_fov: number | null;
+            /** Format: double */
+            vertical_fov: number | null;
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        Coordinate: [
+            number,
+            number
+        ];
+        PointGeometry: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "Point";
+            coordinates: components["schemas"]["Coordinate"];
+        };
+        LineGeometry: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "LineString";
+            coordinates: components["schemas"]["Coordinate"][];
+        };
+        PolygonGeometry: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "Polygon";
+            coordinates: [
+                components["schemas"]["Coordinate"][][]
+            ];
+        };
+        /** @description 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid. */
+        Geometry: components["schemas"]["PointGeometry"] | components["schemas"]["LineGeometry"] | components["schemas"]["PolygonGeometry"];
+        MediaReferences: {
+            object_ids: components["schemas"]["Identifier"][];
+        };
+        MilitaryDisplay: {
+            symbol_code: string;
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        SensorReferences: {
+            asset_ids: components["schemas"]["Identifier"][];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        GeometryObservation: {
+            geometry: components["schemas"]["Geometry"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        TrackTypeObservation: {
+            type: components["schemas"]["TrackType"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        MediaObservation: {
+            media: components["schemas"]["MediaReferences"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        UnreportedSection: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "unknown";
+        };
+        StatusValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["Status"];
+        };
+        StatusError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        StatusWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        StatusSection: components["schemas"]["StatusValue"] | components["schemas"]["StatusError"] | components["schemas"]["StatusWithdrawn"];
+        RetainedStatusReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["StatusSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedStatusSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedStatusReport"];
+        TelemetryValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["Telemetry"];
+        };
+        TelemetryError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        TelemetryWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        TelemetrySection: components["schemas"]["TelemetryValue"] | components["schemas"]["TelemetryError"] | components["schemas"]["TelemetryWithdrawn"];
+        RetainedTelemetryReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["TelemetrySection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedTelemetrySection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedTelemetryReport"];
+        CommunicationsValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["Communications"];
+        };
+        CommunicationsError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CommunicationsWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CommunicationsSection: components["schemas"]["CommunicationsValue"] | components["schemas"]["CommunicationsError"] | components["schemas"]["CommunicationsWithdrawn"];
+        RetainedCommunicationsReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["CommunicationsSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedCommunicationsSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedCommunicationsReport"];
+        AttitudeValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["Attitude"];
+        };
+        AttitudeError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        AttitudeWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        AttitudeSection: components["schemas"]["AttitudeValue"] | components["schemas"]["AttitudeError"] | components["schemas"]["AttitudeWithdrawn"];
+        RetainedAttitudeReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["AttitudeSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedAttitudeSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedAttitudeReport"];
+        PowerValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["Power"];
+        };
+        PowerError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        PowerWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        PowerSection: components["schemas"]["PowerValue"] | components["schemas"]["PowerError"] | components["schemas"]["PowerWithdrawn"];
+        RetainedPowerReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["PowerSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedPowerSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedPowerReport"];
+        GimbalValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["Gimbal"];
+        };
+        GimbalError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        GimbalWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        GimbalSection: components["schemas"]["GimbalValue"] | components["schemas"]["GimbalError"] | components["schemas"]["GimbalWithdrawn"];
+        RetainedGimbalReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["GimbalSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedGimbalSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedGimbalReport"];
+        CameraValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["Camera"];
+        };
+        CameraError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CameraWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CameraSection: components["schemas"]["CameraValue"] | components["schemas"]["CameraError"] | components["schemas"]["CameraWithdrawn"];
+        RetainedCameraReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["CameraSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedCameraSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedCameraReport"];
+        CameraOpticsValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["CameraOptics"];
+        };
+        CameraOpticsError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CameraOpticsWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CameraOpticsSection: components["schemas"]["CameraOpticsValue"] | components["schemas"]["CameraOpticsError"] | components["schemas"]["CameraOpticsWithdrawn"];
+        RetainedCameraOpticsReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["CameraOpticsSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedCameraOpticsSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedCameraOpticsReport"];
+        GeometryObservationValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["GeometryObservation"];
+        };
+        GeometryObservationError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        GeometryObservationWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        GeometryObservationSection: components["schemas"]["GeometryObservationValue"] | components["schemas"]["GeometryObservationError"] | components["schemas"]["GeometryObservationWithdrawn"];
+        RetainedGeometryObservationReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["GeometryObservationSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedGeometryObservationSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedGeometryObservationReport"];
+        TrackTypeObservationValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["TrackTypeObservation"];
+        };
+        TrackTypeObservationError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        TrackTypeObservationWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        TrackTypeObservationSection: components["schemas"]["TrackTypeObservationValue"] | components["schemas"]["TrackTypeObservationError"] | components["schemas"]["TrackTypeObservationWithdrawn"];
+        RetainedTrackTypeObservationReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["TrackTypeObservationSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedTrackTypeObservationSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedTrackTypeObservationReport"];
+        MediaObservationValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["MediaObservation"];
+        };
+        MediaObservationError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        MediaObservationWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        MediaObservationSection: components["schemas"]["MediaObservationValue"] | components["schemas"]["MediaObservationError"] | components["schemas"]["MediaObservationWithdrawn"];
+        RetainedMediaObservationReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["MediaObservationSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedMediaObservationSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedMediaObservationReport"];
+        MilitaryDisplayValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["MilitaryDisplay"];
+        };
+        MilitaryDisplayError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        MilitaryDisplayWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        MilitaryDisplaySection: components["schemas"]["MilitaryDisplayValue"] | components["schemas"]["MilitaryDisplayError"] | components["schemas"]["MilitaryDisplayWithdrawn"];
+        RetainedMilitaryDisplayReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["MilitaryDisplaySection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedMilitaryDisplaySection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedMilitaryDisplayReport"];
+        SensorReferencesValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "value";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            value: components["schemas"]["SensorReferences"];
+        };
+        SensorReferencesError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "error";
+            /** @enum {string} */
+            classification: "state_until_changed" | "dated_measurement";
+            evidence: components["schemas"]["SourceEvidence"];
+            error: components["schemas"]["SectionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        SensorReferencesWithdrawn: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "withdrawn";
+            /** @enum {string} */
+            classification: "state_until_changed";
+            evidence: components["schemas"]["SourceEvidence"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        SensorReferencesSection: components["schemas"]["SensorReferencesValue"] | components["schemas"]["SensorReferencesError"] | components["schemas"]["SensorReferencesWithdrawn"];
+        RetainedSensorReferencesReport: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "reported";
+            result: components["schemas"]["SensorReferencesSection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        RetainedSensorReferencesSection: components["schemas"]["UnreportedSection"] | components["schemas"]["RetainedSensorReferencesReport"];
+        AssetSections: {
+            status?: components["schemas"]["StatusSection"];
+            telemetry?: components["schemas"]["TelemetrySection"];
+            communications?: components["schemas"]["CommunicationsSection"];
+            attitude?: components["schemas"]["AttitudeSection"];
+            power?: components["schemas"]["PowerSection"];
+            gimbal?: components["schemas"]["GimbalSection"];
+            camera?: components["schemas"]["CameraSection"];
+            camera_optics?: components["schemas"]["CameraOpticsSection"];
+        };
+        TrackSections: {
+            telemetry?: components["schemas"]["TelemetrySection"];
+            attitude?: components["schemas"]["AttitudeSection"];
+            geometry?: components["schemas"]["GeometryObservationSection"];
+            type?: components["schemas"]["TrackTypeObservationSection"];
+            media?: components["schemas"]["MediaObservationSection"];
+            military_display?: components["schemas"]["MilitaryDisplaySection"];
+            sensor_references?: components["schemas"]["SensorReferencesSection"];
+        };
+        /** @description Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields. */
+        CredentialFacts: {
+            key_id: components["schemas"]["Identifier"];
+            secret: string;
+        };
+        Retry: {
+            request_id: components["schemas"]["Identifier"];
+        };
+        Deletion: {
+            id: components["schemas"]["Identifier"];
+            version: components["schemas"]["PositiveCounter"];
+            /** @enum {string} */
+            kind: "asset" | "track" | "geofeature" | "task" | "object";
+        };
+        Asset: {
+            id: components["schemas"]["Identifier"];
+            version: components["schemas"]["PositiveCounter"];
+            edit_revision: components["schemas"]["PositiveCounter"];
+            alias: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            entity_type: "asset";
+            description: components["schemas"]["AssetDescription"];
+            type: components["schemas"]["AssetType"];
+            capabilities: components["schemas"]["Capabilities"];
+            process_generation: components["schemas"]["Identifier"];
+            status: components["schemas"]["RetainedStatusSection"];
+            communications: {
+                reported: components["schemas"]["RetainedCommunicationsSection"];
+                health: components["schemas"]["Health"];
+            };
+            heartbeat: components["schemas"]["Heartbeat"];
+            telemetry?: components["schemas"]["RetainedTelemetrySection"];
+            attitude?: components["schemas"]["RetainedAttitudeSection"];
+            power?: components["schemas"]["RetainedPowerSection"];
+            gimbal?: components["schemas"]["RetainedGimbalSection"];
+            camera?: components["schemas"]["RetainedCameraSection"];
+            camera_optics?: components["schemas"]["RetainedCameraOpticsSection"];
+        };
+        Track: {
+            id: components["schemas"]["Identifier"];
+            version: components["schemas"]["PositiveCounter"];
+            edit_revision: components["schemas"]["PositiveCounter"];
+            alias: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            entity_type: "track";
+            publisher_id: components["schemas"]["Identifier"];
+            description: components["schemas"]["Description"];
+            telemetry?: components["schemas"]["RetainedTelemetrySection"];
+            attitude?: components["schemas"]["RetainedAttitudeSection"];
+            geometry?: components["schemas"]["RetainedGeometryObservationSection"];
+            type?: components["schemas"]["RetainedTrackTypeObservationSection"];
+            media?: components["schemas"]["RetainedMediaObservationSection"];
+            military_display?: components["schemas"]["RetainedMilitaryDisplaySection"];
+            sensor_references?: components["schemas"]["RetainedSensorReferencesSection"];
+        };
+        Geofeature: {
+            id: components["schemas"]["Identifier"];
+            version: components["schemas"]["PositiveCounter"];
+            edit_revision: components["schemas"]["PositiveCounter"];
+            alias: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            entity_type: "geofeature";
+            description: components["schemas"]["Description"];
+            type: components["schemas"]["GeofeatureType"];
+            geometry: components["schemas"]["Geometry"];
+            geometry_revision: components["schemas"]["PositiveCounter"];
+        };
+        Entity: components["schemas"]["Asset"] | components["schemas"]["Track"] | components["schemas"]["Geofeature"];
+        SectionDisposition: {
+            /** @enum {string} */
+            section: "status" | "telemetry" | "communications" | "attitude" | "power" | "gimbal" | "camera" | "camera_optics" | "geometry" | "type" | "media" | "military_display" | "sensor_references";
+            /** @enum {string} */
+            disposition: "accepted" | "duplicate";
+        };
+        AssetUpdateResult: {
+            asset: components["schemas"]["Asset"];
+            dispositions: components["schemas"]["SectionDisposition"][];
+            fresh_contact: boolean;
+        };
+        TrackUpdateResult: {
+            track: components["schemas"]["Track"];
+            dispositions: [
+            ] | [
+                components["schemas"]["SectionDisposition"]
+            ] | [
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"]
+            ] | [
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"]
+            ] | [
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"]
+            ] | [
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"]
+            ] | [
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"]
+            ] | [
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"],
+                components["schemas"]["SectionDisposition"]
+            ];
+        };
+        MovementSample: {
+            entity_id: components["schemas"]["Identifier"];
+            telemetry: components["schemas"]["TelemetrySection"];
+            receipt: components["schemas"]["Receipt"];
+        };
+        AssetStatus: {
+            asset_id: components["schemas"]["Identifier"];
+            status: components["schemas"]["RetainedStatusSection"];
+            communications: {
+                reported: components["schemas"]["RetainedCommunicationsSection"];
+                health: components["schemas"]["Health"];
+            };
+            heartbeat: components["schemas"]["Heartbeat"];
+        };
+        MoveToPosition: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "position";
+            position: components["schemas"]["Position"];
+        };
+        /** @description Must resolve to a Point geometry at admission. Revision use is reported by the Asset, never inferred. */
+        MoveToGeofeature: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "geofeature";
+            geofeature_id: components["schemas"]["Identifier"];
+        };
+        MoveToTarget: components["schemas"]["MoveToPosition"] | components["schemas"]["MoveToGeofeature"];
+        QueuedMoveTo: {
+            /** @enum {string} */
+            command: "move_to";
+            /** @enum {string} */
+            scheduling: "queued";
+            target: components["schemas"]["MoveToTarget"];
+            altitude?: components["schemas"]["Altitude"];
+        };
+        ImmediateMoveTo: {
+            /** @enum {string} */
+            command: "move_to";
+            /** @enum {string} */
+            scheduling: "immediate";
+            target: components["schemas"]["MoveToTarget"];
+            altitude?: components["schemas"]["Altitude"];
+            expires_at?: components["schemas"]["Timestamp"];
+        };
+        PauseCommand: {
+            /** @enum {string} */
+            command: "pause";
+            /** @enum {string} */
+            scheduling: "immediate";
+        };
+        ResumeCommand: {
+            /** @enum {string} */
+            command: "resume";
+            /** @enum {string} */
+            scheduling: "immediate";
+            expires_at?: components["schemas"]["Timestamp"];
+        };
+        TaskCommand: components["schemas"]["QueuedMoveTo"] | components["schemas"]["ImmediateMoveTo"] | components["schemas"]["PauseCommand"] | components["schemas"]["ResumeCommand"];
+        /** @enum {string} */
+        TaskState: "pending" | "acknowledged" | "in_progress" | "paused" | "cancellation_requested" | "completed" | "failed" | "cancelled";
+        ExecutionFault: {
+            code: string;
+            message?: string;
+        };
+        ExecutionProgress: {
+            /** @enum {string} */
+            state: "acknowledged" | "in_progress" | "paused" | "completed" | "cancelled";
+            /** Format: date-time */
+            observed_at: string | null;
+            geometry_revisions?: {
+                geofeature_id: components["schemas"]["Identifier"];
+                revision: components["schemas"]["PositiveCounter"];
+            }[];
+        };
+        ExecutionFailure: {
+            /** @enum {string} */
+            state: "failed";
+            /** @enum {string} */
+            reason: "execution_error" | "unsupported" | "cannot_resume";
+            error: components["schemas"]["ExecutionFault"];
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        NeverAppliedFailure: {
+            /** @enum {string} */
+            state: "failed";
+            /** @enum {string} */
+            reason: "expired" | "superseded";
+            /** @enum {string} */
+            never_applied: "confirmed";
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        CancellationRefused: {
+            /** @enum {string} */
+            state: "cancellation_refused";
+            reason: string;
+            /** Format: date-time */
+            observed_at: string | null;
+        };
+        ExecutionOutcome: components["schemas"]["ExecutionProgress"] | components["schemas"]["ExecutionFailure"] | components["schemas"]["NeverAppliedFailure"] | components["schemas"]["CancellationRefused"];
+        ExecutionReport: {
+            source: components["schemas"]["AssetSource"];
+            evidence: components["schemas"]["SourceEvidence"];
+            outcome: components["schemas"]["ExecutionOutcome"];
+        };
+        ResultDeclaration: {
+            object_id: components["schemas"]["Identifier"];
+            required: boolean;
+            name?: components["schemas"]["Name"];
+        };
+        Task: {
+            id: components["schemas"]["Identifier"];
+            version: components["schemas"]["PositiveCounter"];
+            asset_id: components["schemas"]["Identifier"];
+            command: components["schemas"]["TaskCommand"];
+            submission_sequence: components["schemas"]["PositiveCounter"];
+            state: components["schemas"]["TaskState"];
+            results: components["schemas"]["ResultDeclaration"][];
+            last_execution?: components["schemas"]["ExecutionReport"];
+            last_receipt?: components["schemas"]["Receipt"];
+        };
+        NullablePositiveCounter: components["schemas"]["PositiveCounter"] | null;
+        TaskQueue: {
+            asset_id: components["schemas"]["Identifier"];
+            revision: components["schemas"]["PositiveCounter"];
+            task_ids: components["schemas"]["Identifier"][];
+            confirmed_revision: components["schemas"]["NullablePositiveCounter"];
+        };
+        ObjectMetadata: {
+            name: components["schemas"]["Name"];
+            description?: string;
+            entity_ids: components["schemas"]["Identifier"][];
+            task_ids: components["schemas"]["Identifier"][];
+        };
+        Digest: string;
+        ContentType: string;
+        /** @description One descriptor plus the complete binary HTTP body. Byte length and SHA-256 must match streamed bytes. File admission is configurable Core policy, initially 2 GB. */
+        UploadObjectDescriptor: {
+            object_id: components["schemas"]["Identifier"];
+            request_id: components["schemas"]["Identifier"];
+            byte_length: components["schemas"]["Counter"];
+            sha256: components["schemas"]["Digest"];
+            content_type: components["schemas"]["ContentType"];
+            metadata: components["schemas"]["ObjectMetadata"];
+        };
+        Object: {
+            id: components["schemas"]["Identifier"];
+            version: components["schemas"]["PositiveCounter"];
+            edit_revision: components["schemas"]["PositiveCounter"];
+            byte_length: components["schemas"]["Counter"];
+            sha256: components["schemas"]["Digest"];
+            content_type: components["schemas"]["ContentType"];
+            metadata: components["schemas"]["ObjectMetadata"];
+            published_at: components["schemas"]["Timestamp"];
+        };
+        /** @description Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema. */
+        PluginPayload: unknown;
+        PluginSchemaReference: {
+            /** Format: uri */
+            uri: string;
+            sha256: components["schemas"]["Digest"];
+        };
+        PluginCapability: {
+            name: components["schemas"]["Name"];
+            input_schema: components["schemas"]["PluginSchemaReference"];
+            output_schema: components["schemas"]["PluginSchemaReference"];
+            effects_schema?: components["schemas"]["PluginSchemaReference"];
+        };
+        Plugin: {
+            id: components["schemas"]["Identifier"];
+            release: string;
+            name: components["schemas"]["Name"];
+            available: boolean;
+            capabilities: components["schemas"]["PluginCapability"][];
+        };
+        /** @enum {string} */
+        OperationState: "pending" | "in_progress" | "cancellation_requested" | "completed" | "failed" | "cancelled" | "interrupted";
+        RecoveredOutcome: {
+            /** @enum {string} */
+            state: "completed" | "failed" | "cancelled";
+            /** Format: date-time */
+            observed_at: string | null;
+            output?: components["schemas"]["PluginPayload"];
+            known_effects?: components["schemas"]["PluginPayload"];
+            error?: components["schemas"]["SectionFault"];
+            object_ids: components["schemas"]["Identifier"][];
+        };
+        Operation: {
+            id: components["schemas"]["Identifier"];
+            version: components["schemas"]["PositiveCounter"];
+            plugin_id: components["schemas"]["Identifier"];
+            release: string;
+            capability: components["schemas"]["Name"];
+            input: components["schemas"]["PluginPayload"];
+            state: components["schemas"]["OperationState"];
+            output?: components["schemas"]["PluginPayload"];
+            error?: components["schemas"]["SectionFault"];
+            known_effects?: components["schemas"]["PluginPayload"];
+            object_ids: components["schemas"]["Identifier"][];
+            recovered_outcome?: components["schemas"]["RecoveredOutcome"];
+        };
+        NullableIdentifier: components["schemas"]["Identifier"] | null;
+        ApiKey: {
+            id: components["schemas"]["Identifier"];
+            name: components["schemas"]["Name"];
+            created_at: components["schemas"]["Timestamp"];
+            /** Format: date-time */
+            revoked_at: string | null;
+            associated_asset_id: components["schemas"]["NullableIdentifier"];
+        };
+        Operator: {
+            id: components["schemas"]["Identifier"];
+            edit_revision: components["schemas"]["PositiveCounter"];
+            name: components["schemas"]["Name"];
+            description?: string;
+        };
+        ResourceUsage: {
+            /** @enum {string} */
+            kind: "database" | "objects" | "staging" | "logs" | "plugins";
+            used_bytes: components["schemas"]["Counter"];
+            limit_bytes: components["schemas"]["Counter"];
+        };
+        ActivityRecord: {
+            id: components["schemas"]["Identifier"];
+            recorded_at: components["schemas"]["Timestamp"];
+            kind: string;
+            resource_id?: components["schemas"]["Identifier"];
+            submitting_key_id?: components["schemas"]["Identifier"];
+            message: string;
+        };
+        HealthData: {
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            /** @enum {string} */
+            health: "healthy" | "degraded";
+        };
+        Readiness: {
+            ready: boolean;
+            reason?: string;
+        };
+        Reference: {
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            /** @enum {string} */
+            openapi_path: "/reference/openapi.json";
+            /** @enum {string} */
+            documentation_path: "/reference";
+        };
+        Acknowledgment: {
+            /** @enum {string} */
+            accepted: "committed";
+        };
+        Cursor: string;
+        PageToken: string;
+        ListQuery: {
+            /** @default 100 */
+            page_size: number;
+            page_token?: components["schemas"]["PageToken"];
+        };
+        EntityListQuery: {
+            /** @default 100 */
+            page_size: number;
+            page_token?: components["schemas"]["PageToken"];
+            ids?: components["schemas"]["Identifier"][];
+            aliases?: components["schemas"]["Alias"][];
+            names?: components["schemas"]["Name"][];
+        };
+        HistoryQuery: {
+            /** @default 100 */
+            page_size: number;
+            page_token?: components["schemas"]["PageToken"];
+            start_at?: components["schemas"]["Timestamp"];
+            end_at?: components["schemas"]["Timestamp"];
+        };
+        TaskListQuery: {
+            /** @default 100 */
+            page_size: number;
+            page_token?: components["schemas"]["PageToken"];
+            asset_ids?: components["schemas"]["Identifier"][];
+            states?: components["schemas"]["TaskState"][];
+        };
+        OperationListQuery: {
+            /** @default 100 */
+            page_size: number;
+            page_token?: components["schemas"]["PageToken"];
+            plugin_ids?: components["schemas"]["Identifier"][];
+            states?: [
+            ] | [
+                components["schemas"]["OperationState"]
+            ] | [
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"]
+            ] | [
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"]
+            ] | [
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"]
+            ] | [
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"]
+            ] | [
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"]
+            ] | [
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"],
+                components["schemas"]["OperationState"]
+            ];
+        };
+        ObjectListQuery: {
+            /** @default 100 */
+            page_size: number;
+            page_token?: components["schemas"]["PageToken"];
+            entity_ids?: components["schemas"]["Identifier"][];
+            task_ids?: components["schemas"]["Identifier"][];
+        };
+        AssetPage: {
+            items: components["schemas"]["Asset"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        TrackPage: {
+            items: components["schemas"]["Track"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        GeofeaturePage: {
+            items: components["schemas"]["Geofeature"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        TaskPage: {
+            items: components["schemas"]["Task"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        ObjectPage: {
+            items: components["schemas"]["Object"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        PluginPage: {
+            items: components["schemas"]["Plugin"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        OperationPage: {
+            items: components["schemas"]["Operation"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        ApiKeyPage: {
+            items: components["schemas"]["ApiKey"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        OperatorPage: {
+            items: components["schemas"]["Operator"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        MovementSamplePage: {
+            items: components["schemas"]["MovementSample"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        ResourceUsagePage: {
+            items: components["schemas"]["ResourceUsage"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        ActivityRecordPage: {
+            items: components["schemas"]["ActivityRecord"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        AssignedTaskPage: {
+            items: components["schemas"]["Task"][];
+            queue_revision: components["schemas"]["PositiveCounter"];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        BatchLimits: {
+            max_batch_bytes: components["schemas"]["PositiveCounter"];
+            max_changes: number;
+        };
+        SnapshotContext: {
+            load_id: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+            limits: components["schemas"]["BatchLimits"];
+        };
+        ResourceImage: components["schemas"]["Asset"] | components["schemas"]["Track"] | components["schemas"]["Geofeature"] | components["schemas"]["Task"] | components["schemas"]["Object"];
+        UpsertChange: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "upsert";
+            resource: components["schemas"]["ResourceImage"];
+        };
+        DeleteChange: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "delete";
+            resource: components["schemas"]["Deletion"];
+        };
+        ResourceChange: components["schemas"]["UpsertChange"] | components["schemas"]["DeleteChange"];
+        ChangeBatch: {
+            cursor: components["schemas"]["Cursor"];
+            changes: components["schemas"]["ResourceChange"][];
+        };
+        SnapshotPage: {
+            snapshot_id: components["schemas"]["Identifier"];
+            load_id: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+            baseline: components["schemas"]["Cursor"];
+            expires_at: components["schemas"]["Timestamp"];
+            limits: components["schemas"]["BatchLimits"];
+            items: components["schemas"]["ResourceImage"][];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        ChangePage: {
+            batches: components["schemas"]["ChangeBatch"][];
+            replay_boundary: components["schemas"]["Cursor"];
+            earliest_cursor: components["schemas"]["Cursor"];
+            next_page_token?: components["schemas"]["PageToken"];
+        };
+        SnapshotReleased: {
+            snapshot_id: components["schemas"]["Identifier"];
+            load_id: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+        };
+        ContactChallengeRequest: {
+            request_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+            process_generation: components["schemas"]["Identifier"];
+            expected_generation?: components["schemas"]["Identifier"];
+        };
+        /** @description Exact retry recovers original expiry. Restart invalidates proof. Replacement binds expected_generation and commits its first check-in atomically. */
+        ContactChallenge: {
+            challenge_id: components["schemas"]["Identifier"];
+            request_id: components["schemas"]["Identifier"];
+            dataset_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+            process_generation: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+            issued_at: components["schemas"]["Timestamp"];
+            expires_at: components["schemas"]["Timestamp"];
+            /** @enum {integer} */
+            expires_in_seconds: 10;
+            expected_generation?: components["schemas"]["Identifier"];
+        };
+        ReplaceAssetProcessRequest: {
+            request_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+            expected_generation: components["schemas"]["Identifier"];
+            process_generation: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+            first_check_in: components["schemas"]["ContactProof"];
+        };
+        RegisterAssetRequest: {
+            request_id: components["schemas"]["Identifier"];
+            registration_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+            process_generation: components["schemas"]["Identifier"];
+            credential: components["schemas"]["CredentialFacts"];
+            description: components["schemas"]["AssetDescription"];
+            type: components["schemas"]["AssetType"];
+            capabilities: components["schemas"]["Capabilities"];
+            alias?: components["schemas"]["Alias"];
+        };
+        NullableAlias: components["schemas"]["Alias"] | null;
+        AssetDescriptionUpdate: {
+            description?: components["schemas"]["AssetDescription"];
+            type?: components["schemas"]["AssetType"];
+            capabilities?: components["schemas"]["Capabilities"];
+            alias?: components["schemas"]["NullableAlias"];
+        };
+        AssetDescriptiveChange: {
+            expected_edit_revision: components["schemas"]["PositiveCounter"];
+            sections: components["schemas"]["AssetDescriptionUpdate"];
+        };
+        AssetReport: {
+            source: components["schemas"]["AssetSource"];
+            sections?: components["schemas"]["AssetSections"];
+            heartbeat?: components["schemas"]["ContactProof"];
+        };
+        UpdateAssetRequest: {
+            request_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+            descriptive?: components["schemas"]["AssetDescriptiveChange"];
+            report?: components["schemas"]["AssetReport"];
+        };
+        CreateTrackRequest: {
+            request_id: components["schemas"]["Identifier"];
+            track_id: components["schemas"]["Identifier"];
+            publisher_id: components["schemas"]["Identifier"];
+            description: components["schemas"]["Description"];
+            alias?: components["schemas"]["Alias"];
+            observations?: components["schemas"]["TrackSections"];
+        };
+        EditTrackRequest: {
+            request_id: components["schemas"]["Identifier"];
+            track_id: components["schemas"]["Identifier"];
+            expected_edit_revision: components["schemas"]["PositiveCounter"];
+            description?: components["schemas"]["DescriptionPatch"];
+            alias?: components["schemas"]["NullableAlias"];
+        };
+        ReportTrackObservationsRequest: {
+            request_id: components["schemas"]["Identifier"];
+            track_id: components["schemas"]["Identifier"];
+            publisher_id: components["schemas"]["Identifier"];
+            sections: components["schemas"]["TrackSections"];
+        };
+        CreateGeofeatureRequest: {
+            request_id: components["schemas"]["Identifier"];
+            geofeature_id: components["schemas"]["Identifier"];
+            description: components["schemas"]["Description"];
+            type: components["schemas"]["GeofeatureType"];
+            geometry: components["schemas"]["Geometry"];
+            alias?: components["schemas"]["Alias"];
+        };
+        EditGeofeatureRequest: {
+            request_id: components["schemas"]["Identifier"];
+            geofeature_id: components["schemas"]["Identifier"];
+            expected_edit_revision: components["schemas"]["PositiveCounter"];
+            description?: components["schemas"]["DescriptionPatch"];
+            type?: components["schemas"]["GeofeatureType"];
+            geometry?: components["schemas"]["Geometry"];
+            alias?: components["schemas"]["NullableAlias"];
+        };
+        CreateTaskRequest: {
+            request_id: components["schemas"]["Identifier"];
+            task_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+            command: components["schemas"]["TaskCommand"];
+        };
+        ReportTaskExecutionRequest: {
+            request_id: components["schemas"]["Identifier"];
+            task_id: components["schemas"]["Identifier"];
+            report: components["schemas"]["ExecutionReport"];
+        };
+        ReportTaskResultsRequest: {
+            request_id: components["schemas"]["Identifier"];
+            task_id: components["schemas"]["Identifier"];
+            source: components["schemas"]["AssetSource"];
+            evidence: components["schemas"]["SourceEvidence"];
+            results: components["schemas"]["ResultDeclaration"][];
+        };
+        SetTaskOrderRequest: {
+            request_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+            expected_queue_revision: components["schemas"]["PositiveCounter"];
+            task_ids: components["schemas"]["Identifier"][];
+        };
+        ConfirmTaskOrderRequest: {
+            request_id: components["schemas"]["Identifier"];
+            source: components["schemas"]["AssetSource"];
+            evidence: components["schemas"]["SourceEvidence"];
+            queue_revision: components["schemas"]["PositiveCounter"];
+            task_ids: components["schemas"]["Identifier"][];
+        };
+        EditObjectRequest: {
+            request_id: components["schemas"]["Identifier"];
+            object_id: components["schemas"]["Identifier"];
+            expected_edit_revision: components["schemas"]["PositiveCounter"];
+            metadata: components["schemas"]["ObjectMetadata"];
+        };
+        CreateOperationRequest: {
+            request_id: components["schemas"]["Identifier"];
+            operation_id: components["schemas"]["Identifier"];
+            plugin_id: components["schemas"]["Identifier"];
+            release: string;
+            capability: components["schemas"]["Name"];
+            input: components["schemas"]["PluginPayload"];
+        };
+        CreateApiKeyRequest: {
+            request_id: components["schemas"]["Identifier"];
+            creation_id: components["schemas"]["Identifier"];
+            credential: components["schemas"]["CredentialFacts"];
+            name: components["schemas"]["Name"];
+        };
+        CreateOperatorRequest: {
+            request_id: components["schemas"]["Identifier"];
+            operator_id: components["schemas"]["Identifier"];
+            name: components["schemas"]["Name"];
+            description?: string;
+        };
+        EditOperatorRequest: {
+            request_id: components["schemas"]["Identifier"];
+            operator_id: components["schemas"]["Identifier"];
+            expected_edit_revision: components["schemas"]["PositiveCounter"];
+            profile: components["schemas"]["DescriptionPatch"];
+        };
+        ReadSnapshotRequest: {
+            request_id: components["schemas"]["Identifier"];
+            context: components["schemas"]["SnapshotContext"];
+            snapshot_id?: components["schemas"]["Identifier"];
+            page_token?: components["schemas"]["PageToken"];
+        };
+        ReadChangesRequest: {
+            after: components["schemas"]["Cursor"];
+            limits: components["schemas"]["BatchLimits"];
+            page_token?: components["schemas"]["PageToken"];
+            replay_boundary?: components["schemas"]["Cursor"];
+        };
+        ReleaseSnapshotRequest: {
+            request_id: components["schemas"]["Identifier"];
+            snapshot_id: components["schemas"]["Identifier"];
+            load_id: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+        };
+        IdQuery: {
+            id: components["schemas"]["Identifier"];
+        };
+        AliasQuery: {
+            alias: components["schemas"]["Alias"];
+        };
+        EmptyQuery: Record<string, never>;
+        AssignedTaskQuery: {
+            /** @default 100 */
+            page_size: number;
+            page_token?: components["schemas"]["PageToken"];
+            queue_revision?: components["schemas"]["PositiveCounter"];
+        };
+        ReadObjectContentQuery: {
+            /** @enum {string} */
+            disposition?: "inline" | "attachment";
+        };
+        DeleteAssetRequest: {
+            request_id: components["schemas"]["Identifier"];
+            asset_id: components["schemas"]["Identifier"];
+        };
+        DeleteTrackRequest: {
+            request_id: components["schemas"]["Identifier"];
+            track_id: components["schemas"]["Identifier"];
+        };
+        DeleteGeofeatureRequest: {
+            request_id: components["schemas"]["Identifier"];
+            geofeature_id: components["schemas"]["Identifier"];
+        };
+        DeleteObjectRequest: {
+            request_id: components["schemas"]["Identifier"];
+            object_id: components["schemas"]["Identifier"];
+        };
+        DeleteOperatorRequest: {
+            request_id: components["schemas"]["Identifier"];
+            operator_id: components["schemas"]["Identifier"];
+        };
+        RequestTaskCancellationRequest: {
+            request_id: components["schemas"]["Identifier"];
+            task_id: components["schemas"]["Identifier"];
+        };
+        CancelOperationRequest: {
+            request_id: components["schemas"]["Identifier"];
+            operation_id: components["schemas"]["Identifier"];
+        };
+        RevokeApiKeyRequest: {
+            request_id: components["schemas"]["Identifier"];
+            key_id: components["schemas"]["Identifier"];
+        };
+        ErrorDetails: {
+            expected_dataset_id?: components["schemas"]["Identifier"];
+            actual_dataset_id?: components["schemas"]["Identifier"];
+            expected_protocol_version?: components["schemas"]["ProtocolVersion"];
+            actual_protocol_version?: string;
+            expected_revision?: components["schemas"]["Counter"];
+            actual_revision?: components["schemas"]["Counter"];
+            earliest_cursor?: components["schemas"]["Cursor"];
+            retry_after_seconds?: number;
+            required_limits?: components["schemas"]["BatchLimits"];
+            field?: string;
+        };
+        Error400: {
+            error: {
+                /** @enum {string} */
+                code: "invalid_request" | "dataset_required" | "invalid_json" | "invalid_geometry" | "unsupported_geometry" | "geometry_limit_exceeded" | "unsupported_filter";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error401: {
+            error: {
+                /** @enum {string} */
+                code: "unauthenticated";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error403: {
+            error: {
+                /** @enum {string} */
+                code: "credential_revoked";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error404: {
+            error: {
+                /** @enum {string} */
+                code: "not_found";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error409: {
+            error: {
+                /** @enum {string} */
+                code: "protocol_mismatch" | "dataset_mismatch" | "identity_conflict" | "revision_conflict" | "generation_conflict" | "stale_evidence" | "asset_deleted" | "reference_guard" | "object_held" | "invalid_transition" | "queue_changed" | "challenge_invalid" | "challenge_expired" | "snapshot_expired" | "snapshot_released" | "replay_gap" | "capacity_changed" | "plugin_unavailable" | "unsupported_command";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error410: {
+            error: {
+                /** @enum {string} */
+                code: "identity_ended";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error413: {
+            error: {
+                /** @enum {string} */
+                code: "payload_too_large";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error415: {
+            error: {
+                /** @enum {string} */
+                code: "unsupported_media_type";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error422: {
+            error: {
+                /** @enum {string} */
+                code: "invalid_payload" | "integrity_fault";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error429: {
+            error: {
+                /** @enum {string} */
+                code: "resource_limit";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error500: {
+            error: {
+                /** @enum {string} */
+                code: "internal_error" | "integrity_fault";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error503: {
+            error: {
+                /** @enum {string} */
+                code: "not_ready" | "plugin_unavailable";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        Error507: {
+            error: {
+                /** @enum {string} */
+                code: "storage_limit";
+                message: string;
+                request_id: components["schemas"]["Identifier"];
+                details?: components["schemas"]["ErrorDetails"];
+            };
+            dataset_id?: components["schemas"]["Identifier"];
+        };
+        ErrorResponse: components["schemas"]["Error400"] | components["schemas"]["Error401"] | components["schemas"]["Error403"] | components["schemas"]["Error404"] | components["schemas"]["Error409"] | components["schemas"]["Error410"] | components["schemas"]["Error413"] | components["schemas"]["Error415"] | components["schemas"]["Error422"] | components["schemas"]["Error429"] | components["schemas"]["Error500"] | components["schemas"]["Error503"] | components["schemas"]["Error507"];
+        AuthenticateFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "authenticate";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            api_key: string;
+        };
+        AuthenticatedFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "authenticated";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+        };
+        SubscribeChangesFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "subscribe_changes";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            after: components["schemas"]["Cursor"];
+            limits: components["schemas"]["BatchLimits"];
+        };
+        SubscriptionAckFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "subscription_ack";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            handoff: components["schemas"]["Cursor"];
+            limits: components["schemas"]["BatchLimits"];
+        };
+        ChangesFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "changes";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            batch: components["schemas"]["ChangeBatch"];
+        };
+        HandoffCompleteFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "handoff_complete";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            handoff: components["schemas"]["Cursor"];
+        };
+        GapFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "gap";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            last_complete_cursor: components["schemas"]["Cursor"];
+            earliest_cursor: components["schemas"]["Cursor"];
+        };
+        RecoveryRequiredFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "recovery_required";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            /** @enum {string} */
+            reason: "replay_expired" | "capacity_changed" | "dataset_changed" | "core_restarted";
+            required_limits: components["schemas"]["BatchLimits"];
+        };
+        ReleaseSnapshotFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "release_snapshot";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            request: components["schemas"]["ReleaseSnapshotRequest"];
+        };
+        SnapshotReleasedFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "snapshot_released";
+            dataset_id: components["schemas"]["Identifier"];
+            protocol_version: components["schemas"]["ProtocolVersion"];
+            core_run_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["SnapshotReleased"];
+        };
+        SyncErrorFrame: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "error";
+            response: components["schemas"]["ErrorResponse"];
+        };
+        ClientFrame: components["schemas"]["AuthenticateFrame"] | components["schemas"]["SubscribeChangesFrame"] | components["schemas"]["ReleaseSnapshotFrame"];
+        ServerFrame: components["schemas"]["AuthenticatedFrame"] | components["schemas"]["SubscriptionAckFrame"] | components["schemas"]["ChangesFrame"] | components["schemas"]["HandoffCompleteFrame"] | components["schemas"]["GapFrame"] | components["schemas"]["RecoveryRequiredFrame"] | components["schemas"]["SnapshotReleasedFrame"] | components["schemas"]["SyncErrorFrame"];
+        RegisterAssetResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Asset"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListAssetsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["AssetPage"];
+        };
+        GetAssetResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Asset"];
+        };
+        GetAssetByAliasResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Asset"];
+        };
+        UpdateAssetResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["AssetUpdateResult"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        DeleteAssetResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Acknowledgment"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        GetAssetObjectsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ObjectPage"];
+        };
+        GetAssetMovementHistoryResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["MovementSamplePage"];
+        };
+        CreateTrackResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Track"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListTracksResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["TrackPage"];
+        };
+        GetTrackResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Track"];
+        };
+        GetTrackByAliasResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Track"];
+        };
+        EditTrackResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Track"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        DeleteTrackResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Acknowledgment"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        GetTrackObjectsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ObjectPage"];
+        };
+        GetTrackMovementHistoryResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["MovementSamplePage"];
+        };
+        CreateGeofeatureResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Geofeature"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListGeofeaturesResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["GeofeaturePage"];
+        };
+        GetGeofeatureResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Geofeature"];
+        };
+        GetGeofeatureByAliasResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Geofeature"];
+        };
+        EditGeofeatureResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Geofeature"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        DeleteGeofeatureResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Acknowledgment"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        GetGeofeatureObjectsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ObjectPage"];
+        };
+        GetAssetStatusResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["AssetStatus"];
+        };
+        ReportTrackObservationsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["TrackUpdateResult"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        RequestContactChallengeResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ContactChallenge"];
+        };
+        ReplaceAssetProcessResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["AssetUpdateResult"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        CreateTaskResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Task"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListTasksResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["TaskPage"];
+        };
+        GetTaskResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Task"];
+        };
+        ReportTaskExecutionResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Task"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        RequestTaskCancellationResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Task"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ReportTaskResultsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Task"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        GetTaskObjectsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ObjectPage"];
+        };
+        GetAssignedTasksResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["AssignedTaskPage"];
+        };
+        SetTaskOrderResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["TaskQueue"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ConfirmTaskOrderResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["TaskQueue"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        UploadObjectResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Object"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListObjectsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ObjectPage"];
+        };
+        GetObjectResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Object"];
+        };
+        EditObjectResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Object"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        DeleteObjectResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Acknowledgment"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListPluginsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["PluginPage"];
+        };
+        GetPluginResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Plugin"];
+        };
+        CreateOperationResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Operation"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListOperationsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["OperationPage"];
+        };
+        GetOperationResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Operation"];
+        };
+        CancelOperationResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Operation"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListResourcesResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ResourceUsagePage"];
+        };
+        ReadActivityResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ActivityRecordPage"];
+        };
+        ListApiKeysResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ApiKeyPage"];
+        };
+        CreateApiKeyResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ApiKey"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        RevokeApiKeyResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ApiKey"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        ListOperatorsResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["OperatorPage"];
+        };
+        GetOperatorResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Operator"];
+        };
+        CreateOperatorResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Operator"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        EditOperatorResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Operator"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        DeleteOperatorResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Acknowledgment"];
+            commit_cursor: components["schemas"]["Cursor"];
+        };
+        GetHealthResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["HealthData"];
+        };
+        GetReadinessResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Readiness"];
+        };
+        GetReferenceResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["Reference"];
+        };
+        ReadSnapshotResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["SnapshotPage"];
+        };
+        ReadChangesResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["ChangePage"];
+        };
+        ReleaseSnapshotResponse: {
+            dataset_id: components["schemas"]["Identifier"];
+            data: components["schemas"]["SnapshotReleased"];
+        };
+        CatalogEntry: {
+            command: components["schemas"]["CommandName"];
+            name: string;
+            schema: string;
+            scheduling: ("queued" | "immediate")[];
+            queued_deadline?: boolean;
+            immediate_requires_support?: boolean;
+            /** @enum {string} */
+            target_geometry?: "Point";
+            expires?: boolean;
+        };
     };
-    responses: never;
-    parameters: never;
+    responses: {
+        /** @description invalid_request, dataset_required, invalid_json, invalid_geometry, unsupported_geometry, geometry_limit_exceeded, unsupported_filter */
+        Error400: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error400"];
+            };
+        };
+        /** @description unauthenticated */
+        Error401: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error401"];
+            };
+        };
+        /** @description credential_revoked */
+        Error403: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error403"];
+            };
+        };
+        /** @description not_found */
+        Error404: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error404"];
+            };
+        };
+        /** @description protocol_mismatch, dataset_mismatch, identity_conflict, revision_conflict, generation_conflict, stale_evidence, asset_deleted, reference_guard, object_held, invalid_transition, queue_changed, challenge_invalid, challenge_expired, snapshot_expired, snapshot_released, replay_gap, capacity_changed, plugin_unavailable, unsupported_command */
+        Error409: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error409"];
+            };
+        };
+        /** @description identity_ended */
+        Error410: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error410"];
+            };
+        };
+        /** @description payload_too_large */
+        Error413: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error413"];
+            };
+        };
+        /** @description unsupported_media_type */
+        Error415: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error415"];
+            };
+        };
+        /** @description invalid_payload, integrity_fault */
+        Error422: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error422"];
+            };
+        };
+        /** @description resource_limit */
+        Error429: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error429"];
+            };
+        };
+        /** @description internal_error, integrity_fault */
+        Error500: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error500"];
+            };
+        };
+        /** @description not_ready, plugin_unavailable */
+        Error503: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error503"];
+            };
+        };
+        /** @description storage_limit */
+        Error507: {
+            headers: {
+                "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                "Atlas-Protocol-Version": components["headers"]["Version"];
+                Upgrade: "websocket";
+                Connection: "Upgrade";
+                "Sec-WebSocket-Accept": string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error507"];
+            };
+        };
+    };
+    parameters: {
+        Dataset: components["schemas"]["Identifier"];
+        Version: components["schemas"]["ProtocolVersion"];
+    };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Actual Dataset for successes and declared errors. */
+        Dataset: components["schemas"]["Identifier"];
+        /** @description Actual Core Protocol version, including mismatch errors. */
+        Version: components["schemas"]["ProtocolVersion"];
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    ListAssets: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                ids?: components["schemas"]["Identifier"][];
+                aliases?: components["schemas"]["Alias"][];
+                names?: components["schemas"]["Name"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListAssetsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    RegisterAsset: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterAssetRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisterAssetResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetAsset: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetAssetResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    DeleteAsset: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAssetRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteAssetResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    UpdateAsset: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAssetRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateAssetResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetAssetByAlias: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                alias: components["schemas"]["Alias"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetAssetByAliasResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetAssetObjects: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                entity_ids?: components["schemas"]["Identifier"][];
+                task_ids?: components["schemas"]["Identifier"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetAssetObjectsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetAssetMovementHistory: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                start_at?: components["schemas"]["Timestamp"];
+                end_at?: components["schemas"]["Timestamp"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetAssetMovementHistoryResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListTracks: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                ids?: components["schemas"]["Identifier"][];
+                aliases?: components["schemas"]["Alias"][];
+                names?: components["schemas"]["Name"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListTracksResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    CreateTrack: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTrackRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateTrackResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetTrack: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                track_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetTrackResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    DeleteTrack: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                track_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteTrackRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteTrackResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    EditTrack: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                track_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditTrackRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditTrackResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetTrackByAlias: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                alias: components["schemas"]["Alias"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetTrackByAliasResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetTrackObjects: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                entity_ids?: components["schemas"]["Identifier"][];
+                task_ids?: components["schemas"]["Identifier"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                track_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetTrackObjectsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetTrackMovementHistory: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                start_at?: components["schemas"]["Timestamp"];
+                end_at?: components["schemas"]["Timestamp"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                track_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetTrackMovementHistoryResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListGeofeatures: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                ids?: components["schemas"]["Identifier"][];
+                aliases?: components["schemas"]["Alias"][];
+                names?: components["schemas"]["Name"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListGeofeaturesResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    CreateGeofeature: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGeofeatureRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateGeofeatureResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetGeofeature: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                geofeature_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetGeofeatureResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    DeleteGeofeature: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                geofeature_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteGeofeatureRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteGeofeatureResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    EditGeofeature: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                geofeature_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditGeofeatureRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditGeofeatureResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetGeofeatureByAlias: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                alias: components["schemas"]["Alias"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetGeofeatureByAliasResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetGeofeatureObjects: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                entity_ids?: components["schemas"]["Identifier"][];
+                task_ids?: components["schemas"]["Identifier"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                geofeature_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetGeofeatureObjectsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetAssetStatus: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetAssetStatusResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReportTrackObservations: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                track_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportTrackObservationsRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTrackObservationsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    RequestContactChallenge: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestContactChallengeResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReplaceAssetProcess: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceAssetProcessRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplaceAssetProcessResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListTasks: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                asset_ids?: components["schemas"]["Identifier"][];
+                states?: components["schemas"]["TaskState"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListTasksResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    CreateTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateTaskResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetTask: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                task_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetTaskResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReportTaskExecution: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                task_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportTaskExecutionRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTaskExecutionResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    RequestTaskCancellation: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                task_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestTaskCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestTaskCancellationResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReportTaskResults: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                task_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportTaskResultsRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTaskResultsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetTaskObjects: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                entity_ids?: components["schemas"]["Identifier"][];
+                task_ids?: components["schemas"]["Identifier"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                task_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetTaskObjectsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetAssignedTasks: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                queue_revision?: components["schemas"]["PositiveCounter"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetAssignedTasksResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    SetTaskOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetTaskOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetTaskOrderResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ConfirmTaskOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                asset_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmTaskOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmTaskOrderResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListObjects: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                entity_ids?: components["schemas"]["Identifier"][];
+                task_ids?: components["schemas"]["Identifier"][];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListObjectsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    UploadObject: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                /** @description Unpadded base64url of UTF-8 UploadObjectDescriptor JSON. Bound before decoding. The body is its complete binary stream. */
+                "Atlas-Object-Descriptor": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadObjectResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetObject: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                object_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetObjectResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    DeleteObject: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                object_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteObjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteObjectResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    EditObject: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                object_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditObjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditObjectResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReadObjectContent: {
+        parameters: {
+            query?: {
+                disposition?: "inline" | "attachment";
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                object_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    "Content-Length": components["schemas"]["Counter"];
+                    /** @description sha-256=:BASE64: RFC 9530 value. */
+                    "Content-Digest": string;
+                    "Content-Disposition": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListPlugins: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListPluginsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetPlugin: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                plugin_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetPluginResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    CreateOperation: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                plugin_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOperationRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateOperationResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListOperations: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                plugin_ids?: components["schemas"]["Identifier"][];
+                states?: [
+                ] | [
+                    components["schemas"]["OperationState"]
+                ] | [
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"]
+                ] | [
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"]
+                ] | [
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"]
+                ] | [
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"]
+                ] | [
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"]
+                ] | [
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"],
+                    components["schemas"]["OperationState"]
+                ];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListOperationsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetOperation: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                plugin_id: components["schemas"]["Identifier"];
+                operation_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetOperationResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    CancelOperation: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                plugin_id: components["schemas"]["Identifier"];
+                operation_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelOperationRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelOperationResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListResources: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListResourcesResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReadActivity: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+                start_at?: components["schemas"]["Timestamp"];
+                end_at?: components["schemas"]["Timestamp"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadActivityResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListApiKeys: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListApiKeysResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    CreateApiKey: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApiKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateApiKeyResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    RevokeApiKey: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                key_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeApiKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeApiKeyResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ListOperators: {
+        parameters: {
+            query?: {
+                page_size?: number;
+                page_token?: components["schemas"]["PageToken"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListOperatorsResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    CreateOperator: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOperatorRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            201: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateOperatorResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetOperator: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                operator_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetOperatorResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    DeleteOperator: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                operator_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteOperatorRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteOperatorResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    EditOperator: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path: {
+                operator_id: components["schemas"]["Identifier"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditOperatorRequest"];
+            };
+        };
+        responses: {
+            /** @description Committed result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditOperatorResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetHealthResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetReadiness: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetReadinessResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetReference: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetReferenceResponse"];
+                    "text/html": string;
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetReferenceDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The authenticated authored OpenAPI document. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.oai.openapi+json": string;
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReadSnapshot: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadSnapshotResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReadChanges: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadChangesResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    ReleaseSnapshot: {
+        parameters: {
+            query?: never;
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["Version"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseSnapshotResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    SubscribeChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            101: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    Upgrade: "websocket";
+                    Connection: "Upgrade";
+                    "Sec-WebSocket-Accept": string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+}
