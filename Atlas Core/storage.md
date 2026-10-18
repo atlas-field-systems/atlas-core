@@ -22,8 +22,19 @@ growth. Leave room for later cancellation and terminal reports. Small individual
 requests must not accumulate into an unrepresentable Task or queue. Do not solve
 capacity by dropping accepted declarations or splitting atomic effects.
 
+## Snapshot captures
+
+Core's synchronization owner materializes immutable public resource images and
+their baseline cursor into temporary SQLite-backed captures from one consistent
+database view. Expose only complete captures. End the source read transaction
+before serving pages from the saved images.
+The same owner handles allocation, release, expiry, and failed-build cleanup under
+the [synchronization contract](../Atlas%20Protocol/synchronization.md).
+
 ## Publishing files
 
+Core's Object owner gives each upload attempt distinct private staging and installed
+paths. A retry never overwrites an earlier attempt's file.
 Stream into an attempt-owned private staging file without holding a SQL transaction.
 Verify length and digest; flush bytes, install without overwrite, and flush the
 parent directory. Then take a short transaction, recheck current authority and
@@ -34,10 +45,12 @@ The initial durability target is healthy local Linux storage with same-filesyste
 staging, supported flush semantics, and SQLite WAL with `synchronous=FULL` on every
 writer. Power-loss durability requires an actual qualification test.
 
-After interruption, clean only proven-owned abandoned attempts. Never delete a
-committed, active, or ambiguously owned file. File presence alone is not publication.
-Allow a fresh attempt without restarting Core. Metadata/file disagreement is an
-explicit per-Object fault, not permission to fabricate bytes or erase evidence.
+After interruption, Core's Object owner cleans only proven-owned abandoned attempts
+after verifying their writers have exited. Missing SQL references alone do not prove
+abandonment. Never delete a committed, active, or ambiguously owned file. File presence
+alone is not publication. Allow a fresh attempt without restarting Core. Metadata/file
+disagreement is an explicit per-Object fault, not permission to fabricate bytes or
+erase evidence.
 
 ## Retention and capacity
 

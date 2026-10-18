@@ -15,11 +15,13 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
 | Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, Asset deletion without invented outcomes or transferred Tasks |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
-| Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry, holds versus deletion, disk-full and integrity faults |
+| Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry without overwriting prior attempt files, cleanup preserves live precommit writers and ambiguous files, holds versus deletion, disk-full and integrity faults |
 | Plugins | Disconnect versus runtime loss, same-runtime redelivery, receipt exhaustion, protected drain/force, recovered evidence, removal and retained results |
+| Operation cancellation | Request alone does not cancel; Plugin-confirmed cancellation; completion or failure before effective cancellation wins; late reports preserve terminal state |
 | Operation recovery | Plugin loss before possible delivery keeps pending work; loss after possible delivery interrupts it; Core restart interrupts both |
+| Recovered outcomes | Original Operation reads expose recovered outcomes, effects, and result links; state remains interrupted; no new Operation or execution |
 | Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
-| Full synchronization | Whole-message interruption, fixed handoff, capture retry/release, replay expiry, slow clients, rebuild, Dataset change and capacity pause |
+| Full synchronization | Whole-message interruption, immutable capture under concurrent writes and paging, failed-build cleanup, fixed handoff, capture retry/release, replay expiry, slow clients, rebuild, Dataset change and capacity pause |
 
 For generation, delete outputs and regenerate deterministically with pinned tools.
 Qualify the supported schema profile, independent cross-language examples, package

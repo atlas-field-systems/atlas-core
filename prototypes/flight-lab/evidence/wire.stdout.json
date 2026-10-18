@@ -1,0 +1,434 @@
+{
+  "experiment": "wire",
+  "cases": [
+    {
+      "name": "ordinary document",
+      "expected": {
+        "guarded": true,
+        "native": true
+      },
+      "observed": {
+        "guarded": true,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "nested decoded duplicate",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "duplicate inside array",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "same name in separate objects",
+      "expected": {
+        "guarded": true,
+        "native": true
+      },
+      "observed": {
+        "guarded": true,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "malformed UTF-8",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "overlong UTF-8",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "lone high surrogate",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "lone low surrogate key",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "valid surrogate pair",
+      "expected": {
+        "guarded": true,
+        "native": true
+      },
+      "observed": {
+        "guarded": true,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "overflowed number",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "negative overflow",
+      "expected": {
+        "guarded": false,
+        "native": true
+      },
+      "observed": {
+        "guarded": false,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "non-JSON NaN",
+      "expected": {
+        "guarded": false,
+        "native": false
+      },
+      "observed": {
+        "guarded": false,
+        "native": false
+      },
+      "passed": true
+    },
+    {
+      "name": "truncated document",
+      "expected": {
+        "guarded": false,
+        "native": false
+      },
+      "observed": {
+        "guarded": false,
+        "native": false
+      },
+      "passed": true
+    },
+    {
+      "name": "two documents",
+      "expected": {
+        "guarded": false,
+        "native": false
+      },
+      "observed": {
+        "guarded": false,
+        "native": false
+      },
+      "passed": true
+    },
+    {
+      "name": "unescaped control",
+      "expected": {
+        "guarded": false,
+        "native": false
+      },
+      "observed": {
+        "guarded": false,
+        "native": false
+      },
+      "passed": true
+    },
+    {
+      "name": "64-bit counter string",
+      "expected": {
+        "guarded": true,
+        "native": true
+      },
+      "observed": {
+        "guarded": true,
+        "native": true
+      },
+      "passed": true
+    },
+    {
+      "name": "broken native overflow is nonfinite before JSON output",
+      "expected": [
+        "/value"
+      ],
+      "observed": [
+        "/value"
+      ],
+      "passed": true
+    },
+    {
+      "name": "broken native duplicate loses original fact",
+      "expected": {
+        "outer": {
+          "name": 2
+        }
+      },
+      "observed": {
+        "outer": {
+          "name": 2
+        }
+      },
+      "passed": true
+    },
+    {
+      "name": "broken replacement decoding changes original text",
+      "expected": "\ufffd",
+      "observed": "\ufffd",
+      "passed": true
+    },
+    {
+      "name": "decimal string survives actual Node boundary",
+      "expected": "9007199254740993",
+      "observed": "9007199254740993",
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 0",
+      "expected": true,
+      "observed": true,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 9007199254740993",
+      "expected": true,
+      "observed": true,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 18446744073709551615",
+      "expected": true,
+      "observed": true,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 18446744073709551616",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 01",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter +1",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter -0",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 1e2",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 1",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "prototype unsigned counter 1000-digit input",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "broken numeric counter rounds",
+      "expected": "9007199254740992",
+      "observed": "9007199254740992",
+      "passed": true
+    },
+    {
+      "name": "spatial double precision round trip",
+      "expected": {
+        "latitude": 51.507400000000004,
+        "longitude": -0.12780000000000002
+      },
+      "observed": {
+        "latitude": 51.507400000000004,
+        "longitude": -0.12780000000000002
+      },
+      "passed": true
+    },
+    {
+      "name": "position {\"latitude\": 0, \"longitude\": 0}",
+      "expected": true,
+      "observed": true,
+      "passed": true
+    },
+    {
+      "name": "position {\"latitude\": 51.5074}",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "position {\"latitude\": 91, \"longitude\": 0}",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "position {\"latitude\": true, \"longitude\": 0}",
+      "expected": false,
+      "observed": false,
+      "passed": true
+    },
+    {
+      "name": "omitted section preserves accepted section",
+      "expected": {
+        "description": {
+          "name": "camera",
+          "description": "old details"
+        },
+        "position": {
+          "latitude": 0,
+          "longitude": 0
+        }
+      },
+      "observed": {
+        "description": {
+          "name": "camera",
+          "description": "old details"
+        },
+        "position": {
+          "latitude": 0,
+          "longitude": 0
+        }
+      },
+      "passed": true
+    },
+    {
+      "name": "whole-section replacement removes omitted optional field",
+      "expected": {
+        "name": "renamed"
+      },
+      "observed": {
+        "name": "renamed"
+      },
+      "passed": true
+    },
+    {
+      "name": "invalid mixed update leaves SQL unchanged",
+      "expected": {
+        "refused": true,
+        "body": "{\"description\": {\"name\": \"renamed\"}, \"position\": {\"latitude\": 0, \"longitude\": 0}}"
+      },
+      "observed": {
+        "refused": true,
+        "body": "{\"description\": {\"name\": \"renamed\"}, \"position\": {\"latitude\": 0, \"longitude\": 0}}"
+      },
+      "passed": true
+    },
+    {
+      "name": "broken subfield merge retains obsolete optional field",
+      "expected": "old details",
+      "observed": "old details",
+      "passed": true
+    },
+    {
+      "name": "omission and explicit null remain distinct",
+      "expected": [
+        false,
+        true,
+        null
+      ],
+      "observed": [
+        false,
+        true,
+        null
+      ],
+      "passed": true
+    }
+  ],
+  "findings": [
+    {
+      "classification": "specified implementation pitfall",
+      "claim": "Native JSON.parse accepts decoded duplicates, replacement-decoded UTF-8, lone surrogates and overflowed numbers.",
+      "cases": [
+        "nested decoded duplicate",
+        "malformed UTF-8",
+        "lone high surrogate",
+        "overflowed number"
+      ]
+    },
+    {
+      "classification": "specified implementation pitfall",
+      "claim": "Converting a valid decimal counter to a JS Number changes 9007199254740993 to 9007199254740992.",
+      "cases": [
+        "broken numeric counter rounds"
+      ]
+    },
+    {
+      "classification": "specified implementation pitfall",
+      "claim": "Merging a complete Asset section retains fields the sender omitted.",
+      "cases": [
+        "whole-section replacement removes omitted optional field",
+        "broken subfield merge retains obsolete optional field"
+      ]
+    }
+  ],
+  "limitations": [
+    "Python guards are an instrument, not a proposed SDK dependency or a qualified Go parser.",
+    "Unsigned 64-bit counter range is a fixture assumption; Protocol has not selected signedness per counter.",
+    "The SQL resource is a minimal specimen, not the complete UpdateAsset schema or HTTP API.",
+    "Exact OpenAPI generation, SDK runtime-schema integration, streaming parse memory and full component validation are unrun."
+  ]
+}

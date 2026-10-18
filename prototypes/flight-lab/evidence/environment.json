@@ -1,0 +1,17 @@
+{
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "node": "v24.21.0",
+  "platform": "Linux-6.8.0-146-generic-x86_64-with-glibc2.39",
+  "revision": "adf2d974ca161b74b1bf1d7a523b32c30986f83b",
+  "source_sha256": {
+    "case-manifest.json": "62fe6701a00d5377dccdf303d89720c3192bc698169d626a381f1106278ac00a",
+    "retry/experiment.py": "d5219630555364b38ed0a443d4a35226ccb946eb52aeeeab46ae8d1322c58317",
+    "run.py": "481a0c51d99ded4e726a63d6d90b48f665dd730f4b110b0b3cb3ab0e812a4049",
+    "storage/experiment.py": "0fce92bc79bd391f05112493c45bdb57254f8367819f7408e2101c5107c84645",
+    "sync/experiment.mjs": "3be7fa8f8d85c4a90a513f1b504f6509053decfa32e513ffaa86c481dfe7aa6b",
+    "test_run.py": "580bcce8b4d35217bd8f5e833468620c6d676c60c372a2a93fef24a25b5b339f",
+    "wire/experiment.py": "9af974f0128b8bc171fa096469c5145b0b95b3649ae13b905b625b29dccbfef7",
+    "wire/native.mjs": "162cccfc7b757db6bb44fcfb0d9f26b009433947aa4d1af969868da9843ad4dd"
+  },
+  "qualification": "Disposable mechanism prototypes, not an Atlas implementation."
+}
