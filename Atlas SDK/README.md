@@ -11,16 +11,22 @@ It must not import Core's database, private types, or internal service interface
 | Mode | Behavior |
 | --- | --- |
 | HTTP, default | Read on demand from Core; no maintained replica |
-| Full synchronization, opt-in | Maintain all Entities, Tasks, and ready Object metadata in one in-memory picture |
+| Full synchronization, opt-in | Maintain all Entities, Tasks, ready Object metadata, and retained Asset location readings in one in-memory picture |
 
 Both modes use SDK. In Full mode, resource reads, full queries, changed-since, and
 subscriptions use the local picture. No hidden HTTP fallback or per-call bypass
 pretends to repair incomplete coverage. The public query semantics stay consistent.
 
-Object bytes, Plugin Operations/discovery, operator/key administration, and movement/
-activity history use explicit HTTP operations in both modes. They are outside the
-picture. All mutations go to Core. There is no persistent SDK cache, offline write
-queue, hybrid/selective mode, or shared cross-tab replica.
+The same [Asset history operation](../Atlas%20Protocol/location-history.md) reads
+Core in HTTP mode and the local picture in Full mode. Current Asset values remain
+expanded for callers. Asset helpers preserve each original quantity's source context.
+The helper releases Full-mode views locally and HTTP views through
+`ReleaseAssetHistoryView`.
+
+Object bytes, Plugin Operations/discovery, operator/key administration, Track
+movement history, and activity use explicit HTTP operations in both modes.
+They are outside the picture. All domain mutations go to Core. There is no
+persistent SDK cache, offline write queue, hybrid/selective mode, or shared cross-tab replica.
 
 ## Package boundary
 

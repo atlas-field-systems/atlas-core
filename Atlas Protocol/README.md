@@ -58,6 +58,7 @@ automatic downgrade, or translation between versions. Plugins release independen
 ## Reading order
 
 [Entities](entities.md) → [Identity](identity.md) → [Reports](reports.md) →
+[Asset location history](location-history.md) →
 [Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
 [Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
 

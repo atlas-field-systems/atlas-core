@@ -69,4 +69,7 @@ views, not frozen snapshots; IDs sort bytewise. Default pages contain 100 items,
 maximum 1,000. Tokens bind source, Dataset, kind, filters, size, and continuation;
 ordinary tokens expire after 60 seconds. Assigned-work lists also bind queue revision.
 
+[Asset location history](location-history.md#bounded-history-queries) is a frozen
+query view with its own finite view lifetime and explicit restart result.
+
 [Next: synchronization](synchronization.md)

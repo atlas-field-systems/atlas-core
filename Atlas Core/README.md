@@ -23,7 +23,7 @@ require a cloud service.
 | Owner | Responsibility |
 | --- | --- |
 | Identity | Authenticate keys, record attribution, and enforce revocation |
-| Entities/reporting | Descriptions, accepted observations, contact, and movement |
+| Entities/reporting | Descriptions, accepted observations, contact, Asset location readings, and Track movement |
 | Tasks | Command admission, intent, requested order, and reported execution |
 | Objects | Complete content publication, metadata, holds, and cleanup |
 | Plugins | Installed capability policy and recorded Operation attempts |

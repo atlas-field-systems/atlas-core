@@ -12,6 +12,9 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Shared components | Independent valid/invalid examples; allowed Entity compositions; Go/TypeScript agreement; SDK input/response validation and direct-HTTP refusal of malformed input |
 | Wire and identity | Absent/null, exact counters and identifiers; authenticated discovery and exact-version refusal; equal API permissions across keys; wrong Dataset; lost enrollment reply; revoked-key rejection |
 | Asset updates and Tracks | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; deduplication across keys/gateways, ordering, and history; contact expiry without new packets; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
+| Asset location admission | [Reading cases](../Atlas%20Protocol/location-history-examples.md#new-position-with-older-altitude); reused older altitude; fresh stationary evidence versus relay duplicate; backfill; correction/replay; null unknown and error |
+| Location synchronization | [Atomic reference cases](../Atlas%20Protocol/location-history-examples.md#unknown-errors-and-invalid-references); changed payloads only; current correction and history-only journal delivery; invalid owner/kind/revision or conflicting targets; all readings/tombstones at N and fixed H |
+| Location history queries | [Page/deletion cases](../Atlas%20Protocol/location-history-examples.md#deleted-known-empty-and-stable-pages); HTTP/Full parity without fallback; exact-time order and unknown group; frozen revisions; known-empty after rebuild; expiry/release/Reset restart; view expiry before capacity pause |
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
 | Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, Asset deletion without invented outcomes or transferred Tasks |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
@@ -41,8 +44,9 @@ four-hour missions and eight-hour retained Datasets, including bursts and backlo
 Use a four-CPU, 8 GB RAM, local-SSD Core host and an 8 GB client as the reference.
 
 The eight-hour fixture has 6,912,000 reports, 9,600 Tasks, and 28,800 Operations.
-Include accumulated identities/history, terminal records, old and replacement
-pictures, and decoded memory. Test a 10× burst, ten-minute backlog, slow consumer,
+Include accumulated identities/readings, deleted Asset tombstones, indexes, query
+references and retained revisions, terminal records, old and replacement pictures,
+staging, journal, and decoded memory. Test a 10× burst, ten-minute backlog, slow consumer,
 and four concurrent 1 GB uploads plus downloads. Typical files are 100 MB;
 plan for 10 GB of content per day.
 
@@ -55,7 +59,13 @@ or cancellation of accepted work.
 Initial sync budgets are 4 MiB/1,000 changes per complete message, 4 MiB pending per
 connection, and 64 MiB/15 minutes of replay. SDK picture and journal budgets start
 at 512 MiB/100,000 resources and 16 MiB/10,000 commits. Measure actual aggregate RAM;
-encoded-byte accounting is not a memory guarantee.
+encoded-byte accounting is not a memory guarantee. Resource counts include all
+canonical readings and tombstones. Qualify bounded active history views and their
+reference counts, including a commit that fits only after view expiry and one
+that remains resource-limited. Limits never authorize a history window or eviction.
+At the target Asset rate, two new readings per report produce 2,304,000 readings
+over eight hours. The 100,000-resource starting limit cannot cover that case.
+Qualify a sufficient resource count and aggregate memory budget together.
 
 Qualification targets include p95 ordinary requests below 250 ms, picture lag below
 one second, and initial load below ten seconds. All values require measurement and

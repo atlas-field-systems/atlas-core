@@ -1,8 +1,8 @@
 # Telemetry
 
 Telemetry is the proposed complete section for an Entity's location and motion.
-The name and exact field layout remain proposals. A report supplies this whole
-section, including defined null values, rather than a single-value update.
+A report supplies the whole section, including defined null values.
+Asset history and synchronization use [location reading rules](../location-history.md).
 
 ## Proposed fields
 
@@ -13,10 +13,12 @@ section, including defined null values, rather than a single-value update.
 | `ground_speed` | Number or null | Required | Horizontal metres per second, at least zero; null when unknown |
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
-Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
-Unknown readings do not imply an error. Actual failures use the shared error
-representation. Body heading belongs in [Attitude](attitude.md), separately from
-direction of travel.
+Successful sections also include the [shared fields](README.md#shared-proposed-section-fields).
+Asset reports require [quantity sources](../reports.md#quantity-sources) in their
+shared report context. `observed_at` dates the other telemetry values, including
+speed. It never refreshes the position or altitude source times.
+Unknown values do not imply an error. Errors replace the success section with the
+shared error result. Body heading belongs in [Attitude](attitude.md).
 
 ## Position
 
@@ -55,38 +57,47 @@ The containing field defines how unknown altitude uses null or omission.
 
 ## Complete section example
 
-Valid under the proposed field contract:
+Successful Asset report fragment with enclosing quantity context. Other shared
+report fields are elided. The altitude is an older original observation.
 
 ```json
 {
-	"position": {"latitude": 51.5074, "longitude": -0.1278},
-	"altitude": {"metres": 142.6, "reference": "wgs84_ellipsoid"},
-	"ground_speed": 0,
-	"observed_at": "2026-10-16T12:00:00Z"
+	"telemetry": {
+		"position": {"latitude": 51.5074, "longitude": -0.1278},
+		"altitude": {"metres": 142.6, "reference": "wgs84_ellipsoid"},
+		"ground_speed": 0, "observed_at": "2026-10-16T12:00:00Z"
+	},
+	"quantity_sources": {
+		"position": {
+			"original_evidence": {"process_generation": "00000000-0000-4000-8000-000000000001", "id": "00000000-0000-4000-8000-000000000042", "sequence": "42"},
+			"observed_at": "2026-10-16T12:00:00Z", "revision": "1"
+		},
+		"altitude": {
+			"original_evidence": {"process_generation": "00000000-0000-4000-8000-000000000001", "id": "00000000-0000-4000-8000-000000000040", "sequence": "40"},
+			"observed_at": "2026-10-16T11:59:00Z", "revision": "1"
+		}
+	}
 }
 ```
 
 Omitted `airspeed` is allowed by this proposal. Neither omission nor null
 substitutes an older subfield value.
 
-This fragment is an invalid replacement because required fields are missing:
+`{"ground_speed": 0, "observed_at": "2026-10-16T12:00:00Z"}` is an invalid
+success replacement because required position and altitude are missing.
 
-```json
-{"ground_speed": 0, "observed_at": "2026-10-16T12:00:00Z"}
-```
+A mounted camera can retain Telemetry as state until changed. Aircraft and
+commandless trackers can report dated measurements. Telemetry is not universal.
 
-## Use and decisions
+[`UpdateAsset`](../messaging/assets.md#updating-sections) carries this Asset section.
 
-A mounted camera can retain a complete Telemetry section as state until changed.
-Aircraft and a commandless vehicle tracker can report it as dated measurements.
-This does not require every Entity to have Telemetry.
-
-The proposed [`UpdateAsset`](../messaging/assets.md#updating-sections) message
-carries this Asset section.
-
-Settle the section name, required nullable fields, optional airspeed, and source-time
-layout. A single section timestamp must not conceal older constituent readings.
-Longitude endpoint canonicalization and Altitude's object layout remain open.
+HTTP Asset reads and public SDK values keep expanded `position` and `altitude`.
+Successful Asset reads also expose `telemetry.quantity_sources.position` and
+`.altitude`. Each contains the selected reading's `id`, `revision`,
+`original_evidence`, `observed_at`, and `time_usability`. This read-only metadata
+is distinct from the producer's enclosing report context. Errors expose neither.
+Sync replaces expanded values and this metadata with [references](../synchronization.md#complete-changes).
+Longitude endpoint canonicalization and Altitude's object layout remain proposals.
 Uncertainty fields and exact Track field applicability remain undefined.
 
 [Component index](README.md)

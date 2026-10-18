@@ -34,4 +34,13 @@ Apply Track observation ordering, not Asset process and contact requirements.
 The exact observation envelope and its relationship to complete section updates
 remain unspecified.
 
+## Movement history
+
+Track movement remains an explicit HTTP operation in both SDK modes. Retain
+newly accepted explicit position, speed, or altitude, including historical
+evidence. Preserve sparse quantity times and deduplicate corrections. Never
+create samples by copying a merged Entity snapshot. Deletion retains this history
+until Reset. Queries distinguish unknown Track IDs from known Tracks with no
+matching samples. Track history does not enter the synchronized picture.
+
 [Messaging index](../messaging.md)

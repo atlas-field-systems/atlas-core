@@ -56,13 +56,16 @@ sections do not inherit them. Contact evidence has its own linked representation
 
 | Field | Type | Presence | Proposed meaning |
 | --- | --- | --- | --- |
-| `observed_at` | UTC timestamp string or null | Required | Original source observation time; null when unknown |
+| `observed_at` | UTC timestamp string or null | Required | Section source time; quantity-specific context overrides it where defined |
 | `error` | Error object | Omitted when healthy | Present only for an actual reported error |
 
 Propose an error object with a required string `code` and optional string `message`.
 The allowed codes and handling of failures affecting only part of a section remain
-undecided. A single `observed_at` works for a coherent observation. The representation
-of mixed source times is also undecided. Bundling must preserve original ages.
+undecided. An error replaces the entire result without prior good values.
+A single `observed_at` works for a coherent observation. Asset Telemetry uses
+[quantity sources](../reports.md#quantity-sources) for independent position and
+altitude identity, correction revision, and source time. Other mixed-time layouts
+remain undecided. Bundling must preserve original ages.
 
 Examples show values or section snapshots, not full authenticated API requests.
 The proposed `state` and `measurements` group names remain undecided.
