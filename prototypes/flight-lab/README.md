@@ -31,6 +31,12 @@ env TMPDIR=/tmp python3 prototypes/flight-lab/run.py --out /tmp/atlas-flight-rer
 The output directory must not exist. Each run records source hashes, environment,
 raw stdout, stderr, and the combined result. Runtime children and files belong to
 their individual experiment. The parent enforces a 120-second limit per runner.
+It drains stdout and stderr while the runner executes and retains at most 8 MiB
+in each log. Overflow or timeout fails the run and stops the runner's process group.
+When the leader exits, the parent stops remaining descendants and drains buffered
+output before validating it. Evidence comparison ignores object member order and
+preserves array order and JSON types. Booleans differ from numbers; finite `1` and
+`1.0` match. Nonfinite numbers fail validation.
 
 ## Read the results
 
