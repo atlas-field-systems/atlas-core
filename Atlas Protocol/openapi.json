@@ -1,0 +1,168 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Atlas Protocol",
+    "version": "0.1.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Identifier": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+        "x-go-type": "string"
+      },
+      "Timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "x-go-type": "string"
+      },
+      "Counter": {
+        "type": "string",
+        "format": "uint64-decimal",
+        "pattern": "^(0|[1-9][0-9]{0,19})$"
+      },
+      "Position": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "minimum": -180,
+            "maximum": 180
+          }
+        }
+      },
+      "NullablePosition": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Position"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "Telemetry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "position",
+          "altitude",
+          "ground_speed",
+          "observed_at"
+        ],
+        "properties": {
+          "position": {
+            "$ref": "#/components/schemas/NullablePosition"
+          },
+          "observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "x-go-type": "string"
+          },
+          "altitude": {
+            "$ref": "#/components/schemas/NullableAltitude"
+          },
+          "ground_speed": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "minimum": 0
+          },
+          "airspeed": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "minimum": 0
+          },
+          "position_observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "x-go-type": "string",
+            "description": "Omission uses observed_at. Explicit null means the original time is unknown."
+          },
+          "altitude_observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "x-go-type": "string",
+            "description": "Omission uses observed_at. Explicit null means the original time is unknown."
+          },
+          "ground_speed_observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "x-go-type": "string",
+            "description": "Omission uses observed_at. Explicit null means the original time is unknown."
+          },
+          "airspeed_observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "x-go-type": "string",
+            "description": "Omission uses observed_at. Explicit null means the original time is unknown."
+          }
+        }
+      },
+      "Altitude": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "metres",
+          "reference"
+        ],
+        "properties": {
+          "metres": {
+            "type": "number",
+            "format": "double"
+          },
+          "reference": {
+            "type": "string",
+            "enum": [
+              "wgs84_ellipsoid"
+            ]
+          }
+        }
+      },
+      "NullableAltitude": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Altitude"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
+  }
+}
