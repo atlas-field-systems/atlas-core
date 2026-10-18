@@ -15,6 +15,12 @@ States are `pending`, `in_progress`, `cancellation_requested`, `completed`, `fai
 an aborted SDK wait does not cancel processing. Explicit cancellation is a separate
 request. Do not retry or roll back external effects automatically.
 
+An accepted cancellation request sets unfinished work to `cancellation_requested`.
+Core records `cancelled` only after the Plugin confirms cancellation took effect.
+If processing completes or fails before cancellation takes effect, Core accepts
+`completed` or `failed`, even after recording the request. Later reports cannot
+rewrite a terminal state. Runtime loss follows the rules below.
+
 ## Runtime loss and recovery
 
 Possible exposure means Core may have delivered the Operation to a Plugin.
@@ -37,8 +43,10 @@ For example, a lookup confirmed never exposed stays pending after a Plugin crash
 If Core cannot rule out delivery before that crash, the unfinished lookup becomes
 `interrupted`, even when the Plugin's receipt is unknown.
 
-Preserve known effects. Later valid evidence is a separately recorded recovered
-outcome. It does not turn `interrupted` into ordinary success or authorize another
-execution.
+Preserve known effects. Core records later valid evidence separately as a recovered
+outcome under the original Operation identity. Reads of that Operation include the
+recovered outcome, known effects, and any result links. The original state remains
+`interrupted`. Recording recovery does not create another Operation or authorize
+another execution.
 
 [Next: Objects](objects.md)
