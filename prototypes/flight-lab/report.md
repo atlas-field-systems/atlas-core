@@ -1,17 +1,17 @@
 # Atlas prototype findings
 
 Four throwaway prototypes reproduced practical implementation traps in the design
-at `1ca5623`. All 188 recorded observations matched their expected results in the
+at `1ca5623`. All 233 recorded observations matched their expected results in the
 [assembled run](evidence/summary.json). These are observation points, including
-expected failures of broken alternatives, rather than 188 independent workflows.
+expected failures of broken alternatives, rather than 233 independent workflows.
 
 ## What ran
 
 | Instrument | Observations | Real boundaries |
 | --- | ---: | --- |
-| [Retry and execution](evidence/retry.stdout.json) | 50 | HTTP, SQLite WAL/FULL, Plugin processes, Unix sockets, independent effect log |
-| [Synchronization](evidence/sync.stdout.json) | 31 | HTTP streams, interrupted JSON, SQLite captures, local picture and journal |
-| [Object publication](evidence/storage.stdout.json) | 66 | Files, fsync, SQLite WAL/FULL, 62 child processes, four kill barriers |
+| [Retry and execution](evidence/retry.stdout.json) | 56 | HTTP, SQLite WAL/FULL, Plugin processes, Unix sockets, independent effect log |
+| [Synchronization](evidence/sync.stdout.json) | 38 | HTTP streams, interrupted JSON, SQLite captures, local picture and journal |
+| [Object publication](evidence/storage.stdout.json) | 98 | Files, fsync, SQLite WAL/FULL, 75 child processes, four publication kill barriers |
 | [Wire decoding](evidence/wire.stdout.json) | 41 | Raw bytes through Python and Node, minimal SQL update specimen |
 
 Run `env TMPDIR=/tmp python3 prototypes/flight-lab/run.py` from the repository root.
@@ -34,8 +34,8 @@ Run `env TMPDIR=/tmp python3 prototypes/flight-lab/run.py` from the repository r
 
 3. **Unreferenced files can belong to live uploads.** The broken sweep deleted an
    installed file while its publisher was alive before SQL commit. Publication then
-   reported an integrity error. Conservative ownership checks preserved live,
-   committed, and ambiguous files. Four kill barriers preserved all-or-none public
+   reported an integrity error. Per-artifact ownership checks preserved live,
+   committed, collided, replaced, and unproven files. Four publication kill barriers preserved all-or-none public
    metadata, retry, and change records. See [storage evidence](evidence/storage.stdout.json)
    and [file publication](../../Atlas%20Core/storage.md#publishing-files).
 
@@ -72,7 +72,7 @@ boundaries; that is a bounded investigation result, not a conformance verdict.
   post-commit reply, and atomic replay. These scripts supply scenarios, not reusable
   production modules.
 
-## Limits and review
+## Limits
 
 File content is a three-byte known digest fixture. ENOSPC is simulated. Capture
 expiry uses injected ticks. Plugin dispatch uses synchronous Unix RPC instead of
@@ -82,8 +82,3 @@ backpressure. No speed, memory, large-file, or deployment-capacity claim is made
 Go, the TypeScript SDK, full schemas/generation, TLS, Docker/host-manager lifecycle,
 Reset recovery, contact proofs, concurrent duplicate uploads, physical reclamation,
 real Assets/radio, and power-loss durability remain unqualified or unrun.
-
-An independent Grok rerun confirmed all five findings and 188 observations. Its
-low verification notes led to exact outcome gates and measured cleanup records.
-A fresh Gemini rerun verified those changes, all 188 observations, and source hashes.
-Use the short-temp command above to avoid the reviewer's harness socket-path limit.

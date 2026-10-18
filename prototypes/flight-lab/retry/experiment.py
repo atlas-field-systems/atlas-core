@@ -245,6 +245,9 @@ class Core:
                 if select.select([pinned], [], [], 0)[0]:
                     os.close(pinned)
                     return 409, {"error": "runtime_dead"}
+                self.db.execute("""INSERT OR IGNORE INTO reservations
+                                   SELECT ?,id FROM operations
+                                   WHERE exposure=? AND state NOT IN (?,?,?,?)""", (hello["runtime"], Exposure.NEVER, *TERMINAL))
                 if self.pidfd is not None:
                     os.close(self.pidfd)
                 self.runtime, self.pidfd = value, pinned
@@ -593,7 +596,19 @@ def run(lab, case, findings):
         case("runtime death preserves never exposure and interrupts possible " + variant,
              {never.identity: "pending", possible.identity: "interrupted"}, states)
         plugin = lab.plugin("replacement-" + variant, core, effects)
-        call(core, "/dispatch", {"identity": never.identity})
+        if not variant:
+            fresh = admit(core, "replacement-fresh")
+            overflow = PreparedRequest(DATASET, uid("replacement-overflow"), fresh.original_facts, "operation")
+            case("replacement capacity includes carried never-exposed work", ("rejected", {"error": "receipt_capacity"}), submit(core, overflow))
+            case("replacement capacity leaves carried exact retry usable", ("accepted", {"identity": never.identity, "replayed": True}), submit(core, never))
+            case("replacement executes reserved carried and fresh Operations", [(200, {"revision": "1", "state": "completed"})] * 2,
+                 [call(core, "/dispatch", {"identity": request.identity}) for request in (never, fresh)])
+            case("replacement fresh Operation records one external effect", 1, count(fresh.identity))
+            case("replacement retains both completed receipts", 2, read_sql(plugin["cfg"]["receipts"], "SELECT count(*) FROM receipts WHERE outcome='completed'")[0][0])
+            case("completed replacement receipts still consume admission capacity", ("rejected", {"error": "receipt_capacity"}),
+                 submit(core, PreparedRequest(DATASET, uid("replacement-after-completion"), fresh.original_facts, "operation")))
+        else:
+            call(core, "/dispatch", {"identity": never.identity})
         call(core, "/dispatch", {"identity": possible.identity})
         if variant:
             effect_count = count(possible.identity)

@@ -31,7 +31,7 @@ function merge(base, changes) {
   for (const r of changes) {
     const old = next.get(r.id);
     if (!old || old.version < r.version) next.set(r.id, r);
-    else if (old.version === r.version) must(json(old) === json(r), 'conflicting_version');
+    else if (old.version === r.version) must(isDeepStrictEqual(old, r), 'conflicting_version');
   }
   return next;
 }
@@ -54,7 +54,7 @@ class Picture {
       journal: structuredClone(this.journal), notifications: structuredClone(this.notifications) };
   }
   begin(capture) {
-    this.capture = capture; this.staged = new Map(); this.stageCursor = capture.N; this.coverage = 'recovering';
+    this.capture = capture; this.releasePending = false; this.staged = new Map(); this.stageCursor = capture.N; this.coverage = 'recovering';
     this.pageOffset = 0; this.pagesDone = false; this.receipts = new Map();
   }
   page(raw) {
@@ -70,7 +70,7 @@ class Picture {
     must(c.type === 'commit' && c.dataset === this.dataset && Array.isArray(c.changes), 'commit_context');
     const seq = index(c.cursor);
     if (c.changes.length > this.budget.changes) { this.coverage = 'resource-limited'; fail('capacity'); }
-    if (this.receipts.has(c.cursor)) { must(this.receipts.get(c.cursor) === json(c), 'conflicting_commit'); return; }
+    if (this.receipts.has(c.cursor)) { must(isDeepStrictEqual(JSON.parse(this.receipts.get(c.cursor)), c), 'conflicting_commit'); return; }
     const previous = index(this.staged ? this.stageCursor : this.applied);
     must(seq === previous + 1, 'commit_order');
     if (incremental) {
@@ -212,7 +212,15 @@ async function route(req, res) {
       for (const c of rows('SELECT data FROM commits WHERE seq>? ORDER BY seq', f.from)) f.res.write(json(c) + '\n');
       f.from = head(); value = { delivered: cursor(f.from) }; break;
     }
-    case '/message': value = { type: 'commit', dataset: 'D1', cursor: 'c2', changes: [image('a', 2, 'A2'), image('b', 2, url.searchParams.has('invalid') ? 17 : 'B2')] }; break;
+    case '/message':
+      value = url.searchParams.has('cursor')
+        ? rows('SELECT data FROM commits WHERE seq=?', index(url.searchParams.get('cursor')))[0]
+        : { type: 'commit', dataset: 'D1', cursor: 'c2', changes: [image('a', 2, 'A2'), image('b', 2, url.searchParams.has('invalid') ? 17 : 'B2')] };
+      if (url.searchParams.has('reordered')) value = {
+        changes: value.changes.map(r => Object.fromEntries(Object.entries(r).reverse())), cursor: value.cursor, dataset: value.dataset, type: value.type
+      };
+      if (url.searchParams.has('reversed')) value.changes.reverse();
+      break;
     case '/limits': {
       const retained = rows('SELECT data FROM commits');
       value = { bytes: Math.max(1024, ...retained.map(c => Buffer.byteLength(json(c)))), changes: Math.max(4, ...retained.map(c => c.changes.length)), tick }; break;
@@ -308,17 +316,24 @@ async function atomicCases() {
     { unchanged: !detected, resources: brokenAfter.resources, cursor: brokenAfter.cursor, journal: brokenAfter.journal.length, notifications: brokenAfter.notifications.length });
   if (detected) report.findings.push({ classification: 'documented-rule pitfall', claim: 'Incremental validation mutated state before rejecting the invalid final resource.',
     evidence: { changed: Object.keys(brokenBefore).filter(key => !isDeepStrictEqual(brokenBefore[key], brokenAfter[key])), resources: brokenAfter.resources, cursor: brokenAfter.cursor } });
-  p.receive((await api('/message')).body);
+  p.receive((await api('/write', { changes: [image('a', 2, 'A2'), image('b', 2, 'B2')] })).body);
   check('complete_commit_notifies_once_with_coherent_query_and_cursor',
     { resources: { a: [2, 'A2'], b: [2, 'B2'], c: [1, 'C0'], d: [1, 'D0'] }, cursor: 'c2', journal: 1, notifications: 1, coherent: true },
     { resources: p.query().resources, cursor: p.applied, journal: p.journal.length, notifications: p.notifications.length, coherent: isDeepStrictEqual(p.notifications[0], p.query()) });
-  const c3 = { type: 'commit', dataset: 'D1', cursor: 'c3', changes: [deletion('b', 3)] };
+  const afterComplete = p.effects();
+  check('reordered_object_members_duplicate_is_inert', { result: 'accepted', unchanged: true },
+    { result: await refused(async () => p.receive((await api('/message?cursor=c2&reordered=1')).body)), unchanged: isDeepStrictEqual(afterComplete, p.effects()) });
+  check('reordered_changes_array_duplicate_is_rejected', { rejection: 'conflicting_commit', unchanged: true },
+    { rejection: await refused(async () => p.receive((await api('/message?cursor=c2&reversed=1')).body)), unchanged: isDeepStrictEqual(afterComplete, p.effects()) });
+  const c3 = JSON.parse((await api('/write', { changes: [deletion('b', 3)] })).body);
   p.receive(json(c3)); const afterDelete = p.effects(); p.receive(json(c3));
   check('exact_duplicate_is_inert', true, isDeepStrictEqual(afterDelete, p.effects()));
+  check('reordered_deletion_duplicate_is_inert', { result: 'accepted', unchanged: true },
+    { result: await refused(async () => p.receive((await api('/message?cursor=c3&reordered=1')).body)), unchanged: isDeepStrictEqual(afterDelete, p.effects()) });
   const conflicting = { ...c3, changes: [image('b', 3, 'resurrect')] };
   check('conflicting_duplicate_is_rejected', { rejection: 'conflicting_commit', unchanged: true },
     { rejection: await refused(() => p.receive(json(conflicting))), unchanged: isDeepStrictEqual(afterDelete, p.effects()) });
-  p.receive(json({ type: 'commit', dataset: 'D1', cursor: 'c4', changes: [image('b', 1, 'stale')] }));
+  p.receive((await api('/write', { changes: [image('b', 1, 'stale')] })).body);
   check('tombstone_blocks_stale_resurrection', { present: false, tombstoneVersion: 3, cursor: 'c4' },
     { present: 'b' in p.query().resources, tombstoneVersion: p.published.get('b').version, cursor: p.applied });
   const beforeDataset = p.effects();
@@ -327,9 +342,17 @@ async function atomicCases() {
   const slow = p.subscribe(0), current = p.subscribe();
   check('slow_subscriber_gets_explicit_gap', [{ type: 'gap' }], p.drain(slow));
   check('new_subscriber_starts_at_boundary', [], p.drain(current));
-  p.receive(json({ type: 'commit', dataset: 'D1', cursor: 'c5', changes: [image('a', 3, 'A5')] }));
+  p.receive((await api('/write', { changes: [image('a', 3, 'A5')] })).body);
   check('gapped_subscriber_stops_and_current_subscriber_gets_whole_commit', { stopped: [], changes: [image('a', 3, 'A5')], position: 4 },
     { stopped: p.drain(slow), changes: p.drain(current)[0].commit.changes, position: current.position });
+  check('same_version_reordered_resource_is_harmless',
+    { result: 'accepted', resources: { a: [3, 'A5'], c: [1, 'C0'], d: [1, 'D0'] }, cursor: 'c6', notifications: 5 },
+    { result: await refused(async () => p.receive((await api('/write', { changes: [{ value: 'A5', version: 3, id: 'a', kind: 'image' }] })).body)),
+      resources: p.query().resources, cursor: p.applied, notifications: p.notifications.length });
+  const beforeVersionConflict = p.effects();
+  check('same_version_changed_resource_is_rejected', { rejection: 'conflicting_version', unchanged: true },
+    { rejection: await refused(async () => p.receive((await api('/write', { changes: [image('a', 3, 'different')] })).body)),
+      unchanged: isDeepStrictEqual(beforeVersionConflict, p.effects()) });
 }
 
 const throughH = { b: [2, 'B@2'], c: [1, 'C0'], d: [2, 'D@3'] };
@@ -378,6 +401,7 @@ async function handoff(variant) {
 async function captureCases() {
   reset(); const ctx = load('lost-allocation');
   await interrupted(() => api('/allocate?cut=1', ctx));
+  await api('/clock', { tick: 10 });
   await api('/write', { changes: [image('a', 2, 'later')] });
   const cap = JSON.parse((await api('/allocate', ctx)).body);
   check('lost_allocation_retry_recovers_original_capture_and_expiry', { loadId: ctx.loadId, N: 'c1', expiry: 50, allocations: 1 }, { ...cap, allocations });
@@ -404,6 +428,17 @@ async function captureCases() {
   check('expired_pruned_context_cannot_resurrect', { status: 409, allocations: 1 }, { status: (await api('/allocate', ctx)).status, allocations });
   const oldRun = load('old-run'); await api('/restart');
   check('old_run_context_cannot_allocate_after_restart', 409, (await api('/allocate', oldRun)).status);
+  reset(); const waiting = new Picture(), abandoned = load('release-lost-until-expiry');
+  await waiting.recover(api, abandoned);
+  waiting.releasePending = true; await interrupted(() => api('/release?cut=1', { loadId: abandoned.loadId }));
+  await api('/clock', { tick: 60 }); const replacement = load('after-expiry');
+  check('replacement_after_lost_release_expiry_allocates_fresh_capture',
+    { state: 'loading', capture: { loadId: 'after-expiry', N: 'c1', expiry: 110 }, allocations: 2, allocationAttempts: 2 },
+    { state: await waiting.recover(api, replacement), capture: waiting.capture, allocations, allocationAttempts });
+  check('fresh_capture_retry_does_not_inherit_expired_release_wait',
+    { state: 'loading', capture: { loadId: 'after-expiry', N: 'c1', expiry: 110 }, allocations: 2, allocationAttempts: 3 },
+    { state: await waiting.recover(api, replacement), capture: waiting.capture, allocations, allocationAttempts });
+  await api('/release', { loadId: replacement.loadId });
 }
 
 async function recoveryCases() {

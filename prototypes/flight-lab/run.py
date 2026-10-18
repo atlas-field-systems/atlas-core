@@ -13,6 +13,9 @@ import sys
 import tempfile
 
 
+CASE_MANIFEST = json.loads(Path(__file__).with_name("case-manifest.json").read_text())
+
+
 def validate_observation(value, experiment):
     if not isinstance(value, dict) or value.get("experiment") != experiment:
         raise ValueError("missing or mismatched experiment name")
@@ -30,6 +33,12 @@ def validate_observation(value, experiment):
             raise ValueError("case lacks evidence")
         if case.get("passed") is not True or case["expected"] != case["observed"]:
             raise ValueError("unexpected failed case: " + case["name"])
+    expected_names = set(CASE_MANIFEST[experiment])
+    if names != expected_names:
+        raise ValueError(
+            f"case manifest mismatch: missing {sorted(expected_names - names)}, "
+            f"unexpected {sorted(names - expected_names)}"
+        )
     for key in ("findings", "limitations"):
         if not isinstance(value.get(key), list):
             raise ValueError("missing " + key)
@@ -87,7 +96,7 @@ def main():
         output.mkdir(parents=True, exist_ok=False)
     else:
         output = Path(tempfile.mkdtemp(prefix="atlas-flight-results-"))
-    files = sorted([*base.rglob("*.py"), *base.rglob("*.mjs")])
+    files = sorted([*base.rglob("*.py"), *base.rglob("*.mjs"), base / "case-manifest.json"])
     metadata = {
         "python": sys.version,
         "node": subprocess.check_output(["node", "--version"], text=True).strip(),

@@ -17,6 +17,9 @@ temporary directories. The command prints results and its evidence directory.
 A missing runner, unexpected failed observation, process failure, or invalid output
 makes the command exit nonzero. Deliberately broken controls pass only when the
 experiment observes their expected failure.
+The checked-in [case manifest](case-manifest.json) lists every required observation;
+missing or unexpected cases fail the run. Verify this gate with
+`python3 prototypes/flight-lab/test_run.py`.
 
 Run one experiment or choose a new evidence directory.
 

@@ -69,6 +69,9 @@ def initialize(root):
     root.mkdir()
     (root / "private").mkdir()
     (root / "installed").mkdir()
+    (root / "owned").mkdir()
+    for folder in ("private", "installed"):
+        (root / "owned" / folder).mkdir()
     db = connect(root)
     try:
         db.executescript(SCHEMA)
@@ -86,6 +89,18 @@ def fsync_directory(path):
 
 class Refusal(Exception):
     pass
+
+
+def record_ownership(root, folder, token, identity):
+    proof = root / "owned" / folder / token
+    # A hard-link witness pins the inode across path replacement and SQL rollback.
+    os.link(root / folder / token, proof, follow_symlinks=False)
+    actual = proof.lstat()
+    if (actual.st_dev, actual.st_ino) != (identity.st_dev, identity.st_ino):
+        proof.unlink()
+        fsync_directory(proof.parent)
+        raise Refusal("ownership_changed")
+    fsync_directory(proof.parent)
 
 
 def checkpoint(channel, configured, name, token):
@@ -123,10 +138,17 @@ def publish(root, config, channel):
             raise Refusal("admission_refused")
         db.execute("INSERT INTO attempts VALUES(?,?,?,'active')", (token, attempt.pid, token))
         if broken != "metadata_first":
-            with attempt.private_file.open("xb") as stream:
+            try:
+                stream = attempt.private_file.open("xb")
+            except FileExistsError:
+                raise Refusal("staging_collision")
+            with stream:
                 stream.write(body)
                 stream.flush()
                 os.fsync(stream.fileno())
+                identity = os.fstat(stream.fileno())
+                checkpoint(channel, stop, "private_before_proof", token)
+                record_ownership(root, "private", token, identity)
             checkpoint(channel, stop, "upload_wait", token)
             checkpoint(channel, stop, "before_install", token)
             if config.get("simulated_enospc"):
@@ -138,6 +160,8 @@ def publish(root, config, channel):
                     os.link(attempt.private_file, attempt.installed_file)
                 except FileExistsError:
                     raise Refusal("install_collision")
+            checkpoint(channel, stop, "installed_before_proof", token)
+            record_ownership(root, "installed", token, identity)
             checkpoint(channel, stop, "after_install", token)
             fsync_directory(root / "installed")
             attempt.private_file.unlink(missing_ok=True)
@@ -252,10 +276,23 @@ def sweep_owned(root, confirmed_dead):
                 continue
             for folder in ("private", "installed"):
                 path = root / folder / filename
-                if path.exists():
+                proof = root / "owned" / folder / filename
+                try:
+                    identity = proof.lstat()
+                except FileNotFoundError:
+                    continue
+                try:
+                    actual = path.lstat()
+                except FileNotFoundError:
+                    actual = None
+                if actual is not None:
+                    if (actual.st_dev, actual.st_ino) != (identity.st_dev, identity.st_ino):
+                        continue
                     path.unlink()
                     removed.append(f"{folder}/{filename}")
                     fsync_directory(root / folder)
+                proof.unlink()
+                fsync_directory(proof.parent)
             db.execute("UPDATE attempts SET state='abandoned' WHERE token=?", (token,))
         return sorted(removed)
     finally:
@@ -387,6 +424,12 @@ def run_experiment(base, cases, children):
         check(f"{stop}: one exact publication after retry", expected_view("ready"), fresh(root))
         if old_bytes is not None:
             check(f"{stop}: orphan or committed bytes unchanged", old_bytes.hex(), old_file.read_bytes().hex())
+        removed = {"before_install": ["private/interrupted"],
+                   "after_install": ["installed/interrupted", "private/interrupted"],
+                   "before_sql_commit": ["installed/interrupted"], "after_sql_commit": []}
+        check(f"{stop}: sweep respects per-file ownership and commit", removed[stop],
+              sweep_owned(root, {"interrupted": writer.process.pid}))
+        check(f"{stop}: publication survives sweep", expected_view("ready"), fresh(root))
         if stop == "after_sql_commit":
             committed = root
 
@@ -402,11 +445,30 @@ def run_experiment(base, cases, children):
     root = new("collision")
     occupied = root / "installed" / "occupied"
     occupied.write_bytes(b"DIFFERENT")
-    check("no-overwrite refuses different existing bytes", "install_collision", child(root, "occupied").finish()["outcome"])
+    colliding = child(root, "occupied")
+    check("no-overwrite refuses different existing bytes", "install_collision", colliding.finish()["outcome"])
     check("collision does not publish", expected_view(), fresh(root))
+    check("collision sweep removes only owned staging file", ["private/occupied"],
+          sweep_owned(root, {"occupied": colliding.process.pid}))
+    check("collision sweep preserves pre-existing installed bytes", "444946464552454e54",
+          occupied.read_bytes().hex() if occupied.exists() else None)
     check("fresh attempt progresses after collision", "published", child(root, "new-attempt").finish()["outcome"])
-    check("different orphan bytes survive retry unchanged", "444946464552454e54", occupied.read_bytes().hex())
+    check("different orphan bytes survive retry unchanged", "444946464552454e54",
+          occupied.read_bytes().hex() if occupied.exists() else None)
     check("new attempt publishes exact content", expected_view("ready"), fresh(root))
+
+    root = new("staging_collision")
+    occupied = root / "private" / "occupied"
+    occupied.write_bytes(b"DIFFERENT")
+    colliding = child(root, "occupied")
+    check("exclusive creation refuses pre-existing staging file", "staging_collision", colliding.finish()["outcome"])
+    check("staging collision does not publish", expected_view(), fresh(root))
+    check("staging collision sweep has no owned artifacts", [],
+          sweep_owned(root, {"occupied": colliding.process.pid}))
+    check("staging collision sweep preserves pre-existing bytes", "444946464552454e54",
+          occupied.read_bytes().hex() if occupied.exists() else None)
+    check("fresh attempt progresses after staging collision", "published", child(root, "new-attempt").finish()["outcome"])
+    check("staging collision retry publishes exact content", expected_view("ready"), fresh(root))
 
     for name, mutation, outcome in (
         ("revoked", "UPDATE authority SET authorized=0", "unauthorized"),
@@ -418,6 +480,8 @@ def run_experiment(base, cases, children):
         writer.release()
         check(f"{name}: rechecked after upload wait", outcome, writer.finish()["outcome"])
         check(f"{name}: no public effects", expected_view(), fresh(root))
+        check(f"{name}: ownership survives publication rollback", ["installed/waiting"],
+              sweep_owned(root, {"waiting": writer.process.pid}))
     root = new("simulated_enospc")
     check("SIMULATED ENOSPC refuses publication", "simulated_enospc", child(root, "full", simulated_enospc=True).finish()["outcome"])
     check("SIMULATED ENOSPC leaves no public effects", expected_view(), fresh(root))
@@ -460,6 +524,38 @@ def run_experiment(base, cases, children):
           sweep_owned(root, {"abandoned": abandoned.process.pid, "live": writer.process.pid}))
     check("cleanup retains committed state and exact bytes", expected_view("ready"), fresh(root))
     check("cleanup retains ambiguous ownership", True, ambiguous.exists())
+    check("repeated cleanup removes nothing further", [],
+          sweep_owned(root, {"abandoned": abandoned.process.pid, "live": writer.process.pid}))
+
+    for stop, folder, removed in (("private_before_proof", "private", []),
+                                  ("installed_before_proof", "installed", ["private/unproven"])):
+        root = new(stop)
+        writer = child(root, "unproven", stop=stop)
+        writer.barrier(stop)
+        check(f"{stop}: SIGKILL barrier", {"outcome": "killed", "returncode": -9}, writer.finish(kill=True))
+        check(f"{stop}: sweep removes only separately proven artifacts", removed,
+              sweep_owned(root, {"unproven": writer.process.pid}))
+        path = root / folder / "unproven"
+        check(f"{stop}: ambiguous crash-window bytes survive", "616263",
+              path.read_bytes().hex() if path.exists() else None)
+        check(f"{stop}: repeated sweep preserves ambiguous bytes", {"removed": [], "exists": True},
+              {"removed": sweep_owned(root, {"unproven": writer.process.pid}), "exists": path.exists()})
+        check(f"{stop}: no public effects", expected_view(), fresh(root))
+
+    root = new("replaced_artifacts")
+    writer = child(root, "replaced", stop="after_install")
+    writer.barrier("after_install")
+    writer.finish(kill=True)
+    for folder, body in (("private", b"DIFFERENT"), ("installed", BODY)):
+        replacement = root / folder / "replacement"
+        replacement.write_bytes(body)
+        os.replace(replacement, root / folder / "replaced")
+    check("sweep preserves replaced private and same-content installed files", [],
+          sweep_owned(root, {"replaced": writer.process.pid}))
+    check("replacement bytes survive sweep", ["444946464552454e54", "616263"],
+          [(root / folder / "replaced").read_bytes().hex() if (root / folder / "replaced").exists() else None
+           for folder in ("private", "installed")])
+    check("repeated sweep preserves replacements", [], sweep_owned(root, {"replaced": writer.process.pid}))
 
     root = new("broken_sweep")
     writer = child(root, "live", stop="after_install")
@@ -573,7 +669,7 @@ def main():
         "Object files only. Reset, host manager, Docker, Go, HTTP streaming, downloads, and Task execution are unrun.",
         "ENOSPC is explicitly simulated before installation. No host disk filling or real capacity isolation proof.",
         "Single bounded 3-byte fixture, SHA-256 known vector, local Linux same-filesystem hard links and SQLite WAL/FULL.",
-        "Ownership proof uses this parent's waited child PID plus unique attempt token; takeover and PID-reuse fencing are unresolved.",
+        "Cleanup uses waited child PID/token and per-artifact hard-link witnesses; missing proof and replacements are retained. Takeover and PID-reuse fencing are unresolved.",
         "Hold/delete tests force both lock orders, not arbitrary schedule stress. Physical tombstone reclamation is unrun.",
         "Descriptor, Dataset, credential, retry, and batch encodings are prototype assumptions, not authoritative schemas.",
         "Attempt-path collision refuses that attempt; progress requires a fresh unique attempt path.",

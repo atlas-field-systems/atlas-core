@@ -7,7 +7,7 @@
     ],
     "status": "PASS",
     "exit_code": 0,
-    "cases": 50
+    "cases": 56
   },
   {
     "experiment": "sync",
@@ -17,7 +17,7 @@
     ],
     "status": "PASS",
     "exit_code": 0,
-    "cases": 31
+    "cases": 38
   },
   {
     "experiment": "storage",
@@ -27,7 +27,7 @@
     ],
     "status": "PASS",
     "exit_code": 0,
-    "cases": 66
+    "cases": 98
   },
   {
     "experiment": "wire",
