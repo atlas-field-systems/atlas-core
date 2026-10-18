@@ -3,6 +3,8 @@
 Telemetry is the proposed complete section for an Entity's location and motion.
 The name and exact field layout remain proposals. A report supplies this whole
 section, including defined null values, rather than a single-value update.
+The same whole-snapshot ordering applies to Asset and Track Telemetry. The source
+assembles the snapshot; Core does not merge independently arriving quantities.
 
 ## Proposed fields
 

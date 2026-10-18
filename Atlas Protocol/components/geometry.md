@@ -2,7 +2,7 @@
 
 Geometry describes a point, line, or polygon using a shared spatial value.
 Geofeatures require it. Applicable Tracks can report an observed extent. Asset
-location uses [Position](telemetry.md#position). Exact schema limits below remain proposals.
+location uses [Position](telemetry.md#position).
 
 ## Proposed representation
 
@@ -14,17 +14,21 @@ Each object has required, non-null `type` and `coordinates` fields. Its geometry
 | --- | --- | --- |
 | `Point` | One coordinate pair | Exactly two finite numbers, longitude then latitude |
 | `LineString` | Array of coordinate pairs | At least two pairs |
-| `Polygon` | Array of closed rings | At least one ring; at least four pairs per ring, including the repeated first/last pair |
+| `Polygon` | Array containing one closed ring | At least four pairs, including the repeated first/last pair |
 
 Use WGS84 degrees and the bounds from [Position](telemetry.md#position), preserving
 double precision. Coordinate tuples reference the same longitude and latitude scalar
-definitions in the eventual schemas. The first polygon ring is the exterior.
-Subsequent rings are holes. Follow GeoJSON winding rules.
+definitions in the schemas. The single polygon ring is the exterior. Follow GeoJSON
+winding rules. A polygon must have nonzero area and must not intersect itself.
 
-This proposal accepts geometry objects, not Feature wrappers or collections.
-It starts with two-dimensional coordinates. Command altitude uses the explicit
-[Altitude](telemetry.md#altitude) value. Vertex limits, antimeridian handling, and
-polygon validity rules need agreement before an executable schema is complete.
+Accept only these two-dimensional geometry objects. Feature wrappers, collections,
+holes, multipart geometry, and dateline- or pole-spanning shapes are unsupported.
+The initial maximum is 1,024 coordinate pairs in total, including a ring's repeated
+closing pair. Command altitude uses the explicit [Altitude](telemetry.md#altitude) value.
+
+Refuse malformed shapes as `invalid_geometry`, excluded representations as
+`unsupported_geometry`, and excess vertices as `geometry_limit_exceeded`. Never
+silently close, simplify, reorient, split, or repair submitted geometry.
 
 ## Examples
 

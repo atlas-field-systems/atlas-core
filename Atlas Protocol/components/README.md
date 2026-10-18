@@ -59,10 +59,10 @@ sections do not inherit them. Contact evidence has its own linked representation
 | `observed_at` | UTC timestamp string or null | Required | Original source observation time; null when unknown |
 | `error` | Error object | Omitted when healthy | Present only for an actual reported error |
 
-Propose an error object with a required string `code` and optional string `message`.
-The allowed codes and handling of failures affecting only part of a section remain
-undecided. A single `observed_at` works for a coherent observation. The representation
-of mixed source times is also undecided. Bundling must preserve original ages.
+An Asset reports an actual section failure with a required string `code` and optional
+string `message`. Reads expose the section error rather than reconstructing partial
+success. Withdrawal follows [Reports](../reports.md#shared-context). A single
+`observed_at` describes a coherent observation; mixed-time values retain their own ages.
 
 Examples show values or section snapshots, not full authenticated API requests.
 The proposed `state` and `measurements` group names remain undecided.

@@ -2,7 +2,8 @@
 
 **Core records intent. The Asset runtime schedules and executes it.**
 Protocol owns the Command Catalog; each Asset advertises its supported subset.
-Plugins are not Task targets and cannot add Asset Commands.
+The initial Catalog contains only Move To, Pause, and Resume. Plugins are not Task
+targets and cannot add Asset Commands.
 
 ## Creation and state
 
@@ -52,6 +53,10 @@ explicit Resume. Pending cancellation must be resolved before resumption.
 Controls follow Core acceptance order, not packet arrival. Superseded controls
 cannot later take effect. Pause does not expire; expired Resume cannot unpause or
 fall back to an older control. Command-specific deadlines remain explicit.
+
+An Asset that confirms a control never applied reports `failed` with an `expired`
+or `superseded` reason. Without that evidence, its outcome remains unresolved.
+Accept valid delayed evidence of execution before the cutoff; terminal states remain immutable.
 
 ## References and results
 

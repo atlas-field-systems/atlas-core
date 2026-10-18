@@ -18,10 +18,15 @@ Never merge its subfields with the prior section. Missing required fields reject
 the update. Omitted optional fields do not retain old values. Null subfields are
 valid only where their schemas permit them.
 
-An accepted error report becomes the affected section's current result. Reads expose
-the error without falling back to a prior value. Error reports follow normal validation and ordering.
+The Asset detects failures and reports a section-level error with a code and optional
+message. Core records and exposes it without diagnosing hardware, reconstructing
+healthy subfields, or falling back to a prior value. Normal validation and ordering apply.
 Preserve original observation times within complete sections. Fresh contact or
 bundling fields together does not make older observations fresh.
+
+An explicit withdrawn result ends a state-until-changed assertion. Omission still
+preserves it. Retain withdrawal evidence and ordering so older reports cannot restore
+the assertion. Required section containers remain present with their withdrawn result.
 
 Validate identity, API-key validity, original facts, and all effects atomically.
 Classify evidence as accepted, duplicate, or rejected, separately from freshness.
@@ -29,11 +34,9 @@ Duplicate evidence alone cannot refresh contact, append movement, repeat activit
 or produce a public change. Order each section, Task stream, and queue stream independently.
 New telemetry must not discard a previously unseen earlier Task outcome.
 
-Core deduplicates direct and relayed submissions at its IP-facing update boundary.
-Original evidence identity excludes the submitting key, gateway, and delivery-packet
-identity. Delivering the same evidence through another key or gateway does not
-change its identity. Edge connections and data links may deduplicate independently.
-Core does not depend on them to prevent repeated effects.
+Original evidence identity excludes credentials, gateways, and delivery-packet IDs.
+Core deduplicates it at the IP-facing boundary. Independent edge-link deduplication
+does not replace Core's protection against repeated effects.
 
 ## Process generations
 
@@ -55,10 +58,9 @@ Radio encoding and edge-link retries remain external.
 
 ## Time and contact
 
-Deployment supplies correct UTC clocks. Atlas does not estimate offsets, correct
-drift, or rewrite source event times. Keep source observation time, Core receipt
-time, and actual state-change time separate. Unchanged fresh status is not a new
-status-change time.
+Deployment supplies correct UTC clocks. Atlas does not calculate offsets, correct
+drift, or rewrite event times. Observation, receipt, and state-change times remain
+distinct. Unchanged fresh status is not a new status change.
 
 Accept otherwise valid future-dated observations as time-uncertain, with no usable
 fresh age. Unknown time remains unknown. Optional clock-uncertainty compatibility
@@ -73,12 +75,11 @@ Historical reports, duplicates, Track-only observations, open connections, and
 description changes alone do not establish contact. Gateway IP health does not
 prove a downstream Asset is reachable.
 
-Communications health is `healthy` for less than 15 seconds after accepted fresh
-contact, `degraded` from 15 seconds until 60 seconds, and `offline` at 60 seconds.
-No proven contact in the current Core run means offline. These are initial defaults
-subject to field qualification, separate from the 10-second challenge expiry.
-Use Core's monotonic elapsed time; source timestamps do not reset this timer.
-Expiry transitions are public committed changes even when no new packet arrives.
+`healthy` lasts less than 15 seconds after fresh contact; `degraded` lasts from
+15 seconds until 60; `offline` starts at 60. No proven contact this Core run means
+offline. These initial thresholds need field qualification, separately from challenge expiry.
+Use Core's monotonic elapsed time, never source timestamps. Timer transitions are
+public committed changes even without another report.
 
 Keep bandwidth capability separate from communications health. A high-bandwidth
 link can be offline. Gateway connectivity alone establishes neither the downstream
@@ -86,11 +87,10 @@ Asset's health nor its bandwidth capability; unknown capability stays unknown.
 
 ## Movement and recovery
 
-Append movement only for newly accepted explicit position, speed, or altitude,
-including historical evidence. Preserve sparse quantity times and deduplicate
-corrections. Never create samples by copying an entire merged Entity snapshot.
-History survives Entity deletion until Reset. Bounded history queries distinguish
-unknown Entity IDs from known Entities with no matching samples.
+Append movement only from newly accepted position, speed, or altitude, including
+historical evidence. Preserve quantity times and deduplicate corrections. Never copy
+merged Entity snapshots into samples. History survives Entity deletion until Reset.
+Bounded queries distinguish unknown IDs from known Entities with no matching samples.
 
 On reconnect, reconcile retained reports and current instructions. Neither a new
 connection nor a new process authorizes automatically repeating uncertain physical
