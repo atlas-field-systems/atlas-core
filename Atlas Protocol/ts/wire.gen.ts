@@ -881,7 +881,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Format: uuid */
+        /**
+         * Format: uuid
+         * @description UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+         */
         Identifier: string;
         /** Format: date-time */
         Timestamp: string;

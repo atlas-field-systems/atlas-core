@@ -24,6 +24,7 @@ interface Schema extends IntegerSchema {
  $ref?: string;
  properties?: Record<string, Schema>;
  items?: Schema;
+ uniqueItems?: boolean;
  oneOf?: Schema[];
  anyOf?: Schema[];
  allOf?: Schema[];
@@ -85,6 +86,11 @@ function uuidProperty(schema: Schema, field: string): boolean {
  if (property) return schemaValue(property).format === 'uuid';
  return [resolved.oneOf, resolved.anyOf, resolved.allOf].some(group => group?.some(branch => uuidProperty(branch, field)));
 }
+function uuidSchema(schema: Schema): boolean {
+ if (schema.$ref) return uuidSchema(schemaValue(schema));
+ if (schema.format === 'uuid' || schema.allOf?.some(uuidSchema)) return true;
+ return [schema.oneOf, schema.anyOf].some(group => group?.length && group.every(uuidSchema));
+}
 function semantics(schema: Schema, value: unknown, site: NumberSite | undefined, sources: NumericSources, plan: NumericPlan): void {
  if (schema.$ref) {semantics(schemaValue(schema), value, site, sources, plan); return;}
  if (schema['x-go-type'] === 'json.RawMessage') {plan.preserve(value, site, sources); return;}
@@ -130,7 +136,15 @@ function semantics(schema: Schema, value: unknown, site: NumberSite | undefined,
    for (const item of items) if (isRecord(item) && typeof item[identity] === 'string') { const key = uuidIdentity ? item[identity].toLowerCase() : item[identity]; if (seen.has(key)) throw new Error(`duplicate ${identity}`); seen.add(key); }
   }
  }
- if (Array.isArray(value) && schema.items) for (const [i, item] of value.entries()) semantics(schema.items, item, sources.at(value, String(i)), sources, plan);
+ if (Array.isArray(value) && schema.items) {
+  const seen = schema.uniqueItems && uuidSchema(schema.items) ? new Set<string>() : undefined;
+  for (const [i, item] of value.entries()) {
+   if (seen && typeof item === 'string') {
+    const key = item.toLowerCase(); if (seen.has(key)) throw new Error('duplicate UUID'); seen.add(key);
+   }
+   semantics(schema.items, item, sources.at(value, String(i)), sources, plan);
+  }
+ }
 }
 export function Decode<N extends SchemaName>(name: N, wire: Uint8Array, limits: Limits = DefaultLimits()): components['schemas'][N] {
  if (!isSchemaName(name)) throw new Error('unknown schema');

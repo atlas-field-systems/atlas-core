@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -138,6 +139,31 @@ func pathFacts(pattern, path string) (map[string]string, error) {
 	}
 	return facts, nil
 }
+func queryStringSize(value string, budget int) (int, error) {
+	size := 2
+	if size > budget {
+		return 0, fmt.Errorf("payload_too_large")
+	}
+	for _, r := range value {
+		n := utf8.RuneLen(r)
+		switch r {
+		case '"', '\\', '\b', '\f', '\n', '\r', '\t':
+			n = 2
+		case '\u2028', '\u2029':
+			n = 6
+		default:
+			if r < 0x20 {
+				n = 6
+			}
+		}
+		if n > budget-size {
+			return 0, fmt.Errorf("payload_too_large")
+		}
+		size += n
+	}
+	return size, nil
+}
+
 func queryJSON(raw string, op *openapi3.Operation, limits Limits) ([]byte, error) {
 	if len(raw) > limits.MaxJSONBytes {
 		return nil, fmt.Errorf("payload_too_large")
@@ -149,7 +175,15 @@ func queryJSON(raw string, op *openapi3.Operation, limits Limits) ([]byte, error
 	if len(values) > limits.MaxValues {
 		return nil, fmt.Errorf("query work limit")
 	}
-	result := map[string]json.RawMessage{}
+	type member struct {
+		key, value string
+		quoted     bool
+	}
+	members := make([]member, 0, len(values))
+	size := 2
+	if size > limits.MaxJSONBytes {
+		return nil, fmt.Errorf("payload_too_large")
+	}
 	for key, values := range values {
 		if len(values) != 1 || !utf8.ValidString(key) || !utf8.ValidString(values[0]) {
 			return nil, fmt.Errorf("duplicate or malformed query")
@@ -168,35 +202,60 @@ func queryJSON(raw string, op *openapi3.Operation, limits Limits) ([]byte, error
 		if schema == nil {
 			schema = parameter.Content["application/json"].Schema
 		}
-		if schema.Value.Type.Is("string") {
-			b, err := json.Marshal(values[0])
-			if err != nil {
-				return nil, err
-			}
-			result[key] = b
-		} else {
-			if err := scan([]byte(values[0]), limits); err != nil {
-				return nil, err
-			}
-			result[key] = json.RawMessage(values[0])
+		n := 1
+		if len(members) > 0 {
+			n++
 		}
-	}
-	size := 2
-	for key, raw := range result {
-		encodedKey, err := json.Marshal(key)
+		keySize, err := queryStringSize(key, limits.MaxJSONBytes-size-n)
 		if err != nil {
 			return nil, err
 		}
-		n := len(encodedKey) + 1 + len(raw)
-		if size > 2 {
-			n++
+		n += keySize
+		quoted := schema.Value.Type.Is("string")
+		valueSize := len(values[0])
+		if quoted {
+			valueSize, err = queryStringSize(values[0], limits.MaxJSONBytes-size-n)
+			if err != nil {
+				return nil, err
+			}
 		}
-		if n > limits.MaxJSONBytes-size {
+		if valueSize > limits.MaxJSONBytes-size-n {
 			return nil, fmt.Errorf("payload_too_large")
 		}
-		size += n
+		size += n + valueSize
+		if !quoted {
+			if err := scan([]byte(values[0]), limits); err != nil {
+				return nil, err
+			}
+		}
+		members = append(members, member{key, values[0], quoted})
 	}
-	return json.Marshal(result)
+	slices.SortFunc(members, func(a, b member) int { return strings.Compare(a.key, b.key) })
+	var result bytes.Buffer
+	result.Grow(size)
+	encoder := json.NewEncoder(&result)
+	encoder.SetEscapeHTML(false)
+	result.WriteByte('{')
+	for i, member := range members {
+		if i > 0 {
+			result.WriteByte(',')
+		}
+		if err := encoder.Encode(member.key); err != nil {
+			return nil, err
+		}
+		result.Truncate(result.Len() - 1)
+		result.WriteByte(':')
+		if member.quoted {
+			if err := encoder.Encode(member.value); err != nil {
+				return nil, err
+			}
+			result.Truncate(result.Len() - 1)
+		} else {
+			result.WriteString(member.value)
+		}
+	}
+	result.WriteByte('}')
+	return result.Bytes(), nil
 }
 
 // ValidateRequest consumes the body. The caller owns authentication, staging and commit authority.
@@ -225,7 +284,7 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 		if err != nil {
 			return result, err
 		}
-		if err := doc.Components.Schemas["APIKeySecret"].Value.VisitJSON(key[7:], doc.formats); err != nil {
+		if err := doc.Components.Schemas["APIKeySecret"].Value.VisitJSON(key[7:], doc.formats...); err != nil {
 			return result, fmt.Errorf("unauthenticated")
 		}
 		if name != "GetHealth" {
@@ -245,7 +304,7 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 			if err != nil {
 				return result, err
 			}
-			if err := p.Value.Schema.Value.VisitJSON(facts[p.Value.Name], doc.formats); err != nil {
+			if err := p.Value.Schema.Value.VisitJSON(facts[p.Value.Name], doc.formats...); err != nil {
 				return result, err
 			}
 		}

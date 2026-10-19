@@ -1,17 +1,13 @@
 package atlas
 
 import (
-	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -22,7 +18,7 @@ var document []byte
 
 type contract struct {
 	*openapi3.T
-	formats       openapi3.SchemaValidationOption
+	formats       []openapi3.SchemaValidationOption
 	branchSchemas map[*openapi3.Schema]*openapi3.Schema
 }
 
@@ -31,34 +27,11 @@ var loadContract = sync.OnceValues(func() (*contract, error) {
 	if err != nil {
 		return nil, err
 	}
-	timestampGrammar, err := regexp.Compile(doc.Components.Schemas["Timestamp"].Value.Pattern)
+	formats, err := contractFormats(doc)
 	if err != nil {
 		return nil, err
 	}
-	formats := map[string]openapi3.StringFormatValidator{
-		"date-time": openapi3.NewCallbackValidator(func(s string) error {
-			if !timestampGrammar.MatchString(s) {
-				return fmt.Errorf("invalid timestamp grammar")
-			}
-			_, err := time.Parse(time.RFC3339Nano, s)
-			return err
-		}),
-		"uri": openapi3.NewCallbackValidator(func(s string) error {
-			u, err := url.Parse(s)
-			if err != nil {
-				return err
-			}
-			if !u.IsAbs() || strings.ContainsAny(s, " \t\r\n") {
-				return fmt.Errorf("invalid absolute URI")
-			}
-			return nil
-		}),
-		"uint64-decimal": openapi3.NewCallbackValidator(func(s string) error { _, err := strconv.ParseUint(s, 10, 64); return err }),
-	}
-	if err := doc.Validate(context.Background()); err != nil {
-		return nil, err
-	}
-	c := &contract{T: doc, formats: openapi3.WithStringFormatValidators(formats), branchSchemas: make(map[*openapi3.Schema]*openapi3.Schema)}
+	c := &contract{T: doc, formats: formats, branchSchemas: make(map[*openapi3.Schema]*openapi3.Schema)}
 	for _, schema := range doc.Components.Schemas {
 		c.branchCandidateSchema(schema.Value)
 	}
@@ -284,12 +257,36 @@ func uuidProperty(schema *openapi3.Schema, field string) bool {
 	return false
 }
 
+func uuidSchema(schema *openapi3.Schema) bool {
+	if schema.Format == "uuid" {
+		return true
+	}
+	for _, branch := range schema.AllOf {
+		if uuidSchema(branch.Value) {
+			return true
+		}
+	}
+	for _, group := range []openapi3.SchemaRefs{schema.OneOf, schema.AnyOf} {
+		if len(group) == 0 {
+			continue
+		}
+		allUUID := true
+		for _, branch := range group {
+			allUUID = allUUID && uuidSchema(branch.Value)
+		}
+		if allUUID {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan) error {
 	if schema.Extensions["x-atlas-geometry"] == true {
 		if err := geometry(value); err != nil {
 			return err
 		}
-		if err := schema.VisitJSON(value, c.formats); err != nil {
+		if err := schema.VisitJSON(value, c.formats...); err != nil {
 			return fmt.Errorf("invalid_geometry")
 		}
 		return nil
@@ -317,7 +314,7 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 		accepted := 0
 		marks := make(integerPlan)
 		for _, branch := range group.branches {
-			if c.branchSchemas[branch.Value].VisitJSON(value, c.formats) != nil {
+			if c.branchSchemas[branch.Value].VisitJSON(value, c.formats...) != nil {
 				continue
 			}
 			candidate := make(integerPlan)
@@ -342,14 +339,14 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 		plan.merge(marks)
 	}
 	for _, branch := range schema.AllOf {
-		if c.branchSchemas[branch.Value].VisitJSON(value, c.formats) != nil {
+		if c.branchSchemas[branch.Value].VisitJSON(value, c.formats...) != nil {
 			return fmt.Errorf("invalid_payload: allOf")
 		}
 		if err := c.semantics(branch.Value, value, place, plan); err != nil {
 			return err
 		}
 	}
-	if schema.Not != nil && c.branchSchemas[schema.Not.Value].VisitJSON(value, c.formats) == nil {
+	if schema.Not != nil && c.branchSchemas[schema.Not.Value].VisitJSON(value, c.formats...) == nil {
 		if c.semantics(schema.Not.Value, value, place, make(integerPlan)) == nil {
 			return fmt.Errorf("invalid_payload: not")
 		}
@@ -418,7 +415,18 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 		}
 	}
 	if values, ok := value.([]interface{}); ok && schema.Items != nil {
+		var seen map[string]bool
+		if schema.UniqueItems && uuidSchema(schema.Items.Value) {
+			seen = make(map[string]bool, len(values))
+		}
 		for i, v := range values {
+			if id, ok := v.(string); ok && seen != nil {
+				key := strings.ToLower(id)
+				if seen[key] {
+					return fmt.Errorf("duplicate UUID")
+				}
+				seen[key] = true
+			}
 			if err := c.semantics(schema.Items.Value, v, place.children[strconv.Itoa(i)], plan); err != nil {
 				return err
 			}

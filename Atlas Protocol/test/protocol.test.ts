@@ -56,7 +56,7 @@ test('shared independent fixtures execute generated types and both validation bo
    assert.equal(new TextDecoder().decode(encoded), expectedWire); assert.deepEqual(value, result);
   } else {invalid++; if (sample.error) assert.throws(() => Decode(name, raw), new RegExp(sample.error)); else assert.throws(() => Decode(name, raw));}
  });}
- assert.equal(valid, 276); assert.equal(invalid, 287); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
+ assert.equal(valid, 278); assert.equal(invalid, 289); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
 });
 
 test('every HTTP message validates status, media, context, request and reply', async t => {
@@ -311,6 +311,61 @@ test('typed integers refuse fractions hidden by double rounding', () => {
  for (const token of ['100.0000000000000000001', '1e-400']) assert.throws(() => Decode('ErrorDetails', new TextEncoder().encode('{"retry_after_seconds":' + token + '}')));
 });
 
+
+test('checked queries preserve raw fragments and use bounded JSON string quoting', async t => {
+ for (const [operation, path, key, value, checked, maxJSONBytes] of [
+  ['ListAssets', '/assets', 'names', '["<<<<<<<<<<"]', '{"names":["<<<<<<<<<<"]}', 64],
+  ['ListAssets', '/assets', 'names', '["<>&"]', '{"names":["<>&"]}', 64],
+  ['ListAssets', '/assets', 'names', '  [ "Camera", "camera" ]  ', '{"names":  [ "Camera", "camera" ]  }', 64],
+  ['ListAssets', '/assets', 'names', '["café雪😀","quote\\\"\\\\","\\u0001\\u0007\\b\\f\\n\\r\\t"]', '{"names":["café雪😀","quote\\\"\\\\","\\u0001\\u0007\\b\\f\\n\\r\\t"]}', 512],
+  ['GetAssetByAlias', '/assets/by-alias', 'alias', '<>&', '{"alias":"<>&"}', 64],
+  ['GetAssetByAlias', '/assets/by-alias', 'alias', 'a\x00\x07\x0b\x1f"\\雪😀b', '{"alias":"a\\u0000\\u0007\\u000b\\u001f\\\"\\\\雪😀b"}', 512],
+  ['GetAssetByAlias', '/assets/by-alias', 'alias', 'a\u0085\u2028\u2029b', '{"alias":"a\u0085\\u2028\\u2029b"}', 512],
+  ['ListAssets', '/assets', 'page_size', '100.0', '{"page_size":100.0}', 64],
+  ['ListAssets', '/assets', 'page_size', '1e2', '{"page_size":1e2}', 64],
+ ] as const) await t.test(value, async () => {
+  const limits = {...DefaultLimits(), maxJSONBytes};
+  const raw = new URLSearchParams({[key]: value});
+  const data = await ValidateRequest(operation, new Request('https://atlas.invalid' + path + '?' + raw, {headers: headers()}), dataset, limits);
+  assert.equal(new TextDecoder().decode(data.query), checked);
+  if (key === 'alias') assert.equal(Decode('AliasQuery', data.query, limits).alias, value);
+  else {
+   const query = Decode('EntityListQuery', data.query, limits);
+   if (key === 'page_size') assert.equal(query.page_size, 100); else assert.deepEqual(query.names, JSON.parse(value));
+  }
+ });
+ for (const [raw, checked, alias] of [
+  ['alias=a%01b', '{"alias":"a\\u0001b"}', true],
+  ['alias=a%E2%80%A8b', '{"alias":"a\\u2028b"}', true],
+  ['page_size=1e2', '{"page_size":1e2}', false],
+  ['names=[]&aliases=[]&page_size=100', '{"names":[],"aliases":[],"page_size":100}', false],
+ ] as const) for (const delta of [0, -1]) {
+  const limits = {...DefaultLimits(), maxJSONBytes: Buffer.byteLength(checked) + delta};
+  const request = new Request('https://atlas.invalid' + (alias ? '/assets/by-alias' : '/assets') + '?' + raw, {headers: headers()});
+  const validation = ValidateRequest(alias ? 'GetAssetByAlias' : 'ListAssets', request, dataset, limits);
+  if (delta) await assert.rejects(validation); else assert.equal((await validation).query.byteLength, Buffer.byteLength(checked));
+ }
+ for (const raw of ['names=%5B%5D&n%61mes=%5B%5D', 'names=%FF', 'names=%5B%22%5Cud800%22%5D', 'names=%5B', 'page_size=100%200']) {
+  await assert.rejects(ValidateRequest('ListAssets', new Request('https://atlas.invalid/assets?' + raw, {headers: headers()}), dataset));
+ }
+ for (const bounds of [{maxValues: 4}, {maxDepth: 1}]) {
+  await assert.rejects(ValidateRequest('ListAssets', new Request('https://atlas.invalid/assets?names=%5B%22A%22%2C%22a%22%5D&page_size=100', {headers: headers()}), dataset, {...DefaultLimits(), ...bounds}));
+ }
+});
+
+test('UUID array fixtures cross the real Task order and Object edit requests', async () => {
+ let count = 0;
+ for (const sample of cases.filter(sample => sample.name.startsWith('UUID array '))) {
+  const operation = sample.schema === 'SetTaskOrderRequest' ? 'SetTaskOrder' : 'EditObject';
+  const base = exchanges.find(exchange => exchange.name === operation); assert(base);
+  const validation = ValidateRequest(operation, request({...base, request: sample.value}), dataset);
+  if (sample.valid) await validation; else await assert.rejects(validation);
+  count++;
+ }
+ assert.equal(count, 4);
+ const names = {page_size: 100, names: ['Camera', 'camera']}; assert.deepEqual(Decode('EntityListQuery', Encode('EntityListQuery', names)), names);
+ const payload = [dataset, dataset.toLowerCase()]; assert.deepEqual(Decode('PluginPayload', Encode('PluginPayload', payload)), payload);
+});
 
 test('exact integers reach typed query consumers and generated unions', async () => {
  for (const token of ['100', '100.0', '1e2', '1e+2', '1000e-1', '1.00e2']) {

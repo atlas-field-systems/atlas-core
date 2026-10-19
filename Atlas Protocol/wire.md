@@ -7,7 +7,9 @@ Binary content remains binary, not JSON-encoded bytes.
 
 ## Common representation
 
-Use UUID identifiers and snake_case wire fields. Encode 64-bit counters as
+Use UUID identifiers and snake_case wire fields. UUID identity ignores letter case,
+including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+Encode 64-bit counters as
 canonical decimal strings, not JavaScript numbers. Validate their numeric range,
 not only their spelling. Preserve double precision for spatial values. Timestamp strings use uppercase `T`,
 `Z` or an explicit numeric offset, and at most nine fractional digits. Reject

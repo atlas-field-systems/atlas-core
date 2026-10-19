@@ -75,7 +75,11 @@ try {
  for (const rule of ['Identifier', 'first_check_in']) {
   const weakened = JSON.parse(readFileSync('openapi.json', 'utf8'));
   const schemas = weakened.components.schemas;
-  const expected = rule === 'Identifier' ? ['malformed UUID text', 'malformed UUID hex'] : ['replacement missing first_check_in'];
+  const expected = rule === 'Identifier' ? [
+   'malformed UUID text', 'malformed UUID hex',
+   'UUID array task order rejects alternate-case duplicate',
+   'UUID array Object edit rejects alternate-case Entity duplicate',
+  ] : ['replacement missing first_check_in'];
   if (rule === 'Identifier') schemas.Identifier = {type:'string'};
   else schemas.ReplaceAssetProcessRequest.required = schemas.ReplaceAssetProcessRequest.required.filter(field => field !== 'first_check_in');
   writeFileSync(file, JSON.stringify(weakened));

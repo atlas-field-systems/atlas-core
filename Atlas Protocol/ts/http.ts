@@ -66,24 +66,41 @@ function pathFacts(pattern: string, path: string) {
  }
  return facts;
 }
+function queryStringSize(value: string, budget: number): number {
+ let size = 2;
+ if (size > budget) throw new Error('payload_too_large');
+ for (const c of value) {
+  let n = Buffer.byteLength(c);
+  if ('"\\\b\f\n\r\t'.includes(c)) n = 2;
+  else if (c.charCodeAt(0) < 32 || c === '\u2028' || c === '\u2029') n = 6;
+  if (n > budget - size) throw new Error('payload_too_large');
+  size += n;
+ }
+ return size;
+}
+function quoteQueryString(value: string): string {return JSON.stringify(value).replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');}
 function query(raw: string, op: Operation, limits: Limits) {
- if (raw.length > limits.maxJSONBytes) throw new Error('payload_too_large');
+ const encoded = raw.slice(1);
+ if (Buffer.byteLength(encoded) > limits.maxJSONBytes) throw new Error('payload_too_large');
  // URLSearchParams repairs malformed text. Decode each original pair first.
- for (const pair of raw.slice(1).split('&')) if (pair) for (const part of pair.split('=')) decodeURIComponent(part.replaceAll('+', ' '));
+ for (const pair of encoded.split('&')) if (pair) for (const part of pair.split('=')) decodeURIComponent(part.replaceAll('+', ' '));
  const values = new URLSearchParams(raw), seen = new Set<string>(), members: string[] = [];
  let size = 2;
+ if (size > limits.maxJSONBytes) throw new Error('payload_too_large');
  for (const [key, value] of values) {
   if (seen.size >= limits.maxValues) throw new Error('query work limit');
   if (seen.has(key)) throw new Error('duplicate query'); seen.add(key);
   const parameter = op.parameters.find(p => p.in === 'query' && p.name === key); if (!parameter) throw new Error('unsupported_filter');
   let schema = parameter.schema ?? parameter.content?.['application/json']?.schema;
   if (schema?.$ref) schema = schemas[schema.$ref.split('/').at(-1) ?? ''];
-  if (schema?.type !== 'string') parse(bytes(value), limits);
-  const token = schema?.type === 'string' ? JSON.stringify(value) : value;
-  const member = JSON.stringify(key) + ':' + token;
-  size += Buffer.byteLength(member) + Number(members.length > 0);
-  if (size > limits.maxJSONBytes) throw new Error('payload_too_large');
-  members.push(member);
+  const quoted = schema?.type === 'string', punctuation = 1 + Number(members.length > 0);
+  const keySize = queryStringSize(key, limits.maxJSONBytes - size - punctuation);
+  const remaining = limits.maxJSONBytes - size - punctuation - keySize;
+  const valueSize = quoted ? queryStringSize(value, remaining) : Buffer.byteLength(value);
+  if (valueSize > remaining) throw new Error('payload_too_large');
+  size += punctuation + keySize + valueSize;
+  if (!quoted) parse(bytes(value), limits);
+  members.push(quoteQueryString(key) + ':' + (quoted ? quoteQueryString(value) : value));
  }
  const wire = bytes('{' + members.join(',') + '}');
  const name = op['x-atlas-binding'].query_schema; if (!isSchemaName(name)) throw new Error('unknown query schema');

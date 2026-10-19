@@ -3093,11 +3093,16 @@ type AcknowledgmentAccepted string
 
 // ActivityRecord defines model for ActivityRecord.
 type ActivityRecord struct {
-	Id              Identifier  `json:"id"`
-	Kind            string      `json:"kind"`
-	Message         string      `json:"message"`
-	RecordedAt      Timestamp   `json:"recorded_at"`
-	ResourceId      *Identifier `json:"resource_id,omitempty"`
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id         Identifier `json:"id"`
+	Kind       string     `json:"kind"`
+	Message    string     `json:"message"`
+	RecordedAt Timestamp  `json:"recorded_at"`
+
+	// ResourceId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ResourceId *Identifier `json:"resource_id,omitempty"`
+
+	// SubmittingKeyId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	SubmittingKeyId *Identifier `json:"submitting_key_id,omitempty"`
 }
 
@@ -3128,9 +3133,11 @@ type AltitudeReference string
 type ApiKey struct {
 	AssociatedAssetId nullable.Nullable[NullableIdentifier] `json:"associated_asset_id"`
 	CreatedAt         Timestamp                             `json:"created_at"`
-	Id                Identifier                            `json:"id"`
-	Name              Name                                  `json:"name"`
-	RevokedAt         nullable.Nullable[string]             `json:"revoked_at"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id        Identifier                `json:"id"`
+	Name      Name                      `json:"name"`
+	RevokedAt nullable.Nullable[string] `json:"revoked_at"`
 }
 
 // ApiKeyPage defines model for ApiKeyPage.
@@ -3153,12 +3160,16 @@ type Asset struct {
 	Description AssetDescription `json:"description"`
 
 	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
-	EditRevision      PositiveCounter           `json:"edit_revision"`
-	EntityType        AssetEntityType           `json:"entity_type"`
-	Gimbal            *RetainedGimbalSection    `json:"gimbal,omitempty"`
-	Heartbeat         Heartbeat                 `json:"heartbeat"`
-	Id                Identifier                `json:"id"`
-	Power             *RetainedPowerSection     `json:"power,omitempty"`
+	EditRevision PositiveCounter        `json:"edit_revision"`
+	EntityType   AssetEntityType        `json:"entity_type"`
+	Gimbal       *RetainedGimbalSection `json:"gimbal,omitempty"`
+	Heartbeat    Heartbeat              `json:"heartbeat"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id    Identifier            `json:"id"`
+	Power *RetainedPowerSection `json:"power,omitempty"`
+
+	// ProcessGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ProcessGeneration Identifier                `json:"process_generation"`
 	Status            RetainedStatusSection     `json:"status"`
 	Telemetry         *RetainedTelemetrySection `json:"telemetry,omitempty"`
@@ -3221,9 +3232,12 @@ type AssetSections struct {
 
 // AssetSource defines model for AssetSource.
 type AssetSource struct {
-	AssetId           Identifier      `json:"asset_id"`
-	Kind              AssetSourceKind `json:"kind"`
-	ProcessGeneration Identifier      `json:"process_generation"`
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	AssetId Identifier      `json:"asset_id"`
+	Kind    AssetSourceKind `json:"kind"`
+
+	// ProcessGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ProcessGeneration Identifier `json:"process_generation"`
 }
 
 // AssetSourceKind defines model for AssetSource.Kind.
@@ -3231,6 +3245,7 @@ type AssetSourceKind string
 
 // AssetStatus defines model for AssetStatus.
 type AssetStatus struct {
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	AssetId        Identifier `json:"asset_id"`
 	Communications struct {
 		Health   Health                        `json:"health"`
@@ -3332,7 +3347,9 @@ type AttitudeWithdrawnState string
 // AuthenticateFrame defines model for AuthenticateFrame.
 type AuthenticateFrame struct {
 	// ApiKey API-key secret encoded as unpadded base64url. Preserve credential material exactly. Core owns actual credential validity.
-	ApiKey          APIKeySecret          `json:"api_key"`
+	ApiKey APIKeySecret `json:"api_key"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier            `json:"dataset_id"`
 	ProtocolVersion ProtocolVersion       `json:"protocol_version"`
 	Type            AuthenticateFrameType `json:"type"`
@@ -3343,7 +3360,10 @@ type AuthenticateFrameType string
 
 // AuthenticatedFrame defines model for AuthenticatedFrame.
 type AuthenticatedFrame struct {
-	CoreRunId       Identifier             `json:"core_run_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier             `json:"dataset_id"`
 	ProtocolVersion ProtocolVersion        `json:"protocol_version"`
 	Type            AuthenticatedFrameType `json:"type"`
@@ -3361,7 +3381,9 @@ type BatchLimits struct {
 
 // BatteryReserve defines model for BatteryReserve.
 type BatteryReserve struct {
-	CurrentAmperes   nullable.Nullable[float64] `json:"current_amperes"`
+	CurrentAmperes nullable.Nullable[float64] `json:"current_amperes"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	Id               Identifier                 `json:"id"`
 	Kind             BatteryReserveKind         `json:"kind"`
 	ObservedAt       nullable.Nullable[string]  `json:"observed_at"`
@@ -3485,15 +3507,20 @@ type CameraWithdrawnState string
 
 // CancelOperationRequest defines model for CancelOperationRequest.
 type CancelOperationRequest struct {
+	// OperationId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	OperationId Identifier `json:"operation_id"`
-	RequestId   Identifier `json:"request_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // CancelOperationResponse defines model for CancelOperationResponse.
 type CancelOperationResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Operation  `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor    `json:"commit_cursor"`
+	Data         Operation `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // CancellationRefused defines model for CancellationRefused.
@@ -3545,8 +3572,12 @@ type ChangePage struct {
 
 // ChangesFrame defines model for ChangesFrame.
 type ChangesFrame struct {
-	Batch           ChangeBatch      `json:"batch"`
-	CoreRunId       Identifier       `json:"core_run_id"`
+	Batch ChangeBatch `json:"batch"`
+
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier       `json:"dataset_id"`
 	ProtocolVersion ProtocolVersion  `json:"protocol_version"`
 	Type            ChangesFrameType `json:"type"`
@@ -3628,30 +3659,47 @@ type ConfirmTaskOrderRequest struct {
 
 	// QueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	QueueRevision PositiveCounter `json:"queue_revision"`
-	RequestId     Identifier      `json:"request_id"`
-	Source        AssetSource     `json:"source"`
-	TaskIds       []Identifier    `json:"task_ids"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier   `json:"request_id"`
+	Source    AssetSource  `json:"source"`
+	TaskIds   []Identifier `json:"task_ids"`
 }
 
 // ConfirmTaskOrderResponse defines model for ConfirmTaskOrderResponse.
 type ConfirmTaskOrderResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         TaskQueue  `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor    `json:"commit_cursor"`
+	Data         TaskQueue `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ContactChallenge Exact retry recovers original expiry. Restart invalidates proof. Replacement binds expected_generation and commits its first check-in atomically.
 type ContactChallenge struct {
-	AssetId            Identifier                       `json:"asset_id"`
-	ChallengeId        Identifier                       `json:"challenge_id"`
-	CoreRunId          Identifier                       `json:"core_run_id"`
-	DatasetId          Identifier                       `json:"dataset_id"`
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	AssetId Identifier `json:"asset_id"`
+
+	// ChallengeId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ChallengeId Identifier `json:"challenge_id"`
+
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
+
+	// ExpectedGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ExpectedGeneration *Identifier                      `json:"expected_generation,omitempty"`
 	ExpiresAt          Timestamp                        `json:"expires_at"`
 	ExpiresInSeconds   ContactChallengeExpiresInSeconds `json:"expires_in_seconds"`
 	IssuedAt           Timestamp                        `json:"issued_at"`
-	ProcessGeneration  Identifier                       `json:"process_generation"`
-	RequestId          Identifier                       `json:"request_id"`
+
+	// ProcessGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ProcessGeneration Identifier `json:"process_generation"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // ContactChallengeExpiresInSeconds defines model for ContactChallenge.ExpiresInSeconds.
@@ -3659,14 +3707,22 @@ type ContactChallengeExpiresInSeconds int
 
 // ContactChallengeRequest defines model for ContactChallengeRequest.
 type ContactChallengeRequest struct {
-	AssetId            Identifier  `json:"asset_id"`
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	AssetId Identifier `json:"asset_id"`
+
+	// ExpectedGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ExpectedGeneration *Identifier `json:"expected_generation,omitempty"`
-	ProcessGeneration  Identifier  `json:"process_generation"`
-	RequestId          Identifier  `json:"request_id"`
+
+	// ProcessGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ProcessGeneration Identifier `json:"process_generation"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // ContactProof defines model for ContactProof.
 type ContactProof struct {
+	// ChallengeId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ChallengeId Identifier     `json:"challenge_id"`
 	Evidence    SourceEvidence `json:"evidence"`
 }
@@ -3682,29 +3738,38 @@ type Counter = string
 
 // CreateApiKeyRequest defines model for CreateApiKeyRequest.
 type CreateApiKeyRequest struct {
+	// CreationId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	CreationId Identifier `json:"creation_id"`
 
 	// Credential Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields.
 	Credential CredentialFacts `json:"credential"`
 	Name       Name            `json:"name"`
-	RequestId  Identifier      `json:"request_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // CreateApiKeyResponse defines model for CreateApiKeyResponse.
 type CreateApiKeyResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         ApiKey     `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         ApiKey `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // CreateGeofeatureRequest defines model for CreateGeofeatureRequest.
 type CreateGeofeatureRequest struct {
-	Alias        *Alias      `json:"alias,omitempty"`
-	Description  Description `json:"description"`
-	GeofeatureId Identifier  `json:"geofeature_id"`
+	Alias       *Alias      `json:"alias,omitempty"`
+	Description Description `json:"description"`
+
+	// GeofeatureId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	GeofeatureId Identifier `json:"geofeature_id"`
 
 	// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, self-intersections or multipart geometry. The initial profile excludes adjacent absolute longitude steps over 180 degrees (180 allowed), non-Point longitude extent of 360 degrees, and Polygon edges joining distinct longitudes at the same pole. Point latitude +/-90 and an isolated polygon pole vertex are valid. These representation limits do not define general spherical topology. Refuse excluded representations as unsupported_geometry and malformed shapes as invalid_geometry. Excess vertices are geometry_limit_exceeded. Never repair or reorient.
-	Geometry  Geometry       `json:"geometry"`
+	Geometry Geometry `json:"geometry"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier     `json:"request_id"`
 	Type      GeofeatureType `json:"type"`
 }
@@ -3713,7 +3778,9 @@ type CreateGeofeatureRequest struct {
 type CreateGeofeatureResponse struct {
 	CommitCursor Cursor     `json:"commit_cursor"`
 	Data         Geofeature `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // CreateOperationRequest defines model for CreateOperationRequest.
@@ -3721,48 +3788,69 @@ type CreateOperationRequest struct {
 	Capability Name `json:"capability"`
 
 	// Input Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
-	Input       nullable.Nullable[PluginPayload] `json:"input"`
-	OperationId Identifier                       `json:"operation_id"`
-	PluginId    Identifier                       `json:"plugin_id"`
-	Release     string                           `json:"release"`
-	RequestId   Identifier                       `json:"request_id"`
+	Input nullable.Nullable[PluginPayload] `json:"input"`
+
+	// OperationId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	OperationId Identifier `json:"operation_id"`
+
+	// PluginId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	PluginId Identifier `json:"plugin_id"`
+	Release  string     `json:"release"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // CreateOperationResponse defines model for CreateOperationResponse.
 type CreateOperationResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Operation  `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor    `json:"commit_cursor"`
+	Data         Operation `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // CreateOperatorRequest defines model for CreateOperatorRequest.
 type CreateOperatorRequest struct {
-	Description *string    `json:"description,omitempty"`
-	Name        Name       `json:"name"`
-	OperatorId  Identifier `json:"operator_id"`
-	RequestId   Identifier `json:"request_id"`
+	Description *string `json:"description,omitempty"`
+	Name        Name    `json:"name"`
+
+	// OperatorId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	OperatorId Identifier `json:"operator_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // CreateOperatorResponse defines model for CreateOperatorResponse.
 type CreateOperatorResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Operator   `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor   `json:"commit_cursor"`
+	Data         Operator `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // CreateTaskRequest defines model for CreateTaskRequest.
 type CreateTaskRequest struct {
-	AssetId   Identifier  `json:"asset_id"`
-	Command   TaskCommand `json:"command"`
-	RequestId Identifier  `json:"request_id"`
-	TaskId    Identifier  `json:"task_id"`
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	AssetId Identifier  `json:"asset_id"`
+	Command TaskCommand `json:"command"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+
+	// TaskId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TaskId Identifier `json:"task_id"`
 }
 
 // CreateTaskResponse defines model for CreateTaskResponse.
 type CreateTaskResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Task       `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Task   `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // CreateTrackRequest defines model for CreateTrackRequest.
@@ -3770,20 +3858,29 @@ type CreateTrackRequest struct {
 	Alias        *Alias         `json:"alias,omitempty"`
 	Description  Description    `json:"description"`
 	Observations *TrackSections `json:"observations,omitempty"`
-	PublisherId  Identifier     `json:"publisher_id"`
-	RequestId    Identifier     `json:"request_id"`
-	TrackId      Identifier     `json:"track_id"`
+
+	// PublisherId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	PublisherId Identifier `json:"publisher_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+
+	// TrackId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TrackId Identifier `json:"track_id"`
 }
 
 // CreateTrackResponse defines model for CreateTrackResponse.
 type CreateTrackResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Track      `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Track  `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // CredentialFacts Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields.
 type CredentialFacts struct {
+	// KeyId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	KeyId Identifier `json:"key_id"`
 
 	// Secret API-key secret encoded as unpadded base64url. Preserve credential material exactly. Core owns actual credential validity.
@@ -3795,7 +3892,10 @@ type Cursor = string
 
 // DeleteAssetRequest defines model for DeleteAssetRequest.
 type DeleteAssetRequest struct {
-	AssetId   Identifier `json:"asset_id"`
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	AssetId Identifier `json:"asset_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier `json:"request_id"`
 }
 
@@ -3803,7 +3903,9 @@ type DeleteAssetRequest struct {
 type DeleteAssetResponse struct {
 	CommitCursor Cursor         `json:"commit_cursor"`
 	Data         Acknowledgment `json:"data"`
-	DatasetId    Identifier     `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // DeleteChange defines model for DeleteChange.
@@ -3817,20 +3919,28 @@ type DeleteChangeKind string
 
 // DeleteGeofeatureRequest defines model for DeleteGeofeatureRequest.
 type DeleteGeofeatureRequest struct {
+	// GeofeatureId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	GeofeatureId Identifier `json:"geofeature_id"`
-	RequestId    Identifier `json:"request_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // DeleteGeofeatureResponse defines model for DeleteGeofeatureResponse.
 type DeleteGeofeatureResponse struct {
 	CommitCursor Cursor         `json:"commit_cursor"`
 	Data         Acknowledgment `json:"data"`
-	DatasetId    Identifier     `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // DeleteObjectRequest defines model for DeleteObjectRequest.
 type DeleteObjectRequest struct {
-	ObjectId  Identifier `json:"object_id"`
+	// ObjectId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ObjectId Identifier `json:"object_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier `json:"request_id"`
 }
 
@@ -3838,37 +3948,50 @@ type DeleteObjectRequest struct {
 type DeleteObjectResponse struct {
 	CommitCursor Cursor         `json:"commit_cursor"`
 	Data         Acknowledgment `json:"data"`
-	DatasetId    Identifier     `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // DeleteOperatorRequest defines model for DeleteOperatorRequest.
 type DeleteOperatorRequest struct {
+	// OperatorId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	OperatorId Identifier `json:"operator_id"`
-	RequestId  Identifier `json:"request_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // DeleteOperatorResponse defines model for DeleteOperatorResponse.
 type DeleteOperatorResponse struct {
 	CommitCursor Cursor         `json:"commit_cursor"`
 	Data         Acknowledgment `json:"data"`
-	DatasetId    Identifier     `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // DeleteTrackRequest defines model for DeleteTrackRequest.
 type DeleteTrackRequest struct {
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier `json:"request_id"`
-	TrackId   Identifier `json:"track_id"`
+
+	// TrackId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TrackId Identifier `json:"track_id"`
 }
 
 // DeleteTrackResponse defines model for DeleteTrackResponse.
 type DeleteTrackResponse struct {
 	CommitCursor Cursor         `json:"commit_cursor"`
 	Data         Acknowledgment `json:"data"`
-	DatasetId    Identifier     `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // Deletion defines model for Deletion.
 type Deletion struct {
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	Id   Identifier   `json:"id"`
 	Kind DeletionKind `json:"kind"`
 
@@ -3913,10 +4036,14 @@ type EditGeofeatureRequest struct {
 
 	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
-	GeofeatureId         Identifier      `json:"geofeature_id"`
+
+	// GeofeatureId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	GeofeatureId Identifier `json:"geofeature_id"`
 
 	// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, self-intersections or multipart geometry. The initial profile excludes adjacent absolute longitude steps over 180 degrees (180 allowed), non-Point longitude extent of 360 degrees, and Polygon edges joining distinct longitudes at the same pole. Point latitude +/-90 and an isolated polygon pole vertex are valid. These representation limits do not define general spherical topology. Refuse excluded representations as unsupported_geometry and malformed shapes as invalid_geometry. Excess vertices are geometry_limit_exceeded. Never repair or reorient.
-	Geometry  *Geometry       `json:"geometry,omitempty"`
+	Geometry *Geometry `json:"geometry,omitempty"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier      `json:"request_id"`
 	Type      *GeofeatureType `json:"type,omitempty"`
 }
@@ -3925,7 +4052,9 @@ type EditGeofeatureRequest struct {
 type EditGeofeatureResponse struct {
 	CommitCursor Cursor     `json:"commit_cursor"`
 	Data         Geofeature `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // EditObjectRequest defines model for EditObjectRequest.
@@ -3933,31 +4062,43 @@ type EditObjectRequest struct {
 	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
 	Metadata             ObjectMetadata  `json:"metadata"`
-	ObjectId             Identifier      `json:"object_id"`
-	RequestId            Identifier      `json:"request_id"`
+
+	// ObjectId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ObjectId Identifier `json:"object_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // EditObjectResponse defines model for EditObjectResponse.
 type EditObjectResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Object     `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Object `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // EditOperatorRequest defines model for EditOperatorRequest.
 type EditOperatorRequest struct {
 	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
-	ExpectedEditRevision PositiveCounter  `json:"expected_edit_revision"`
-	OperatorId           Identifier       `json:"operator_id"`
-	Profile              DescriptionPatch `json:"profile"`
-	RequestId            Identifier       `json:"request_id"`
+	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
+
+	// OperatorId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	OperatorId Identifier       `json:"operator_id"`
+	Profile    DescriptionPatch `json:"profile"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // EditOperatorResponse defines model for EditOperatorResponse.
 type EditOperatorResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Operator   `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor   `json:"commit_cursor"`
+	Data         Operator `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // EditTrackRequest defines model for EditTrackRequest.
@@ -3967,15 +4108,21 @@ type EditTrackRequest struct {
 
 	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
-	RequestId            Identifier      `json:"request_id"`
-	TrackId              Identifier      `json:"track_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+
+	// TrackId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TrackId Identifier `json:"track_id"`
 }
 
 // EditTrackResponse defines model for EditTrackResponse.
 type EditTrackResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Track      `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Track  `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // EmptyQuery defines model for EmptyQuery.
@@ -3997,14 +4144,17 @@ type EntityListQuery struct {
 
 // Error400 defines model for Error400.
 type Error400 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error400ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4013,14 +4163,17 @@ type Error400ErrorCode string
 
 // Error401 defines model for Error401.
 type Error401 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error401ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4029,14 +4182,17 @@ type Error401ErrorCode string
 
 // Error403 defines model for Error403.
 type Error403 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error403ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4045,14 +4201,17 @@ type Error403ErrorCode string
 
 // Error404 defines model for Error404.
 type Error404 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error404ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4061,14 +4220,17 @@ type Error404ErrorCode string
 
 // Error409 defines model for Error409.
 type Error409 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error409ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4077,14 +4239,17 @@ type Error409ErrorCode string
 
 // Error410 defines model for Error410.
 type Error410 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error410ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4093,14 +4258,17 @@ type Error410ErrorCode string
 
 // Error413 defines model for Error413.
 type Error413 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error413ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4109,14 +4277,17 @@ type Error413ErrorCode string
 
 // Error415 defines model for Error415.
 type Error415 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error415ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4125,14 +4296,17 @@ type Error415ErrorCode string
 
 // Error422 defines model for Error422.
 type Error422 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error422ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4141,14 +4315,17 @@ type Error422ErrorCode string
 
 // Error429 defines model for Error429.
 type Error429 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error429ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4157,14 +4334,17 @@ type Error429ErrorCode string
 
 // Error500 defines model for Error500.
 type Error500 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error500ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4173,14 +4353,17 @@ type Error500ErrorCode string
 
 // Error503 defines model for Error503.
 type Error503 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error503ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4189,14 +4372,17 @@ type Error503ErrorCode string
 
 // Error507 defines model for Error507.
 type Error507 struct {
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
 		Code Error507ErrorCode `json:"code"`
 
 		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
-		Details   *ErrorDetails `json:"details,omitempty"`
-		Message   string        `json:"message"`
-		RequestId Identifier    `json:"request_id"`
+		Details *ErrorDetails `json:"details,omitempty"`
+		Message string        `json:"message"`
+
+		// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+		RequestId Identifier `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4205,12 +4391,15 @@ type Error507ErrorCode string
 
 // ErrorDetails expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
 type ErrorDetails struct {
+	// ActualDatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ActualDatasetId       *Identifier `json:"actual_dataset_id,omitempty"`
 	ActualProtocolVersion *string     `json:"actual_protocol_version,omitempty"`
 
 	// ActualRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
-	ActualRevision          *Counter    `json:"actual_revision,omitempty"`
-	EarliestCursor          *Cursor     `json:"earliest_cursor,omitempty"`
+	ActualRevision *Counter `json:"actual_revision,omitempty"`
+	EarliestCursor *Cursor  `json:"earliest_cursor,omitempty"`
+
+	// ExpectedDatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ExpectedDatasetId       *Identifier `json:"expected_dataset_id,omitempty"`
 	ExpectedProtocolVersion *string     `json:"expected_protocol_version,omitempty"`
 
@@ -4254,6 +4443,7 @@ type ExecutionOutcome struct {
 // ExecutionProgress defines model for ExecutionProgress.
 type ExecutionProgress struct {
 	GeometryRevisions *[]struct {
+		// GeofeatureId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 		GeofeatureId Identifier `json:"geofeature_id"`
 
 		// Revision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
@@ -4275,6 +4465,7 @@ type ExecutionReport struct {
 
 // FuelReserve defines model for FuelReserve.
 type FuelReserve struct {
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	Id               Identifier                 `json:"id"`
 	Kind             FuelReserveKind            `json:"kind"`
 	ObservedAt       nullable.Nullable[string]  `json:"observed_at"`
@@ -4286,7 +4477,10 @@ type FuelReserveKind string
 
 // GapFrame defines model for GapFrame.
 type GapFrame struct {
-	CoreRunId          Identifier      `json:"core_run_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId          Identifier      `json:"dataset_id"`
 	EarliestCursor     Cursor          `json:"earliest_cursor"`
 	LastCompleteCursor Cursor          `json:"last_complete_cursor"`
@@ -4311,8 +4505,10 @@ type Geofeature struct {
 
 	// GeometryRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	GeometryRevision PositiveCounter `json:"geometry_revision"`
-	Id               Identifier      `json:"id"`
-	Type             GeofeatureType  `json:"type"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id   Identifier     `json:"id"`
+	Type GeofeatureType `json:"type"`
 
 	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
@@ -4397,133 +4593,177 @@ type GeometryObservationWithdrawnState string
 
 // GetAssetByAliasResponse defines model for GetAssetByAliasResponse.
 type GetAssetByAliasResponse struct {
-	Data      Asset      `json:"data"`
+	Data Asset `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetAssetMovementHistoryResponse defines model for GetAssetMovementHistoryResponse.
 type GetAssetMovementHistoryResponse struct {
-	Data      MovementSamplePage `json:"data"`
-	DatasetId Identifier         `json:"dataset_id"`
+	Data MovementSamplePage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetAssetObjectsResponse defines model for GetAssetObjectsResponse.
 type GetAssetObjectsResponse struct {
-	Data      ObjectPage `json:"data"`
+	Data ObjectPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetAssetResponse defines model for GetAssetResponse.
 type GetAssetResponse struct {
-	Data      Asset      `json:"data"`
+	Data Asset `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetAssetStatusResponse defines model for GetAssetStatusResponse.
 type GetAssetStatusResponse struct {
-	Data      AssetStatus `json:"data"`
-	DatasetId Identifier  `json:"dataset_id"`
+	Data AssetStatus `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetAssignedTasksResponse defines model for GetAssignedTasksResponse.
 type GetAssignedTasksResponse struct {
-	Data      AssignedTaskPage `json:"data"`
-	DatasetId Identifier       `json:"dataset_id"`
+	Data AssignedTaskPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetGeofeatureByAliasResponse defines model for GetGeofeatureByAliasResponse.
 type GetGeofeatureByAliasResponse struct {
-	Data      Geofeature `json:"data"`
+	Data Geofeature `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetGeofeatureObjectsResponse defines model for GetGeofeatureObjectsResponse.
 type GetGeofeatureObjectsResponse struct {
-	Data      ObjectPage `json:"data"`
+	Data ObjectPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetGeofeatureResponse defines model for GetGeofeatureResponse.
 type GetGeofeatureResponse struct {
-	Data      Geofeature `json:"data"`
+	Data Geofeature `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetHealthResponse defines model for GetHealthResponse.
 type GetHealthResponse struct {
-	Data      HealthData `json:"data"`
+	Data HealthData `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetObjectResponse defines model for GetObjectResponse.
 type GetObjectResponse struct {
-	Data      Object     `json:"data"`
+	Data Object `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetOperationResponse defines model for GetOperationResponse.
 type GetOperationResponse struct {
-	Data      Operation  `json:"data"`
+	Data Operation `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetOperatorResponse defines model for GetOperatorResponse.
 type GetOperatorResponse struct {
-	Data      Operator   `json:"data"`
+	Data Operator `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetPluginResponse defines model for GetPluginResponse.
 type GetPluginResponse struct {
-	Data      Plugin     `json:"data"`
+	Data Plugin `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetReadinessResponse defines model for GetReadinessResponse.
 type GetReadinessResponse struct {
-	Data      Readiness  `json:"data"`
+	Data Readiness `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetReferenceResponse defines model for GetReferenceResponse.
 type GetReferenceResponse struct {
-	Data      Reference  `json:"data"`
+	Data Reference `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetTaskObjectsResponse defines model for GetTaskObjectsResponse.
 type GetTaskObjectsResponse struct {
-	Data      ObjectPage `json:"data"`
+	Data ObjectPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetTaskResponse defines model for GetTaskResponse.
 type GetTaskResponse struct {
-	Data      Task       `json:"data"`
+	Data Task `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetTrackByAliasResponse defines model for GetTrackByAliasResponse.
 type GetTrackByAliasResponse struct {
-	Data      Track      `json:"data"`
+	Data Track `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetTrackMovementHistoryResponse defines model for GetTrackMovementHistoryResponse.
 type GetTrackMovementHistoryResponse struct {
-	Data      MovementSamplePage `json:"data"`
-	DatasetId Identifier         `json:"dataset_id"`
+	Data MovementSamplePage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetTrackObjectsResponse defines model for GetTrackObjectsResponse.
 type GetTrackObjectsResponse struct {
-	Data      ObjectPage `json:"data"`
+	Data ObjectPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // GetTrackResponse defines model for GetTrackResponse.
 type GetTrackResponse struct {
-	Data      Track      `json:"data"`
+	Data Track `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
@@ -4586,7 +4826,10 @@ type GimbalWithdrawnState string
 
 // HandoffCompleteFrame defines model for HandoffCompleteFrame.
 type HandoffCompleteFrame struct {
-	CoreRunId       Identifier               `json:"core_run_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier               `json:"dataset_id"`
 	Handoff         Cursor                   `json:"handoff"`
 	ProtocolVersion ProtocolVersion          `json:"protocol_version"`
@@ -4601,6 +4844,7 @@ type Health string
 
 // HealthData defines model for HealthData.
 type HealthData struct {
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	CoreRunId       Identifier       `json:"core_run_id"`
 	Health          HealthDataHealth `json:"health"`
 	ProtocolVersion ProtocolVersion  `json:"protocol_version"`
@@ -4611,6 +4855,7 @@ type HealthDataHealth string
 
 // Heartbeat defines model for Heartbeat.
 type Heartbeat struct {
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	CoreRunId     Identifier                `json:"core_run_id"`
 	LastContactAt nullable.Nullable[string] `json:"last_contact_at"`
 }
@@ -4625,10 +4870,11 @@ type HistoryQuery struct {
 
 // IdQuery defines model for IdQuery.
 type IdQuery struct {
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	Id Identifier `json:"id"`
 }
 
-// Identifier defines model for Identifier.
+// Identifier UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 type Identifier = string
 
 // ImmediateMoveTo defines model for ImmediateMoveTo.
@@ -4660,43 +4906,57 @@ type LineGeometryType string
 
 // ListApiKeysResponse defines model for ListApiKeysResponse.
 type ListApiKeysResponse struct {
-	Data      ApiKeyPage `json:"data"`
+	Data ApiKeyPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListAssetsResponse defines model for ListAssetsResponse.
 type ListAssetsResponse struct {
-	Data      AssetPage  `json:"data"`
+	Data AssetPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListGeofeaturesResponse defines model for ListGeofeaturesResponse.
 type ListGeofeaturesResponse struct {
-	Data      GeofeaturePage `json:"data"`
-	DatasetId Identifier     `json:"dataset_id"`
+	Data GeofeaturePage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListObjectsResponse defines model for ListObjectsResponse.
 type ListObjectsResponse struct {
-	Data      ObjectPage `json:"data"`
+	Data ObjectPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListOperationsResponse defines model for ListOperationsResponse.
 type ListOperationsResponse struct {
-	Data      OperationPage `json:"data"`
-	DatasetId Identifier    `json:"dataset_id"`
+	Data OperationPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListOperatorsResponse defines model for ListOperatorsResponse.
 type ListOperatorsResponse struct {
-	Data      OperatorPage `json:"data"`
-	DatasetId Identifier   `json:"dataset_id"`
+	Data OperatorPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListPluginsResponse defines model for ListPluginsResponse.
 type ListPluginsResponse struct {
-	Data      PluginPage `json:"data"`
+	Data PluginPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
@@ -4708,19 +4968,25 @@ type ListQuery struct {
 
 // ListResourcesResponse defines model for ListResourcesResponse.
 type ListResourcesResponse struct {
-	Data      ResourceUsagePage `json:"data"`
-	DatasetId Identifier        `json:"dataset_id"`
+	Data ResourceUsagePage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListTasksResponse defines model for ListTasksResponse.
 type ListTasksResponse struct {
-	Data      TaskPage   `json:"data"`
+	Data TaskPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ListTracksResponse defines model for ListTracksResponse.
 type ListTracksResponse struct {
-	Data      TrackPage  `json:"data"`
+	Data TrackPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
@@ -4847,6 +5113,7 @@ type MoveToCommand struct {
 
 // MoveToGeofeature Must resolve to a Point geometry at admission. Revision use is reported by the Asset, never inferred.
 type MoveToGeofeature struct {
+	// GeofeatureId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	GeofeatureId Identifier           `json:"geofeature_id"`
 	Kind         MoveToGeofeatureKind `json:"kind"`
 }
@@ -4882,6 +5149,7 @@ type MoveToTarget struct {
 
 // MovementSample defines model for MovementSample.
 type MovementSample struct {
+	// EntityId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	EntityId  Identifier       `json:"entity_id"`
 	Receipt   Receipt          `json:"receipt"`
 	Telemetry TelemetrySection `json:"telemetry"`
@@ -4936,10 +5204,12 @@ type Object struct {
 
 	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	EditRevision PositiveCounter `json:"edit_revision"`
-	Id           Identifier      `json:"id"`
-	Metadata     ObjectMetadata  `json:"metadata"`
-	PublishedAt  Timestamp       `json:"published_at"`
-	Sha256       Digest          `json:"sha256"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id          Identifier     `json:"id"`
+	Metadata    ObjectMetadata `json:"metadata"`
+	PublishedAt Timestamp      `json:"published_at"`
+	Sha256      Digest         `json:"sha256"`
 
 	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
@@ -4971,7 +5241,9 @@ type ObjectPage struct {
 type Operation struct {
 	Capability Name          `json:"capability"`
 	Error      *SectionFault `json:"error,omitempty"`
-	Id         Identifier    `json:"id"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id Identifier `json:"id"`
 
 	// Input Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
 	Input nullable.Nullable[PluginPayload] `json:"input"`
@@ -4981,11 +5253,13 @@ type Operation struct {
 	ObjectIds    []Identifier                     `json:"object_ids"`
 
 	// Output Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
-	Output           nullable.Nullable[PluginPayload] `json:"output,omitempty"`
-	PluginId         Identifier                       `json:"plugin_id"`
-	RecoveredOutcome *RecoveredOutcome                `json:"recovered_outcome,omitempty"`
-	Release          string                           `json:"release"`
-	State            OperationState                   `json:"state"`
+	Output nullable.Nullable[PluginPayload] `json:"output,omitempty"`
+
+	// PluginId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	PluginId         Identifier        `json:"plugin_id"`
+	RecoveredOutcome *RecoveredOutcome `json:"recovered_outcome,omitempty"`
+	Release          string            `json:"release"`
+	State            OperationState    `json:"state"`
 
 	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
@@ -5014,8 +5288,10 @@ type Operator struct {
 
 	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	EditRevision PositiveCounter `json:"edit_revision"`
-	Id           Identifier      `json:"id"`
-	Name         Name            `json:"name"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id   Identifier `json:"id"`
+	Name Name       `json:"name"`
 }
 
 // OperatorPage defines model for OperatorPage.
@@ -5063,9 +5339,11 @@ type PauseSupportScheduling string
 type Plugin struct {
 	Available    bool               `json:"available"`
 	Capabilities []PluginCapability `json:"capabilities"`
-	Id           Identifier         `json:"id"`
-	Name         Name               `json:"name"`
-	Release      string             `json:"release"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id      Identifier `json:"id"`
+	Name    Name       `json:"name"`
+	Release string     `json:"release"`
 }
 
 // PluginCapability defines model for PluginCapability.
@@ -5183,8 +5461,10 @@ type ProtocolVersion string
 
 // PublisherSource defines model for PublisherSource.
 type PublisherSource struct {
-	Kind        PublisherSourceKind `json:"kind"`
-	PublisherId Identifier          `json:"publisher_id"`
+	Kind PublisherSourceKind `json:"kind"`
+
+	// PublisherId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	PublisherId Identifier `json:"publisher_id"`
 }
 
 // PublisherSourceKind defines model for PublisherSource.Kind.
@@ -5206,8 +5486,10 @@ type QueuedMoveToScheduling string
 
 // ReadActivityResponse defines model for ReadActivityResponse.
 type ReadActivityResponse struct {
-	Data      ActivityRecordPage `json:"data"`
-	DatasetId Identifier         `json:"dataset_id"`
+	Data ActivityRecordPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ReadChangesRequest defines model for ReadChangesRequest.
@@ -5220,7 +5502,9 @@ type ReadChangesRequest struct {
 
 // ReadChangesResponse defines model for ReadChangesResponse.
 type ReadChangesResponse struct {
-	Data      ChangePage `json:"data"`
+	Data ChangePage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
 }
 
@@ -5234,16 +5518,22 @@ type ReadObjectContentQueryDisposition string
 
 // ReadSnapshotRequest defines model for ReadSnapshotRequest.
 type ReadSnapshotRequest struct {
-	Context    SnapshotContext `json:"context"`
-	PageToken  *PageToken      `json:"page_token,omitempty"`
-	RequestId  Identifier      `json:"request_id"`
-	SnapshotId *Identifier     `json:"snapshot_id,omitempty"`
+	Context   SnapshotContext `json:"context"`
+	PageToken *PageToken      `json:"page_token,omitempty"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+
+	// SnapshotId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	SnapshotId *Identifier `json:"snapshot_id,omitempty"`
 }
 
 // ReadSnapshotResponse defines model for ReadSnapshotResponse.
 type ReadSnapshotResponse struct {
-	Data      SnapshotPage `json:"data"`
-	DatasetId Identifier   `json:"dataset_id"`
+	Data SnapshotPage `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // Readiness defines model for Readiness.
@@ -5254,10 +5544,13 @@ type Readiness struct {
 
 // Receipt defines model for Receipt.
 type Receipt struct {
-	CoreRunId       Identifier     `json:"core_run_id"`
-	ReceivedAt      Timestamp      `json:"received_at"`
-	Source          ReportedSource `json:"source"`
-	SubmittingKeyId Identifier     `json:"submitting_key_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId  Identifier     `json:"core_run_id"`
+	ReceivedAt Timestamp      `json:"received_at"`
+	Source     ReportedSource `json:"source"`
+
+	// SubmittingKeyId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	SubmittingKeyId Identifier `json:"submitting_key_id"`
 }
 
 // RecoveredOutcome defines model for RecoveredOutcome.
@@ -5279,7 +5572,10 @@ type RecoveredOutcomeState string
 
 // RecoveryRequiredFrame defines model for RecoveryRequiredFrame.
 type RecoveryRequiredFrame struct {
-	CoreRunId       Identifier                  `json:"core_run_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier                  `json:"dataset_id"`
 	ProtocolVersion ProtocolVersion             `json:"protocol_version"`
 	Reason          RecoveryRequiredFrameReason `json:"reason"`
@@ -5308,29 +5604,42 @@ type ReferenceOpenapiPath string
 
 // RegisterAssetRequest defines model for RegisterAssetRequest.
 type RegisterAssetRequest struct {
-	Alias        *Alias       `json:"alias,omitempty"`
+	Alias *Alias `json:"alias,omitempty"`
+
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	AssetId      Identifier   `json:"asset_id"`
 	Capabilities Capabilities `json:"capabilities"`
 
 	// Credential Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields.
-	Credential        CredentialFacts  `json:"credential"`
-	Description       AssetDescription `json:"description"`
-	ProcessGeneration Identifier       `json:"process_generation"`
-	RegistrationId    Identifier       `json:"registration_id"`
-	RequestId         Identifier       `json:"request_id"`
-	Type              AssetType        `json:"type"`
+	Credential  CredentialFacts  `json:"credential"`
+	Description AssetDescription `json:"description"`
+
+	// ProcessGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ProcessGeneration Identifier `json:"process_generation"`
+
+	// RegistrationId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RegistrationId Identifier `json:"registration_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+	Type      AssetType  `json:"type"`
 }
 
 // RegisterAssetResponse defines model for RegisterAssetResponse.
 type RegisterAssetResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Asset      `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Asset  `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ReleaseSnapshotFrame defines model for ReleaseSnapshotFrame.
 type ReleaseSnapshotFrame struct {
-	CoreRunId       Identifier               `json:"core_run_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier               `json:"dataset_id"`
 	ProtocolVersion ProtocolVersion          `json:"protocol_version"`
 	Request         ReleaseSnapshotRequest   `json:"request"`
@@ -5342,78 +5651,117 @@ type ReleaseSnapshotFrameType string
 
 // ReleaseSnapshotRequest defines model for ReleaseSnapshotRequest.
 type ReleaseSnapshotRequest struct {
-	CoreRunId  Identifier `json:"core_run_id"`
-	LoadId     Identifier `json:"load_id"`
-	RequestId  Identifier `json:"request_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// LoadId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	LoadId Identifier `json:"load_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+
+	// SnapshotId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	SnapshotId Identifier `json:"snapshot_id"`
 }
 
 // ReleaseSnapshotResponse defines model for ReleaseSnapshotResponse.
 type ReleaseSnapshotResponse struct {
-	Data      SnapshotReleased `json:"data"`
-	DatasetId Identifier       `json:"dataset_id"`
+	Data SnapshotReleased `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ReplaceAssetProcessRequest defines model for ReplaceAssetProcessRequest.
 type ReplaceAssetProcessRequest struct {
-	AssetId            Identifier   `json:"asset_id"`
-	CoreRunId          Identifier   `json:"core_run_id"`
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	AssetId Identifier `json:"asset_id"`
+
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// ExpectedGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ExpectedGeneration Identifier   `json:"expected_generation"`
 	FirstCheckIn       ContactProof `json:"first_check_in"`
-	ProcessGeneration  Identifier   `json:"process_generation"`
-	RequestId          Identifier   `json:"request_id"`
+
+	// ProcessGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ProcessGeneration Identifier `json:"process_generation"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // ReplaceAssetProcessResponse defines model for ReplaceAssetProcessResponse.
 type ReplaceAssetProcessResponse struct {
 	CommitCursor Cursor            `json:"commit_cursor"`
 	Data         AssetUpdateResult `json:"data"`
-	DatasetId    Identifier        `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ReportTaskExecutionRequest defines model for ReportTaskExecutionRequest.
 type ReportTaskExecutionRequest struct {
-	Report    ExecutionReport `json:"report"`
-	RequestId Identifier      `json:"request_id"`
-	TaskId    Identifier      `json:"task_id"`
+	Report ExecutionReport `json:"report"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+
+	// TaskId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TaskId Identifier `json:"task_id"`
 }
 
 // ReportTaskExecutionResponse defines model for ReportTaskExecutionResponse.
 type ReportTaskExecutionResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Task       `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Task   `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ReportTaskResultsRequest defines model for ReportTaskResultsRequest.
 type ReportTaskResultsRequest struct {
-	Evidence  SourceEvidence      `json:"evidence"`
+	Evidence SourceEvidence `json:"evidence"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier          `json:"request_id"`
 	Results   []ResultDeclaration `json:"results"`
 	Source    AssetSource         `json:"source"`
-	TaskId    Identifier          `json:"task_id"`
+
+	// TaskId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TaskId Identifier `json:"task_id"`
 }
 
 // ReportTaskResultsResponse defines model for ReportTaskResultsResponse.
 type ReportTaskResultsResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Task       `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Task   `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ReportTrackObservationsRequest defines model for ReportTrackObservationsRequest.
 type ReportTrackObservationsRequest struct {
-	PublisherId Identifier    `json:"publisher_id"`
-	RequestId   Identifier    `json:"request_id"`
-	Sections    TrackSections `json:"sections"`
-	TrackId     Identifier    `json:"track_id"`
+	// PublisherId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	PublisherId Identifier `json:"publisher_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier    `json:"request_id"`
+	Sections  TrackSections `json:"sections"`
+
+	// TrackId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TrackId Identifier `json:"track_id"`
 }
 
 // ReportTrackObservationsResponse defines model for ReportTrackObservationsResponse.
 type ReportTrackObservationsResponse struct {
 	CommitCursor Cursor            `json:"commit_cursor"`
 	Data         TrackUpdateResult `json:"data"`
-	DatasetId    Identifier        `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ReportedSource defines model for ReportedSource.
@@ -5424,21 +5772,28 @@ type ReportedSource struct {
 // RequestContactChallengeResponse defines model for RequestContactChallengeResponse.
 type RequestContactChallengeResponse struct {
 	// Data Exact retry recovers original expiry. Restart invalidates proof. Replacement binds expected_generation and commits its first check-in atomically.
-	Data      ContactChallenge `json:"data"`
-	DatasetId Identifier       `json:"dataset_id"`
+	Data ContactChallenge `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // RequestTaskCancellationRequest defines model for RequestTaskCancellationRequest.
 type RequestTaskCancellationRequest struct {
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier `json:"request_id"`
-	TaskId    Identifier `json:"task_id"`
+
+	// TaskId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	TaskId Identifier `json:"task_id"`
 }
 
 // RequestTaskCancellationResponse defines model for RequestTaskCancellationResponse.
 type RequestTaskCancellationResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Task       `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Task   `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // ResourceChange defines model for ResourceChange.
@@ -5473,7 +5828,9 @@ type ResourceUsagePage struct {
 
 // ResultDeclaration defines model for ResultDeclaration.
 type ResultDeclaration struct {
-	Name     *Name      `json:"name,omitempty"`
+	Name *Name `json:"name,omitempty"`
+
+	// ObjectId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	ObjectId Identifier `json:"object_id"`
 	Required bool       `json:"required"`
 }
@@ -5700,20 +6057,26 @@ type RetainedTrackTypeObservationSection struct {
 
 // Retry defines model for Retry.
 type Retry struct {
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier `json:"request_id"`
 }
 
 // RevokeApiKeyRequest defines model for RevokeApiKeyRequest.
 type RevokeApiKeyRequest struct {
-	KeyId     Identifier `json:"key_id"`
+	// KeyId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	KeyId Identifier `json:"key_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	RequestId Identifier `json:"request_id"`
 }
 
 // RevokeApiKeyResponse defines model for RevokeApiKeyResponse.
 type RevokeApiKeyResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         ApiKey     `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         ApiKey `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // SectionDisposition defines model for SectionDisposition.
@@ -5795,51 +6158,73 @@ type ServerFrame struct {
 
 // SetTaskOrderRequest defines model for SetTaskOrderRequest.
 type SetTaskOrderRequest struct {
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	AssetId Identifier `json:"asset_id"`
 
 	// ExpectedQueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedQueueRevision PositiveCounter `json:"expected_queue_revision"`
-	RequestId             Identifier      `json:"request_id"`
-	TaskIds               []Identifier    `json:"task_ids"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier   `json:"request_id"`
+	TaskIds   []Identifier `json:"task_ids"`
 }
 
 // SetTaskOrderResponse defines model for SetTaskOrderResponse.
 type SetTaskOrderResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         TaskQueue  `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor    `json:"commit_cursor"`
+	Data         TaskQueue `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // SnapshotContext defines model for SnapshotContext.
 type SnapshotContext struct {
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	CoreRunId Identifier  `json:"core_run_id"`
 	Limits    BatchLimits `json:"limits"`
-	LoadId    Identifier  `json:"load_id"`
+
+	// LoadId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	LoadId Identifier `json:"load_id"`
 }
 
 // SnapshotPage defines model for SnapshotPage.
 type SnapshotPage struct {
-	Baseline      Cursor          `json:"baseline"`
-	CoreRunId     Identifier      `json:"core_run_id"`
-	ExpiresAt     Timestamp       `json:"expires_at"`
-	Items         []ResourceImage `json:"items"`
-	Limits        BatchLimits     `json:"limits"`
-	LoadId        Identifier      `json:"load_id"`
-	NextPageToken *PageToken      `json:"next_page_token,omitempty"`
-	SnapshotId    Identifier      `json:"snapshot_id"`
+	Baseline Cursor `json:"baseline"`
+
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier      `json:"core_run_id"`
+	ExpiresAt Timestamp       `json:"expires_at"`
+	Items     []ResourceImage `json:"items"`
+	Limits    BatchLimits     `json:"limits"`
+
+	// LoadId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	LoadId        Identifier `json:"load_id"`
+	NextPageToken *PageToken `json:"next_page_token,omitempty"`
+
+	// SnapshotId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	SnapshotId Identifier `json:"snapshot_id"`
 }
 
 // SnapshotReleased defines model for SnapshotReleased.
 type SnapshotReleased struct {
-	CoreRunId  Identifier `json:"core_run_id"`
-	LoadId     Identifier `json:"load_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// LoadId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	LoadId Identifier `json:"load_id"`
+
+	// SnapshotId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	SnapshotId Identifier `json:"snapshot_id"`
 }
 
 // SnapshotReleasedFrame defines model for SnapshotReleasedFrame.
 type SnapshotReleasedFrame struct {
-	CoreRunId       Identifier                `json:"core_run_id"`
-	Data            SnapshotReleased          `json:"data"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier       `json:"core_run_id"`
+	Data      SnapshotReleased `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier                `json:"dataset_id"`
 	ProtocolVersion ProtocolVersion           `json:"protocol_version"`
 	Type            SnapshotReleasedFrameType `json:"type"`
@@ -5851,10 +6236,12 @@ type SnapshotReleasedFrameType string
 // SourceEvidence defines model for SourceEvidence.
 type SourceEvidence struct {
 	// CorrectionRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
-	CorrectionRevision Counter                    `json:"correction_revision"`
-	EvidenceId         Identifier                 `json:"evidence_id"`
-	EvidenceKind       SourceEvidenceEvidenceKind `json:"evidence_kind"`
-	GeneratedAt        nullable.Nullable[string]  `json:"generated_at"`
+	CorrectionRevision Counter `json:"correction_revision"`
+
+	// EvidenceId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	EvidenceId   Identifier                 `json:"evidence_id"`
+	EvidenceKind SourceEvidenceEvidenceKind `json:"evidence_kind"`
+	GeneratedAt  nullable.Nullable[string]  `json:"generated_at"`
 
 	// Sequence Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Sequence PositiveCounter `json:"sequence"`
@@ -5922,8 +6309,12 @@ type StatusWithdrawnState string
 
 // SubscribeChangesFrame defines model for SubscribeChangesFrame.
 type SubscribeChangesFrame struct {
-	After           Cursor                    `json:"after"`
-	CoreRunId       Identifier                `json:"core_run_id"`
+	After Cursor `json:"after"`
+
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier                `json:"dataset_id"`
 	Limits          BatchLimits               `json:"limits"`
 	ProtocolVersion ProtocolVersion           `json:"protocol_version"`
@@ -5935,7 +6326,10 @@ type SubscribeChangesFrameType string
 
 // SubscriptionAckFrame defines model for SubscriptionAckFrame.
 type SubscriptionAckFrame struct {
-	CoreRunId       Identifier               `json:"core_run_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier               `json:"dataset_id"`
 	Handoff         Cursor                   `json:"handoff"`
 	Limits          BatchLimits              `json:"limits"`
@@ -5948,7 +6342,10 @@ type SubscriptionAckFrameType string
 
 // SyncErrorFrame defines model for SyncErrorFrame.
 type SyncErrorFrame struct {
-	CoreRunId       Identifier         `json:"core_run_id"`
+	// CoreRunId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	CoreRunId Identifier `json:"core_run_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId       Identifier         `json:"dataset_id"`
 	ProtocolVersion string             `json:"protocol_version"`
 	Response        ErrorResponse      `json:"response"`
@@ -5960,8 +6357,11 @@ type SyncErrorFrameType string
 
 // Task defines model for Task.
 type Task struct {
-	AssetId       Identifier          `json:"asset_id"`
-	Command       TaskCommand         `json:"command"`
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	AssetId Identifier  `json:"asset_id"`
+	Command TaskCommand `json:"command"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	Id            Identifier          `json:"id"`
 	LastExecution *ExecutionReport    `json:"last_execution,omitempty"`
 	LastReceipt   *Receipt            `json:"last_receipt,omitempty"`
@@ -5996,6 +6396,7 @@ type TaskPage struct {
 
 // TaskQueue defines model for TaskQueue.
 type TaskQueue struct {
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	AssetId           Identifier                                 `json:"asset_id"`
 	ConfirmedRevision nullable.Nullable[NullablePositiveCounter] `json:"confirmed_revision"`
 
@@ -6086,12 +6487,16 @@ type Track struct {
 	Description Description               `json:"description"`
 
 	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
-	EditRevision     PositiveCounter                      `json:"edit_revision"`
-	EntityType       TrackEntityType                      `json:"entity_type"`
-	Geometry         *RetainedGeometryObservationSection  `json:"geometry,omitempty"`
-	Id               Identifier                           `json:"id"`
-	Media            *RetainedMediaObservationSection     `json:"media,omitempty"`
-	MilitaryDisplay  *RetainedMilitaryDisplaySection      `json:"military_display,omitempty"`
+	EditRevision PositiveCounter                     `json:"edit_revision"`
+	EntityType   TrackEntityType                     `json:"entity_type"`
+	Geometry     *RetainedGeometryObservationSection `json:"geometry,omitempty"`
+
+	// Id UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	Id              Identifier                       `json:"id"`
+	Media           *RetainedMediaObservationSection `json:"media,omitempty"`
+	MilitaryDisplay *RetainedMilitaryDisplaySection  `json:"military_display,omitempty"`
+
+	// PublisherId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	PublisherId      Identifier                           `json:"publisher_id"`
 	SensorReferences *RetainedSensorReferencesSection     `json:"sensor_references,omitempty"`
 	Telemetry        *RetainedTelemetrySection            `json:"telemetry,omitempty"`
@@ -6199,17 +6604,22 @@ type UnreportedSectionState string
 
 // UpdateAssetRequest defines model for UpdateAssetRequest.
 type UpdateAssetRequest struct {
+	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	AssetId     Identifier              `json:"asset_id"`
 	Descriptive *AssetDescriptiveChange `json:"descriptive,omitempty"`
 	Report      *AssetReport            `json:"report,omitempty"`
-	RequestId   Identifier              `json:"request_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
 }
 
 // UpdateAssetResponse defines model for UpdateAssetResponse.
 type UpdateAssetResponse struct {
 	CommitCursor Cursor            `json:"commit_cursor"`
 	Data         AssetUpdateResult `json:"data"`
-	DatasetId    Identifier        `json:"dataset_id"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // UploadObjectDescriptor One descriptor plus the complete binary HTTP body. Byte length and SHA-256 must match streamed bytes. File admission is configurable Core policy, initially 2 GB.
@@ -6218,16 +6628,22 @@ type UploadObjectDescriptor struct {
 	ByteLength  Counter        `json:"byte_length"`
 	ContentType ContentType    `json:"content_type"`
 	Metadata    ObjectMetadata `json:"metadata"`
-	ObjectId    Identifier     `json:"object_id"`
-	RequestId   Identifier     `json:"request_id"`
-	Sha256      Digest         `json:"sha256"`
+
+	// ObjectId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	ObjectId Identifier `json:"object_id"`
+
+	// RequestId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	RequestId Identifier `json:"request_id"`
+	Sha256    Digest     `json:"sha256"`
 }
 
 // UploadObjectResponse defines model for UploadObjectResponse.
 type UploadObjectResponse struct {
-	CommitCursor Cursor     `json:"commit_cursor"`
-	Data         Object     `json:"data"`
-	DatasetId    Identifier `json:"dataset_id"`
+	CommitCursor Cursor `json:"commit_cursor"`
+	Data         Object `json:"data"`
+
+	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
+	DatasetId Identifier `json:"dataset_id"`
 }
 
 // UpsertChange defines model for UpsertChange.
@@ -6239,7 +6655,7 @@ type UpsertChange struct {
 // UpsertChangeKind defines model for UpsertChange.Kind.
 type UpsertChangeKind string
 
-// Dataset defines model for Dataset.
+// Dataset UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 type Dataset = Identifier
 
 // VersionContext defines model for VersionContext.

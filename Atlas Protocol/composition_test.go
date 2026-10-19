@@ -45,6 +45,23 @@ func TestSemanticComposition(t *testing.T) {
 	default:
 		t.Fatal("unknown composition")
 	}
+	identifier := &openapi3.SchemaRef{Ref: "#/components/schemas/Identifier", Value: doc.Components.Schemas["Identifier"].Value}
+	composed := &openapi3.Schema{}
+	switch composition {
+	case "oneOf":
+		composed.OneOf = openapi3.SchemaRefs{identifier}
+	case "anyOf":
+		composed.AnyOf = openapi3.SchemaRefs{identifier}
+	case "allOf":
+		composed.AllOf = openapi3.SchemaRefs{identifier}
+	}
+	doc.Components.Schemas["UUIDArrayProbe"] = &openapi3.SchemaRef{Value: composed}
+	for _, list := range []*openapi3.Schema{
+		doc.Components.Schemas["SetTaskOrderRequest"].Value.Properties["task_ids"].Value,
+		doc.Components.Schemas["ObjectMetadata"].Value.Properties["entity_ids"].Value,
+	} {
+		list.Items = &openapi3.SchemaRef{Ref: "#/components/schemas/UUIDArrayProbe", Value: composed}
+	}
 	document, err = json.Marshal(doc)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +69,7 @@ func TestSemanticComposition(t *testing.T) {
 	count := 0
 	for _, sample := range readFixture[[]fixture](t, "cases.json") {
 		syncGeometry := strings.Contains(sample.Name, "Track geometry ") && (strings.HasPrefix(sample.Name, "snapshot ") || strings.HasPrefix(sample.Name, "commit "))
-		if !syncGeometry {
+		if !syncGeometry && !strings.HasPrefix(sample.Name, "UUID array ") {
 			continue
 		}
 		count++
@@ -66,7 +83,7 @@ func TestSemanticComposition(t *testing.T) {
 			t.Errorf("%s: %v", sample.Name, err)
 		}
 	}
-	if count != 8 {
-		t.Fatalf("expected eight independent snapshot and commit cases, got %d", count)
+	if count != 12 {
+		t.Fatalf("expected twelve independent snapshot, commit and UUID array cases, got %d", count)
 	}
 }

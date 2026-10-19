@@ -6884,6 +6884,7 @@
   "components": {
     "schemas": {
       "Identifier": {
+        "description": "UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.",
         "type": "string",
         "format": "uuid",
         "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",

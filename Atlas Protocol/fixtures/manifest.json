@@ -562,7 +562,11 @@
     "API-key secret space",
     "API-key secret nonascii",
     "Plugin capability names retain case-sensitive identity",
-    "Plugin duplicate capability name refused"
+    "Plugin duplicate capability name refused",
+    "UUID array task order rejects alternate-case duplicate",
+    "UUID array Object edit rejects alternate-case Entity duplicate",
+    "UUID array task order preserves distinct spelling and order",
+    "UUID array Object edit preserves distinct Entity and Task references"
   ],
   "exchange_names": [
     "RegisterAsset",
@@ -633,6 +637,6 @@
     "ReleaseSnapshot",
     "SubscribeChanges"
   ],
-  "valid": 276,
-  "invalid": 287
+  "valid": 278,
+  "invalid": 289
 }
