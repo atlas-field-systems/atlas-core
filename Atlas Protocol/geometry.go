@@ -1,6 +1,7 @@
 package atlas
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -59,8 +60,10 @@ func geometry(value interface{}) error {
 		if len(pair) != 2 {
 			return fmt.Errorf("invalid_geometry")
 		}
-		x, xok := pair[0].(float64)
-		y, yok := pair[1].(float64)
+		xn, xok := pair[0].(json.Number)
+		yn, yok := pair[1].(json.Number)
+		x, _ := xn.Float64()
+		y, _ := yn.Float64()
 		if !xok || !yok || !isFinite(x) || !isFinite(y) || x < -180 || x > 180 || y < -90 || y > 90 {
 			return fmt.Errorf("invalid_geometry")
 		}

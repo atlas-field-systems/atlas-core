@@ -4,8 +4,9 @@ import {mkdtemp, open, readFile, rename, rm, stat, writeFile} from 'node:fs/prom
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
+import {spawnSync} from 'node:child_process';
 import {Ajv2020} from 'ajv/dist/2020.js';
-import {Decode, Encode, Version, Catalog, isSchemaName, DefaultLimits, ValidateRequest, ValidateResponse, ValidateFrame, CheckContent} from '../ts/index.js';
+import {Decode, Encode, Version, Catalog, isSchemaName, DefaultLimits, ValidateRequest, ValidateResponse, ValidateFrame, CheckContent, PluginNumberText} from '../ts/index.js';
 import type {ResponseContext, FrameContext, components, operations} from '../ts/index.js';
 interface Fixture {name: string; schema: string; valid: boolean; value?: unknown; raw?: string; hex?: string; error?: string}
 interface Exchange {name: string; request_schema: string | null; request: unknown; response_schema: string | null; response: unknown; status: number; query: string}
@@ -51,7 +52,8 @@ test('shared independent fixtures execute generated types and both validation bo
   const raw = sample.hex ? Buffer.from(sample.hex, 'hex') : sample.raw !== undefined ? new TextEncoder().encode(sample.raw) : wire(sample.value);
   if (sample.valid) {
    valid++; const value = Decode(name, raw), encoded = Encode(name, value), result = Decode(name, encoded);
-   assert.deepEqual(result, sample.value); assert.deepEqual(value, result);
+   const expectedWire = sample.name === 'Plugin raw numeric spelling' ? sample.raw : JSON.stringify(sample.value);
+   assert.equal(new TextDecoder().decode(encoded), expectedWire); assert.deepEqual(value, result);
   } else {invalid++; if (sample.error) assert.throws(() => Decode(name, raw), new RegExp(sample.error)); else assert.throws(() => Decode(name, raw));}
  });}
  assert.equal(valid, 276); assert.equal(invalid, 287); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
@@ -107,7 +109,7 @@ test('Plugin null and optional payloads retain their generated presence states',
  for (const fields of [{}, {output: null, known_effects: null}, {output: {precise: 1.2345678901234567}, known_effects: [null, false, 0, '']}]) {
   const operation = {...base, ...fields, recovered_outcome: {state: 'completed', observed_at: null, object_ids: [], ...fields}} satisfies components['schemas']['Operation'];
   const out = Decode('Operation', Encode('Operation', operation));
-  assert.deepEqual(out, operation); assert.equal(Object.hasOwn(out, 'output'), Object.hasOwn(fields, 'output')); assert.equal(Object.hasOwn(out, 'known_effects'), Object.hasOwn(fields, 'known_effects'));
+  assert.equal(JSON.stringify(out), JSON.stringify(operation)); assert.equal(Object.hasOwn(out, 'output'), Object.hasOwn(fields, 'output')); assert.equal(Object.hasOwn(out, 'known_effects'), Object.hasOwn(fields, 'known_effects'));
  }
 });
 
@@ -290,4 +292,114 @@ test('caller-owned file staging preserves verified uploads and downloads', async
    else await assert.rejects(stat(finalPath), {code: 'ENOENT'});
   } finally {await rm(root, {recursive: true, force: true});}
  });
+});
+
+
+test('Plugin numeric source survives public Decode and Encode', () => {
+ for (const token of ['1.0', '-0', '1e-400', '9007199254740993', '12345678901234567890', '0.10000000000000001']) {
+  const wire = new TextEncoder().encode(token);
+  assert.equal(new TextDecoder().decode(Encode('PluginPayload', Decode('PluginPayload', wire))), token);
+ }
+});
+test('typed integers refuse fractions hidden by double rounding', () => {
+ for (const token of ['100.0000000000000000001', '1e-400']) assert.throws(() => Decode('ErrorDetails', new TextEncoder().encode('{"retry_after_seconds":' + token + '}')));
+});
+
+
+test('exact integers reach typed query consumers and generated unions', async () => {
+ for (const token of ['100', '100.0', '1e2', '1e+2', '1000e-1', '1.00e2']) {
+  const raw = new TextEncoder().encode('{"page_size":' + token + '}');
+  assert.equal(Decode('EntityListQuery', raw).page_size, 100);
+  const checked = await ValidateRequest('ListAssets', new Request('https://atlas.invalid/assets?page_size=' + encodeURIComponent(token), {headers: headers()}), dataset);
+  assert.equal(Decode('EntityListQuery', checked.query).page_size, 100);
+ }
+ for (const token of ['100.0000000000000000001', '1e-400', '0.1', '1001', '-0', '0e' + '9'.repeat(1000), '1e1000000000']) {
+  assert.throws(() => Decode('EntityListQuery', new TextEncoder().encode('{"page_size":' + token + '}')));
+  await assert.rejects(ValidateRequest('ListAssets', new Request('https://atlas.invalid/assets?page_size=' + encodeURIComponent(token), {headers: headers()}), dataset));
+ }
+ for (const [token, expected] of [['0', 0], ['-0', -0], ['0e' + '9'.repeat(10000), 0], ['-0.00e-' + '9'.repeat(10000), -0], ['9007199254740991', 9007199254740991], ['9.007199254740991e15', 9007199254740991]] as const) {
+  assert.equal(Decode('ErrorDetails', new TextEncoder().encode('{"retry_after_seconds":' + token + '}')).retry_after_seconds, expected);
+ }
+ for (const token of ['9007199254740992', '9007199254740993', '1e20', '1e1000000000', '1e-400', '100.0000000000000000001', '-1']) assert.throws(() => Decode('ErrorDetails', new TextEncoder().encode('{"retry_after_seconds":' + token + '}')));
+ const challenge = '{"challenge_id":"' + dataset + '","request_id":"' + dataset + '","dataset_id":"' + dataset + '","asset_id":"' + dataset + '","process_generation":"' + dataset + '","core_run_id":"' + coreRun + '","issued_at":"2026-10-18T00:00:00Z","expires_at":"2026-10-18T00:00:10Z","expires_in_seconds":';
+ for (const token of ['10.0', '1e1']) assert.equal(Decode('ContactChallenge', new TextEncoder().encode(challenge + token + '}')).expires_in_seconds, 10);
+ assert.throws(() => Decode('ContactChallenge', new TextEncoder().encode(challenge + '10.0000000000000000001}')));
+ const frame = Decode('ServerFrame', new TextEncoder().encode('{"type":"error","dataset_id":"' + dataset + '","core_run_id":"' + coreRun + '","protocol_version":"0.1.0","response":{"error":{"code":"resource_limit","message":"busy","request_id":"' + coreRun + '","details":{"retry_after_seconds":1e2}}}}'));
+ assert(frame.type === 'error'); assert.equal(frame.response.error.details?.retry_after_seconds, 100);
+});
+
+function pluginObject(value: unknown): asserts value is Record<string, unknown> {
+ assert(typeof value === 'object' && value !== null && !Array.isArray(value));
+}
+
+test('uniform Plugin atoms preserve source at every declared payload location', () => {
+ const bytes = (raw: string) => new TextEncoder().encode(raw);
+ const chars = (raw: Uint8Array) => new TextDecoder().decode(raw);
+ for (const token of ['1', '42', '1.0', '-0', '1e-400', '9007199254740993', '12345678901234567890', '0.10000000000000001', '1.00000000000000001', '9.007199254740993e15', '1e308']) {
+  const root = Decode('PluginPayload', bytes(token));
+  assert.equal(typeof root, 'object'); assert(Object.isFrozen(root)); assert.equal(PluginNumberText(root), token);
+  assert.equal(chars(Encode('PluginPayload', root)), token);
+  const payload = '{ "10" : [' + token + ',42], "2": ' + token + ', "page_size": 100.0000000000000000001, "retry_after_seconds": 1e-400 }';
+  const request = Decode('CreateOperationRequest', bytes('{"request_id":"' + coreRun + '","operation_id":"' + coreRun + '","plugin_id":"' + coreRun + '","release":"r1","capability":"probe","input":' + payload + '}'));
+  pluginObject(request.input); assert.equal(PluginNumberText(request.input['2']), token);
+  assert(Array.isArray(request.input['10'])); assert.equal(PluginNumberText(request.input['10'][0]), token); assert.equal(PluginNumberText(request.input['10'][1]), '42');
+  assert.equal(PluginNumberText(request.input.page_size), '100.0000000000000000001'); assert.equal(PluginNumberText(request.input.retry_after_seconds), '1e-400');
+  const forwarded = chars(Encode('CreateOperationRequest', request)); assert(forwarded.includes('"2":' + token)); assert(forwarded.includes('"10":[' + token + ',42]'));
+  const recovery = '{"state":"completed","observed_at":null,"object_ids":[],"output":' + payload + ',"known_effects":[' + token + ',null]}';
+  const recovered = Decode('RecoveredOutcome', bytes(recovery));
+  pluginObject(recovered.output); assert.equal(PluginNumberText(recovered.output['2']), token);
+  assert(chars(Encode('RecoveredOutcome', recovered)).includes('"known_effects":[' + token + ',null]'));
+  const base = '{"id":"' + coreRun + '","version":"1","plugin_id":"' + coreRun + '","release":"r1","capability":"probe","input":' + payload + ',"state":"interrupted","object_ids":[],"recovered_outcome":' + recovery;
+  for (const tail of ['}', ',"known_effects":null}', ',"output":' + payload + ',"known_effects":[' + token + ',null]}']) {
+   const op = Decode('Operation', bytes(base + tail)), wire = Encode('Operation', op), again = Decode('Operation', wire);
+   assert.deepEqual(again, op); assert.equal(Object.hasOwn(op, 'output'), tail.includes('"output"')); assert.equal(Object.hasOwn(op, 'known_effects'), tail.includes('"known_effects"'));
+   if (tail === ',"known_effects":null}') assert.equal(op.known_effects, null);
+   pluginObject(again.input); assert.equal(PluginNumberText(again.input['2']), token); assert(chars(wire).includes('"2":' + token));
+  }
+ }
+ assert.equal(PluginNumberText(1), undefined); assert.equal(PluginNumberText(null), undefined); assert.equal(PluginNumberText({rawJSON: '1'}), undefined);
+ assert.equal(chars(Encode('PluginPayload', {rawJSON: '1'})), '{"rawJSON":"1"}');
+ let calls = 0;
+ const accessor = Object.defineProperty({}, 'rawJSON', {enumerable: true, get() {calls++; return '1';}});
+ assert.equal(PluginNumberText(accessor), undefined);
+ assert.throws(() => Encode('PluginPayload', accessor), /JSON accessor/);
+ assert.throws(() => Encode('PluginPayload', {toJSON() {calls++; return 1;}}), /unsupported JSON value/);
+ assert.equal(calls, 0);
+ const exact = Decode('PluginPayload', bytes('1.0')), copy = Decode('PluginPayload', Encode('PluginPayload', exact));
+ assert.equal(PluginNumberText(copy), '1.0'); assert.throws(() => structuredClone(exact), {name: 'DataCloneError'});
+ const rounded = Decode('PluginPayload', Encode('PluginPayload', Number('9007199254740993')));
+ assert.equal(PluginNumberText(rounded), '9007199254740992');
+});
+
+test('canonical numeric size, atom accounting, and existing refusals share limits', () => {
+ const bytes = (raw: string) => new TextEncoder().encode(raw);
+ for (const raw of ['{"field":"📍","retry_after_seconds":1e15}', '{"retry_after_seconds":1e15}', '{"retry_after_seconds":1e15,"required_limits":{"max_changes":100.0,"max_batch_bytes":"1"}}']) {
+  const size = bytes(raw).byteLength + 12 - (raw.includes('100.0') ? 2 : 0);
+  assert.throws(() => Decode('ErrorDetails', bytes(raw), {...DefaultLimits(), maxJSONBytes: size - 1}), /payload_too_large/);
+  Decode('ErrorDetails', bytes(raw), {...DefaultLimits(), maxJSONBytes: size});
+ }
+ for (const token of ['0.1', '1e308']) {
+  const value = Decode('Altitude', bytes('{"metres":' + token + ',"reference":"wgs84_ellipsoid"}'));
+  assert.equal(value.metres, Number(token)); Encode('Altitude', value);
+ }
+ for (const raw of ['1e309', '{"x":1,"\\u0078":2}', '"\\ud800"', '1 2']) assert.throws(() => Decode('PluginPayload', bytes(raw)));
+ assert.throws(() => Decode('PluginPayload', Uint8Array.of(255)));
+ const raw = '[9007199254740993,9007199254740993]', value = Decode('PluginPayload', bytes(raw));
+ assert.equal(new TextDecoder().decode(Encode('PluginPayload', value, {...DefaultLimits(), maxValues: 3, maxDepth: 1, maxJSONBytes: raw.length})), raw);
+ assert.throws(() => Encode('PluginPayload', value, {...DefaultLimits(), maxValues: 2}));
+ assert.throws(() => Encode('PluginPayload', value, {...DefaultLimits(), maxJSONBytes: raw.length - 1}));
+ assert.throws(() => Decode('PluginPayload', bytes('[[1]]'), {...DefaultLimits(), maxDepth: 1}));
+ for (const [raw, maxValues, valid] of [['[1,42]', 3, true], ['[1,42]', 2, false], ['{"a":1,"b":42}', 5, true], ['{"a":1,"b":42}', 4, false]] as const) {
+  const check = () => Decode('PluginPayload', bytes(raw), {...DefaultLimits(), maxValues}); if (valid) check(); else assert.throws(check);
+ }
+ const outcome = Decode('RecoveredOutcome', bytes('{"state":"completed","observed_at":null,"object_ids":[],"output":[1,42],"known_effects":[1,42]}'));
+ assert.throws(() => Encode('RecoveredOutcome', outcome, {...DefaultLimits(), maxValues: 10}));
+});
+
+test('unsupported numeric runtime features fail at module load', () => {
+ const target = new URL('../ts/index.js', import.meta.url).href;
+ for (const setup of ["JSON.rawJSON = undefined;", "JSON.isRawJSON = undefined;", "JSON.rawJSON = text => Object.freeze({rawJSON: text});", "JSON.isRawJSON = () => false;", "const native = JSON.parse; JSON.parse = (text, reviver) => native(text, reviver ? function(key, value) {return reviver.call(this, key, value);} : undefined);"]) {
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', setup + 'await import(' + JSON.stringify(target) + ');'], {encoding: 'utf8'});
+  assert.ifError(result.error); assert.equal(result.signal, null); assert.notEqual(result.status, 0); assert.match(result.stderr, /Atlas requires/);
+ }
 });

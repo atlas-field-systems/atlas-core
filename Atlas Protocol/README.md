@@ -1,9 +1,8 @@
 # Atlas Protocol
 
 Protocol is the shared language of Atlas. This self-contained package supplies
-one authored [OpenAPI 3.1 contract](openapi.json), generated Go and TypeScript
-declarations, runtime validation, HTTP and WebSocket binding checks, and fixtures.
-Core server mechanisms and SDK client workflows remain separate work.
+one authored [OpenAPI 3.1 contract](openapi.json), generated declarations, validation,
+HTTP and WebSocket checks, and fixtures. Core and SDK runtimes remain separate work.
 
 ## Contract ownership
 
@@ -11,13 +10,12 @@ Core server mechanisms and SDK client workflows remain separate work.
 routes, query values, replies, and local Catalog metadata. The Catalog contains
 only `move_to`, `pause`, and `resume`. There is no Catalog network endpoint.
 Core and SDK must support this exact version. Plugins release independently and
-own specialized payload schemas through the declared `PluginPayload` boundary.
-They cannot introduce Entity components or Asset Commands.
+own specialized schemas at `PluginPayload`, without new Entity components or Commands.
 
-Generate declarations with stock oapi-codegen 2.8.0 and openapi-typescript 7.13.0.
+Stock generators are oapi-codegen 2.8.0 and openapi-typescript 7.13.0.
 Never edit `*.gen.go` or `*.gen.ts`. Go nullable wrappers preserve omitted, null,
-and value states. UUIDs and timestamps remain validated strings. Quantities use
-double precision; 64-bit counters remain decimal strings with checked range.
+and value states. UUIDs and timestamps stay strings. Spatial quantities use
+doubles; 64-bit counters use decimal strings with checked range.
 
 ## Vocabulary
 
@@ -40,10 +38,9 @@ Install Go 1.27.2, Node 24.21.0, and npm 11.19.0, then run from a clean checkout
 bash 'Atlas Protocol/verify.sh'
 ```
 
-The command installs locked dependencies and the pinned generator, validates the
-contract and independent inventory, compares regeneration, builds both consumers,
-runs type rejection checks, vet, race tests, HTTP/WS and file fixtures, gate
-canaries, and imports the built npm artifact and standalone Go module.
+The command checks the contract and inventory, deterministic stock generation,
+both consumer builds, type rejection, vet, race tests, HTTP/WS and file fixtures,
+gate canaries, and standalone Go and built npm consumption.
 Use `bash scripts/generate.sh` from this folder after an intentional contract edit.
 
 Go imports `atlas/protocol` from this module. TypeScript imports `@atlas/protocol`
@@ -60,24 +57,32 @@ const wire = Encode('Position', position);
 validates encoded bytes. Supply JSON values and omit unused optional properties;
 explicit `undefined` is rejected. Go also exposes `ValidateJSON`. Direct generated JSON
 helpers provide declarations and union access, without validation. Construct a Go
-union variant through `Encode` then `Decode` before nesting it, so unset required
-nullable fields cannot become explicit unknown values during generated marshaling.
-Nullable object or scalar root aliases in Go use `nullable.Nullable[T]`, as the
-generated nullable fields do. The `PluginPayload` root uses its generated
-`json.RawMessage` alias directly.
+union with `Variant[TelemetrySection]("TelemetryValue", "TelemetrySection", value, limits)`
+before nesting it. This validates required nullable fields before stock marshaling
+can fabricate real zero readings from omitted fields. Unchecked generated `From*`,
+`Merge*`, and JSON methods cannot recover those omissions.
+Go nullable roots use `nullable.Nullable[T]`. `PluginPayload` uses `json.RawMessage`.
+Every TypeScript Plugin number is an immutable native raw JSON atom.
+`PluginNumberText(value)` returns its exact numeric token or `undefined`.
+Construct exact Plugin values with `Decode('PluginPayload', bytes)`. Copy them
+with `Encode` and `Decode`. `structuredClone` refuses native atoms in Node 24.
+Supplied JS numbers retain only the digits already present in memory.
+Source-aware parsing, `rawJSON`, and `isRawJSON` are required at module load.
+Unsupported runtimes fail locally.
 
+`ValidateRequest` returns checked query JSON in `Query` or `query`. Use `Decode`
+with the operation's query schema to read it, including mathematical integer spellings.
 `ValidateRequest` and `ValidateResponse` consume bodies. The caller owns the stream,
 authentication, staging, and commitment. `CheckContent` verifies streaming length
 and SHA-256. `ValidateFrame` checks one text frame against caller-owned connection
-state. It runs no timer or connection loop. Limits are explicit and configurable;
-defaults reflect provisional Core admission, 1 MiB JSON and 2 GB files. Synchronizing
-callers supply their negotiated whole-message budget.
+state. Default limits reflect provisional Core admission, 1 MiB JSON and 2 GB files.
+Synchronizing callers supply their negotiated whole-message budget.
 
 ## Conformance limits
 
 Fixtures qualify this package's stateless boundaries, not a Core server or SDK.
-Core still owns credential validity, atomic commits, retries, source authority,
-contact expiry, Task transitions, deletion guards, durable replay, and recovery.
+Core owns credential validity, commits, retries, source authority, contact expiry,
+Task transitions, deletion guards, replay, and recovery.
 Validation failures are local diagnostics, not wire `ErrorResponse` values. Core
 chooses declared wire refusals at its request boundary. A response validation
 failure does not determine whether its mutation committed.
@@ -91,4 +96,4 @@ runtime is qualified in Node 24. Browser bundling is not covered by verification
 [Entities](entities.md) → [Identity](identity.md) → [Reports](reports.md) →
 [Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
 [Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
-The [component reference](components/README.md) explains fields and units.
+[Component reference](components/README.md) covers fields and units.

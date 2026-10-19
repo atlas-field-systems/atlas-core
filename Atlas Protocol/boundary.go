@@ -94,7 +94,13 @@ func (c *contract) schemaWithoutGeometry(schema *openapi3.Schema) *openapi3.Sche
 			(*group.to)[i] = ref(child)
 		}
 	}
-	shape.Not = ref(schema.Not)
+	// Shape checks are necessary predicates. The semantic walk counts exact branches.
+	shape.AnyOf = append(shape.AnyOf, shape.OneOf...)
+	shape.OneOf = nil
+	if schema.Not != nil {
+		c.schemaWithoutGeometry(schema.Not.Value)
+	}
+	shape.Not = nil
 	shape.AdditionalProperties.Schema = ref(schema.AdditionalProperties.Schema)
 	return &shape
 }
@@ -117,25 +123,12 @@ func Catalog() []CatalogEntry {
 }
 
 func ValidateJSON(name string, data []byte, limits Limits) error {
-	if err := scan(data, limits); err != nil {
-		return err
-	}
 	doc, err := loadContract()
 	if err != nil {
 		return err
 	}
-	schema, ok := doc.Components.Schemas[name]
-	if !ok {
-		return fmt.Errorf("unknown schema %s", name)
-	}
-	var value interface{}
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	if err := doc.semantics(schema.Value, value); err != nil {
-		return err
-	}
-	return schema.Value.VisitJSON(value, doc.formats)
+	_, err = doc.checkJSON(name, data, limits)
+	return err
 }
 
 func Decode[T interface{}](name string, data []byte, limits Limits) (T, error) {
@@ -143,10 +136,15 @@ func Decode[T interface{}](name string, data []byte, limits Limits) (T, error) {
 	if err := typeMatches[T](name); err != nil {
 		return value, err
 	}
-	if err := ValidateJSON(name, data, limits); err != nil {
+	doc, err := loadContract()
+	if err != nil {
 		return value, err
 	}
-	err := json.Unmarshal(data, &value)
+	checked, err := doc.checkJSON(name, data, limits)
+	if err != nil {
+		return value, err
+	}
+	err = json.Unmarshal(checked, &value)
 	return value, err
 }
 func Encode[T interface{}](name string, value T, limits Limits) ([]byte, error) {
@@ -168,6 +166,16 @@ func Encode[T interface{}](name string, value T, limits Limits) ([]byte, error) 
 		return nil, err
 	}
 	return data, nil
+}
+
+// Variant validates the source before generated union marshaling can erase omissions.
+func Variant[U, V interface{}](variantSchema, unionSchema string, value V, limits Limits) (U, error) {
+	var zero U
+	wire, err := Encode(variantSchema, value, limits)
+	if err != nil {
+		return zero, err
+	}
+	return Decode[U](unionSchema, wire, limits)
 }
 func typeMatches[T interface{}](name string) error {
 	if schemaTypes[name] != reflect.TypeFor[T]() {
@@ -277,11 +285,11 @@ func uuidProperty(schema *openapi3.Schema, field string) bool {
 	return false
 }
 
-func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
-	if value == nil {
-		return nil
-	}
+func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan) error {
 	if schema.Extensions["x-atlas-geometry"] == true {
+		if value == nil {
+			return nil
+		}
 		if err := geometry(value); err != nil {
 			return err
 		}
@@ -290,38 +298,85 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 		}
 		return nil
 	}
-	for _, group := range []openapi3.SchemaRefs{schema.OneOf, schema.AnyOf} {
+	if schema.Extensions["x-go-type"] == "json.RawMessage" {
+		return nil
+	}
+	if schema.Type.Includes("integer") {
+		if number, ok := value.(json.Number); ok {
+			d, err := exactInteger(schema, number)
+			if err != nil {
+				return err
+			}
+			plan[place] = d
+		}
+	}
+	for _, group := range []struct {
+		branches openapi3.SchemaRefs
+		one      bool
+	}{{schema.OneOf, true}, {schema.AnyOf, false}} {
+		if len(group.branches) == 0 {
+			continue
+		}
 		var failure error
-		accepted := false
-		for _, branch := range group {
+		accepted := 0
+		marks := make(integerPlan)
+		for _, branch := range group.branches {
 			if c.branchSchemas[branch.Value].VisitJSON(value, c.formats) != nil {
 				continue
 			}
-			if err := c.semantics(branch.Value, value); err != nil {
+			candidate := make(integerPlan)
+			if err := c.semantics(branch.Value, value, place, candidate); err != nil {
 				if failure == nil {
 					failure = err
 				}
-			} else {
-				accepted = true
+				continue
 			}
+			accepted++
+			marks.merge(candidate)
 		}
-		if !accepted && failure != nil {
-			return failure
+		if accepted == 0 {
+			if failure != nil {
+				return failure
+			}
+			return fmt.Errorf("invalid_payload: no matching branch")
 		}
+		if group.one && accepted != 1 {
+			return fmt.Errorf("invalid_payload: multiple oneOf branches")
+		}
+		plan.merge(marks)
 	}
 	for _, branch := range schema.AllOf {
-		if err := c.semantics(branch.Value, value); err != nil {
+		if c.branchSchemas[branch.Value].VisitJSON(value, c.formats) != nil {
+			return fmt.Errorf("invalid_payload: allOf")
+		}
+		if err := c.semantics(branch.Value, value, place, plan); err != nil {
 			return err
 		}
 	}
+	if schema.Not != nil && c.branchSchemas[schema.Not.Value].VisitJSON(value, c.formats) == nil {
+		if c.semantics(schema.Not.Value, value, place, make(integerPlan)) == nil {
+			return fmt.Errorf("invalid_payload: not")
+		}
+	}
+
 	if object, ok := value.(map[string]interface{}); ok {
 		for key, child := range schema.Properties {
 			if v, ok := object[key]; ok {
-				if err := c.semantics(child.Value, v); err != nil {
+				if err := c.semantics(child.Value, v, place.children[key], plan); err != nil {
 					return err
 				}
 			}
 		}
+		if extra := schema.AdditionalProperties.Schema; extra != nil {
+			for key, v := range object {
+				if _, known := schema.Properties[key]; !known {
+					if err := c.semantics(extra.Value, v, place.children[key], plan); err != nil {
+						return err
+					}
+				}
+			}
+		}
+
 		if raw, ok := schema.Extensions["x-atlas-dependent-required"]; ok {
 			b, _ := json.Marshal(raw)
 			var dependencies map[string][]string
@@ -367,8 +422,8 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 		}
 	}
 	if values, ok := value.([]interface{}); ok && schema.Items != nil {
-		for _, v := range values {
-			if err := c.semantics(schema.Items.Value, v); err != nil {
+		for i, v := range values {
+			if err := c.semantics(schema.Items.Value, v, place.children[strconv.Itoa(i)], plan); err != nil {
 				return err
 			}
 		}

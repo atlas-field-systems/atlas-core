@@ -5,7 +5,7 @@ import {parse as parseDisposition} from 'content-disposition';
 import document from '../openapi.json' with {type: 'json'};
 import {Decode, Encode, isSchemaName} from './index.js';
 import {Version} from './metadata.gen.js';
-import {checkLimits, DefaultLimits, isRecord, parse, stringify} from './scan.js';
+import {checkLimits, DefaultLimits, isRecord, parse} from './scan.js';
 import type {Limits} from './scan.js';
 import type {components} from './wire.gen.js';
 type Descriptor = components['schemas']['UploadObjectDescriptor'];
@@ -70,18 +70,24 @@ function query(raw: string, op: Operation, limits: Limits) {
  if (raw.length > limits.maxJSONBytes) throw new Error('payload_too_large');
  // URLSearchParams repairs malformed text. Decode each original pair first.
  for (const pair of raw.slice(1).split('&')) if (pair) for (const part of pair.split('=')) decodeURIComponent(part.replaceAll('+', ' '));
- const values = new URLSearchParams(raw), result: Record<string, unknown> = {};
- let count = 0;
+ const values = new URLSearchParams(raw), seen = new Set<string>(), members: string[] = [];
+ let size = 2;
  for (const [key, value] of values) {
-  if (++count > limits.maxValues) throw new Error('query work limit');
-  if (Object.hasOwn(result, key)) throw new Error('duplicate query');
+  if (seen.size >= limits.maxValues) throw new Error('query work limit');
+  if (seen.has(key)) throw new Error('duplicate query'); seen.add(key);
   const parameter = op.parameters.find(p => p.in === 'query' && p.name === key); if (!parameter) throw new Error('unsupported_filter');
   let schema = parameter.schema ?? parameter.content?.['application/json']?.schema;
   if (schema?.$ref) schema = schemas[schema.$ref.split('/').at(-1) ?? ''];
-  result[key] = schema?.type === 'string' ? value : parse(bytes(value), limits);
+  if (schema?.type !== 'string') parse(bytes(value), limits);
+  const token = schema?.type === 'string' ? JSON.stringify(value) : value;
+  const member = JSON.stringify(key) + ':' + token;
+  size += Buffer.byteLength(member) + Number(members.length > 0);
+  if (size > limits.maxJSONBytes) throw new Error('payload_too_large');
+  members.push(member);
  }
+ const wire = bytes('{' + members.join(',') + '}');
  const name = op['x-atlas-binding'].query_schema; if (!isSchemaName(name)) throw new Error('unknown query schema');
- Decode(name, stringify(result, limits), limits);
+ Decode(name, wire, limits); return wire;
 }
 export async function CheckContent(descriptor: Descriptor, content: AsyncIterable<Uint8Array>, limits: Limits = DefaultLimits()): Promise<void> {
  Encode('UploadObjectDescriptor', descriptor, limits);
@@ -90,7 +96,7 @@ export async function CheckContent(descriptor: Descriptor, content: AsyncIterabl
  for await (const chunk of content) {received += BigInt(chunk.byteLength); if (received > size || received > limits.maxFileBytes) throw new Error('integrity_fault'); hash.update(chunk);}
  if (received !== size || hash.digest('hex') !== descriptor.sha256) throw new Error('integrity_fault');
 }
-export interface RequestData {json?: Uint8Array; upload?: Descriptor}
+export interface RequestData {json?: Uint8Array; upload?: Descriptor; query: Uint8Array}
 export async function ValidateRequest(name: string, request: Request, expectedDataset: string, limits: Limits = DefaultLimits()): Promise<RequestData> {
  checkLimits(limits);
  const {path, method, op} = operation(name); if (request.method !== method) throw new Error('wrong method');
@@ -105,10 +111,10 @@ export async function ValidateRequest(name: string, request: Request, expectedDa
   const param = op.parameters.find(p => p.in === 'path' && p.name === key), schema = param?.schema?.$ref?.split('/').at(-1);
   if (!schema || !isSchemaName(schema)) throw new Error('unknown path schema'); Decode(schema, bytes(JSON.stringify(value)), limits);
  }
- query(url.search, op, limits);
+ const checkedQuery = query(url.search, op, limits);
  if (name === 'SubscribeChanges') {
   if (header(request.headers, 'Upgrade').toLowerCase() !== 'websocket' || header(request.headers, 'Sec-WebSocket-Version') !== '13' || !header(request.headers, 'Connection').toLowerCase().split(',').some(x => x.trim() === 'upgrade')) throw new Error('invalid WebSocket upgrade');
-  const key = header(request.headers, 'Sec-WebSocket-Key'), decoded = Buffer.from(key, 'base64'); if (decoded.byteLength !== 16 || decoded.toString('base64') !== key) throw new Error('invalid WebSocket key'); if ((await bounded(request.body, limits)).byteLength) throw new Error('unexpected body'); return {};
+  const key = header(request.headers, 'Sec-WebSocket-Key'), decoded = Buffer.from(key, 'base64'); if (decoded.byteLength !== 16 || decoded.toString('base64') !== key) throw new Error('invalid WebSocket key'); if ((await bounded(request.body, limits)).byteLength) throw new Error('unexpected body'); return {query: checkedQuery};
  }
  if (name === 'UploadObject') {
   if (media(request.headers) !== 'application/octet-stream') throw new Error('unsupported_media_type');
@@ -116,7 +122,7 @@ export async function ValidateRequest(name: string, request: Request, expectedDa
   if (raw.length > Math.ceil(limits.maxJSONBytes * 4 / 3)) throw new Error('payload_too_large');
   if (!/^[A-Za-z0-9_-]+$/.test(raw)) throw new Error('invalid descriptor encoding');
   const wire = Buffer.from(raw, 'base64url'); if (wire.toString('base64url') !== raw) throw new Error('invalid descriptor encoding');
-  const descriptor = Decode('UploadObjectDescriptor', wire, limits); await CheckContent(descriptor, chunks(request.body), limits); return {upload: descriptor};
+  const descriptor = Decode('UploadObjectDescriptor', wire, limits); await CheckContent(descriptor, chunks(request.body), limits); return {upload: descriptor, query: checkedQuery};
  }
  const wire = await bounded(request.body, limits), schema = op['x-atlas-binding'].body_schema;
  if (schema) {
@@ -128,9 +134,9 @@ export async function ValidateRequest(name: string, request: Request, expectedDa
    const source = isRecord(value.report) ? value.report.source : value.source;
    if (facts.asset_id && isRecord(source) && typeof source.asset_id === 'string' && !sameID(source.asset_id, facts.asset_id)) throw new Error('source/path identity conflict');
   }
-  return {json: wire};
+  return {json: wire, query: checkedQuery};
  }
- if (wire.byteLength) throw new Error('unexpected body'); return {};
+ if (wire.byteLength) throw new Error('unexpected body'); return {query: checkedQuery};
 }
 export interface HTTPResponse {status: number; headers: Headers; body: ReadableStream<Uint8Array> | null}
 export interface ResponseContext {datasetID: string; object?: components['schemas']['Object']; webSocketKey?: string; disposition?: 'inline' | 'attachment'}

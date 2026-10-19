@@ -7,13 +7,16 @@ import {schemaNames} from './metadata.gen.js';
 import {DefaultLimits, isRecord, parse, stringify} from './scan.js';
 import type {Limits} from './scan.js';
 import {geometry} from './geometry.js';
+import {NumericSources, NumericPlan, exactInteger} from './numeric.js';
+import type {NumberSite, IntegerSchema} from './numeric.js';
+export {PluginNumberText} from './numeric.js';
 export {Version, Catalog} from './metadata.gen.js';
 export {DefaultLimits} from './scan.js';
 export type {Limits} from './scan.js';
 export type {components, operations, paths} from './wire.gen.js';
 export type SchemaName = keyof components['schemas'];
 
-interface Schema {
+interface Schema extends IntegerSchema {
  [keyword: string]: unknown;
  description?: string;
  type?: string | string[];
@@ -43,19 +46,24 @@ ajv.addFormat('date-time', value => {
 });
 ajv.addFormat('uint64-decimal', value => /^(0|[1-9][0-9]{0,19})$/.test(value) && BigInt(value) <= 18446744073709551615n);
 ajv.addFormat('base64url-json', /^[A-Za-z0-9_-]+$/);
-ajv.addSchema({$id: 'urn:atlas:protocol', components: document.components});
+ajv.addSchema({$id: 'urn:atlas:protocol', components: {schemas: Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, schemaWithGeometryPolicy(schema, 'urn:atlas:protocol', 'validate')]))}});
 const references: Record<string, object> = Object.fromEntries(schemaNames.map(name => [name, {$ref: 'urn:atlas:protocol#/components/schemas/' + name}]));
 export function isSchemaName(name: string): name is SchemaName { return schemaNames.some(n => n === name); }
 
 type GeometryPolicy = 'validate' | 'ignoreForBranchSelection';
 function schemaWithGeometryPolicy(schema: Schema, root: string, policy: GeometryPolicy): Schema {
+ if (schema['x-go-type'] === 'json.RawMessage') return {};
  if (policy === 'ignoreForBranchSelection' && schema['x-atlas-geometry']) return {};
  const copy = {...schema};
  if (schema.$ref) copy.$ref = root + schema.$ref;
  if (schema.properties) copy.properties = Object.fromEntries(Object.entries(schema.properties).map(([key, child]) => [key, schemaWithGeometryPolicy(child, root, policy)]));
  if (schema.items) copy.items = schemaWithGeometryPolicy(schema.items, root, policy);
  for (const keyword of ['oneOf', 'anyOf', 'allOf'] as const) if (schema[keyword]) copy[keyword] = schema[keyword].map(branch => schemaWithGeometryPolicy(branch, root, policy));
- if (schema.not) copy.not = schemaWithGeometryPolicy(schema.not, root, policy);
+ // Exact branch acceptance belongs to semantics, including oneOf cardinality and not.
+ copy.anyOf = [...(copy.anyOf ?? []), ...(copy.oneOf ?? [])];
+ if (!copy.anyOf.length) delete copy.anyOf;
+ delete copy.oneOf;
+ delete copy.not;
  if (typeof schema.additionalProperties === 'object') copy.additionalProperties = schemaWithGeometryPolicy(schema.additionalProperties, root, policy);
  return copy;
 }
@@ -78,22 +86,42 @@ function uuidProperty(schema: Schema, field: string): boolean {
  if (property) return schemaValue(property).format === 'uuid';
  return [resolved.oneOf, resolved.anyOf, resolved.allOf].some(group => group?.some(branch => uuidProperty(branch, field)));
 }
-function semantics(schema: Schema, value: unknown): void {
- if (value === null) return;
- if (schema.$ref) {semantics(schemaValue(schema), value); return;}
+function semantics(schema: Schema, value: unknown, site: NumberSite | undefined, sources: NumericSources, plan: NumericPlan): void {
+ if (schema.$ref) {semantics(schemaValue(schema), value, site, sources, plan); return;}
+ if (schema['x-go-type'] === 'json.RawMessage') {plan.preserve(value, site, sources); return;}
  if (schema['x-atlas-geometry']) {
+  if (value === null) return;
   geometry(value); if (!matches(schema, value, 'validate')) throw new Error('invalid_geometry'); return;
  }
- for (const group of [schema.oneOf, schema.anyOf]) {
-  let failure: unknown, accepted = false;
-  for (const branch of group ?? []) if (matches(branch, value, 'ignoreForBranchSelection')) {
-   try {semantics(branch, value); accepted = true;} catch (error) {failure ??= error;}
-  }
-  if (!accepted && failure) throw failure;
+ if ((schema.type === 'integer' || Array.isArray(schema.type) && schema.type.includes('integer')) && typeof value === 'number') {
+  if (!site) throw new Error('missing numeric source');
+  plan.integers.set(site, exactInteger(schema, site));
  }
- for (const branch of schema.allOf ?? []) semantics(branch, value);
+ for (const [group, one] of [[schema.oneOf, true], [schema.anyOf, false]] as const) {
+  if (!group?.length) continue;
+  let failure: unknown, accepted = 0;
+  const marks = new NumericPlan();
+  for (const branch of group) if (matches(branch, value, 'ignoreForBranchSelection')) {
+   const candidate = new NumericPlan();
+   try {semantics(branch, value, site, sources, candidate); accepted++; marks.merge(candidate);} catch (error) {failure ??= error;}
+  }
+  if (!accepted) throw failure ?? new Error('invalid_payload: no matching branch');
+  if (one && accepted !== 1) throw new Error('invalid_payload: multiple oneOf branches');
+  plan.merge(marks);
+ }
+ for (const branch of schema.allOf ?? []) {
+  if (!matches(branch, value, 'ignoreForBranchSelection')) throw new Error('invalid_payload: allOf');
+  semantics(branch, value, site, sources, plan);
+ }
+ if (schema.not && matches(schema.not, value, 'ignoreForBranchSelection')) {
+  let accepted = false;
+  try {semantics(schema.not, value, site, sources, new NumericPlan()); accepted = true;} catch { /* A failed negated branch accepts this value. */ }
+  if (accepted) throw new Error('invalid_payload: not');
+ }
+
  if (isRecord(value)) {
-  for (const [key, child] of Object.entries(schema.properties ?? {})) if (Object.hasOwn(value, key)) semantics(child, value[key]);
+  for (const [key, child] of Object.entries(schema.properties ?? {})) if (Object.hasOwn(value, key)) semantics(child, value[key], sources.at(value, key), sources, plan);
+  if (typeof schema.additionalProperties === 'object') for (const [key, child] of Object.entries(value)) if (!Object.hasOwn(schema.properties ?? {}, key)) semantics(schema.additionalProperties, child, sources.at(value, key), sources, plan);
   for (const [key, required] of Object.entries(schema['x-atlas-dependent-required'] ?? {})) if (Object.hasOwn(value, key)) for (const other of required) if (!Object.hasOwn(value, other)) throw new Error(`${key} requires ${other}`);
   for (const [key, identity] of Object.entries(schema['x-atlas-unique-by'] ?? {})) {
    const items = value[key]; if (!Array.isArray(items)) continue;
@@ -104,13 +132,16 @@ function semantics(schema: Schema, value: unknown): void {
    for (const item of items) if (isRecord(item) && typeof item[identity] === 'string') { const key = uuidIdentity ? item[identity].toLowerCase() : item[identity]; if (seen.has(key)) throw new Error(`duplicate ${identity}`); seen.add(key); }
   }
  }
- if (Array.isArray(value) && schema.items) for (const item of value) semantics(schema.items, item);
+ if (Array.isArray(value) && schema.items) for (const [i, item] of value.entries()) semantics(schema.items, item, sources.at(value, String(i)), sources, plan);
 }
 export function Decode<N extends SchemaName>(name: N, wire: Uint8Array, limits: Limits = DefaultLimits()): components['schemas'][N] {
  if (!isSchemaName(name)) throw new Error('unknown schema');
- const value = parse(wire, limits);
+ const sources = new NumericSources();
+ let value = parse(wire, limits, sources);
  const schema = schemas[name]; if (!schema) throw new Error('unknown schema');
- semantics(schema, value);
+ const plan = new NumericPlan();
+ semantics(schema, value, sources.root, sources, plan);
+ value = plan.materialize(value, sources, wire.byteLength, limits.maxJSONBytes);
  const reference = references[name]; if (!reference) throw new Error('unknown schema');
  const validate = ajv.compile<components['schemas'][N]>(reference);
  if (!validate(value)) throw new Error('invalid_payload: ' + ajv.errorsText(validate.errors));

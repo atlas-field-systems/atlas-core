@@ -13542,7 +13542,9 @@
           },
           "retry_after_seconds": {
             "type": "integer",
-            "minimum": 0
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "required_limits": {
             "$ref": "#/components/schemas/BatchLimits"

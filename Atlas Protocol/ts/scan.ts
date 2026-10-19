@@ -1,3 +1,5 @@
+import {nativeRaw, PluginNumberText} from './numeric.js';
+import type {NumericSources} from './numeric.js';
 export interface Limits {
  maxJSONBytes: number;
  maxDepth: number;
@@ -10,7 +12,7 @@ export function checkLimits(limits: Limits) {
 }
 export function isRecord(v: unknown): v is Record<string, unknown> { return typeof v === 'object' && v !== null && !Array.isArray(v); }
 
-export function parse(wire: Uint8Array, limits: Limits): unknown {
+export function parse(wire: Uint8Array, limits: Limits, sources?: NumericSources): unknown {
  checkLimits(limits);
  if (wire.byteLength > limits.maxJSONBytes) throw new Error('payload_too_large');
  const raw = new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(wire);
@@ -69,7 +71,9 @@ export function parse(wire: Uint8Array, limits: Limits): unknown {
   if (!/^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/.test(token) || !Number.isFinite(Number(token))) return fail('nonfinite or invalid number');
  }
  value(0); space(); if (i !== raw.length) fail('trailing values');
- const result: unknown = JSON.parse(raw); return result;
+ const result: unknown = sources ? JSON.parse(raw, function(this: unknown, key: string, value: unknown, context?: unknown): unknown {
+  return sources.reviver(this, key, value, context);
+ }) : JSON.parse(raw); return result;
 }
 
 export function stringify(value: unknown, limits: Limits): Uint8Array {
@@ -78,6 +82,9 @@ export function stringify(value: unknown, limits: Limits): Uint8Array {
  const active = new Set<object>();
  function walk(v: unknown, depth: number): void {
   if (++count > limits.maxValues || depth > limits.maxDepth || size > limits.maxJSONBytes) throw new Error('outbound work limit');
+  const token = PluginNumberText(v);
+  if (token !== undefined) {size += token.length; if (size > limits.maxJSONBytes) throw new Error('outbound size limit'); return;}
+  if (nativeRaw(v)) throw new Error('unsupported native raw JSON value');
   if (v === null || typeof v === 'boolean') { size++; return; }
   if (typeof v === 'number') { if (!Number.isFinite(v)) throw new Error('nonfinite number'); size++; return; }
   if (typeof v === 'string') {

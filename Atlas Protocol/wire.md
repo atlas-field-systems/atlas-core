@@ -51,7 +51,11 @@ subscription. [OpenAPI](openapi.json) defines controls and complete change frame
 
 Accept one bounded UTF-8 JSON document. Reject duplicate decoded member names at
 any depth, malformed UTF-8, unpaired surrogates, and nonfinite numbers. Validate
-original text before normalizing typed values.
+original text before normalizing typed values. Typed integers accept mathematical
+integer forms such as `100.0` and `1e2`. Reject real fractions even when double
+rounding hides them. Canonical typed integers must also fit the caller's JSON byte
+budget. Plugin numeric tokens retain their exact spelling. Spatial quantities
+keep finite double behavior.
 
 Patches leave omitted fields unchanged, replace scalars and arrays, merge defined
 objects, and use null only for permitted removal/clearing. Validate the complete
@@ -61,6 +65,10 @@ Asset updates use [whole-section replacement](reports.md#shared-context) instead
 of subfield merging, including on bindings that use PATCH.
 
 ## Retry and Dataset rules
+
+Optional `error.details.retry_after_seconds` is integer advice from 0 through
+9007199254740991, the portable range shared by Go int64 and JavaScript numbers.
+It does not cap spatial doubles or Plugin JSON.
 
 Each mutation declares its retry identity and original facts. Repeating those
 facts recovers the original effect; changed facts conflict; ended identities do

@@ -30,6 +30,9 @@ printf 'TypeScript consumer fixtures and HTTP/WS bindings passed.\n'
 for composition in oneOf anyOf allOf; do
   node scripts/semantic-composition.mjs "$composition"
 done
+for composition in oneOf anyOf allOf not arrays properties rollback duplicate wide; do
+  node scripts/numeric-composition.mjs "$composition"
+done
 node scripts/canaries.mjs
 bash scripts/consume.sh
 printf 'Atlas Protocol verification passed.\n'

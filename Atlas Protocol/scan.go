@@ -40,7 +40,7 @@ func scan(data []byte, limits Limits) error {
 		return fmt.Errorf("invalid_json: UTF-8")
 	}
 	s := scanner{data: data, limits: limits}
-	if err := s.value(0); err != nil {
+	if err := s.value(0, nil); err != nil {
 		return err
 	}
 	s.space()
@@ -62,7 +62,7 @@ func (s *scanner) take(c byte) bool {
 	}
 	return false
 }
-func (s *scanner) value(depth int) error {
+func (s *scanner) value(depth int, place *numberPlace) error {
 	s.space()
 	s.count++
 	if depth > s.limits.MaxDepth || s.count > s.limits.MaxValues {
@@ -94,7 +94,7 @@ func (s *scanner) value(depth int) error {
 			if !s.take(':') {
 				return fmt.Errorf("invalid_json: expected colon")
 			}
-			if err := s.value(depth + 1); err != nil {
+			if err := s.value(depth+1, place.child(key)); err != nil {
 				return err
 			}
 			if s.take('}') {
@@ -109,8 +109,8 @@ func (s *scanner) value(depth int) error {
 		if s.take(']') {
 			return nil
 		}
-		for {
-			if err := s.value(depth + 1); err != nil {
+		for index := 0; ; index++ {
+			if err := s.value(depth+1, place.child(strconv.Itoa(index))); err != nil {
 				return err
 			}
 			if s.take(']') {
@@ -133,6 +133,9 @@ func (s *scanner) value(depth int) error {
 			s.i++
 		}
 		token := s.data[start:s.i]
+		if place != nil {
+			place.start, place.end = start, s.i
+		}
 		if string(token) == "true" || string(token) == "false" || string(token) == "null" {
 			return nil
 		}

@@ -22,6 +22,7 @@ import (
 
 type RequestData struct {
 	JSON   []byte
+	Query  []byte
 	Upload *UploadObjectDescriptor
 }
 type binding struct {
@@ -180,6 +181,21 @@ func queryJSON(raw string, op *openapi3.Operation, limits Limits) ([]byte, error
 			result[key] = json.RawMessage(values[0])
 		}
 	}
+	size := 2
+	for key, raw := range result {
+		encodedKey, err := json.Marshal(key)
+		if err != nil {
+			return nil, err
+		}
+		n := len(encodedKey) + 1 + len(raw)
+		if size > 2 {
+			n++
+		}
+		if n > limits.MaxJSONBytes-size {
+			return nil, fmt.Errorf("payload_too_large")
+		}
+		size += n
+	}
 	return json.Marshal(result)
 }
 
@@ -245,6 +261,7 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 	if err := ValidateJSON(bind.QuerySchema, query, limits); err != nil {
 		return result, err
 	}
+	result.Query = query
 	if name == "SubscribeChanges" {
 		data, err := readBounded(req.Body, limits)
 		if err != nil {

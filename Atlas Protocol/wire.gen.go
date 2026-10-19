@@ -4218,7 +4218,7 @@ type ErrorDetails struct {
 	ExpectedRevision  *Counter     `json:"expected_revision,omitempty"`
 	Field             *string      `json:"field,omitempty"`
 	RequiredLimits    *BatchLimits `json:"required_limits,omitempty"`
-	RetryAfterSeconds *int         `json:"retry_after_seconds,omitempty"`
+	RetryAfterSeconds *int64       `json:"retry_after_seconds,omitempty"`
 }
 
 // ErrorResponse defines model for ErrorResponse.

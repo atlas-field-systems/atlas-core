@@ -22,6 +22,33 @@ try {
  const file = join(scratch, 'contract.json');
  contract.info.version = '0.1.1'; writeFileSync(file, JSON.stringify(contract)); rejects('node', ['scripts/contract.mjs', '--contract', file]);
  contract.info.version = '0.1.0'; contract['x-atlas-catalog'].push({command:'scan'}); writeFileSync(file, JSON.stringify(contract)); rejects('node', ['scripts/contract.mjs', '--contract', file]);
+ const pristine = JSON.parse(readFileSync('openapi.json', 'utf8'));
+ for (const invalid of ['unsupported', 'ambiguous']) {
+  const changed = structuredClone(pristine);
+  changed.components.schemas.NumericTraversalProbe = invalid === 'unsupported'
+   ? {type: 'array', contains: {type: 'integer'}}
+   : {anyOf: [{$ref: '#/components/schemas/PluginPayload'}, {type: 'integer'}]};
+  writeFileSync(file, JSON.stringify(changed));
+  const failed = rejects(process.execPath, ['scripts/contract.mjs', '--contract', file]);
+  assert.match(failed.stderr, invalid === 'unsupported' ? /numeric schema under unsupported contains/ : /ambiguous Plugin and typed numeric roles/);
+ }
+ const wide = structuredClone(pristine);
+ wide.components.schemas.NumericTraversalProbe = {type: 'integer', minimum: -1e100, maximum: 1e100};
+ writeFileSync(file, JSON.stringify(wide));
+ const noProfile = run(process.execPath, ['scripts/contract.mjs', '--contract', file]); assert.equal(noProfile.status, 0, noProfile.stdout + noProfile.stderr);
+ const target = new URL('../dist/ts/index.js', import.meta.url).href;
+ const roundedSource = `const native = JSON.parse; JSON.parse = (text, reviver) => native(text, reviver ? function(key, value, context) {return reviver.call(this, key, value, typeof value === 'number' ? {...context, source: String(value)} : context);} : undefined);`;
+ const numericChecks = [
+  `assert.throws(() => Decode('ErrorDetails', new TextEncoder().encode('{"retry_after_seconds":100.0000000000000000001}')), 'hidden fraction must refuse');`,
+  `assert.equal(new TextDecoder().decode(Encode('PluginPayload', Decode('PluginPayload', new TextEncoder().encode('9007199254740993')))), '9007199254740993', 'Plugin digits must survive');`,
+ ];
+ for (const check of numericChecks) {
+  const body = `const {default: assert} = await import('node:assert/strict'); const {Decode, Encode} = await import(${JSON.stringify(target)}); ` + check;
+  const control = run(process.execPath, ['--input-type=module', '-e', body]); assert.equal(control.status, 0, control.stdout + control.stderr);
+  const mutant = rejects(process.execPath, ['--input-type=module', '-e', roundedSource + body]);
+  assert.match(mutant.stderr, /AssertionError/); assert.match(mutant.stderr, /hidden fraction must refuse|Plugin digits must survive/);
+ }
+ console.log('Numeric gates caught rounded source and unsupported or ambiguous traversal without capping integer ranges');
  for (const f of ['wire.gen.go','types.gen.go','consumers.gen_test.go','ts/wire.gen.ts','ts/metadata.gen.ts']) {cpSync(f, join(scratch, f), {recursive:true});}
  writeFileSync(join(scratch, 'wire.gen.go'), readFileSync('wire.gen.go', 'utf8') + '\n');
  rejects('bash', ['scripts/generate.sh', '--check', scratch]);

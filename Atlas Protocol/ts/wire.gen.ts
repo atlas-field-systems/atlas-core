@@ -2668,6 +2668,7 @@ export interface components {
             expected_revision?: components["schemas"]["Counter"];
             actual_revision?: components["schemas"]["Counter"];
             earliest_cursor?: components["schemas"]["Cursor"];
+            /** Format: int64 */
             retry_after_seconds?: number;
             required_limits?: components["schemas"]["BatchLimits"];
             field?: string;

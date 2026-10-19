@@ -30,4 +30,41 @@ for (const [id, method, path] of inventory) {
 for (const [name, schema] of Object.entries(doc.components.schemas)) {
  if (schema.type === 'object') assert.equal(schema.additionalProperties, false, name);
 }
+// Numeric interpretation must cover each authored location without competing roles.
+const traversed = new Set(['properties', 'items', 'additionalProperties', 'oneOf', 'anyOf', 'allOf', 'not']);
+const schemaPositions = ['prefixItems', 'contains', 'patternProperties', 'dependentSchemas', 'if', 'then', 'else', 'propertyNames', 'unevaluatedItems', 'unevaluatedProperties', '$defs', 'definitions'];
+function numericRoles(schema, path = [], ancestors = new Set()) {
+ if (!schema || typeof schema !== 'object') return [];
+ if (schema.$ref) {
+  assert(schema.$ref.startsWith('#/components/schemas/'), 'unsupported numeric schema reference');
+  assert(!ancestors.has(schema.$ref), 'recursive schema needs bounded numeric traversal');
+  const target = doc.components.schemas[schema.$ref.split('/').at(-1)]; assert(target);
+  const roles = numericRoles(target, path, new Set([...ancestors, schema.$ref]));
+  const siblings = Object.fromEntries(Object.entries(schema).filter(([key]) => !['$ref', 'description', 'summary'].includes(key)));
+  const siblingRoles = numericRoles(siblings, path, ancestors);
+  assert(Object.keys(siblings).length === 0 || roles.length + siblingRoles.length === 0, 'numeric ref siblings need explicit traversal');
+  return roles;
+ }
+ if (schema['x-go-type'] === 'json.RawMessage') return [{path, role: 'plugin'}];
+ const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+ const roles = types.some(type => type === 'integer' || type === 'number') ? [{path, role: 'typed'}] : [];
+ for (const key of schemaPositions) if (schema[key]) {
+  const children = Array.isArray(schema[key]) ? schema[key] : ['patternProperties', 'dependentSchemas', '$defs', 'definitions'].includes(key) ? Object.values(schema[key]) : [schema[key]];
+  assert(children.every(child => numericRoles(child).length === 0), `numeric schema under unsupported ${key}`);
+ }
+ for (const [key, child] of Object.entries(schema)) if (traversed.has(key)) {
+  if (key === 'properties') for (const [name, property] of Object.entries(child)) roles.push(...numericRoles(property, [...path, name], ancestors));
+  else if (key === 'items' || key === 'additionalProperties') roles.push(...numericRoles(child, [...path, '*'], ancestors));
+  else if (Array.isArray(child)) for (const branch of child) roles.push(...numericRoles(branch, path, ancestors));
+  else roles.push(...numericRoles(child, path, ancestors));
+ }
+ return roles;
+}
+for (const [name, schema] of Object.entries(doc.components.schemas)) {
+ const roles = numericRoles(schema);
+ for (const plugin of roles.filter(item => item.role === 'plugin')) for (const typed of roles.filter(item => item.role === 'typed')) {
+  const overlap = plugin.path.length <= typed.path.length && plugin.path.every((part, i) => part === '*' || typed.path[i] === '*' || part === typed.path[i]);
+  assert(!overlap, `ambiguous Plugin and typed numeric roles in ${name}`);
+ }
+}
 console.log(`contract OK, ${inventory.length} bindings, exact version and three commands`);
