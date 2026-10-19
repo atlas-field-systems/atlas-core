@@ -19,9 +19,10 @@ identities do not establish verified runtime identity.
 
 Allowlist fields at each producer before any retained copy. Use route templates,
 safe error codes, counts, and phase durations. Exclude credentials, request and
-response bodies, raw URLs, coordinates, filenames, configuration values, SQL text,
-and arbitrary Plugin error text. Keep credential attribution separate from the
-reported Asset or publisher. Plugins apply the same exclusions to their own output.
+response bodies, raw URLs, coordinates, filenames, SQL text, and arbitrary Plugin
+error text. Exclude configuration values from logs. Exports permit only the subset
+defined below. Keep credential attribution separate from the reported Asset or
+publisher. Plugins apply the same exclusions to their own output.
 
 ## Coverage by owner
 
@@ -66,10 +67,15 @@ Downstream loss may be uncounted, so diagnostics never promise a complete record
 
 ## Collection and lifetime
 
-The host manager explicitly configures Docker's `local` logging driver, rotation,
-and non-blocking delivery for each managed container. Its diagnostics, stdout, and
-stderr use installation-owned rotated files, with no journal or syslog mirror.
-Restart reuses existing containers and their logs. No cloud collector is required.
+The host manager configures Docker's `local` logging driver with rotation and
+non-blocking delivery for Core. It disables Docker logging for Plugin containers.
+A manager-owned collector bounds Plugin stdout/stderr before buffering or parsing,
+using the event and queue limits above. It retains only validated, allowlisted
+structured records in installation-owned rotated Plugin files. It drops raw,
+malformed, or unsafe output before retention and reports known omissions.
+The manager's diagnostics, stdout, and stderr use installation-owned rotated files.
+There is no journal or syslog mirror. Restart reuses existing containers and logs.
+No cloud collector is required.
 
 Before launch, assign byte quotas to each container and the manager. Their sum,
 including rotated copies, storage overhead, and export staging, is at most 256 MiB.
@@ -81,16 +87,18 @@ Expose retained ranges and known gaps. Actual retention and disk bounds require
 
 [Lifecycle](lifecycle.md#reset-recovery) owns Restart and Reset semantics.
 Reset cleanup covers managed container, Plugin, and manager diagnostic copies.
-The existing action owner stops or completes exports, verifies emitters and drains
-have stopped, and switches the manager's diagnostic writer before clearing old logs.
+The action owner stops or completes exports, verifies container emitters have stopped,
+and stops and drains collectors. It switches or closes every manager output stream,
+including diagnostics, stdout, and stderr, then verifies pending writes to old storage
+have drained before clearing old logs.
 Use supported per-installation storage or container lifecycle controls. Never edit
 Docker-owned files or vacuum unrelated host logs. Failure to verify cleanup leaves
 Reset incomplete. Durable management authority stays outside this cleanup.
 
 Local administration can explicitly export a bounded diagnostic bundle before Reset.
-Include versions, Dataset and run context, diagnostic settings, and known gaps.
-Only allowlisted structured Plugin records enter exports; omit raw or malformed
-output and report omissions. Core cannot sanitize arbitrary Plugin text retroactively.
+Include versions, Dataset and run context, and known gaps. For configuration, include
+only the diagnostic severity threshold and numeric diagnostic limits. Paths,
+destinations, and all other configuration values remain excluded.
 Report partial or failed exports. No upload or export is a Reset prerequisite.
 A user-selected export is user-owned and is not erased by Atlas Reset.
 
