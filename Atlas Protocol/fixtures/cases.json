@@ -22600,6 +22600,7 @@
     "name": "UUID array task order rejects alternate-case duplicate",
     "schema": "SetTaskOrderRequest",
     "valid": false,
+    "error": "duplicate UUID",
     "value": {
       "request_id": "00000000-0000-0000-0000-000000000002",
       "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
@@ -22614,6 +22615,7 @@
     "name": "UUID array Object edit rejects alternate-case Entity duplicate",
     "schema": "EditObjectRequest",
     "valid": false,
+    "error": "duplicate UUID",
     "value": {
       "request_id": "00000000-0000-0000-0000-000000000002",
       "object_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",

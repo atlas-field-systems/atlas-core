@@ -104,5 +104,6 @@ func contractFormats(doc *openapi3.T) ([]openapi3.SchemaValidationOption, error)
 		openapi3.WithStringFormatValidators(stringFormats),
 		openapi3.WithIntegerFormatValidators(integerFormats),
 		openapi3.WithNumberFormatValidators(numberFormats),
+		openapi3.DisablePatternValidation(),
 	}, nil
 }

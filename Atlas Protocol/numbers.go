@@ -262,7 +262,7 @@ func (c *contract) checkJSON(name string, data []byte, limits Limits) ([]byte, e
 	if err := c.semantics(schema.Value, value, root, plan); err != nil {
 		return nil, err
 	}
-	if err := c.branchSchemas[schema.Value].VisitJSON(value, c.formats...); err != nil {
+	if err := c.schemas[schema.Value].visit(value, c.formats, false); err != nil {
 		return nil, err
 	}
 	return plan.wire(data, limits)

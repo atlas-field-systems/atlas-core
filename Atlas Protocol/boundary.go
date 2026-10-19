@@ -3,8 +3,10 @@ package atlas
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,8 +20,9 @@ var document []byte
 
 type contract struct {
 	*openapi3.T
-	formats       []openapi3.SchemaValidationOption
-	branchSchemas map[*openapi3.Schema]*openapi3.Schema
+	formats  []openapi3.SchemaValidationOption
+	patterns map[string]*regexp.Regexp
+	schemas  map[*openapi3.Schema]schemaShapes
 }
 
 var loadContract = sync.OnceValues(func() (*contract, error) {
@@ -27,54 +30,29 @@ var loadContract = sync.OnceValues(func() (*contract, error) {
 	if err != nil {
 		return nil, err
 	}
+	patterns, err := compilePatterns(doc)
+	if err != nil {
+		return nil, err
+	}
 	formats, err := contractFormats(doc)
 	if err != nil {
 		return nil, err
 	}
-	c := &contract{T: doc, formats: formats, branchSchemas: make(map[*openapi3.Schema]*openapi3.Schema)}
-	for _, schema := range doc.Components.Schemas {
-		c.branchCandidateSchema(schema.Value)
+	c := &contract{T: doc, formats: formats, patterns: patterns, schemas: make(map[*openapi3.Schema]schemaShapes)}
+	if err := doc.WalkSchemas(func(_ string, schema *openapi3.SchemaRef) error {
+		c.prepareSchema(schema.Value)
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	return c, nil
 })
 
-func (c *contract) branchCandidateSchema(schema *openapi3.Schema) *openapi3.Schema {
-	if shape, ok := c.branchSchemas[schema]; ok {
-		return shape
+func (c *contract) checkString(schema *openapi3.Schema, value string) error {
+	if err := c.semantics(schema, value, nil, make(integerPlan)); err != nil {
+		return err
 	}
-	shape := *schema
-	c.branchSchemas[schema] = &shape
-	if schema.Extensions["x-atlas-geometry"] == true {
-		shape = openapi3.Schema{Type: &openapi3.Types{"null", "boolean", "number", "string", "array", "object"}}
-		return &shape
-	}
-	ref := func(s *openapi3.SchemaRef) *openapi3.SchemaRef {
-		if s == nil {
-			return nil
-		}
-		return &openapi3.SchemaRef{Ref: s.Ref, Value: c.branchCandidateSchema(s.Value)}
-	}
-	shape.Properties = make(openapi3.Schemas, len(schema.Properties))
-	for key, child := range schema.Properties {
-		shape.Properties[key] = ref(child)
-	}
-	shape.Items = ref(schema.Items)
-	for _, group := range []struct{ from, to *openapi3.SchemaRefs }{
-		{&schema.OneOf, &shape.OneOf}, {&schema.AnyOf, &shape.AnyOf}, {&schema.AllOf, &shape.AllOf},
-	} {
-		*group.to = make(openapi3.SchemaRefs, len(*group.from))
-		for i, child := range *group.from {
-			(*group.to)[i] = ref(child)
-		}
-	}
-	shape.AnyOf = append(shape.AnyOf, shape.OneOf...)
-	shape.OneOf = nil
-	if schema.Not != nil {
-		c.branchCandidateSchema(schema.Not.Value)
-	}
-	shape.Not = nil
-	shape.AdditionalProperties.Schema = ref(schema.AdditionalProperties.Schema)
-	return &shape
+	return c.schemas[schema].visit(value, c.formats, false)
 }
 
 func Version() string {
@@ -286,13 +264,35 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 		if err := geometry(value); err != nil {
 			return err
 		}
-		if err := schema.VisitJSON(value, c.formats...); err != nil {
+		if err := c.schemas[schema].visit(value, c.formats, true); err != nil {
+			if errors.Is(err, errUnpreparedRule) {
+				return err
+			}
+			return fmt.Errorf("invalid_geometry")
+		}
+		if err := c.semanticRules(schema, value, place, plan); err != nil {
+			if errors.Is(err, errUnpreparedRule) {
+				return err
+			}
 			return fmt.Errorf("invalid_geometry")
 		}
 		return nil
 	}
 	if schema.Extensions["x-go-type"] == "json.RawMessage" {
 		return nil
+	}
+	return c.semanticRules(schema, value, place, plan)
+}
+
+func (c *contract) semanticRules(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan) error {
+	if text, ok := value.(string); ok && schema.Pattern != "" {
+		pattern := c.patterns[schema.Pattern]
+		if pattern == nil {
+			return fmt.Errorf("%w: pattern %s", errUnpreparedRule, schema.Pattern)
+		}
+		if !pattern.MatchString(text) {
+			return fmt.Errorf("invalid_payload: pattern %s", schema.Pattern)
+		}
 	}
 	if schema.Type.Includes("integer") {
 		if number, ok := value.(json.Number); ok {
@@ -314,11 +314,17 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 		accepted := 0
 		marks := make(integerPlan)
 		for _, branch := range group.branches {
-			if c.branchSchemas[branch.Value].VisitJSON(value, c.formats...) != nil {
+			if err := c.schemas[branch.Value].visit(value, c.formats, false); err != nil {
+				if errors.Is(err, errUnpreparedRule) {
+					return err
+				}
 				continue
 			}
 			candidate := make(integerPlan)
 			if err := c.semantics(branch.Value, value, place, candidate); err != nil {
+				if errors.Is(err, errUnpreparedRule) {
+					return err
+				}
 				if failure == nil {
 					failure = err
 				}
@@ -339,16 +345,29 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 		plan.merge(marks)
 	}
 	for _, branch := range schema.AllOf {
-		if c.branchSchemas[branch.Value].VisitJSON(value, c.formats...) != nil {
+		if err := c.schemas[branch.Value].visit(value, c.formats, false); err != nil {
+			if errors.Is(err, errUnpreparedRule) {
+				return err
+			}
 			return fmt.Errorf("invalid_payload: allOf")
 		}
 		if err := c.semantics(branch.Value, value, place, plan); err != nil {
 			return err
 		}
 	}
-	if schema.Not != nil && c.branchSchemas[schema.Not.Value].VisitJSON(value, c.formats...) == nil {
-		if c.semantics(schema.Not.Value, value, place, make(integerPlan)) == nil {
-			return fmt.Errorf("invalid_payload: not")
+	if schema.Not != nil {
+		err := c.schemas[schema.Not.Value].visit(value, c.formats, false)
+		if errors.Is(err, errUnpreparedRule) {
+			return err
+		}
+		if err == nil {
+			err = c.semantics(schema.Not.Value, value, place, make(integerPlan))
+			if errors.Is(err, errUnpreparedRule) {
+				return err
+			}
+			if err == nil {
+				return fmt.Errorf("invalid_payload: not")
+			}
 		}
 	}
 
@@ -414,21 +433,17 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 			}
 		}
 	}
-	if values, ok := value.([]interface{}); ok && schema.Items != nil {
-		var seen map[string]bool
-		if schema.UniqueItems && uuidSchema(schema.Items.Value) {
-			seen = make(map[string]bool, len(values))
-		}
-		for i, v := range values {
-			if id, ok := v.(string); ok && seen != nil {
-				key := strings.ToLower(id)
-				if seen[key] {
-					return fmt.Errorf("duplicate UUID")
-				}
-				seen[key] = true
-			}
-			if err := c.semantics(schema.Items.Value, v, place.children[strconv.Itoa(i)], plan); err != nil {
+	if values, ok := value.([]interface{}); ok {
+		if schema.UniqueItems {
+			if err := checkUniqueItems(schema, values); err != nil {
 				return err
+			}
+		}
+		if schema.Items != nil {
+			for i, v := range values {
+				if err := c.semantics(schema.Items.Value, v, place.children[strconv.Itoa(i)], plan); err != nil {
+					return err
+				}
 			}
 		}
 	}

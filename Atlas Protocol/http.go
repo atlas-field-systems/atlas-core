@@ -284,7 +284,7 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 		if err != nil {
 			return result, err
 		}
-		if err := doc.Components.Schemas["APIKeySecret"].Value.VisitJSON(key[7:], doc.formats...); err != nil {
+		if err := doc.checkString(doc.Components.Schemas["APIKeySecret"].Value, key[7:]); err != nil {
 			return result, fmt.Errorf("unauthenticated")
 		}
 		if name != "GetHealth" {
@@ -304,7 +304,7 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 			if err != nil {
 				return result, err
 			}
-			if err := p.Value.Schema.Value.VisitJSON(facts[p.Value.Name], doc.formats...); err != nil {
+			if err := doc.checkString(p.Value.Schema.Value, facts[p.Value.Name]); err != nil {
 				return result, err
 			}
 		}
