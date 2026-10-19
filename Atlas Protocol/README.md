@@ -78,6 +78,9 @@ callers supply their negotiated whole-message budget.
 Fixtures qualify this package's stateless boundaries, not a Core server or SDK.
 Core still owns credential validity, atomic commits, retries, source authority,
 contact expiry, Task transitions, deletion guards, durable replay, and recovery.
+Validation failures are local diagnostics, not wire `ErrorResponse` values. Core
+chooses declared wire refusals at its request boundary. A response validation
+failure does not determine whether its mutation committed.
 Plugin owners validate their specialized payloads against the referenced release
 schemas. Transport cancellation, persistent state, physical execution, deployment
 capacity, and field thresholds need integration qualification. The TypeScript

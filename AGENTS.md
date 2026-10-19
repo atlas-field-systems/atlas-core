@@ -45,5 +45,5 @@ results must catch a plausible broken implementation; generated snapshots alone
 are not an oracle. Do not add a helper test merely to satisfy a test-count habit.
 
 Report the exact changed scope, checks actually run, failures, and unrun coverage.
-Do not weaken a check to get green. This documentation-only baseline has no build
-or test command; introduce commands only with the implementation that supplies them.
+Do not weaken a check to get green. For Protocol changes, run the checks in its
+[verification guide](Atlas%20Protocol/README.md#verify-and-consume).
