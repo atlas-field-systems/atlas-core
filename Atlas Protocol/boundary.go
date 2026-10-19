@@ -341,6 +341,10 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 						if !ok {
 							continue
 						}
+						// Reserve IDs are UUIDs. Command and Plugin capability names are case sensitive.
+						if identity == "id" {
+							key = strings.ToLower(key)
+						}
 						if seen[key] {
 							return fmt.Errorf("duplicate %s", identity)
 						}

@@ -1,5 +1,7 @@
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
+import {parse as parseContentType} from 'content-type';
+import {parse as parseDisposition} from 'content-disposition';
 import document from '../openapi.json' with {type: 'json'};
 import {Decode, Encode, isSchemaName} from './index.js';
 import {Version} from './metadata.gen.js';
@@ -29,10 +31,19 @@ function context(headers: Headers) {
  if (version.includes(',') || version.length > 128) throw new Error('invalid version header');
  return {dataset, version};
 }
+// These strict parsers accept spaces around separators. Preserve quoted values
+// while admitting HTTP horizontal whitespace in the same positions.
+function parameterSpacing(raw: string): string {return raw.replace(/"(?:[^"\\]|\\.)*"|[ \t]+/g, part => part.startsWith('"') ? part : ' ');}
 function mediaType(raw: string) {
- const [kind, ...parameters] = raw.toLowerCase().split(';');
- for (const p of parameters) if (p.trim().startsWith('charset=') && !['charset=utf-8', 'charset="utf-8"'].includes(p.trim())) throw new Error('unsupported_media_type');
- return kind?.trim() ?? '';
+ const spaced = parameterSpacing(raw), {type, parameters} = parseContentType(spaced);
+ // The parser keeps the last parameter. Refuse duplicates before trusting charset.
+ const seen = new Set<string>();
+ for (const [parameter] of spaced.matchAll(/;(?:[^;"]|"(?:[^"\\]|\\.)*")*/g)) {
+  const name = parameter.slice(1, parameter.indexOf('=')).trim().toLowerCase();
+  if (seen.has(name)) throw new Error('duplicate media parameter'); seen.add(name);
+ }
+ if (parameters.charset !== undefined && parameters.charset.toLowerCase() !== 'utf-8') throw new Error('unsupported_media_type');
+ return type;
 }
 function media(headers: Headers) {return mediaType(header(headers, 'Content-Type'));}
 async function* chunks(body: ReadableStream<Uint8Array> | null) {
@@ -85,7 +96,8 @@ export async function ValidateRequest(name: string, request: Request, expectedDa
  const {path, method, op} = operation(name); if (request.method !== method) throw new Error('wrong method');
  const url = new URL(request.url), facts = pathFacts(path, url.pathname);
  if (name !== 'SubscribeChanges') {
-  const key = header(request.headers, 'Authorization'); if (key.slice(0, 7).toLowerCase() !== 'bearer ' || !/^[A-Za-z0-9_-]{43,128}$/.test(key.slice(7))) throw new Error('unauthenticated');
+  const key = header(request.headers, 'Authorization'); if (key.slice(0, 7).toLowerCase() !== 'bearer ') throw new Error('unauthenticated');
+  try {Encode('APIKeySecret', key.slice(7));} catch {throw new Error('unauthenticated');}
   if (name !== 'GetHealth') {const {dataset, version} = context(request.headers); if (expectedDataset && !sameID(dataset, expectedDataset)) throw new Error('dataset_mismatch'); if (version !== Version) throw new Error('protocol_mismatch');}
  }
  for (const parameter of op.parameters) if (parameter.in === 'header' && parameter.required && parameter.name) header(request.headers, parameter.name);
@@ -141,8 +153,9 @@ export async function ValidateResponse(name: string, response: HTTPResponse, ctx
   const size = header(response.headers, 'Content-Length'), digest = header(response.headers, 'Content-Digest'), match = /^sha-256=:([A-Za-z0-9+/]+={0,2}):$/.exec(digest);
   if (!match?.[1]) throw new Error('invalid digest');
   const hash = Buffer.from(match[1], 'base64'); if (hash.byteLength !== 32 || hash.toString('base64') !== match[1]) throw new Error('invalid digest');
-  if (!/^(inline|attachment)(;.*)?$/.test(header(response.headers, 'Content-Disposition'))) throw new Error('invalid disposition');
-  if (ctx.disposition && header(response.headers, 'Content-Disposition').split(';')[0] !== ctx.disposition) throw new Error('wrong disposition');
+  const mode = parseDisposition(parameterSpacing(header(response.headers, 'Content-Disposition'))).type;
+  if (mode !== 'inline' && mode !== 'attachment') throw new Error('invalid disposition');
+  if (ctx.disposition && mode !== ctx.disposition) throw new Error('wrong disposition');
   const descriptor: Descriptor = {object_id: dataset, request_id: dataset, byte_length: size, sha256: hash.toString('hex'), content_type: kind, metadata: {name: 'content', entity_ids: [], task_ids: []}};
   if (expectedObject && (expectedObject.byte_length !== size || expectedObject.sha256 !== descriptor.sha256 || mediaType(expectedObject.content_type) !== kind)) throw new Error('object response mismatch');
   await CheckContent(descriptor, chunks(response.body), limits); return;

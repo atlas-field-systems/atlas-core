@@ -70,7 +70,7 @@ func ValidateFrame(direction string, wire []byte, ctx FrameContext, limits Limit
 			return fmt.Errorf("subscription required")
 		}
 	}
-	if frame.Request != nil && frame.Request.CoreRunId != frame.CoreRunID {
+	if frame.Request != nil && !strings.EqualFold(frame.Request.CoreRunId, frame.CoreRunID) {
 		return fmt.Errorf("release Core run mismatch")
 	}
 	return nil

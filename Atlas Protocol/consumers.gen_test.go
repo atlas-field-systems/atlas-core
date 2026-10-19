@@ -9,6 +9,8 @@ import (
 func generatedRoundTrip(t *testing.T, name string, wire []byte) []byte {
 	t.Helper()
 	switch name {
+	case "APIKeySecret":
+		return roundTrip[APIKeySecret](t, name, wire)
 	case "Acknowledgment":
 		return roundTrip[Acknowledgment](t, name, wire)
 	case "ActivityRecord":

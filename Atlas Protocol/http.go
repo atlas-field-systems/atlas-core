@@ -13,15 +13,12 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
-
-var bearerGrammar = regexp.MustCompile(`^(?i:Bearer) [A-Za-z0-9_-]{43,128}$`)
 
 type RequestData struct {
 	JSON   []byte
@@ -205,7 +202,14 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 	}
 	if name != "SubscribeChanges" {
 		key, err := oneHeader(req.Header, "Authorization")
-		if err != nil || !bearerGrammar.MatchString(key) {
+		if err != nil || len(key) < 7 || !strings.EqualFold(key[:7], "Bearer ") {
+			return result, fmt.Errorf("unauthenticated")
+		}
+		doc, err := loadContract()
+		if err != nil {
+			return result, err
+		}
+		if err := doc.Components.Schemas["APIKeySecret"].Value.VisitJSON(key[7:], doc.formats); err != nil {
 			return result, fmt.Errorf("unauthenticated")
 		}
 		if name != "GetHealth" {

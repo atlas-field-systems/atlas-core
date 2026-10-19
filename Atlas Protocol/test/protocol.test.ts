@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {mkdtemp, open, readFile, rename, rm, stat, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import test from 'node:test';
 import {Ajv2020} from 'ajv/dist/2020.js';
 import {Decode, Encode, Version, Catalog, isSchemaName, DefaultLimits, ValidateRequest, ValidateResponse, ValidateFrame, CheckContent} from '../ts/index.js';
@@ -51,7 +54,7 @@ test('shared independent fixtures execute generated types and both validation bo
    assert.deepEqual(result, sample.value); assert.deepEqual(value, result);
   } else {invalid++; if (sample.error) assert.throws(() => Decode(name, raw), new RegExp(sample.error)); else assert.throws(() => Decode(name, raw));}
  });}
- assert.equal(valid, 267); assert.equal(invalid, 256); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
+ assert.equal(valid, 270); assert.equal(invalid, 265); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
 });
 
 test('every HTTP message validates status, media, context, request and reply', async t => {
@@ -194,4 +197,97 @@ test('WebSocket authentication and release stay separate from data subscription'
   if (sample.schema !== 'SyncErrorFrame') assert.throws(() => ValidateFrame(direction, wire(sample.value), {...ctx, datasetID: coreRun}));
   if (sample.schema === 'ChangesFrame') assert.throws(() => ValidateFrame(direction, wire(sample.value), {...ctx, authenticated: false}));
  }
+});
+
+test('release UUID identity folds case and preserves source spelling', () => {
+ for (const run of [dataset, dataset.toLowerCase(), coreRun]) {
+  const frame = {type: 'release_snapshot', dataset_id: dataset, protocol_version: Version, core_run_id: dataset,
+   request: {request_id: coreRun, snapshot_id: dataset, load_id: coreRun, core_run_id: run}} satisfies components['schemas']['ReleaseSnapshotFrame'];
+  const encoded = Encode('ReleaseSnapshotFrame', frame);
+  const validate = () => ValidateFrame('client', encoded, {datasetID: dataset, coreRunID: dataset.toLowerCase(), authenticated: true, subscribed: false});
+  if (run === coreRun) assert.throws(validate, /release Core run mismatch/); else validate();
+  assert.deepEqual(Decode('ReleaseSnapshotFrame', encoded), frame);
+ }
+});
+
+test('reserve UUID uniqueness folds case and preserves distinct IDs', () => {
+ for (const id of [dataset, dataset.toLowerCase(), (dataset.slice(0, -1) + '7').toLowerCase()]) {
+  const power = {external_power: null, observed_at: null, reserves: [
+   {id: dataset, kind: 'fuel', remaining_percent: null, observed_at: null},
+   {id, kind: 'fuel', remaining_percent: null, observed_at: null},
+  ]} satisfies components['schemas']['Power'];
+  if (id.toLowerCase() === dataset.toLowerCase()) assert.throws(() => Decode('Power', wire(power)), /duplicate id/);
+  else assert.deepEqual(Decode('Power', Encode('Power', power)), power);
+ }
+});
+
+test('API keys agree across frame schemas, connection frames, credentials and HTTP', async t => {
+ for (const [name, secret, valid] of [
+  ['minimum', 'A'.repeat(43), true], ['alphabet', 'aZ09_-'.repeat(21) + '-_', true],
+  ['too short', 'A'.repeat(42), false], ['too long', 'A'.repeat(129), false],
+  ['plus', '+'.repeat(43), false], ['slash', '/'.repeat(43), false],
+  ['padding', 'A'.repeat(42) + '=', false], ['space', 'A'.repeat(42) + ' A', false],
+ ] satisfies [string, string, boolean][]) await t.test(name, async () => {
+  const frame = {type: 'authenticate', dataset_id: dataset, protocol_version: Version, api_key: secret};
+  const checks = [() => Decode('AuthenticateFrame', wire(frame)),
+   () => ValidateFrame('client', wire(frame), {datasetID: dataset, coreRunID: '', authenticated: false, subscribed: false}),
+   () => Decode('CredentialFacts', wire({key_id: coreRun, secret}))];
+  for (const check of checks) {if (valid) check(); else assert.throws(check);}
+  const h = headers(); h.set('Authorization', 'bEaReR ' + secret);
+  const result = ValidateRequest('GetAsset', new Request('https://atlas.invalid/assets/' + dataset, {headers: h}), dataset);
+  if (valid) await result; else await assert.rejects(result, /unauthenticated/);
+ });
+});
+
+test('MIME header parsing accepts ordinary spelling and rejects malformed values', async t => {
+ const data: unknown = JSON.parse(readFileSync(fixtureRoot + '/http-headers.json', 'utf8'));
+ const validate = ajv.compile<{name: string; operation: string; media: string; disposition: string; mode: '' | 'inline' | 'attachment'; valid: boolean}[]>({type: 'array', items: {type: 'object', additionalProperties: false, required: ['name', 'operation', 'media', 'disposition', 'mode', 'valid'], properties: {name: {type: 'string'}, operation: {type: 'string'}, media: {type: 'string'}, disposition: {type: 'string'}, mode: {enum: ['', 'inline', 'attachment']}, valid: {type: 'boolean'}}}});
+ assert(validate(data));
+ for (const sample of data) await t.test(sample.name, async () => {
+  const exchange = exchanges.find(x => x.name === sample.operation); assert(exchange);
+  const result = response(exchange); result.headers.set('Content-Type', sample.media);
+  if (sample.operation === 'ReadObjectContent') result.headers.set('Content-Disposition', sample.disposition);
+  const ctx: ResponseContext = {datasetID: dataset, ...(sample.mode ? {disposition: sample.mode} : {})};
+  const checked = ValidateResponse(sample.operation, result, ctx);
+  if (sample.valid) await checked; else await assert.rejects(checked);
+ });
+});
+
+test('caller-owned file staging preserves verified uploads and downloads', async t => {
+ const uploaded = exchanges.find(x => x.name === 'UploadObject'), stored = exchanges.find(x => x.name === 'GetObject'); assert(uploaded && stored);
+ const descriptor = Decode('UploadObjectDescriptor', wire(uploaded.request)), object = Decode('GetObjectResponse', wire(stored.response)).data;
+ assert.equal(descriptor.sha256, 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'); assert.equal(object.sha256, descriptor.sha256);
+ for (const direction of ['upload', 'download']) for (const content of ['abc', 'ab', 'abd']) await t.test(direction + '/' + content, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'atlas-protocol-staging-'));
+  try {
+   const sourcePath = join(root, 'source'), stagePath = join(root, 'staging'), finalPath = join(root, 'verified');
+   await writeFile(sourcePath, content);
+   const source = await open(sourcePath, 'r');
+   try {
+    const staged = await open(stagePath, 'wx');
+    try {
+     const fileStream = new ReadableStream<Uint8Array>({async pull(controller) {
+      const chunk = new Uint8Array(2), {bytesRead} = await source.read(chunk);
+      if (bytesRead) controller.enqueue(chunk.subarray(0, bytesRead)); else controller.close();
+     }});
+     const body = fileStream.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+      async transform(chunk, controller) {await staged.writeFile(chunk); controller.enqueue(chunk);},
+      async flush() {await staged.close();},
+     }));
+     let verified: Promise<unknown>;
+     if (direction === 'upload') {
+      const h = headers(); h.set('Content-Type', 'application/octet-stream'); h.set('Atlas-Object-Descriptor', Buffer.from(Encode('UploadObjectDescriptor', descriptor)).toString('base64url'));
+      const init = {method: 'POST', headers: h, body, duplex: 'half'} satisfies RequestInit & {duplex: 'half'};
+      verified = ValidateRequest('UploadObject', new Request('https://atlas.invalid/objects', init), dataset).then(result => assert.deepEqual(result.upload, descriptor));
+     } else {
+      const h = headers(); h.set('Content-Type', 'text/plain'); h.set('Content-Length', '3'); h.set('Content-Digest', 'sha-256=:ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=:'); h.set('Content-Disposition', 'attachment');
+      verified = ValidateResponse('ReadObjectContent', {status: 200, headers: h, body}, {datasetID: dataset, object, disposition: 'attachment'});
+     }
+     if (content === 'abc') await verified; else await assert.rejects(verified, /integrity_fault/);
+    } finally {await staged.close();}
+   } finally {await source.close();}
+   if (content === 'abc') {await rename(stagePath, finalPath); assert.equal(await readFile(finalPath, 'utf8'), 'abc');}
+   else await assert.rejects(stat(finalPath), {code: 'ENOENT'});
+  } finally {await rm(root, {recursive: true, force: true});}
+ });
 });

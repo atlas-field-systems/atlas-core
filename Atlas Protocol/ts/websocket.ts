@@ -16,5 +16,5 @@ export function ValidateFrame(direction: 'client' | 'server', wire: Uint8Array, 
  if (ctx.datasetID && frame.dataset_id.toLowerCase() !== ctx.datasetID.toLowerCase()) throw new Error('dataset_mismatch');
  if ('core_run_id' in frame && ctx.coreRunID && frame.core_run_id.toLowerCase() !== ctx.coreRunID.toLowerCase()) throw new Error('Core run mismatch');
  if (['changes', 'handoff_complete', 'gap'].includes(frame.type) && !ctx.subscribed) throw new Error('subscription required');
- if (frame.type === 'release_snapshot' && frame.request.core_run_id !== frame.core_run_id) throw new Error('release Core run mismatch');
+ if (frame.type === 'release_snapshot' && frame.request.core_run_id.toLowerCase() !== frame.core_run_id.toLowerCase()) throw new Error('release Core run mismatch');
 }

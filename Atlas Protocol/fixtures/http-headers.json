@@ -1,0 +1,234 @@
+[
+  {
+    "name": "application/json",
+    "operation": "GetAsset",
+    "media": "application/json",
+    "disposition": "",
+    "mode": "",
+    "valid": true
+  },
+  {
+    "name": "Application/JSON; CHARSET = \"UtF-8\"",
+    "operation": "GetAsset",
+    "media": "Application/JSON; CHARSET = \"UtF-8\"",
+    "disposition": "",
+    "mode": "",
+    "valid": true
+  },
+  {
+    "name": "application/json; charset\t=\tutf-8",
+    "operation": "GetAsset",
+    "media": "application/json; charset\t=\tutf-8",
+    "disposition": "",
+    "mode": "",
+    "valid": true
+  },
+  {
+    "name": "application/json; note=\"x;y\"; charset = \"UTF-8\"",
+    "operation": "GetAsset",
+    "media": "application/json; note=\"x;y\"; charset = \"UTF-8\"",
+    "disposition": "",
+    "mode": "",
+    "valid": true
+  },
+  {
+    "name": "application/json; charset=iso-8859-1",
+    "operation": "GetAsset",
+    "media": "application/json; charset=iso-8859-1",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset = iso-8859-1",
+    "operation": "GetAsset",
+    "media": "application/json; charset = iso-8859-1",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset = \"ISO-8859-1\"",
+    "operation": "GetAsset",
+    "media": "application/json; charset = \"ISO-8859-1\"",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset",
+    "operation": "GetAsset",
+    "media": "application/json; charset",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset=",
+    "operation": "GetAsset",
+    "media": "application/json; charset=",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset=\"utf-8",
+    "operation": "GetAsset",
+    "media": "application/json; charset=\"utf-8",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset=utf-8 garbage",
+    "operation": "GetAsset",
+    "media": "application/json; charset=utf-8 garbage",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json, text/plain",
+    "operation": "GetAsset",
+    "media": "application/json, text/plain",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "attachment requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "attachment",
+    "mode": "attachment",
+    "valid": true
+  },
+  {
+    "name": "Attachment requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "Attachment",
+    "mode": "attachment",
+    "valid": true
+  },
+  {
+    "name": "INLINE; filename = \"a;b.txt\" requested inline",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "INLINE; filename = \"a;b.txt\"",
+    "mode": "inline",
+    "valid": true
+  },
+  {
+    "name": "AtTaChMeNt; filename=\"../source.txt\" requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "AtTaChMeNt; filename=\"../source.txt\"",
+    "mode": "attachment",
+    "valid": true
+  },
+  {
+    "name": "Attachment requested inline",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "Attachment",
+    "mode": "inline",
+    "valid": false
+  },
+  {
+    "name": "form-data requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "form-data",
+    "mode": "attachment",
+    "valid": false
+  },
+  {
+    "name": "attachment; filename requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "attachment; filename",
+    "mode": "attachment",
+    "valid": false
+  },
+  {
+    "name": "attachment; filename= requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "attachment; filename=",
+    "mode": "attachment",
+    "valid": false
+  },
+  {
+    "name": "attachment; filename=\"unterminated requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "attachment; filename=\"unterminated",
+    "mode": "attachment",
+    "valid": false
+  },
+  {
+    "name": "attachment; filename=\"a\" garbage requested attachment",
+    "operation": "ReadObjectContent",
+    "media": "Text/Plain",
+    "disposition": "attachment; filename=\"a\" garbage",
+    "mode": "attachment",
+    "valid": false
+  },
+  {
+    "name": "empty charset",
+    "operation": "GetAsset",
+    "media": "application/json; charset=\"\"",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "disposition horizontal whitespace",
+    "operation": "ReadObjectContent",
+    "media": "text/plain",
+    "disposition": "Attachment;\tfilename\t=\t\"original name.txt\"",
+    "mode": "attachment",
+    "valid": true
+  },
+  {
+    "name": "application/json; charset=iso-8859-1; charset=utf-8",
+    "operation": "GetAsset",
+    "media": "application/json; charset=iso-8859-1; charset=utf-8",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset = iso-8859-1; charset = utf-8",
+    "operation": "GetAsset",
+    "media": "application/json; charset = iso-8859-1; charset = utf-8",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; charset=utf-8; charset=iso-8859-1; charset=utf-8",
+    "operation": "GetAsset",
+    "media": "application/json; charset=utf-8; charset=iso-8859-1; charset=utf-8",
+    "disposition": "",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "application/json; note=\"x; charset = iso-8859-1\"; charset=utf-8",
+    "operation": "GetAsset",
+    "media": "application/json; note=\"x; charset = iso-8859-1\"; charset=utf-8",
+    "disposition": "",
+    "mode": "",
+    "valid": true
+  },
+  {
+    "name": "application/json; note=\"x\\\";y\"; charset = UTF-8",
+    "operation": "GetAsset",
+    "media": "application/json; note=\"x\\\";y\"; charset = UTF-8",
+    "disposition": "",
+    "mode": "",
+    "valid": true
+  }
+]

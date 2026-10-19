@@ -7,6 +7,7 @@ import (
 )
 
 var schemaTypes = map[string]reflect.Type{
+	"APIKeySecret":                        reflect.TypeFor[APIKeySecret](),
 	"Acknowledgment":                      reflect.TypeFor[Acknowledgment](),
 	"ActivityRecord":                      reflect.TypeFor[ActivityRecord](),
 	"ActivityRecordPage":                  reflect.TypeFor[ActivityRecordPage](),

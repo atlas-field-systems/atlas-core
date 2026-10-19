@@ -21795,5 +21795,135 @@
       "release": "example-1",
       "capability": "independent"
     }
+  },
+  {
+    "name": "API-key secret minimum",
+    "schema": "APIKeySecret",
+    "valid": true,
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+    "name": "API-key secret maximum",
+    "schema": "APIKeySecret",
+    "valid": true,
+    "value": "aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_-aZ09_--_"
+  },
+  {
+    "name": "API-key secret empty",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": ""
+  },
+  {
+    "name": "API-key secret short",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+    "name": "API-key secret long",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+    "name": "API-key secret plus",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": "+++++++++++++++++++++++++++++++++++++++++++"
+  },
+  {
+    "name": "API-key secret slash",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": "///////////////////////////////////////////"
+  },
+  {
+    "name": "API-key secret padding",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  {
+    "name": "API-key secret space",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA A"
+  },
+  {
+    "name": "API-key secret nonascii",
+    "schema": "APIKeySecret",
+    "valid": false,
+    "value": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+  },
+  {
+    "name": "Plugin capability names retain case-sensitive identity",
+    "schema": "Plugin",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "name": "Independent plugin",
+      "available": true,
+      "capabilities": [
+        {
+          "name": "Camera",
+          "input_schema": {
+            "uri": "https://plugin.invalid/release-1/input.json",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "output_schema": {
+            "uri": "https://plugin.invalid/release-1/output.json",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        {
+          "name": "camera",
+          "input_schema": {
+            "uri": "https://plugin.invalid/release-1/input.json",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "output_schema": {
+            "uri": "https://plugin.invalid/release-1/output.json",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Plugin duplicate capability name refused",
+    "schema": "Plugin",
+    "valid": false,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "name": "Independent plugin",
+      "available": true,
+      "capabilities": [
+        {
+          "name": "Camera",
+          "input_schema": {
+            "uri": "https://plugin.invalid/release-1/input.json",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "output_schema": {
+            "uri": "https://plugin.invalid/release-1/output.json",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        {
+          "name": "Camera",
+          "input_schema": {
+            "uri": "https://plugin.invalid/release-1/input.json",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "output_schema": {
+            "uri": "https://plugin.invalid/release-1/output.json",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        }
+      ]
+    }
   }
 ]

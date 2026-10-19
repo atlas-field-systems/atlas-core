@@ -522,7 +522,19 @@
     "Plugin Operation optional payloads value",
     "Plugin recovery optional payloads value",
     "Plugin raw numeric spelling",
-    "Plugin null input does not permit omission"
+    "Plugin null input does not permit omission",
+    "API-key secret minimum",
+    "API-key secret maximum",
+    "API-key secret empty",
+    "API-key secret short",
+    "API-key secret long",
+    "API-key secret plus",
+    "API-key secret slash",
+    "API-key secret padding",
+    "API-key secret space",
+    "API-key secret nonascii",
+    "Plugin capability names retain case-sensitive identity",
+    "Plugin duplicate capability name refused"
   ],
   "exchange_names": [
     "RegisterAsset",
@@ -593,6 +605,6 @@
     "ReleaseSnapshot",
     "SubscribeChanges"
   ],
-  "valid": 267,
-  "invalid": 256
+  "valid": 270,
+  "invalid": 265
 }

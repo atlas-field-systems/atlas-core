@@ -86,7 +86,8 @@ function semantics(schema: Schema, value: unknown): void {
   for (const [key, identity] of Object.entries(schema['x-atlas-unique-by'] ?? {})) {
    const items = value[key]; if (!Array.isArray(items)) continue;
    const seen = new Set<string>();
-   for (const item of items) if (isRecord(item) && typeof item[identity] === 'string') { const key = item[identity]; if (seen.has(key)) throw new Error(`duplicate ${identity}`); seen.add(key); }
+   // Reserve IDs are UUIDs. Command and Plugin capability names are case sensitive.
+   for (const item of items) if (isRecord(item) && typeof item[identity] === 'string') { const key = identity === 'id' ? item[identity].toLowerCase() : item[identity]; if (seen.has(key)) throw new Error(`duplicate ${identity}`); seen.add(key); }
   }
  }
  if (Array.isArray(value) && schema.items) for (const item of value) semantics(schema.items, item);

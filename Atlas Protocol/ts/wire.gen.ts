@@ -940,7 +940,7 @@ export interface components {
         Latitude: number;
         /**
          * Format: uint64-decimal
-         * @description Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+         * @description Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
          */
         PositiveCounter: string;
         Alias: string;
@@ -1864,7 +1864,7 @@ export interface components {
         /** @description Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields. */
         CredentialFacts: {
             key_id: components["schemas"]["Identifier"];
-            secret: string;
+            secret: components["schemas"]["APIKeySecret"];
         };
         Retry: {
             request_id: components["schemas"]["Identifier"];
@@ -2811,7 +2811,7 @@ export interface components {
             type: "authenticate";
             dataset_id: components["schemas"]["Identifier"];
             protocol_version: components["schemas"]["ProtocolVersion"];
-            api_key: string;
+            api_key: components["schemas"]["APIKeySecret"];
         };
         AuthenticatedFrame: {
             /**
@@ -3224,6 +3224,8 @@ export interface components {
             expires?: boolean;
         };
         MoveToCommand: components["schemas"]["QueuedMoveTo"] | components["schemas"]["ImmediateMoveTo"];
+        /** @description API-key secret encoded as unpadded base64url. Preserve credential material exactly. Core owns actual credential validity. */
+        APIKeySecret: string;
     };
     responses: {
         /** @description invalid_request, dataset_required, invalid_json, invalid_geometry, unsupported_geometry, geometry_limit_exceeded, unsupported_filter */

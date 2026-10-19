@@ -3080,6 +3080,9 @@ func (e ReadObjectContentParamsDisposition) Valid() bool {
 	}
 }
 
+// APIKeySecret API-key secret encoded as unpadded base64url. Preserve credential material exactly. Core owns actual credential validity.
+type APIKeySecret = string
+
 // Acknowledgment defines model for Acknowledgment.
 type Acknowledgment struct {
 	Accepted AcknowledgmentAccepted `json:"accepted"`
@@ -3149,7 +3152,7 @@ type Asset struct {
 	} `json:"communications"`
 	Description AssetDescription `json:"description"`
 
-	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	EditRevision      PositiveCounter           `json:"edit_revision"`
 	EntityType        AssetEntityType           `json:"entity_type"`
 	Gimbal            *RetainedGimbalSection    `json:"gimbal,omitempty"`
@@ -3161,7 +3164,7 @@ type Asset struct {
 	Telemetry         *RetainedTelemetrySection `json:"telemetry,omitempty"`
 	Type              AssetType                 `json:"type"`
 
-	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
 }
 
@@ -3186,7 +3189,7 @@ type AssetDescriptionUpdate struct {
 
 // AssetDescriptiveChange defines model for AssetDescriptiveChange.
 type AssetDescriptiveChange struct {
-	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter        `json:"expected_edit_revision"`
 	Sections             AssetDescriptionUpdate `json:"sections"`
 }
@@ -3254,7 +3257,7 @@ type AssignedTaskPage struct {
 	Items         []Task     `json:"items"`
 	NextPageToken *PageToken `json:"next_page_token,omitempty"`
 
-	// QueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// QueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	QueueRevision PositiveCounter `json:"queue_revision"`
 }
 
@@ -3263,7 +3266,7 @@ type AssignedTaskQuery struct {
 	PageSize  *int       `json:"page_size,omitempty"`
 	PageToken *PageToken `json:"page_token,omitempty"`
 
-	// QueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// QueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	QueueRevision *PositiveCounter `json:"queue_revision,omitempty"`
 }
 
@@ -3328,7 +3331,8 @@ type AttitudeWithdrawnState string
 
 // AuthenticateFrame defines model for AuthenticateFrame.
 type AuthenticateFrame struct {
-	ApiKey          string                `json:"api_key"`
+	// ApiKey API-key secret encoded as unpadded base64url. Preserve credential material exactly. Core owns actual credential validity.
+	ApiKey          APIKeySecret          `json:"api_key"`
 	DatasetId       Identifier            `json:"dataset_id"`
 	ProtocolVersion ProtocolVersion       `json:"protocol_version"`
 	Type            AuthenticateFrameType `json:"type"`
@@ -3350,7 +3354,7 @@ type AuthenticatedFrameType string
 
 // BatchLimits defines model for BatchLimits.
 type BatchLimits struct {
-	// MaxBatchBytes Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// MaxBatchBytes Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	MaxBatchBytes PositiveCounter `json:"max_batch_bytes"`
 	MaxChanges    int             `json:"max_changes"`
 }
@@ -3622,7 +3626,7 @@ type CommunicationsWithdrawnState string
 type ConfirmTaskOrderRequest struct {
 	Evidence SourceEvidence `json:"evidence"`
 
-	// QueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// QueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	QueueRevision PositiveCounter `json:"queue_revision"`
 	RequestId     Identifier      `json:"request_id"`
 	Source        AssetSource     `json:"source"`
@@ -3780,8 +3784,10 @@ type CreateTrackResponse struct {
 
 // CredentialFacts Caller retains at least 32 cryptographically random bytes encoded base64url without padding. Core retains only the verifier. No role or scope fields.
 type CredentialFacts struct {
-	KeyId  Identifier `json:"key_id"`
-	Secret string     `json:"secret"`
+	KeyId Identifier `json:"key_id"`
+
+	// Secret API-key secret encoded as unpadded base64url. Preserve credential material exactly. Core owns actual credential validity.
+	Secret APIKeySecret `json:"secret"`
 }
 
 // Cursor defines model for Cursor.
@@ -3866,7 +3872,7 @@ type Deletion struct {
 	Id   Identifier   `json:"id"`
 	Kind DeletionKind `json:"kind"`
 
-	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
 }
 
@@ -3905,7 +3911,7 @@ type EditGeofeatureRequest struct {
 	Alias       nullable.Nullable[NullableAlias] `json:"alias,omitempty"`
 	Description *DescriptionPatch                `json:"description,omitempty"`
 
-	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
 	GeofeatureId         Identifier      `json:"geofeature_id"`
 
@@ -3924,7 +3930,7 @@ type EditGeofeatureResponse struct {
 
 // EditObjectRequest defines model for EditObjectRequest.
 type EditObjectRequest struct {
-	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
 	Metadata             ObjectMetadata  `json:"metadata"`
 	ObjectId             Identifier      `json:"object_id"`
@@ -3940,7 +3946,7 @@ type EditObjectResponse struct {
 
 // EditOperatorRequest defines model for EditOperatorRequest.
 type EditOperatorRequest struct {
-	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter  `json:"expected_edit_revision"`
 	OperatorId           Identifier       `json:"operator_id"`
 	Profile              DescriptionPatch `json:"profile"`
@@ -3959,7 +3965,7 @@ type EditTrackRequest struct {
 	Alias       nullable.Nullable[NullableAlias] `json:"alias,omitempty"`
 	Description *DescriptionPatch                `json:"description,omitempty"`
 
-	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// ExpectedEditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedEditRevision PositiveCounter `json:"expected_edit_revision"`
 	RequestId            Identifier      `json:"request_id"`
 	TrackId              Identifier      `json:"track_id"`
@@ -4250,7 +4256,7 @@ type ExecutionProgress struct {
 	GeometryRevisions *[]struct {
 		GeofeatureId Identifier `json:"geofeature_id"`
 
-		// Revision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+		// Revision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 		Revision PositiveCounter `json:"revision"`
 	} `json:"geometry_revisions,omitempty"`
 	ObservedAt nullable.Nullable[string] `json:"observed_at"`
@@ -4296,19 +4302,19 @@ type Geofeature struct {
 	Alias       nullable.Nullable[string] `json:"alias"`
 	Description Description               `json:"description"`
 
-	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	EditRevision PositiveCounter      `json:"edit_revision"`
 	EntityType   GeofeatureEntityType `json:"entity_type"`
 
 	// Geometry 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid.
 	Geometry Geometry `json:"geometry"`
 
-	// GeometryRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// GeometryRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	GeometryRevision PositiveCounter `json:"geometry_revision"`
 	Id               Identifier      `json:"id"`
 	Type             GeofeatureType  `json:"type"`
 
-	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
 }
 
@@ -4928,14 +4934,14 @@ type Object struct {
 	ByteLength  Counter     `json:"byte_length"`
 	ContentType ContentType `json:"content_type"`
 
-	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	EditRevision PositiveCounter `json:"edit_revision"`
 	Id           Identifier      `json:"id"`
 	Metadata     ObjectMetadata  `json:"metadata"`
 	PublishedAt  Timestamp       `json:"published_at"`
 	Sha256       Digest          `json:"sha256"`
 
-	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
 }
 
@@ -4981,7 +4987,7 @@ type Operation struct {
 	Release          string                           `json:"release"`
 	State            OperationState                   `json:"state"`
 
-	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
 }
 
@@ -5006,7 +5012,7 @@ type OperationState string
 type Operator struct {
 	Description *string `json:"description,omitempty"`
 
-	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	EditRevision PositiveCounter `json:"edit_revision"`
 	Id           Identifier      `json:"id"`
 	Name         Name            `json:"name"`
@@ -5109,7 +5115,7 @@ type Position struct {
 	Longitude Longitude `json:"longitude"`
 }
 
-// PositiveCounter Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+// PositiveCounter Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 type PositiveCounter = string
 
 // Power defines model for Power.
@@ -5791,7 +5797,7 @@ type ServerFrame struct {
 type SetTaskOrderRequest struct {
 	AssetId Identifier `json:"asset_id"`
 
-	// ExpectedQueueRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// ExpectedQueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	ExpectedQueueRevision PositiveCounter `json:"expected_queue_revision"`
 	RequestId             Identifier      `json:"request_id"`
 	TaskIds               []Identifier    `json:"task_ids"`
@@ -5850,7 +5856,7 @@ type SourceEvidence struct {
 	EvidenceKind       SourceEvidenceEvidenceKind `json:"evidence_kind"`
 	GeneratedAt        nullable.Nullable[string]  `json:"generated_at"`
 
-	// Sequence Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Sequence Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Sequence PositiveCounter `json:"sequence"`
 }
 
@@ -5962,10 +5968,10 @@ type Task struct {
 	Results       []ResultDeclaration `json:"results"`
 	State         TaskState           `json:"state"`
 
-	// SubmissionSequence Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// SubmissionSequence Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	SubmissionSequence PositiveCounter `json:"submission_sequence"`
 
-	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
 }
 
@@ -5993,7 +5999,7 @@ type TaskQueue struct {
 	AssetId           Identifier                                 `json:"asset_id"`
 	ConfirmedRevision nullable.Nullable[NullablePositiveCounter] `json:"confirmed_revision"`
 
-	// Revision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Revision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Revision PositiveCounter `json:"revision"`
 	TaskIds  []Identifier    `json:"task_ids"`
 }
@@ -6079,7 +6085,7 @@ type Track struct {
 	Attitude    *RetainedAttitudeSection  `json:"attitude,omitempty"`
 	Description Description               `json:"description"`
 
-	// EditRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// EditRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	EditRevision     PositiveCounter                      `json:"edit_revision"`
 	EntityType       TrackEntityType                      `json:"entity_type"`
 	Geometry         *RetainedGeometryObservationSection  `json:"geometry,omitempty"`
@@ -6091,7 +6097,7 @@ type Track struct {
 	Telemetry        *RetainedTelemetrySection            `json:"telemetry,omitempty"`
 	Type             *RetainedTrackTypeObservationSection `json:"type,omitempty"`
 
-	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
+	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
 }
 
