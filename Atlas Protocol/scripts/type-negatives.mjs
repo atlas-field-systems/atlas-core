@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import ts from 'typescript';
+const config = ts.readConfigFile('tsconfig.json', ts.sys.readFile);
+const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, '.');
+const program = ts.createProgram(['fixtures/types-invalid.ts'], {...parsed.options, noEmit: true});
+const diagnostics = ts.getPreEmitDiagnostics(program);
+const actual = diagnostics.map(d => ({file: d.file?.fileName.replaceAll('\\', '/').split('/').slice(-2).join('/'), line: d.file && d.start !== undefined ? d.file.getLineAndCharacterOfPosition(d.start).line + 1 : 0, code: d.code}));
+const expected = [{line:3,code:2322},{line:4,code:2322},{line:5,code:2739},{line:6,code:2322},{line:7,code:2322},{line:8,code:2353},{line:9,code:2322},{line:10,code:2353}].map(x => ({file:'fixtures/types-invalid.ts',...x}));
+if (JSON.stringify(actual) !== JSON.stringify(expected)) console.error(ts.formatDiagnosticsWithColorAndContext(diagnostics, {getCanonicalFileName: f => f, getCurrentDirectory: () => process.cwd(), getNewLine: () => '\n'}));
+assert.deepEqual(actual, expected);
+console.log('TypeScript rejected all eight independent type errors');

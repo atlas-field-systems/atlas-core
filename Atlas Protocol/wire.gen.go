@@ -3671,7 +3671,7 @@ type ContactProof struct {
 type ContentType = string
 
 // Coordinate defines model for Coordinate.
-type Coordinate = []float64
+type Coordinate = []Longitude
 
 // Counter Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
 type Counter = string
@@ -3993,10 +3993,12 @@ type EntityListQuery struct {
 type Error400 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error400ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error400ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4007,10 +4009,12 @@ type Error400ErrorCode string
 type Error401 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error401ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error401ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4021,10 +4025,12 @@ type Error401ErrorCode string
 type Error403 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error403ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error403ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4035,10 +4041,12 @@ type Error403ErrorCode string
 type Error404 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error404ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error404ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4049,10 +4057,12 @@ type Error404ErrorCode string
 type Error409 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error409ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error409ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4063,10 +4073,12 @@ type Error409ErrorCode string
 type Error410 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error410ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error410ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4077,10 +4089,12 @@ type Error410ErrorCode string
 type Error413 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error413ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error413ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4091,10 +4105,12 @@ type Error413ErrorCode string
 type Error415 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error415ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error415ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4105,10 +4121,12 @@ type Error415ErrorCode string
 type Error422 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error422ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error422ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4119,10 +4137,12 @@ type Error422ErrorCode string
 type Error429 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error429ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error429ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4133,10 +4153,12 @@ type Error429ErrorCode string
 type Error500 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error500ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error500ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4147,10 +4169,12 @@ type Error500ErrorCode string
 type Error503 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error503ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error503ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
@@ -4161,26 +4185,28 @@ type Error503ErrorCode string
 type Error507 struct {
 	DatasetId *Identifier `json:"dataset_id,omitempty"`
 	Error     struct {
-		Code      Error507ErrorCode `json:"code"`
-		Details   *ErrorDetails     `json:"details,omitempty"`
-		Message   string            `json:"message"`
-		RequestId Identifier        `json:"request_id"`
+		Code Error507ErrorCode `json:"code"`
+
+		// Details expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
+		Details   *ErrorDetails `json:"details,omitempty"`
+		Message   string        `json:"message"`
+		RequestId Identifier    `json:"request_id"`
 	} `json:"error"`
 }
 
 // Error507ErrorCode defines model for Error507.Error.Code.
 type Error507ErrorCode string
 
-// ErrorDetails defines model for ErrorDetails.
+// ErrorDetails expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version.
 type ErrorDetails struct {
 	ActualDatasetId       *Identifier `json:"actual_dataset_id,omitempty"`
 	ActualProtocolVersion *string     `json:"actual_protocol_version,omitempty"`
 
 	// ActualRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
-	ActualRevision          *Counter         `json:"actual_revision,omitempty"`
-	EarliestCursor          *Cursor          `json:"earliest_cursor,omitempty"`
-	ExpectedDatasetId       *Identifier      `json:"expected_dataset_id,omitempty"`
-	ExpectedProtocolVersion *ProtocolVersion `json:"expected_protocol_version,omitempty"`
+	ActualRevision          *Counter    `json:"actual_revision,omitempty"`
+	EarliestCursor          *Cursor     `json:"earliest_cursor,omitempty"`
+	ExpectedDatasetId       *Identifier `json:"expected_dataset_id,omitempty"`
+	ExpectedProtocolVersion *string     `json:"expected_protocol_version,omitempty"`
 
 	// ExpectedRevision Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
 	ExpectedRevision  *Counter     `json:"expected_revision,omitempty"`
@@ -4807,6 +4833,11 @@ type MilitaryDisplayWithdrawnClassification string
 
 // MilitaryDisplayWithdrawnState defines model for MilitaryDisplayWithdrawn.State.
 type MilitaryDisplayWithdrawnState string
+
+// MoveToCommand defines model for MoveToCommand.
+type MoveToCommand struct {
+	union json.RawMessage
+}
 
 // MoveToGeofeature Must resolve to a Point geometry at admission. Revision use is reported by the Asset, never inferred.
 type MoveToGeofeature struct {
@@ -5911,8 +5942,11 @@ type SubscriptionAckFrameType string
 
 // SyncErrorFrame defines model for SyncErrorFrame.
 type SyncErrorFrame struct {
-	Response ErrorResponse      `json:"response"`
-	Type     SyncErrorFrameType `json:"type"`
+	CoreRunId       Identifier         `json:"core_run_id"`
+	DatasetId       Identifier         `json:"dataset_id"`
+	ProtocolVersion string             `json:"protocol_version"`
+	Response        ErrorResponse      `json:"response"`
+	Type            SyncErrorFrameType `json:"type"`
 }
 
 // SyncErrorFrameType defines model for SyncErrorFrame.Type.
@@ -6202,116 +6236,117 @@ type UpsertChangeKind string
 // Dataset defines model for Dataset.
 type Dataset = Identifier
 
-// Version defines model for Version.
-type Version = ProtocolVersion
+// VersionContext defines model for VersionContext.
+type VersionContext = ProtocolVersion
 
 // ReadActivityParams defines parameters for ReadActivity.
 type ReadActivityParams struct {
-	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
-	StartAt              *Timestamp `form:"start_at,omitempty" json:"start_at,omitempty"`
-	EndAt                *Timestamp `form:"end_at,omitempty" json:"end_at,omitempty"`
-	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	StartAt              *Timestamp     `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt                *Timestamp     `form:"end_at,omitempty" json:"end_at,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListApiKeysParams defines parameters for ListApiKeys.
 type ListApiKeysParams struct {
-	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
-	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CreateApiKeyParams defines parameters for CreateApiKey.
 type CreateApiKeyParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // RevokeApiKeyParams defines parameters for RevokeApiKey.
 type RevokeApiKeyParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListAssetsParams defines parameters for ListAssets.
 type ListAssetsParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	Ids                  *[]Identifier `form:"ids,omitempty" json:"ids,omitempty"`
-	Aliases              *[]Alias      `form:"aliases,omitempty" json:"aliases,omitempty"`
-	Names                *[]Name       `form:"names,omitempty" json:"names,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	Ids                  *[]Identifier  `form:"ids,omitempty" json:"ids,omitempty"`
+	Aliases              *[]Alias       `form:"aliases,omitempty" json:"aliases,omitempty"`
+	Names                *[]Name        `form:"names,omitempty" json:"names,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // RegisterAssetParams defines parameters for RegisterAsset.
 type RegisterAssetParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetAssetByAliasParams defines parameters for GetAssetByAlias.
 type GetAssetByAliasParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	Alias                Alias          `form:"alias" json:"alias"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // DeleteAssetParams defines parameters for DeleteAsset.
 type DeleteAssetParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetAssetParams defines parameters for GetAsset.
 type GetAssetParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // UpdateAssetParams defines parameters for UpdateAsset.
 type UpdateAssetParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // RequestContactChallengeParams defines parameters for RequestContactChallenge.
 type RequestContactChallengeParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetAssetMovementHistoryParams defines parameters for GetAssetMovementHistory.
 type GetAssetMovementHistoryParams struct {
-	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
-	StartAt              *Timestamp `form:"start_at,omitempty" json:"start_at,omitempty"`
-	EndAt                *Timestamp `form:"end_at,omitempty" json:"end_at,omitempty"`
-	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	StartAt              *Timestamp     `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt                *Timestamp     `form:"end_at,omitempty" json:"end_at,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetAssetObjectsParams defines parameters for GetAssetObjects.
 type GetAssetObjectsParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
-	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier  `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier  `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReplaceAssetProcessParams defines parameters for ReplaceAssetProcess.
 type ReplaceAssetProcessParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetAssetStatusParams defines parameters for GetAssetStatus.
 type GetAssetStatusParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetAssignedTasksParams defines parameters for GetAssignedTasks.
@@ -6320,92 +6355,93 @@ type GetAssignedTasksParams struct {
 	PageToken            *PageToken       `form:"page_token,omitempty" json:"page_token,omitempty"`
 	QueueRevision        *PositiveCounter `form:"queue_revision,omitempty" json:"queue_revision,omitempty"`
 	AtlasDatasetID       Dataset          `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version          `json:"Atlas-Protocol-Version"`
+	AtlasProtocolVersion VersionContext   `json:"Atlas-Protocol-Version"`
 }
 
 // SetTaskOrderParams defines parameters for SetTaskOrder.
 type SetTaskOrderParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ConfirmTaskOrderParams defines parameters for ConfirmTaskOrder.
 type ConfirmTaskOrderParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReadChangesParams defines parameters for ReadChanges.
 type ReadChangesParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListGeofeaturesParams defines parameters for ListGeofeatures.
 type ListGeofeaturesParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	Ids                  *[]Identifier `form:"ids,omitempty" json:"ids,omitempty"`
-	Aliases              *[]Alias      `form:"aliases,omitempty" json:"aliases,omitempty"`
-	Names                *[]Name       `form:"names,omitempty" json:"names,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	Ids                  *[]Identifier  `form:"ids,omitempty" json:"ids,omitempty"`
+	Aliases              *[]Alias       `form:"aliases,omitempty" json:"aliases,omitempty"`
+	Names                *[]Name        `form:"names,omitempty" json:"names,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CreateGeofeatureParams defines parameters for CreateGeofeature.
 type CreateGeofeatureParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetGeofeatureByAliasParams defines parameters for GetGeofeatureByAlias.
 type GetGeofeatureByAliasParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	Alias                Alias          `form:"alias" json:"alias"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // DeleteGeofeatureParams defines parameters for DeleteGeofeature.
 type DeleteGeofeatureParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetGeofeatureParams defines parameters for GetGeofeature.
 type GetGeofeatureParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // EditGeofeatureParams defines parameters for EditGeofeature.
 type EditGeofeatureParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetGeofeatureObjectsParams defines parameters for GetGeofeatureObjects.
 type GetGeofeatureObjectsParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
-	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier  `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier  `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListObjectsParams defines parameters for ListObjects.
 type ListObjectsParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
-	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier  `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier  `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // UploadObjectParams defines parameters for UploadObject.
 type UploadObjectParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 
 	// AtlasObjectDescriptor Unpadded base64url of UTF-8 UploadObjectDescriptor JSON. Bound before decoding. The body is its complete binary stream.
 	AtlasObjectDescriptor string `json:"Atlas-Object-Descriptor"`
@@ -6413,27 +6449,27 @@ type UploadObjectParams struct {
 
 // DeleteObjectParams defines parameters for DeleteObject.
 type DeleteObjectParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetObjectParams defines parameters for GetObject.
 type GetObjectParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // EditObjectParams defines parameters for EditObject.
 type EditObjectParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReadObjectContentParams defines parameters for ReadObjectContent.
 type ReadObjectContentParams struct {
 	Disposition          *ReadObjectContentParamsDisposition `form:"disposition,omitempty" json:"disposition,omitempty"`
 	AtlasDatasetID       Dataset                             `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version                             `json:"Atlas-Protocol-Version"`
+	AtlasProtocolVersion VersionContext                      `json:"Atlas-Protocol-Version"`
 }
 
 // ReadObjectContentParamsDisposition defines parameters for ReadObjectContent.
@@ -6446,226 +6482,227 @@ type ListOperationsParams struct {
 	PluginIds            *[]Identifier     `form:"plugin_ids,omitempty" json:"plugin_ids,omitempty"`
 	States               *[]OperationState `form:"states,omitempty" json:"states,omitempty"`
 	AtlasDatasetID       Dataset           `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version           `json:"Atlas-Protocol-Version"`
+	AtlasProtocolVersion VersionContext    `json:"Atlas-Protocol-Version"`
 }
 
 // ListOperatorsParams defines parameters for ListOperators.
 type ListOperatorsParams struct {
-	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
-	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CreateOperatorParams defines parameters for CreateOperator.
 type CreateOperatorParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // DeleteOperatorParams defines parameters for DeleteOperator.
 type DeleteOperatorParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetOperatorParams defines parameters for GetOperator.
 type GetOperatorParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // EditOperatorParams defines parameters for EditOperator.
 type EditOperatorParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListPluginsParams defines parameters for ListPlugins.
 type ListPluginsParams struct {
-	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
-	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetPluginParams defines parameters for GetPlugin.
 type GetPluginParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CreateOperationParams defines parameters for CreateOperation.
 type CreateOperationParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetOperationParams defines parameters for GetOperation.
 type GetOperationParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CancelOperationParams defines parameters for CancelOperation.
 type CancelOperationParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetReadinessParams defines parameters for GetReadiness.
 type GetReadinessParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetReferenceParams defines parameters for GetReference.
 type GetReferenceParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetReferenceDocumentParams defines parameters for GetReferenceDocument.
 type GetReferenceDocumentParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListResourcesParams defines parameters for ListResources.
 type ListResourcesParams struct {
-	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
-	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReadSnapshotParams defines parameters for ReadSnapshot.
 type ReadSnapshotParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReleaseSnapshotParams defines parameters for ReleaseSnapshot.
 type ReleaseSnapshotParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListTasksParams defines parameters for ListTasks.
 type ListTasksParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	AssetIds             *[]Identifier `form:"asset_ids,omitempty" json:"asset_ids,omitempty"`
-	States               *[]TaskState  `form:"states,omitempty" json:"states,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	AssetIds             *[]Identifier  `form:"asset_ids,omitempty" json:"asset_ids,omitempty"`
+	States               *[]TaskState   `form:"states,omitempty" json:"states,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CreateTaskParams defines parameters for CreateTask.
 type CreateTaskParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetTaskParams defines parameters for GetTask.
 type GetTaskParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // RequestTaskCancellationParams defines parameters for RequestTaskCancellation.
 type RequestTaskCancellationParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReportTaskExecutionParams defines parameters for ReportTaskExecution.
 type ReportTaskExecutionParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetTaskObjectsParams defines parameters for GetTaskObjects.
 type GetTaskObjectsParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
-	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier  `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier  `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReportTaskResultsParams defines parameters for ReportTaskResults.
 type ReportTaskResultsParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ListTracksParams defines parameters for ListTracks.
 type ListTracksParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	Ids                  *[]Identifier `form:"ids,omitempty" json:"ids,omitempty"`
-	Aliases              *[]Alias      `form:"aliases,omitempty" json:"aliases,omitempty"`
-	Names                *[]Name       `form:"names,omitempty" json:"names,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	Ids                  *[]Identifier  `form:"ids,omitempty" json:"ids,omitempty"`
+	Aliases              *[]Alias       `form:"aliases,omitempty" json:"aliases,omitempty"`
+	Names                *[]Name        `form:"names,omitempty" json:"names,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CreateTrackParams defines parameters for CreateTrack.
 type CreateTrackParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetTrackByAliasParams defines parameters for GetTrackByAlias.
 type GetTrackByAliasParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	Alias                Alias          `form:"alias" json:"alias"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // DeleteTrackParams defines parameters for DeleteTrack.
 type DeleteTrackParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetTrackParams defines parameters for GetTrack.
 type GetTrackParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // EditTrackParams defines parameters for EditTrack.
 type EditTrackParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetTrackMovementHistoryParams defines parameters for GetTrackMovementHistory.
 type GetTrackMovementHistoryParams struct {
-	PageSize             *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
-	StartAt              *Timestamp `form:"start_at,omitempty" json:"start_at,omitempty"`
-	EndAt                *Timestamp `form:"end_at,omitempty" json:"end_at,omitempty"`
-	AtlasDatasetID       Dataset    `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version    `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	StartAt              *Timestamp     `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt                *Timestamp     `form:"end_at,omitempty" json:"end_at,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // GetTrackObjectsParams defines parameters for GetTrackObjects.
 type GetTrackObjectsParams struct {
-	PageSize             *int          `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken    `form:"page_token,omitempty" json:"page_token,omitempty"`
-	EntityIds            *[]Identifier `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
-	TaskIds              *[]Identifier `form:"task_ids,omitempty" json:"task_ids,omitempty"`
-	AtlasDatasetID       Dataset       `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version       `json:"Atlas-Protocol-Version"`
+	PageSize             *int           `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken            *PageToken     `form:"page_token,omitempty" json:"page_token,omitempty"`
+	EntityIds            *[]Identifier  `form:"entity_ids,omitempty" json:"entity_ids,omitempty"`
+	TaskIds              *[]Identifier  `form:"task_ids,omitempty" json:"task_ids,omitempty"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // ReportTrackObservationsParams defines parameters for ReportTrackObservations.
 type ReportTrackObservationsParams struct {
-	AtlasDatasetID       Dataset `json:"Atlas-Dataset-ID"`
-	AtlasProtocolVersion Version `json:"Atlas-Protocol-Version"`
+	AtlasDatasetID       Dataset        `json:"Atlas-Dataset-ID"`
+	AtlasProtocolVersion VersionContext `json:"Atlas-Protocol-Version"`
 }
 
 // CreateApiKeyJSONRequestBody defines body for CreateApiKey for application/json ContentType.
@@ -8922,6 +8959,68 @@ func (t MilitaryDisplaySection) MarshalJSON() ([]byte, error) {
 }
 
 func (t *MilitaryDisplaySection) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsQueuedMoveTo returns the union data inside the MoveToCommand as a QueuedMoveTo
+func (t MoveToCommand) AsQueuedMoveTo() (QueuedMoveTo, error) {
+	var body QueuedMoveTo
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromQueuedMoveTo overwrites any union data inside the MoveToCommand as the provided QueuedMoveTo
+func (t *MoveToCommand) FromQueuedMoveTo(v QueuedMoveTo) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeQueuedMoveTo performs a merge with any union data inside the MoveToCommand, using the provided QueuedMoveTo
+func (t *MoveToCommand) MergeQueuedMoveTo(v QueuedMoveTo) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsImmediateMoveTo returns the union data inside the MoveToCommand as a ImmediateMoveTo
+func (t MoveToCommand) AsImmediateMoveTo() (ImmediateMoveTo, error) {
+	var body ImmediateMoveTo
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromImmediateMoveTo overwrites any union data inside the MoveToCommand as the provided ImmediateMoveTo
+func (t *MoveToCommand) FromImmediateMoveTo(v ImmediateMoveTo) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeImmediateMoveTo performs a merge with any union data inside the MoveToCommand, using the provided ImmediateMoveTo
+func (t *MoveToCommand) MergeImmediateMoveTo(v ImmediateMoveTo) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t MoveToCommand) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *MoveToCommand) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -11511,48 +11610,22 @@ func (t *StatusSection) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-// AsQueuedMoveTo returns the union data inside the TaskCommand as a QueuedMoveTo
-func (t TaskCommand) AsQueuedMoveTo() (QueuedMoveTo, error) {
-	var body QueuedMoveTo
+// AsMoveToCommand returns the union data inside the TaskCommand as a MoveToCommand
+func (t TaskCommand) AsMoveToCommand() (MoveToCommand, error) {
+	var body MoveToCommand
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromQueuedMoveTo overwrites any union data inside the TaskCommand as the provided QueuedMoveTo
-func (t *TaskCommand) FromQueuedMoveTo(v QueuedMoveTo) error {
+// FromMoveToCommand overwrites any union data inside the TaskCommand as the provided MoveToCommand
+func (t *TaskCommand) FromMoveToCommand(v MoveToCommand) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeQueuedMoveTo performs a merge with any union data inside the TaskCommand, using the provided QueuedMoveTo
-func (t *TaskCommand) MergeQueuedMoveTo(v QueuedMoveTo) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsImmediateMoveTo returns the union data inside the TaskCommand as a ImmediateMoveTo
-func (t TaskCommand) AsImmediateMoveTo() (ImmediateMoveTo, error) {
-	var body ImmediateMoveTo
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromImmediateMoveTo overwrites any union data inside the TaskCommand as the provided ImmediateMoveTo
-func (t *TaskCommand) FromImmediateMoveTo(v ImmediateMoveTo) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeImmediateMoveTo performs a merge with any union data inside the TaskCommand, using the provided ImmediateMoveTo
-func (t *TaskCommand) MergeImmediateMoveTo(v ImmediateMoveTo) error {
+// MergeMoveToCommand performs a merge with any union data inside the TaskCommand, using the provided MoveToCommand
+func (t *TaskCommand) MergeMoveToCommand(v MoveToCommand) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

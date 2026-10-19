@@ -4,7 +4,7 @@ Geometry describes a point, line, or polygon using a shared spatial value.
 Geofeatures require it. Applicable Tracks can report an observed extent. Asset
 location uses [Position](telemetry.md#position).
 
-## Proposed representation
+## Representation
 
 Use a two-dimensional subset of [GeoJSON Geometry](https://www.rfc-editor.org/rfc/rfc7946.html#section-3.1).
 Each object has required, non-null `type` and `coordinates` fields. Its geometry
@@ -18,11 +18,11 @@ Each object has required, non-null `type` and `coordinates` fields. Its geometry
 
 Use WGS84 degrees and the bounds from [Position](telemetry.md#position), preserving
 double precision. Coordinate tuples reference the same longitude and latitude scalar
-definitions in the schemas. The single polygon ring is the exterior. Follow GeoJSON
-winding rules. A polygon must have nonzero area and must not intersect itself.
+definitions in the schemas. The single polygon ring is the exterior. The exterior ring uses counterclockwise winding. A polygon must have nonzero area and must not intersect itself.
 
 Accept only these two-dimensional geometry objects. Feature wrappers, collections,
 holes, multipart geometry, and dateline- or pole-spanning shapes are unsupported.
+A Point at either pole is valid. A pole vertex alone does not make an area unsupported.
 The initial maximum is 1,024 coordinate pairs in total, including a ring's repeated
 closing pair. Command altitude uses the explicit [Altitude](telemetry.md#altitude) value.
 
@@ -32,7 +32,7 @@ silently close, simplify, reorient, split, or repair submitted geometry.
 
 ## Examples
 
-Valid point under the proposal:
+Valid point as a component value:
 
 ```json
 {"type": "Point", "coordinates": [-0.1278, 51.5074]}

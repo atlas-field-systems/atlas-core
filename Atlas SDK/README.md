@@ -4,7 +4,9 @@ SDK is the IP-specific TypeScript client for Atlas Core.
 It consumes [Protocol](../Atlas%20Protocol/README.md), exchanges messages with Core
 over HTTP/JSON and WebSocket, and provides handwritten workflows that use generated
 declarations.
-It must not import Core's database, private types, or internal service interfaces.
+This folder documents the client; its runtime is not implemented. The executable
+Protocol package supplies its declarations and stateless validators.
+SDK must not import Core's database, private types, or internal service interfaces.
 
 ## Two explicit read modes
 

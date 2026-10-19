@@ -3,8 +3,8 @@
 Protocol defines what a message means. Its link defines how it is carried.
 Requests, results, reports, and notifications reuse Protocol's component schemas.
 Core validates the contract independently of the link that delivers the message.
-Message names, exact payloads, type identifiers, and reply envelopes remain
-proposals.
+The authored [OpenAPI contract](openapi.json) defines exact payloads, type
+identifiers, reply envelopes, routes, and WebSocket frames.
 
 ## Message contracts
 
@@ -13,7 +13,7 @@ Required values, behavior for null and omitted values, bounds, and component
 references belong in shared OpenAPI schemas. Bindings define how the link represents
 and exchanges messages.
 
-Expected users describe proposed workflows, not permissions.
+Expected users describe typical workflows, not permissions.
 Any valid key has the same public permissions under [Identity](identity.md).
 The named caller originates the request or report. A gateway may carry it on their behalf.
 
@@ -62,7 +62,7 @@ resumable-upload exchange, or remote Core-configuration message.
 
 ## Administration messages
 
-| Proposed message | Expected user and purpose | Request | Result |
+| Message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
 | `ListResources` | Administration app inspects resource usage and capacity | Bounded inspection query | Resource usage |
 | `ReadActivity` | Operator app or diagnostic tool investigates recorded activity | Bounded activity query | Activity records |
@@ -77,7 +77,7 @@ resumable-upload exchange, or remote Core-configuration message.
 
 ## Discovery messages
 
-| Proposed message | Expected user and purpose | Request | Result |
+| Message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
 | `GetHealth` | Connecting application discovers the Dataset, exact Protocol version, and health | Authenticated health and discovery request | Dataset, exact Protocol version, and health under [Wire](wire.md) |
 | `GetReadiness` | Deployment monitor checks whether Core is ready to serve requests | Authenticated readiness request | Readiness information |
@@ -85,7 +85,7 @@ resumable-upload exchange, or remote Core-configuration message.
 
 ## Synchronization messages
 
-| Proposed message | Expected user and purpose | Request | Result |
+| Message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
 | `ReadSnapshot` | Application maintaining a synchronized picture stages its initial resource views | Snapshot capture and paging context | Captured resource views under [Synchronization](synchronization.md) |
 | `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Bounded replay context | Whole committed change batches |
@@ -93,6 +93,6 @@ resumable-upload exchange, or remote Core-configuration message.
 | `ReleaseSnapshot` | Loading application frees its capture after paging or cancellation | Capture identity | Release acknowledgment or explicit refusal |
 
 Core sends synchronization replies for release, handoff, replay, gaps, and recovery
-as defined by [Synchronization](synchronization.md). Exact reply message names remain open.
+as defined by [Synchronization](synchronization.md). The OpenAPI schemas name each control and reply.
 
 [Next: wire conventions](wire.md)

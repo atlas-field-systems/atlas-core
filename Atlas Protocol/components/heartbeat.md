@@ -3,9 +3,9 @@
 Heartbeat carries contact evidence and exposes the contact Core has accepted.
 It can establish fresh contact without resending unchanged position or camera
 calibration. [Reports](../reports.md#time-and-contact) owns proof acceptance and
-expiry. The input and output layouts below are proposals.
+expiry. [OpenAPI](../openapi.json) owns the separate input and read schemas.
 
-## Proposed evidence fields
+## Evidence fields
 
 | Field | Type | Presence | Meaning |
 | --- | --- | --- | --- |
@@ -15,9 +15,10 @@ The containing update supplies the [shared source context](../reports.md#shared-
 A challenge reference is evidence only when validated with the original source
 facts and the existing challenge rules. A gateway's own response is not Asset proof.
 Heartbeat evidence can accompany `UpdateAsset` without changing a measured section.
-The evidence envelope and challenge exchange remain proposed, not a complete handshake.
+`RequestContactChallenge` and `ReplaceAssetProcess` carry the challenge exchange
+defined by [process generations](../reports.md#process-generations).
 
-## Proposed read fields
+## Read fields
 
 | Field | Type | Presence | Meaning |
 | --- | --- | --- | --- |
@@ -30,22 +31,23 @@ section and does not refresh other sections' observation times.
 
 ## Examples
 
-Proposed proof fragment, requiring its enclosing source context:
+Proof fragment, requiring its enclosing source context:
 
 ```json
 {"challenge_id": "143c5ce7-f80e-4c4e-94af-8af39d995487"}
 ```
 
-Before fresh contact, the proposed read fragment is `{"last_contact_at": null}`.
+Before fresh contact, a read fragment is `{"last_contact_at": null}`.
 Invalid proof fragment because a submitted health flag is not contact evidence:
 
 ```json
 {"healthy": true}
 ```
 
-## Decisions to settle
+## Scope
 
-Confirm evidence fields, challenge and result messages, and exactly how the read
-timestamp relates to retained receipt facts.
+The read view also names `core_run_id`. Retained receipts identify original
+source and submitting key separately. Protocol validates these shapes; Core owns
+challenge expiry and acceptance.
 
 [Component index](README.md)

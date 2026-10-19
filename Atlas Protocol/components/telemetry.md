@@ -1,12 +1,12 @@
 # Telemetry
 
-Telemetry is the proposed complete section for an Entity's location and motion.
-The name and exact field layout remain proposals. A report supplies this whole
+Telemetry is the complete section for an Entity's location and motion.
+The [OpenAPI contract](../openapi.json) owns its exact layout. A report supplies this whole
 section, including defined null values, rather than a single-value update.
 The same whole-snapshot ordering applies to Asset and Track Telemetry. The source
 assembles the snapshot; Core does not merge independently arriving quantities.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -15,7 +15,7 @@ assembles the snapshot; Core does not merge independently arriving quantities.
 | `ground_speed` | Number or null | Required | Horizontal metres per second, at least zero; null when unknown |
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
-Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
+Also include the [reported result definitions](README.md#reported-results).
 Unknown readings do not imply an error. Actual failures use the shared error
 representation. Body heading belongs in [Attitude](attitude.md), separately from
 direction of travel.
@@ -49,7 +49,7 @@ explicit `wgs84_ellipsoid` reference. AGL and MSL must not be silently substitut
 | `metres` | Number | Required, non-null | Finite signed metres; negative and zero are allowed |
 | `reference` | String | Required, non-null | Exactly `wgs84_ellipsoid` |
 
-The object layout and absence of an operational height limit remain proposals.
+Altitude has no Protocol operational height cap.
 The containing field defines how unknown altitude uses null or omission.
 
 - Valid: `{"metres": -12.5, "reference": "wgs84_ellipsoid"}`.
@@ -57,7 +57,7 @@ The containing field defines how unknown altitude uses null or omission.
 
 ## Complete section example
 
-Valid under the proposed field contract:
+Valid component value:
 
 ```json
 {
@@ -68,7 +68,7 @@ Valid under the proposed field contract:
 }
 ```
 
-Omitted `airspeed` is allowed by this proposal. Neither omission nor null
+Omitted `airspeed` is allowed. Neither omission nor null
 substitutes an older subfield value.
 
 This fragment is an invalid replacement because required fields are missing:
@@ -83,12 +83,15 @@ A mounted camera can retain a complete Telemetry section as state until changed.
 Aircraft and a commandless vehicle tracker can report it as dated measurements.
 This does not require every Entity to have Telemetry.
 
-The proposed [`UpdateAsset`](../messaging/assets.md#updating-sections) message
+The [`UpdateAsset`](../messaging/assets.md#updating-sections) message
 carries this Asset section.
 
-Settle the section name, required nullable fields, optional airspeed, and source-time
-layout. A single section timestamp must not conceal older constituent readings.
-Longitude endpoint canonicalization and Altitude's object layout remain open.
-Uncertainty fields and exact Track field applicability remain undefined.
+`observed_at` supplies the common original time. Optional
+`position_observed_at`, `altitude_observed_at`, `ground_speed_observed_at`, and
+`airspeed_observed_at` override it for their quantities. An omitted override uses
+the common time; explicit null records an unknown original time. The enclosing
+section carries one source sequence, including on Tracks. Longitude endpoints
+retain their original values; no canonicalization occurs. Position quality and
+uncertainty fields remain deferred.
 
 [Component index](README.md)

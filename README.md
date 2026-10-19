@@ -3,14 +3,15 @@
 **Atlas coordinates field systems: observe what exists, ask Assets to do work,
 and retain what they report.**
 
-This repository is a documentation-only design experiment. Nothing here claims
-an implemented API, generated package, passing runtime, or qualified deployment.
+Atlas Protocol includes an executable contract package with generated Go and
+TypeScript declarations and stateless validation. Core and SDK remain design
+documents. There is no implemented Core server, SDK runtime, or qualified deployment.
 
 ## Three layers, one contract
 
 | Layer | Owns | Does not own |
 | --- | --- | --- |
-| **Atlas Protocol** | Shared vocabulary, schemas, message contracts, observable rules | Databases, processes, implementation |
+| **Atlas Protocol** | Shared vocabulary, schemas, message contracts, observable rules | Databases, processes, server or client workflows |
 | **Atlas Core** | A running server that enforces Protocol and retains state | Physical execution on a drone |
 | **Atlas SDK** | An IP-specific TypeScript client for Protocol | Server policy or private Core internals |
 
@@ -37,5 +38,6 @@ Each folder's README gives its short reading order. Contributors also read
 folder to reconcile. Earlier explanations remain in Git history, not as a second
 active specification.
 
-These pages are the current design baseline, not a complete executable wire
-specification. Concrete schemas and independent acceptance examples remain incomplete.
+The [Protocol package](Atlas%20Protocol/README.md#verify-and-consume) supplies the
+executable wire contract and independent acceptance fixtures. Core and SDK behavior
+still requires implementation and integration qualification.

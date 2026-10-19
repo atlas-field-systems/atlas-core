@@ -1,0 +1,10 @@
+import type {components} from '../ts/wire.gen.js';
+type S = components['schemas'];
+const counter: S['Counter'] = 18446744073709551615;
+const coordinate: S['Coordinate'] = [0, 0, 1];
+const incomplete: S['Telemetry'] = {position: null, observed_at: null};
+const pluginCommand: S['TaskCommand'] = {command: 'scan', scheduling: 'queued'};
+const missingVariant: S['AssetType'] = {kind: 'drone'};
+const impossibleType: S['AssetType'] = {kind: 'tracker', variant: null};
+const wrongControl: S['TaskCommand'] = {command: 'pause', scheduling: 'queued'};
+const inputAuthority: S['SourceEvidence'] = {evidence_id: '', sequence: '1', correction_revision: '0', generated_at: null, evidence_kind: 'current', received_at: ''};

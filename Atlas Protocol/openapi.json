@@ -15,7 +15,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -102,7 +102,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -131,49 +131,55 @@
             "name": "ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "aliases",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Alias"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Alias"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "names",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Name"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Name"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -252,7 +258,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -337,7 +343,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -432,7 +438,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -520,93 +526,6 @@
         }
       }
     },
-    "/assets/by-alias/{alias}": {
-      "get": {
-        "operationId": "GetAssetByAlias",
-        "summary": "GetAssetByAlias",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Dataset"
-          },
-          {
-            "$ref": "#/components/parameters/Version"
-          },
-          {
-            "name": "alias",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/Alias"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Result.",
-            "headers": {
-              "Atlas-Dataset-ID": {
-                "$ref": "#/components/headers/Dataset"
-              },
-              "Atlas-Protocol-Version": {
-                "$ref": "#/components/headers/Version"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetAssetByAliasResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Error400"
-          },
-          "401": {
-            "$ref": "#/components/responses/Error401"
-          },
-          "403": {
-            "$ref": "#/components/responses/Error403"
-          },
-          "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "410": {
-            "$ref": "#/components/responses/Error410"
-          },
-          "413": {
-            "$ref": "#/components/responses/Error413"
-          },
-          "415": {
-            "$ref": "#/components/responses/Error415"
-          },
-          "422": {
-            "$ref": "#/components/responses/Error422"
-          },
-          "429": {
-            "$ref": "#/components/responses/Error429"
-          },
-          "500": {
-            "$ref": "#/components/responses/Error500"
-          },
-          "503": {
-            "$ref": "#/components/responses/Error503"
-          },
-          "507": {
-            "$ref": "#/components/responses/Error507"
-          }
-        },
-        "x-atlas-binding": {
-          "query_schema": "EmptyQuery",
-          "body_schema": null,
-          "response_schema": "GetAssetByAliasResponse",
-          "mutation": false
-        }
-      }
-    },
     "/assets/{asset_id}/objects": {
       "get": {
         "operationId": "GetAssetObjects",
@@ -616,7 +535,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -653,33 +572,37 @@
             "name": "entity_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "task_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -758,7 +681,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -888,7 +811,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -975,7 +898,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -1004,49 +927,55 @@
             "name": "ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "aliases",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Alias"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Alias"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "names",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Name"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Name"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -1125,7 +1054,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "track_id",
@@ -1210,7 +1139,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "track_id",
@@ -1305,7 +1234,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "track_id",
@@ -1393,93 +1322,6 @@
         }
       }
     },
-    "/tracks/by-alias/{alias}": {
-      "get": {
-        "operationId": "GetTrackByAlias",
-        "summary": "GetTrackByAlias",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Dataset"
-          },
-          {
-            "$ref": "#/components/parameters/Version"
-          },
-          {
-            "name": "alias",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/Alias"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Result.",
-            "headers": {
-              "Atlas-Dataset-ID": {
-                "$ref": "#/components/headers/Dataset"
-              },
-              "Atlas-Protocol-Version": {
-                "$ref": "#/components/headers/Version"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetTrackByAliasResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Error400"
-          },
-          "401": {
-            "$ref": "#/components/responses/Error401"
-          },
-          "403": {
-            "$ref": "#/components/responses/Error403"
-          },
-          "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "410": {
-            "$ref": "#/components/responses/Error410"
-          },
-          "413": {
-            "$ref": "#/components/responses/Error413"
-          },
-          "415": {
-            "$ref": "#/components/responses/Error415"
-          },
-          "422": {
-            "$ref": "#/components/responses/Error422"
-          },
-          "429": {
-            "$ref": "#/components/responses/Error429"
-          },
-          "500": {
-            "$ref": "#/components/responses/Error500"
-          },
-          "503": {
-            "$ref": "#/components/responses/Error503"
-          },
-          "507": {
-            "$ref": "#/components/responses/Error507"
-          }
-        },
-        "x-atlas-binding": {
-          "query_schema": "EmptyQuery",
-          "body_schema": null,
-          "response_schema": "GetTrackByAliasResponse",
-          "mutation": false
-        }
-      }
-    },
     "/tracks/{track_id}/objects": {
       "get": {
         "operationId": "GetTrackObjects",
@@ -1489,7 +1331,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "track_id",
@@ -1526,33 +1368,37 @@
             "name": "entity_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "task_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -1631,7 +1477,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "track_id",
@@ -1761,7 +1607,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -1848,7 +1694,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -1877,49 +1723,55 @@
             "name": "ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "aliases",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Alias"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Alias"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "names",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Name"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Name"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -1998,7 +1850,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "geofeature_id",
@@ -2083,7 +1935,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "geofeature_id",
@@ -2178,7 +2030,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "geofeature_id",
@@ -2266,93 +2118,6 @@
         }
       }
     },
-    "/geofeatures/by-alias/{alias}": {
-      "get": {
-        "operationId": "GetGeofeatureByAlias",
-        "summary": "GetGeofeatureByAlias",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Dataset"
-          },
-          {
-            "$ref": "#/components/parameters/Version"
-          },
-          {
-            "name": "alias",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/Alias"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Result.",
-            "headers": {
-              "Atlas-Dataset-ID": {
-                "$ref": "#/components/headers/Dataset"
-              },
-              "Atlas-Protocol-Version": {
-                "$ref": "#/components/headers/Version"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetGeofeatureByAliasResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Error400"
-          },
-          "401": {
-            "$ref": "#/components/responses/Error401"
-          },
-          "403": {
-            "$ref": "#/components/responses/Error403"
-          },
-          "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "410": {
-            "$ref": "#/components/responses/Error410"
-          },
-          "413": {
-            "$ref": "#/components/responses/Error413"
-          },
-          "415": {
-            "$ref": "#/components/responses/Error415"
-          },
-          "422": {
-            "$ref": "#/components/responses/Error422"
-          },
-          "429": {
-            "$ref": "#/components/responses/Error429"
-          },
-          "500": {
-            "$ref": "#/components/responses/Error500"
-          },
-          "503": {
-            "$ref": "#/components/responses/Error503"
-          },
-          "507": {
-            "$ref": "#/components/responses/Error507"
-          }
-        },
-        "x-atlas-binding": {
-          "query_schema": "EmptyQuery",
-          "body_schema": null,
-          "response_schema": "GetGeofeatureByAliasResponse",
-          "mutation": false
-        }
-      }
-    },
     "/geofeatures/{geofeature_id}/objects": {
       "get": {
         "operationId": "GetGeofeatureObjects",
@@ -2362,7 +2127,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "geofeature_id",
@@ -2399,33 +2164,37 @@
             "name": "entity_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "task_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -2504,7 +2273,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -2591,7 +2360,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "track_id",
@@ -2688,7 +2457,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -2785,7 +2554,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -2882,7 +2651,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -2969,7 +2738,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -2998,33 +2767,37 @@
             "name": "asset_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "states",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/TaskState"
-              },
-              "minItems": 0,
-              "maxItems": 8,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskState"
+                  },
+                  "minItems": 0,
+                  "maxItems": 8,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -3103,7 +2876,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "task_id",
@@ -3190,7 +2963,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "task_id",
@@ -3287,7 +3060,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "task_id",
@@ -3384,7 +3157,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "task_id",
@@ -3481,7 +3254,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "task_id",
@@ -3518,33 +3291,37 @@
             "name": "entity_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "task_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -3623,7 +3400,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -3743,7 +3520,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -3840,7 +3617,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "asset_id",
@@ -3937,7 +3714,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "Atlas-Object-Descriptor",
@@ -4035,7 +3812,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -4064,33 +3841,37 @@
             "name": "entity_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "task_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -4169,7 +3950,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "object_id",
@@ -4254,7 +4035,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "object_id",
@@ -4349,7 +4130,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "object_id",
@@ -4446,7 +4227,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "object_id",
@@ -4506,7 +4287,7 @@
               }
             },
             "content": {
-              "application/octet-stream": {
+              "*/*": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
@@ -4571,7 +4352,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -4673,7 +4454,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "plugin_id",
@@ -4760,7 +4541,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "plugin_id",
@@ -4857,7 +4638,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -4886,33 +4667,37 @@
             "name": "plugin_ids",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Identifier"
-              },
-              "minItems": 0,
-              "maxItems": 1000,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  "minItems": 0,
+                  "maxItems": 1000,
+                  "uniqueItems": true
+                }
+              }
+            }
           },
           {
             "name": "states",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/OperationState"
-              },
-              "minItems": 0,
-              "maxItems": 7,
-              "uniqueItems": true
-            },
-            "style": "form",
-            "explode": true
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OperationState"
+                  },
+                  "minItems": 0,
+                  "maxItems": 7,
+                  "uniqueItems": true
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -4991,7 +4776,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "plugin_id",
@@ -5086,7 +4871,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "plugin_id",
@@ -5191,7 +4976,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -5293,7 +5078,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -5415,7 +5200,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -5515,7 +5300,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -5604,7 +5389,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "key_id",
@@ -5701,7 +5486,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "page_size",
@@ -5801,7 +5586,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -5890,7 +5675,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "operator_id",
@@ -5975,7 +5760,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "operator_id",
@@ -6070,7 +5855,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           },
           {
             "name": "operator_id",
@@ -6240,7 +6025,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -6319,7 +6104,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -6403,7 +6188,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -6483,7 +6268,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -6572,7 +6357,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -6661,7 +6446,7 @@
             "$ref": "#/components/parameters/Dataset"
           },
           {
-            "$ref": "#/components/parameters/Version"
+            "$ref": "#/components/parameters/VersionContext"
           }
         ],
         "responses": {
@@ -6832,6 +6617,267 @@
         },
         "security": [],
         "description": "WebSocket upgrade. First frame carries authentication, Dataset and exact version; no public data before authentication."
+      }
+    },
+    "/assets/by-alias": {
+      "get": {
+        "operationId": "GetAssetByAlias",
+        "summary": "GetAssetByAlias",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Dataset"
+          },
+          {
+            "$ref": "#/components/parameters/VersionContext"
+          },
+          {
+            "name": "alias",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Alias"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result.",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Dataset"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAssetByAliasResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "410": {
+            "$ref": "#/components/responses/Error410"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "507": {
+            "$ref": "#/components/responses/Error507"
+          }
+        },
+        "x-atlas-binding": {
+          "query_schema": "AliasQuery",
+          "body_schema": null,
+          "response_schema": "GetAssetByAliasResponse",
+          "mutation": false
+        }
+      }
+    },
+    "/tracks/by-alias": {
+      "get": {
+        "operationId": "GetTrackByAlias",
+        "summary": "GetTrackByAlias",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Dataset"
+          },
+          {
+            "$ref": "#/components/parameters/VersionContext"
+          },
+          {
+            "name": "alias",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Alias"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result.",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Dataset"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTrackByAliasResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "410": {
+            "$ref": "#/components/responses/Error410"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "507": {
+            "$ref": "#/components/responses/Error507"
+          }
+        },
+        "x-atlas-binding": {
+          "query_schema": "AliasQuery",
+          "body_schema": null,
+          "response_schema": "GetTrackByAliasResponse",
+          "mutation": false
+        }
+      }
+    },
+    "/geofeatures/by-alias": {
+      "get": {
+        "operationId": "GetGeofeatureByAlias",
+        "summary": "GetGeofeatureByAlias",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Dataset"
+          },
+          {
+            "$ref": "#/components/parameters/VersionContext"
+          },
+          {
+            "name": "alias",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Alias"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result.",
+            "headers": {
+              "Atlas-Dataset-ID": {
+                "$ref": "#/components/headers/Dataset"
+              },
+              "Atlas-Protocol-Version": {
+                "$ref": "#/components/headers/Version"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetGeofeatureByAliasResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "410": {
+            "$ref": "#/components/responses/Error410"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "507": {
+            "$ref": "#/components/responses/Error507"
+          }
+        },
+        "x-atlas-binding": {
+          "query_schema": "AliasQuery",
+          "body_schema": null,
+          "response_schema": "GetGeofeatureByAliasResponse",
+          "mutation": false
+        }
       }
     }
   },
@@ -7017,13 +7063,13 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 128,
-        "pattern": "^\\S(?:[^\\r\\n]*\\S)?$"
+        "pattern": "^[^\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff](?:[^\r\n]*[^\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff])?$"
       },
       "Name": {
         "type": "string",
         "minLength": 1,
         "maxLength": 128,
-        "pattern": "\\S"
+        "pattern": "[^\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]"
       },
       "Description": {
         "type": "object",
@@ -7906,10 +7952,7 @@
       "Coordinate": {
         "type": "array",
         "items": {
-          "type": "number",
-          "format": "double",
-          "minimum": -180,
-          "maximum": 180
+          "$ref": "#/components/schemas/Longitude"
         },
         "minItems": 2,
         "maxItems": 2
@@ -10984,10 +11027,7 @@
       "TaskCommand": {
         "oneOf": [
           {
-            "$ref": "#/components/schemas/QueuedMoveTo"
-          },
-          {
-            "$ref": "#/components/schemas/ImmediateMoveTo"
+            "$ref": "#/components/schemas/MoveToCommand"
           },
           {
             "$ref": "#/components/schemas/PauseCommand"
@@ -13476,7 +13516,9 @@
             "$ref": "#/components/schemas/Identifier"
           },
           "expected_protocol_version": {
-            "$ref": "#/components/schemas/ProtocolVersion"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           },
           "actual_protocol_version": {
             "type": "string",
@@ -13505,7 +13547,8 @@
             "maxLength": 512
           }
         },
-        "required": []
+        "required": [],
+        "description": "expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version."
       },
       "Error400": {
         "type": "object",
@@ -14435,11 +14478,25 @@
           },
           "response": {
             "$ref": "#/components/schemas/ErrorResponse"
+          },
+          "dataset_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "core_run_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "protocol_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
           "type",
-          "response"
+          "response",
+          "dataset_id",
+          "core_run_id",
+          "protocol_version"
         ]
       },
       "ClientFrame": {
@@ -15681,6 +15738,16 @@
             "type": "boolean"
           }
         }
+      },
+      "MoveToCommand": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/QueuedMoveTo"
+          },
+          {
+            "$ref": "#/components/schemas/ImmediateMoveTo"
+          }
+        ]
       }
     },
     "securitySchemes": {
@@ -15699,7 +15766,7 @@
           "$ref": "#/components/schemas/Identifier"
         }
       },
-      "Version": {
+      "VersionContext": {
         "name": "Atlas-Protocol-Version",
         "in": "header",
         "required": true,
@@ -15719,7 +15786,9 @@
       "Version": {
         "required": true,
         "schema": {
-          "$ref": "#/components/schemas/ProtocolVersion"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
         },
         "description": "Actual Core Protocol version, including mismatch errors."
       }
@@ -16310,7 +16379,7 @@
     {
       "command": "move_to",
       "name": "Move To",
-      "schema": "TaskCommand",
+      "schema": "MoveToCommand",
       "scheduling": [
         "queued",
         "immediate"

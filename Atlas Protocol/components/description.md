@@ -3,9 +3,9 @@
 Description supplies the human-readable name and details shown for an Entity.
 It is authored data. Asset descriptions use `UpdateAsset`. Track and Geofeature
 descriptions use their respective edit messages and descriptive revision checks.
-The fields and bounds below are proposals.
+[OpenAPI](../openapi.json) owns the fields and bounds.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ Asset updates replace the complete supplied section under [update rules](../repo
 
 ## Examples
 
-Valid Asset description under the proposal:
+Valid Asset description as a component value:
 
 ```json
 {

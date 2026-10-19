@@ -1,0 +1,3566 @@
+[
+  {
+    "name": "RegisterAsset",
+    "request_schema": "RegisterAssetRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "description": {
+        "name": "North camera",
+        "manufacturer": "Example"
+      },
+      "registration_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "process_generation": "00000000-0000-0000-0000-000000000002",
+      "credential": {
+        "key_id": "00000000-0000-0000-0000-000000000002",
+        "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "type": {
+        "kind": "security_camera"
+      },
+      "capabilities": {
+        "commands": [
+          {
+            "command": "move_to",
+            "scheduling": [
+              "queued",
+              "immediate"
+            ]
+          },
+          {
+            "command": "pause",
+            "scheduling": [
+              "immediate"
+            ]
+          },
+          {
+            "command": "resume",
+            "scheduling": [
+              "immediate"
+            ]
+          }
+        ]
+      }
+    },
+    "response_schema": "RegisterAssetResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "18446744073709551615",
+        "edit_revision": "1",
+        "alias": null,
+        "entity_type": "asset",
+        "description": {
+          "name": "North camera",
+          "manufacturer": "Example"
+        },
+        "type": {
+          "kind": "security_camera"
+        },
+        "capabilities": {
+          "commands": [
+            {
+              "command": "move_to",
+              "scheduling": [
+                "queued",
+                "immediate"
+              ]
+            },
+            {
+              "command": "pause",
+              "scheduling": [
+                "immediate"
+              ]
+            },
+            {
+              "command": "resume",
+              "scheduling": [
+                "immediate"
+              ]
+            }
+          ]
+        },
+        "process_generation": "00000000-0000-0000-0000-000000000002",
+        "status": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "condition": "healthy",
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "asset",
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "process_generation": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        },
+        "communications": {
+          "reported": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "bandwidth_bps": null,
+                "observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          },
+          "health": "offline"
+        },
+        "heartbeat": {
+          "last_contact_at": null,
+          "core_run_id": "00000000-0000-0000-0000-000000000002"
+        },
+        "telemetry": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "asset",
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "process_generation": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        }
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "ListAssets",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListAssetsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "18446744073709551615",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "asset",
+            "description": {
+              "name": "North camera",
+              "manufacturer": "Example"
+            },
+            "type": {
+              "kind": "security_camera"
+            },
+            "capabilities": {
+              "commands": [
+                {
+                  "command": "move_to",
+                  "scheduling": [
+                    "queued",
+                    "immediate"
+                  ]
+                },
+                {
+                  "command": "pause",
+                  "scheduling": [
+                    "immediate"
+                  ]
+                },
+                {
+                  "command": "resume",
+                  "scheduling": [
+                    "immediate"
+                  ]
+                }
+              ]
+            },
+            "process_generation": "00000000-0000-0000-0000-000000000002",
+            "status": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "condition": "healthy",
+                  "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "asset",
+                  "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "process_generation": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            },
+            "communications": {
+              "reported": {
+                "state": "reported",
+                "result": {
+                  "state": "value",
+                  "classification": "dated_measurement",
+                  "evidence": {
+                    "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "sequence": "18446744073709551615",
+                    "correction_revision": "0",
+                    "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                    "evidence_kind": "current"
+                  },
+                  "value": {
+                    "bandwidth_bps": null,
+                    "observed_at": null
+                  }
+                },
+                "receipt": {
+                  "received_at": "2026-10-18T01:02:04.1234+05:30",
+                  "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                  "core_run_id": "00000000-0000-0000-0000-000000000002",
+                  "source": {
+                    "kind": "asset",
+                    "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "process_generation": "00000000-0000-0000-0000-000000000002"
+                  }
+                }
+              },
+              "health": "offline"
+            },
+            "heartbeat": {
+              "last_contact_at": null,
+              "core_run_id": "00000000-0000-0000-0000-000000000002"
+            },
+            "telemetry": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "position": {
+                    "latitude": 51.5074123456789,
+                    "longitude": -0.1278123456789
+                  },
+                  "altitude": {
+                    "metres": -12.50000000001,
+                    "reference": "wgs84_ellipsoid"
+                  },
+                  "ground_speed": 0,
+                  "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "position_observed_at": "2026-10-18T01:02:01+05:30",
+                  "altitude_observed_at": null
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "asset",
+                  "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "process_generation": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": "ids=%5B%5D&page_size=100"
+  },
+  {
+    "name": "GetAsset",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetAssetResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "18446744073709551615",
+        "edit_revision": "1",
+        "alias": null,
+        "entity_type": "asset",
+        "description": {
+          "name": "North camera",
+          "manufacturer": "Example"
+        },
+        "type": {
+          "kind": "security_camera"
+        },
+        "capabilities": {
+          "commands": [
+            {
+              "command": "move_to",
+              "scheduling": [
+                "queued",
+                "immediate"
+              ]
+            },
+            {
+              "command": "pause",
+              "scheduling": [
+                "immediate"
+              ]
+            },
+            {
+              "command": "resume",
+              "scheduling": [
+                "immediate"
+              ]
+            }
+          ]
+        },
+        "process_generation": "00000000-0000-0000-0000-000000000002",
+        "status": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "condition": "healthy",
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "asset",
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "process_generation": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        },
+        "communications": {
+          "reported": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "bandwidth_bps": null,
+                "observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          },
+          "health": "offline"
+        },
+        "heartbeat": {
+          "last_contact_at": null,
+          "core_run_id": "00000000-0000-0000-0000-000000000002"
+        },
+        "telemetry": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "asset",
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "process_generation": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        }
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetAssetByAlias",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetAssetByAliasResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "18446744073709551615",
+        "edit_revision": "1",
+        "alias": "..",
+        "entity_type": "asset",
+        "description": {
+          "name": "North camera",
+          "manufacturer": "Example"
+        },
+        "type": {
+          "kind": "security_camera"
+        },
+        "capabilities": {
+          "commands": [
+            {
+              "command": "move_to",
+              "scheduling": [
+                "queued",
+                "immediate"
+              ]
+            },
+            {
+              "command": "pause",
+              "scheduling": [
+                "immediate"
+              ]
+            },
+            {
+              "command": "resume",
+              "scheduling": [
+                "immediate"
+              ]
+            }
+          ]
+        },
+        "process_generation": "00000000-0000-0000-0000-000000000002",
+        "status": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "condition": "healthy",
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "asset",
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "process_generation": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        },
+        "communications": {
+          "reported": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "bandwidth_bps": null,
+                "observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          },
+          "health": "offline"
+        },
+        "heartbeat": {
+          "last_contact_at": null,
+          "core_run_id": "00000000-0000-0000-0000-000000000002"
+        },
+        "telemetry": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "asset",
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "process_generation": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        }
+      }
+    },
+    "status": 200,
+    "query": "alias=.."
+  },
+  {
+    "name": "UpdateAsset",
+    "request_schema": "UpdateAssetRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "descriptive": {
+        "expected_edit_revision": "1",
+        "sections": {
+          "description": {
+            "name": "Revised"
+          }
+        }
+      },
+      "report": {
+        "source": {
+          "kind": "asset",
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "process_generation": "00000000-0000-0000-0000-000000000002"
+        },
+        "sections": {
+          "telemetry": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          }
+        },
+        "heartbeat": {
+          "challenge_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "evidence": {
+            "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "sequence": "18446744073709551615",
+            "correction_revision": "0",
+            "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+            "evidence_kind": "current"
+          }
+        }
+      }
+    },
+    "response_schema": "UpdateAssetResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "asset": {
+          "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "version": "18446744073709551615",
+          "edit_revision": "1",
+          "alias": null,
+          "entity_type": "asset",
+          "description": {
+            "name": "North camera",
+            "manufacturer": "Example"
+          },
+          "type": {
+            "kind": "security_camera"
+          },
+          "capabilities": {
+            "commands": [
+              {
+                "command": "move_to",
+                "scheduling": [
+                  "queued",
+                  "immediate"
+                ]
+              },
+              {
+                "command": "pause",
+                "scheduling": [
+                  "immediate"
+                ]
+              },
+              {
+                "command": "resume",
+                "scheduling": [
+                  "immediate"
+                ]
+              }
+            ]
+          },
+          "process_generation": "00000000-0000-0000-0000-000000000002",
+          "status": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "condition": "healthy",
+                "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          },
+          "communications": {
+            "reported": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "bandwidth_bps": null,
+                  "observed_at": null
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "asset",
+                  "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "process_generation": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            },
+            "health": "offline"
+          },
+          "heartbeat": {
+            "last_contact_at": null,
+            "core_run_id": "00000000-0000-0000-0000-000000000002"
+          },
+          "telemetry": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "position": {
+                  "latitude": 51.5074123456789,
+                  "longitude": -0.1278123456789
+                },
+                "altitude": {
+                  "metres": -12.50000000001,
+                  "reference": "wgs84_ellipsoid"
+                },
+                "ground_speed": 0,
+                "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                "position_observed_at": "2026-10-18T01:02:01+05:30",
+                "altitude_observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          }
+        },
+        "dispositions": [
+          {
+            "section": "telemetry",
+            "disposition": "accepted"
+          }
+        ],
+        "fresh_contact": false
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "DeleteAsset",
+    "request_schema": "DeleteAssetRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "DeleteAssetResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "accepted": "committed"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetAssetObjects",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetAssetObjectsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "edit_revision": "1",
+            "byte_length": "3",
+            "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "content_type": "text/plain",
+            "metadata": {
+              "name": "sample.txt",
+              "entity_ids": [
+                "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+              ],
+              "task_ids": []
+            },
+            "published_at": "2026-10-18T01:02:03.123400000+05:30"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetAssetMovementHistory",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetAssetMovementHistoryResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "entity_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "telemetry": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "position": {
+                  "latitude": 51.5074123456789,
+                  "longitude": -0.1278123456789
+                },
+                "altitude": {
+                  "metres": -12.50000000001,
+                  "reference": "wgs84_ellipsoid"
+                },
+                "ground_speed": 0,
+                "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                "position_observed_at": "2026-10-18T01:02:01+05:30",
+                "altitude_observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": "start_at=2026-10-18T00%3A00%3A00Z"
+  },
+  {
+    "name": "CreateTrack",
+    "request_schema": "CreateTrackRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "track_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "description": {
+        "name": "Vehicle"
+      },
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "observations": {
+        "telemetry": {
+          "state": "value",
+          "classification": "dated_measurement",
+          "evidence": {
+            "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "sequence": "18446744073709551615",
+            "correction_revision": "0",
+            "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+            "evidence_kind": "current"
+          },
+          "value": {
+            "position": {
+              "latitude": 51.5074123456789,
+              "longitude": -0.1278123456789
+            },
+            "altitude": {
+              "metres": -12.50000000001,
+              "reference": "wgs84_ellipsoid"
+            },
+            "ground_speed": 0,
+            "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+            "position_observed_at": "2026-10-18T01:02:01+05:30",
+            "altitude_observed_at": null
+          }
+        }
+      }
+    },
+    "response_schema": "CreateTrackResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": "Detection-1",
+        "entity_type": "track",
+        "publisher_id": "00000000-0000-0000-0000-000000000002",
+        "description": {
+          "name": "Vehicle"
+        },
+        "telemetry": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "publisher",
+              "publisher_id": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        }
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "ListTracks",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListTracksResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "edit_revision": "1",
+            "alias": "Detection-1",
+            "entity_type": "track",
+            "publisher_id": "00000000-0000-0000-0000-000000000002",
+            "description": {
+              "name": "Vehicle"
+            },
+            "telemetry": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "position": {
+                    "latitude": 51.5074123456789,
+                    "longitude": -0.1278123456789
+                  },
+                  "altitude": {
+                    "metres": -12.50000000001,
+                    "reference": "wgs84_ellipsoid"
+                  },
+                  "ground_speed": 0,
+                  "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "position_observed_at": "2026-10-18T01:02:01+05:30",
+                  "altitude_observed_at": null
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "publisher",
+                  "publisher_id": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": "ids=%5B%5D&page_size=100"
+  },
+  {
+    "name": "GetTrack",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetTrackResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": "Detection-1",
+        "entity_type": "track",
+        "publisher_id": "00000000-0000-0000-0000-000000000002",
+        "description": {
+          "name": "Vehicle"
+        },
+        "telemetry": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "publisher",
+              "publisher_id": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        }
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetTrackByAlias",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetTrackByAliasResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": "..",
+        "entity_type": "track",
+        "publisher_id": "00000000-0000-0000-0000-000000000002",
+        "description": {
+          "name": "Vehicle"
+        },
+        "telemetry": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "publisher",
+              "publisher_id": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        }
+      }
+    },
+    "status": 200,
+    "query": "alias=.."
+  },
+  {
+    "name": "EditTrack",
+    "request_schema": "EditTrackRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "track_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "expected_edit_revision": "1",
+      "description": {
+        "description": null
+      }
+    },
+    "response_schema": "EditTrackResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": "Detection-1",
+        "entity_type": "track",
+        "publisher_id": "00000000-0000-0000-0000-000000000002",
+        "description": {
+          "name": "Vehicle"
+        },
+        "telemetry": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "position": {
+                "latitude": 51.5074123456789,
+                "longitude": -0.1278123456789
+              },
+              "altitude": {
+                "metres": -12.50000000001,
+                "reference": "wgs84_ellipsoid"
+              },
+              "ground_speed": 0,
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+              "position_observed_at": "2026-10-18T01:02:01+05:30",
+              "altitude_observed_at": null
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "publisher",
+              "publisher_id": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        }
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "DeleteTrack",
+    "request_schema": "DeleteTrackRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "track_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "DeleteTrackResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "accepted": "committed"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetTrackObjects",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetTrackObjectsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "edit_revision": "1",
+            "byte_length": "3",
+            "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "content_type": "text/plain",
+            "metadata": {
+              "name": "sample.txt",
+              "entity_ids": [
+                "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+              ],
+              "task_ids": []
+            },
+            "published_at": "2026-10-18T01:02:03.123400000+05:30"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetTrackMovementHistory",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetTrackMovementHistoryResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "entity_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "telemetry": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "position": {
+                  "latitude": 51.5074123456789,
+                  "longitude": -0.1278123456789
+                },
+                "altitude": {
+                  "metres": -12.50000000001,
+                  "reference": "wgs84_ellipsoid"
+                },
+                "ground_speed": 0,
+                "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                "position_observed_at": "2026-10-18T01:02:01+05:30",
+                "altitude_observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": "start_at=2026-10-18T00%3A00%3A00Z"
+  },
+  {
+    "name": "CreateGeofeature",
+    "request_schema": "CreateGeofeatureRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "geofeature_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "description": {
+        "name": "Pole waypoint"
+      },
+      "type": {
+        "kind": "point_of_interest"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0,
+          90
+        ]
+      }
+    },
+    "response_schema": "CreateGeofeatureResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": null,
+        "entity_type": "geofeature",
+        "description": {
+          "name": "Pole waypoint"
+        },
+        "type": {
+          "kind": "point_of_interest"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            0,
+            90
+          ]
+        },
+        "geometry_revision": "1"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "ListGeofeatures",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListGeofeaturesResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "geofeature",
+            "description": {
+              "name": "Pole waypoint"
+            },
+            "type": {
+              "kind": "point_of_interest"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                90
+              ]
+            },
+            "geometry_revision": "1"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": "ids=%5B%5D&page_size=100"
+  },
+  {
+    "name": "GetGeofeature",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetGeofeatureResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": null,
+        "entity_type": "geofeature",
+        "description": {
+          "name": "Pole waypoint"
+        },
+        "type": {
+          "kind": "point_of_interest"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            0,
+            90
+          ]
+        },
+        "geometry_revision": "1"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetGeofeatureByAlias",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetGeofeatureByAliasResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": "..",
+        "entity_type": "geofeature",
+        "description": {
+          "name": "Pole waypoint"
+        },
+        "type": {
+          "kind": "point_of_interest"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            0,
+            90
+          ]
+        },
+        "geometry_revision": "1"
+      }
+    },
+    "status": 200,
+    "query": "alias=.."
+  },
+  {
+    "name": "EditGeofeature",
+    "request_schema": "EditGeofeatureRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "geofeature_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "expected_edit_revision": "1",
+      "description": {
+        "description": null
+      }
+    },
+    "response_schema": "EditGeofeatureResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "alias": null,
+        "entity_type": "geofeature",
+        "description": {
+          "name": "Pole waypoint"
+        },
+        "type": {
+          "kind": "point_of_interest"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            0,
+            90
+          ]
+        },
+        "geometry_revision": "1"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "DeleteGeofeature",
+    "request_schema": "DeleteGeofeatureRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "geofeature_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "DeleteGeofeatureResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "accepted": "committed"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetGeofeatureObjects",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetGeofeatureObjectsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "edit_revision": "1",
+            "byte_length": "3",
+            "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "content_type": "text/plain",
+            "metadata": {
+              "name": "sample.txt",
+              "entity_ids": [
+                "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+              ],
+              "task_ids": []
+            },
+            "published_at": "2026-10-18T01:02:03.123400000+05:30"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetAssetStatus",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetAssetStatusResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "status": {
+          "state": "reported",
+          "result": {
+            "state": "value",
+            "classification": "dated_measurement",
+            "evidence": {
+              "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "sequence": "18446744073709551615",
+              "correction_revision": "0",
+              "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+              "evidence_kind": "current"
+            },
+            "value": {
+              "condition": "healthy",
+              "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+            }
+          },
+          "receipt": {
+            "received_at": "2026-10-18T01:02:04.1234+05:30",
+            "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+            "core_run_id": "00000000-0000-0000-0000-000000000002",
+            "source": {
+              "kind": "asset",
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "process_generation": "00000000-0000-0000-0000-000000000002"
+            }
+          }
+        },
+        "communications": {
+          "reported": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "bandwidth_bps": null,
+                "observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          },
+          "health": "offline"
+        },
+        "heartbeat": {
+          "last_contact_at": null,
+          "core_run_id": "00000000-0000-0000-0000-000000000002"
+        }
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReportTrackObservations",
+    "request_schema": "ReportTrackObservationsRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "track_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "sections": {
+        "telemetry": {
+          "state": "value",
+          "classification": "dated_measurement",
+          "evidence": {
+            "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "sequence": "18446744073709551615",
+            "correction_revision": "0",
+            "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+            "evidence_kind": "current"
+          },
+          "value": {
+            "position": {
+              "latitude": 51.5074123456789,
+              "longitude": -0.1278123456789
+            },
+            "altitude": {
+              "metres": -12.50000000001,
+              "reference": "wgs84_ellipsoid"
+            },
+            "ground_speed": 0,
+            "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+            "position_observed_at": "2026-10-18T01:02:01+05:30",
+            "altitude_observed_at": null
+          }
+        }
+      }
+    },
+    "response_schema": "ReportTrackObservationsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "track": {
+          "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "version": "1",
+          "edit_revision": "1",
+          "alias": "Detection-1",
+          "entity_type": "track",
+          "publisher_id": "00000000-0000-0000-0000-000000000002",
+          "description": {
+            "name": "Vehicle"
+          },
+          "telemetry": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "position": {
+                  "latitude": 51.5074123456789,
+                  "longitude": -0.1278123456789
+                },
+                "altitude": {
+                  "metres": -12.50000000001,
+                  "reference": "wgs84_ellipsoid"
+                },
+                "ground_speed": 0,
+                "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                "position_observed_at": "2026-10-18T01:02:01+05:30",
+                "altitude_observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "publisher",
+                "publisher_id": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          }
+        },
+        "dispositions": [
+          {
+            "section": "telemetry",
+            "disposition": "accepted"
+          }
+        ]
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "RequestContactChallenge",
+    "request_schema": "ContactChallengeRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "process_generation": "00000000-0000-0000-0000-000000000002"
+    },
+    "response_schema": "RequestContactChallengeResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "challenge_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "request_id": "00000000-0000-0000-0000-000000000002",
+        "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "process_generation": "00000000-0000-0000-0000-000000000002",
+        "issued_at": "2026-10-18T00:00:00Z",
+        "expires_at": "2026-10-18T00:00:10Z",
+        "expires_in_seconds": 10
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReplaceAssetProcess",
+    "request_schema": "ReplaceAssetProcessRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "expected_generation": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "process_generation": "00000000-0000-0000-0000-000000000002",
+      "core_run_id": "00000000-0000-0000-0000-000000000002",
+      "first_check_in": {
+        "challenge_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "evidence": {
+          "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "sequence": "18446744073709551615",
+          "correction_revision": "0",
+          "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+          "evidence_kind": "current"
+        }
+      }
+    },
+    "response_schema": "ReplaceAssetProcessResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "asset": {
+          "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "version": "18446744073709551615",
+          "edit_revision": "1",
+          "alias": null,
+          "entity_type": "asset",
+          "description": {
+            "name": "North camera",
+            "manufacturer": "Example"
+          },
+          "type": {
+            "kind": "security_camera"
+          },
+          "capabilities": {
+            "commands": [
+              {
+                "command": "move_to",
+                "scheduling": [
+                  "queued",
+                  "immediate"
+                ]
+              },
+              {
+                "command": "pause",
+                "scheduling": [
+                  "immediate"
+                ]
+              },
+              {
+                "command": "resume",
+                "scheduling": [
+                  "immediate"
+                ]
+              }
+            ]
+          },
+          "process_generation": "00000000-0000-0000-0000-000000000002",
+          "status": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "condition": "healthy",
+                "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          },
+          "communications": {
+            "reported": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "bandwidth_bps": null,
+                  "observed_at": null
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "asset",
+                  "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "process_generation": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            },
+            "health": "offline"
+          },
+          "heartbeat": {
+            "last_contact_at": null,
+            "core_run_id": "00000000-0000-0000-0000-000000000002"
+          },
+          "telemetry": {
+            "state": "reported",
+            "result": {
+              "state": "value",
+              "classification": "dated_measurement",
+              "evidence": {
+                "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "sequence": "18446744073709551615",
+                "correction_revision": "0",
+                "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                "evidence_kind": "current"
+              },
+              "value": {
+                "position": {
+                  "latitude": 51.5074123456789,
+                  "longitude": -0.1278123456789
+                },
+                "altitude": {
+                  "metres": -12.50000000001,
+                  "reference": "wgs84_ellipsoid"
+                },
+                "ground_speed": 0,
+                "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                "position_observed_at": "2026-10-18T01:02:01+05:30",
+                "altitude_observed_at": null
+              }
+            },
+            "receipt": {
+              "received_at": "2026-10-18T01:02:04.1234+05:30",
+              "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+              "core_run_id": "00000000-0000-0000-0000-000000000002",
+              "source": {
+                "kind": "asset",
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "process_generation": "00000000-0000-0000-0000-000000000002"
+              }
+            }
+          }
+        },
+        "dispositions": [],
+        "fresh_contact": true
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "CreateTask",
+    "request_schema": "CreateTaskRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "task_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "command": {
+        "command": "move_to",
+        "scheduling": "queued",
+        "target": {
+          "kind": "position",
+          "position": {
+            "latitude": 0,
+            "longitude": 0
+          }
+        }
+      }
+    },
+    "response_schema": "CreateTaskResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "command": {
+          "command": "move_to",
+          "scheduling": "queued",
+          "target": {
+            "kind": "position",
+            "position": {
+              "latitude": 0,
+              "longitude": 0
+            }
+          }
+        },
+        "submission_sequence": "18446744073709551615",
+        "state": "pending",
+        "results": []
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "ListTasks",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListTasksResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "command": {
+              "command": "move_to",
+              "scheduling": "queued",
+              "target": {
+                "kind": "position",
+                "position": {
+                  "latitude": 0,
+                  "longitude": 0
+                }
+              }
+            },
+            "submission_sequence": "18446744073709551615",
+            "state": "pending",
+            "results": []
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": "states=%5B%22pending%22%5D"
+  },
+  {
+    "name": "GetTask",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetTaskResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "command": {
+          "command": "move_to",
+          "scheduling": "queued",
+          "target": {
+            "kind": "position",
+            "position": {
+              "latitude": 0,
+              "longitude": 0
+            }
+          }
+        },
+        "submission_sequence": "18446744073709551615",
+        "state": "pending",
+        "results": []
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReportTaskExecution",
+    "request_schema": "ReportTaskExecutionRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "task_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "report": {
+        "source": {
+          "kind": "asset",
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "process_generation": "00000000-0000-0000-0000-000000000002"
+        },
+        "evidence": {
+          "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "sequence": "18446744073709551615",
+          "correction_revision": "0",
+          "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+          "evidence_kind": "current"
+        },
+        "outcome": {
+          "state": "completed",
+          "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+        }
+      }
+    },
+    "response_schema": "ReportTaskExecutionResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "command": {
+          "command": "move_to",
+          "scheduling": "queued",
+          "target": {
+            "kind": "position",
+            "position": {
+              "latitude": 0,
+              "longitude": 0
+            }
+          }
+        },
+        "submission_sequence": "18446744073709551615",
+        "state": "pending",
+        "results": []
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "RequestTaskCancellation",
+    "request_schema": "RequestTaskCancellationRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "task_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "RequestTaskCancellationResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "command": {
+          "command": "move_to",
+          "scheduling": "queued",
+          "target": {
+            "kind": "position",
+            "position": {
+              "latitude": 0,
+              "longitude": 0
+            }
+          }
+        },
+        "submission_sequence": "18446744073709551615",
+        "state": "pending",
+        "results": []
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReportTaskResults",
+    "request_schema": "ReportTaskResultsRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "task_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "source": {
+        "kind": "asset",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "process_generation": "00000000-0000-0000-0000-000000000002"
+      },
+      "evidence": {
+        "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "sequence": "18446744073709551615",
+        "correction_revision": "0",
+        "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+        "evidence_kind": "current"
+      },
+      "results": [
+        {
+          "object_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "required": true
+        }
+      ]
+    },
+    "response_schema": "ReportTaskResultsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "command": {
+          "command": "move_to",
+          "scheduling": "queued",
+          "target": {
+            "kind": "position",
+            "position": {
+              "latitude": 0,
+              "longitude": 0
+            }
+          }
+        },
+        "submission_sequence": "18446744073709551615",
+        "state": "pending",
+        "results": []
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetTaskObjects",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetTaskObjectsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "edit_revision": "1",
+            "byte_length": "3",
+            "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "content_type": "text/plain",
+            "metadata": {
+              "name": "sample.txt",
+              "entity_ids": [
+                "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+              ],
+              "task_ids": []
+            },
+            "published_at": "2026-10-18T01:02:03.123400000+05:30"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetAssignedTasks",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetAssignedTasksResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "command": {
+              "command": "move_to",
+              "scheduling": "queued",
+              "target": {
+                "kind": "position",
+                "position": {
+                  "latitude": 0,
+                  "longitude": 0
+                }
+              }
+            },
+            "submission_sequence": "18446744073709551615",
+            "state": "pending",
+            "results": []
+          }
+        ],
+        "queue_revision": "1",
+        "next_page_token": "queue-page"
+      }
+    },
+    "status": 200,
+    "query": "queue_revision=1"
+  },
+  {
+    "name": "SetTaskOrder",
+    "request_schema": "SetTaskOrderRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "expected_queue_revision": "1",
+      "task_ids": [
+        "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+      ]
+    },
+    "response_schema": "SetTaskOrderResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "revision": "1",
+        "task_ids": [
+          "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+        ],
+        "confirmed_revision": null
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ConfirmTaskOrder",
+    "request_schema": "ConfirmTaskOrderRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "source": {
+        "kind": "asset",
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "process_generation": "00000000-0000-0000-0000-000000000002"
+      },
+      "evidence": {
+        "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "sequence": "18446744073709551615",
+        "correction_revision": "0",
+        "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+        "evidence_kind": "current"
+      },
+      "queue_revision": "1",
+      "task_ids": [
+        "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+      ]
+    },
+    "response_schema": "ConfirmTaskOrderResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "revision": "1",
+        "task_ids": [
+          "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+        ],
+        "confirmed_revision": null
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "UploadObject",
+    "request_schema": "UploadObjectDescriptor",
+    "request": {
+      "object_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "byte_length": "3",
+      "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "content_type": "text/plain",
+      "metadata": {
+        "name": "sample.txt",
+        "entity_ids": [
+          "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+        ],
+        "task_ids": []
+      }
+    },
+    "response_schema": "UploadObjectResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "byte_length": "3",
+        "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "content_type": "text/plain",
+        "metadata": {
+          "name": "sample.txt",
+          "entity_ids": [
+            "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+          ],
+          "task_ids": []
+        },
+        "published_at": "2026-10-18T01:02:03.123400000+05:30"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "ListObjects",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListObjectsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "edit_revision": "1",
+            "byte_length": "3",
+            "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "content_type": "text/plain",
+            "metadata": {
+              "name": "sample.txt",
+              "entity_ids": [
+                "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+              ],
+              "task_ids": []
+            },
+            "published_at": "2026-10-18T01:02:03.123400000+05:30"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetObject",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetObjectResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "byte_length": "3",
+        "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "content_type": "text/plain",
+        "metadata": {
+          "name": "sample.txt",
+          "entity_ids": [
+            "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+          ],
+          "task_ids": []
+        },
+        "published_at": "2026-10-18T01:02:03.123400000+05:30"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "EditObject",
+    "request_schema": "EditObjectRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "object_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "expected_edit_revision": "1",
+      "metadata": {
+        "name": "sample.txt",
+        "entity_ids": [
+          "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+        ],
+        "task_ids": []
+      }
+    },
+    "response_schema": "EditObjectResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "edit_revision": "1",
+        "byte_length": "3",
+        "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "content_type": "text/plain",
+        "metadata": {
+          "name": "sample.txt",
+          "entity_ids": [
+            "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+          ],
+          "task_ids": []
+        },
+        "published_at": "2026-10-18T01:02:03.123400000+05:30"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "DeleteObject",
+    "request_schema": "DeleteObjectRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "object_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "DeleteObjectResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "accepted": "committed"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReadObjectContent",
+    "request_schema": null,
+    "request": null,
+    "response_schema": null,
+    "response": null,
+    "status": 200,
+    "query": "disposition=attachment"
+  },
+  {
+    "name": "ListPlugins",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListPluginsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "release": "example-1",
+            "name": "Independent plugin",
+            "available": true,
+            "capabilities": [
+              {
+                "name": "look-up",
+                "input_schema": {
+                  "uri": "https://plugin.invalid/release-1/input.json",
+                  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                },
+                "output_schema": {
+                  "uri": "https://plugin.invalid/release-1/output.json",
+                  "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                }
+              }
+            ]
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetPlugin",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetPluginResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "release": "example-1",
+        "name": "Independent plugin",
+        "available": true,
+        "capabilities": [
+          {
+            "name": "look-up",
+            "input_schema": {
+              "uri": "https://plugin.invalid/release-1/input.json",
+              "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "output_schema": {
+              "uri": "https://plugin.invalid/release-1/output.json",
+              "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          }
+        ]
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "CreateOperation",
+    "request_schema": "CreateOperationRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "operation_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "capability": "look-up",
+      "input": {
+        "new-plugin-field": [
+          null,
+          true,
+          1.23456789012345
+        ],
+        "geometry": {
+          "type": "unsupported-plugin-shape",
+          "coordinates": [
+            1,
+            2,
+            3
+          ]
+        }
+      }
+    },
+    "response_schema": "CreateOperationResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "release": "example-1",
+        "capability": "look-up",
+        "input": {
+          "new-plugin-field": [
+            null,
+            true,
+            1.23456789012345
+          ],
+          "geometry": {
+            "type": "unsupported-plugin-shape",
+            "coordinates": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "state": "pending",
+        "object_ids": []
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "ListOperations",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListOperationsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "1",
+            "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "release": "example-1",
+            "capability": "look-up",
+            "input": {
+              "new-plugin-field": [
+                null,
+                true,
+                1.23456789012345
+              ],
+              "geometry": {
+                "type": "unsupported-plugin-shape",
+                "coordinates": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            },
+            "state": "pending",
+            "object_ids": []
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": "states=%5B%22pending%22%5D"
+  },
+  {
+    "name": "GetOperation",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetOperationResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "release": "example-1",
+        "capability": "look-up",
+        "input": {
+          "new-plugin-field": [
+            null,
+            true,
+            1.23456789012345
+          ],
+          "geometry": {
+            "type": "unsupported-plugin-shape",
+            "coordinates": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "state": "pending",
+        "object_ids": []
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "CancelOperation",
+    "request_schema": "CancelOperationRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "operation_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "CancelOperationResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "version": "1",
+        "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "release": "example-1",
+        "capability": "look-up",
+        "input": {
+          "new-plugin-field": [
+            null,
+            true,
+            1.23456789012345
+          ],
+          "geometry": {
+            "type": "unsupported-plugin-shape",
+            "coordinates": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "state": "pending",
+        "object_ids": []
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ListResources",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListResourcesResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "kind": "objects",
+            "used_bytes": "18446744073709551615",
+            "limit_bytes": "18446744073709551615"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReadActivity",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ReadActivityResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "recorded_at": "2026-10-18T01:02:03.123400000+05:30",
+            "kind": "asset_deleted",
+            "message": "Unfinished Task remains retained."
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ListApiKeys",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListApiKeysResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "name": "Gateway",
+            "created_at": "2026-10-18T01:02:03.123400000+05:30",
+            "revoked_at": null,
+            "associated_asset_id": null
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "CreateApiKey",
+    "request_schema": "CreateApiKeyRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "creation_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "credential": {
+        "key_id": "00000000-0000-0000-0000-000000000002",
+        "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "name": "New gateway"
+    },
+    "response_schema": "CreateApiKeyResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "name": "Gateway",
+        "created_at": "2026-10-18T01:02:03.123400000+05:30",
+        "revoked_at": null,
+        "associated_asset_id": null
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "RevokeApiKey",
+    "request_schema": "RevokeApiKeyRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "key_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "RevokeApiKeyResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "name": "Gateway",
+        "created_at": "2026-10-18T01:02:03.123400000+05:30",
+        "revoked_at": null,
+        "associated_asset_id": null
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ListOperators",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "ListOperatorsResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "edit_revision": "1",
+            "name": "Lee"
+          }
+        ],
+        "next_page_token": "page-token"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetOperator",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetOperatorResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "edit_revision": "1",
+        "name": "Lee"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "CreateOperator",
+    "request_schema": "CreateOperatorRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "operator_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "name": "Lee"
+    },
+    "response_schema": "CreateOperatorResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "edit_revision": "1",
+        "name": "Lee"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 201,
+    "query": ""
+  },
+  {
+    "name": "EditOperator",
+    "request_schema": "EditOperatorRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "operator_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "expected_edit_revision": "1",
+      "profile": {
+        "description": null
+      }
+    },
+    "response_schema": "EditOperatorResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "edit_revision": "1",
+        "name": "Lee"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "DeleteOperator",
+    "request_schema": "DeleteOperatorRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "operator_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+    },
+    "response_schema": "DeleteOperatorResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "accepted": "committed"
+      },
+      "commit_cursor": "cursor-committed"
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetHealth",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetHealthResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "protocol_version": "0.1.0",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "health": "healthy"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetReadiness",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetReadinessResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "ready": false,
+        "reason": "Recovering interrupted Operations"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetReference",
+    "request_schema": null,
+    "request": null,
+    "response_schema": "GetReferenceResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "protocol_version": "0.1.0",
+        "openapi_path": "/reference/openapi.json",
+        "documentation_path": "/reference"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "GetReferenceDocument",
+    "request_schema": null,
+    "request": null,
+    "response_schema": null,
+    "response": null,
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReadSnapshot",
+    "request_schema": "ReadSnapshotRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "context": {
+        "load_id": "00000000-0000-0000-0000-000000000002",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "limits": {
+          "max_batch_bytes": "4194304",
+          "max_changes": 1000
+        }
+      }
+    },
+    "response_schema": "ReadSnapshotResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "snapshot_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "load_id": "00000000-0000-0000-0000-000000000002",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "baseline": "cursor-N",
+        "expires_at": "2026-10-18T01:02:03.123400000+05:30",
+        "limits": {
+          "max_batch_bytes": "4194304",
+          "max_changes": 1000
+        },
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "18446744073709551615",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "asset",
+            "description": {
+              "name": "North camera",
+              "manufacturer": "Example"
+            },
+            "type": {
+              "kind": "security_camera"
+            },
+            "capabilities": {
+              "commands": [
+                {
+                  "command": "move_to",
+                  "scheduling": [
+                    "queued",
+                    "immediate"
+                  ]
+                },
+                {
+                  "command": "pause",
+                  "scheduling": [
+                    "immediate"
+                  ]
+                },
+                {
+                  "command": "resume",
+                  "scheduling": [
+                    "immediate"
+                  ]
+                }
+              ]
+            },
+            "process_generation": "00000000-0000-0000-0000-000000000002",
+            "status": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "condition": "healthy",
+                  "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "asset",
+                  "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "process_generation": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            },
+            "communications": {
+              "reported": {
+                "state": "reported",
+                "result": {
+                  "state": "value",
+                  "classification": "dated_measurement",
+                  "evidence": {
+                    "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "sequence": "18446744073709551615",
+                    "correction_revision": "0",
+                    "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                    "evidence_kind": "current"
+                  },
+                  "value": {
+                    "bandwidth_bps": null,
+                    "observed_at": null
+                  }
+                },
+                "receipt": {
+                  "received_at": "2026-10-18T01:02:04.1234+05:30",
+                  "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                  "core_run_id": "00000000-0000-0000-0000-000000000002",
+                  "source": {
+                    "kind": "asset",
+                    "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "process_generation": "00000000-0000-0000-0000-000000000002"
+                  }
+                }
+              },
+              "health": "offline"
+            },
+            "heartbeat": {
+              "last_contact_at": null,
+              "core_run_id": "00000000-0000-0000-0000-000000000002"
+            },
+            "telemetry": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "position": {
+                    "latitude": 51.5074123456789,
+                    "longitude": -0.1278123456789
+                  },
+                  "altitude": {
+                    "metres": -12.50000000001,
+                    "reference": "wgs84_ellipsoid"
+                  },
+                  "ground_speed": 0,
+                  "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "position_observed_at": "2026-10-18T01:02:01+05:30",
+                  "altitude_observed_at": null
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "asset",
+                  "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "process_generation": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          },
+          {
+            "id": "00000000-0000-0000-0000-000000000003",
+            "version": "1",
+            "edit_revision": "1",
+            "alias": "Detection-1",
+            "entity_type": "track",
+            "publisher_id": "00000000-0000-0000-0000-000000000002",
+            "description": {
+              "name": "Vehicle"
+            },
+            "telemetry": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "18446744073709551615",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "position": {
+                    "latitude": 51.5074123456789,
+                    "longitude": -0.1278123456789
+                  },
+                  "altitude": {
+                    "metres": -12.50000000001,
+                    "reference": "wgs84_ellipsoid"
+                  },
+                  "ground_speed": 0,
+                  "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                  "position_observed_at": "2026-10-18T01:02:01+05:30",
+                  "altitude_observed_at": null
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04.1234+05:30",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "publisher",
+                  "publisher_id": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          },
+          {
+            "id": "00000000-0000-0000-0000-000000000004",
+            "version": "1",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "geofeature",
+            "description": {
+              "name": "Pole waypoint"
+            },
+            "type": {
+              "kind": "point_of_interest"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                90
+              ]
+            },
+            "geometry_revision": "1"
+          },
+          {
+            "id": "00000000-0000-0000-0000-000000000005",
+            "version": "1",
+            "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "command": {
+              "command": "move_to",
+              "scheduling": "queued",
+              "target": {
+                "kind": "position",
+                "position": {
+                  "latitude": 0,
+                  "longitude": 0
+                }
+              }
+            },
+            "submission_sequence": "18446744073709551615",
+            "state": "pending",
+            "results": []
+          },
+          {
+            "id": "00000000-0000-0000-0000-000000000006",
+            "version": "1",
+            "edit_revision": "1",
+            "byte_length": "3",
+            "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "content_type": "text/plain",
+            "metadata": {
+              "name": "sample.txt",
+              "entity_ids": [
+                "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+              ],
+              "task_ids": []
+            },
+            "published_at": "2026-10-18T01:02:03.123400000+05:30"
+          }
+        ]
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReadChanges",
+    "request_schema": "ReadChangesRequest",
+    "request": {
+      "after": "cursor-N",
+      "limits": {
+        "max_batch_bytes": "4194304",
+        "max_changes": 1000
+      }
+    },
+    "response_schema": "ReadChangesResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "batches": [
+          {
+            "cursor": "cursor-H",
+            "changes": [
+              {
+                "kind": "upsert",
+                "resource": {
+                  "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "version": "18446744073709551615",
+                  "edit_revision": "1",
+                  "alias": null,
+                  "entity_type": "asset",
+                  "description": {
+                    "name": "North camera",
+                    "manufacturer": "Example"
+                  },
+                  "type": {
+                    "kind": "security_camera"
+                  },
+                  "capabilities": {
+                    "commands": [
+                      {
+                        "command": "move_to",
+                        "scheduling": [
+                          "queued",
+                          "immediate"
+                        ]
+                      },
+                      {
+                        "command": "pause",
+                        "scheduling": [
+                          "immediate"
+                        ]
+                      },
+                      {
+                        "command": "resume",
+                        "scheduling": [
+                          "immediate"
+                        ]
+                      }
+                    ]
+                  },
+                  "process_generation": "00000000-0000-0000-0000-000000000002",
+                  "status": {
+                    "state": "reported",
+                    "result": {
+                      "state": "value",
+                      "classification": "dated_measurement",
+                      "evidence": {
+                        "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                        "sequence": "18446744073709551615",
+                        "correction_revision": "0",
+                        "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                        "evidence_kind": "current"
+                      },
+                      "value": {
+                        "condition": "healthy",
+                        "observed_at": "2026-10-18T01:02:03.123400000+05:30"
+                      }
+                    },
+                    "receipt": {
+                      "received_at": "2026-10-18T01:02:04.1234+05:30",
+                      "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                      "core_run_id": "00000000-0000-0000-0000-000000000002",
+                      "source": {
+                        "kind": "asset",
+                        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                        "process_generation": "00000000-0000-0000-0000-000000000002"
+                      }
+                    }
+                  },
+                  "communications": {
+                    "reported": {
+                      "state": "reported",
+                      "result": {
+                        "state": "value",
+                        "classification": "dated_measurement",
+                        "evidence": {
+                          "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                          "sequence": "18446744073709551615",
+                          "correction_revision": "0",
+                          "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                          "evidence_kind": "current"
+                        },
+                        "value": {
+                          "bandwidth_bps": null,
+                          "observed_at": null
+                        }
+                      },
+                      "receipt": {
+                        "received_at": "2026-10-18T01:02:04.1234+05:30",
+                        "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                        "core_run_id": "00000000-0000-0000-0000-000000000002",
+                        "source": {
+                          "kind": "asset",
+                          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                          "process_generation": "00000000-0000-0000-0000-000000000002"
+                        }
+                      }
+                    },
+                    "health": "offline"
+                  },
+                  "heartbeat": {
+                    "last_contact_at": null,
+                    "core_run_id": "00000000-0000-0000-0000-000000000002"
+                  },
+                  "telemetry": {
+                    "state": "reported",
+                    "result": {
+                      "state": "value",
+                      "classification": "dated_measurement",
+                      "evidence": {
+                        "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                        "sequence": "18446744073709551615",
+                        "correction_revision": "0",
+                        "generated_at": "2026-10-18T01:02:03.123400000+05:30",
+                        "evidence_kind": "current"
+                      },
+                      "value": {
+                        "position": {
+                          "latitude": 51.5074123456789,
+                          "longitude": -0.1278123456789
+                        },
+                        "altitude": {
+                          "metres": -12.50000000001,
+                          "reference": "wgs84_ellipsoid"
+                        },
+                        "ground_speed": 0,
+                        "observed_at": "2026-10-18T01:02:03.123400000+05:30",
+                        "position_observed_at": "2026-10-18T01:02:01+05:30",
+                        "altitude_observed_at": null
+                      }
+                    },
+                    "receipt": {
+                      "received_at": "2026-10-18T01:02:04.1234+05:30",
+                      "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                      "core_run_id": "00000000-0000-0000-0000-000000000002",
+                      "source": {
+                        "kind": "asset",
+                        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                        "process_generation": "00000000-0000-0000-0000-000000000002"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "delete",
+                "resource": {
+                  "id": "00000000-0000-0000-0000-000000000002",
+                  "version": "2",
+                  "kind": "track"
+                }
+              }
+            ]
+          }
+        ],
+        "replay_boundary": "cursor-H",
+        "earliest_cursor": "cursor-A"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "ReleaseSnapshot",
+    "request_schema": "ReleaseSnapshotRequest",
+    "request": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "snapshot_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "load_id": "00000000-0000-0000-0000-000000000002",
+      "core_run_id": "00000000-0000-0000-0000-000000000002"
+    },
+    "response_schema": "ReleaseSnapshotResponse",
+    "response": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "snapshot_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "load_id": "00000000-0000-0000-0000-000000000002",
+        "core_run_id": "00000000-0000-0000-0000-000000000002"
+      }
+    },
+    "status": 200,
+    "query": ""
+  },
+  {
+    "name": "SubscribeChanges",
+    "request_schema": null,
+    "request": null,
+    "response_schema": null,
+    "response": null,
+    "status": 101,
+    "query": ""
+  }
+]

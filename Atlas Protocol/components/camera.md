@@ -2,9 +2,9 @@
 
 Camera owns current zoom and capture activity. Gimbal owns pointing.
 [Camera Optics](camera-optics.md) retains baseline field of view separately, so
-zoom updates do not resend calibration. The fields below are proposals.
+zoom updates do not resend calibration. [OpenAPI](../openapi.json) owns the fields below.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -14,17 +14,17 @@ zoom updates do not resend calibration. The fields below are proposals.
 
 For supported activities, null means their current state is unknown. Fixed optics
 can report `zoom_ratio: 1`. Magnification is not a vendor's uncalibrated slider or
-percentage. The proposed capture flags are independent because still capture and
-video recording can overlap. The exact activity fields remain open for review.
+percentage. The capture flags are independent because still capture and
+video recording can overlap. Both activity flags may be present.
 
-Include the [shared section fields](README.md#shared-proposed-section-fields).
+Include the [shared section fields](README.md#reported-results).
 An accepted source update uses `UpdateAsset` with the whole Camera section.
 Omitting Camera leaves it unchanged. Reported activity is evidence, not a request
 to start recording, nor proof that a result Object has been published.
 
 ## Examples
 
-Valid proposed snapshot for a camera supporting video recording only:
+Valid snapshot for a camera supporting video recording only:
 
 ```json
 {
@@ -34,16 +34,16 @@ Valid proposed snapshot for a camera supporting video recording only:
 }
 ```
 
-Invalid because magnification is below the proposed baseline minimum:
+Invalid because magnification is below the baseline minimum:
 
 ```json
 {"zoom_ratio": 0.5, "observed_at": "2026-10-17T12:00:00Z"}
 ```
 
-## Decisions to settle
+## Scope
 
-Confirm the activity fields and how magnification is calibrated. Multiple cameras
-need stable instance identification. That collection layout remains undefined.
-Media transport and camera execution remain external responsibilities.
+This contract describes one Camera section. A future multiple-camera collection
+needs stable instance identities. Sources calibrate magnification; media transport
+and camera execution remain external responsibilities.
 
 [Component index](README.md)

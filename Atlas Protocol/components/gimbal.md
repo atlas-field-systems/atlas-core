@@ -1,27 +1,27 @@
 # Gimbal
 
 Gimbal groups bearing and elevation into one complete pointing section.
-Whole-section reporting is agreed. The fields and coordinate frame below are proposals.
+Whole-section reporting is agreed. [OpenAPI](../openapi.json) owns the fields and bounds.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
 | `bearing` | Number or null | Required | Viewing direction clockwise from true north, in degrees, 0 inclusive to 360 exclusive |
 | `elevation` | Number or null | Required | Viewing direction above the local horizon, in degrees, -90 through 90 inclusive |
 
-Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
+Also include the [reported result definitions](README.md#reported-results).
 Propose null for an unknown required angle. Actual failures need error information
 rather than a silent unknown reading.
 
-The proposed angles describe world-relative viewing direction. Raw mechanical
+The angles describe world-relative viewing direction. Raw mechanical
 pan and tilt coordinates would require an explicit mounting transform.
 Live zoom belongs in [Camera](camera.md). Baseline field of view belongs in
 [Camera Optics](camera-optics.md).
 
 ## Examples
 
-Valid under the proposed field contract, with a healthy section omitting `error`:
+Valid Gimbal value:
 
 ```json
 {

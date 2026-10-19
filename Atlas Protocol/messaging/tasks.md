@@ -5,7 +5,7 @@ They expose work as Tasks rather than arbitrary resource state edits.
 
 ## Work and execution
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `CreateTask` | Operator app or automation requests an advertised Asset Command, such as Move To or Pause | Stable Task and request IDs, target Asset, Command inputs, scheduling choice, and validity terms | Recorded Task and per-Asset submission sequence, or refusal under [Task rules](../tasks.md#creation-and-state) |
 | `ListTasks` | Operator app reviews requested work and its reported progress | Bounded filters | Matching Task views |
@@ -22,7 +22,7 @@ Result declarations follow [References and results](../tasks.md#references-and-r
 
 ## Assigned work
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `GetAssignedTasks` | Asset runtime retrieves current instructions, including when reconciling after reconnect | Asset ID and bounded query context | Assigned Tasks with queue revision and paging context |
 | `SetTaskOrder` | Operator app or planning automation requests a new order for eligible unstarted Tasks | Asset ID, complete eligible order, retry identity, and revision precondition | Recorded requested order and revision |

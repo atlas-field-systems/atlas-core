@@ -5,15 +5,15 @@ Accepting evidence and establishing fresh contact remain distinct outcomes.
 
 ## Shared context
 
-Updates identify the Dataset and Asset. Reported sections also identify the process
-generation and a positive sequence number. Their context includes `generated_at`,
-original evidence identity, whether the evidence is current or historical,
-source times for each quantity, and contact proof. Unknown original time stays null.
-Historical evidence retains its identity. A new packet ID cannot make it fresh.
+Updates identify Dataset and Asset. Each reported section identifies the process
+generation and a positive sequence. Source context records `generated_at`, original
+evidence identity, current or historical evidence, quantity times, and contact proof.
+Unknown original time is null. Historical evidence keeps its identity. A new packet
+ID cannot make it fresh.
 
 Apply [reported section classifications](entities.md#reported-sections) independently.
-An omitted section preserves its accepted result, classification, and source times.
-A supplied section is a complete replacement. Core validates it against its full schema.
+Omission preserves accepted result, classification, and source times. A supplied
+section is a complete replacement. Core validates it against its full schema.
 Never merge its subfields with the prior section. Missing required fields reject
 the update. Omitted optional fields do not retain old values. Null subfields are
 valid only where their schemas permit them.
@@ -44,17 +44,17 @@ Direct-IP and gateway reports use the [shared API-key permissions](identity.md#p
 Keep the reported Asset and process separate from the submitting key. Preserve
 original validated identifier and timestamp spellings in retained report facts.
 
-Registration records the initial process generation without establishing contact.
-Core can issue a challenge bound to that process or a proposed replacement.
-Replacing a process uses a current challenge and an atomic compare-and-swap of the
-expected generation with its first check-in. Any valid API key may request this
-replacement. Only one replacement wins. Reconnect is not replacement; an obsolete
+Registration records the initial process without establishing contact.
+`RequestContactChallenge` names the Asset, current or proposed process, retry identity,
+and replacement's expected generation. Its response retains the challenge ID,
+Dataset, Asset, process, Core run, issue time, and original ten-second expiry on retry.
+`ReplaceAssetProcess` supplies proof, expected generation, and first check-in.
+One atomic compare-and-swap commits replacement and first check-in. Only one wins.
+Any valid key may request replacement. Reconnect is not replacement; an obsolete
 generation cannot publish new execution state. A gateway restart is not an Asset restart.
-
-The gateway envelope, source-identity fields, and challenge exchange remain
-unspecified. The gateway translates attributable Asset evidence, including a
-response to Core's challenge; its own response cannot stand in for the Asset.
-Radio encoding and edge-link retries remain external.
+A gateway preserves `AssetSource` and `SourceEvidence`; submitting-key and receipt
+facts are read-only. Its own response cannot stand in for the Asset. Radio encoding
+and edge-link retries remain external. [OpenAPI](openapi.json) owns exact fields.
 
 ## Time and contact
 
@@ -77,9 +77,9 @@ prove a downstream Asset is reachable.
 
 `healthy` lasts less than 15 seconds after fresh contact; `degraded` lasts from
 15 seconds until 60; `offline` starts at 60. No proven contact this Core run means
-offline. These initial thresholds need field qualification, separately from challenge expiry.
-Use Core's monotonic elapsed time, never source timestamps. Timer transitions are
-public committed changes even without another report.
+offline. These thresholds need field qualification,
+separately from challenge expiry. Use Core's monotonic elapsed time, never source
+timestamps. Timer transitions are public committed changes even without another report.
 
 Keep bandwidth capability separate from communications health. A high-bandwidth
 link can be offline. Gateway connectivity alone establishes neither the downstream

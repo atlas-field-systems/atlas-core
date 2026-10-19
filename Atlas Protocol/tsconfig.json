@@ -8,10 +8,16 @@
     "exactOptionalPropertyTypes": true,
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "ts",
+    "rootDir": ".",
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": false
+    "skipLibCheck": false,
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "noEmitOnError": true
   },
   "include": [
     "ts/**/*.ts"

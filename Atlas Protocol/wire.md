@@ -9,7 +9,9 @@ Binary content remains binary, not JSON-encoded bytes.
 
 Use UUID identifiers and snake_case wire fields. Encode 64-bit counters as
 canonical decimal strings, not JavaScript numbers. Validate their numeric range,
-not only their spelling. Preserve double precision for spatial values.
+not only their spelling. Preserve double precision for spatial values. Timestamp strings use uppercase `T`,
+`Z` or an explicit numeric offset, and at most nine fractional digits. Reject
+impossible calendar dates and leap seconds; retain accepted spelling.
 
 Requests identify `Atlas-Dataset-ID` and `Atlas-Protocol-Version`. Responses carry
 the actual Dataset and Core's Protocol version, including declared error responses.
@@ -32,8 +34,16 @@ The error's request ID is diagnostic correlation, not retry identity or commit p
 
 The authenticated raw OpenAPI document, documentation HTML, binary content, and
 explicitly empty responses are declared exceptions to the JSON data envelope.
+Upload uses an unpadded base64url `Atlas-Object-Descriptor` header containing its
+UTF-8 JSON descriptor, followed by one complete binary body. Content reads expose
+length, content type, SHA-256 `Content-Digest`, and read disposition.
 Validate status, media, headers, and body at both ends. A malformed mutation response
 may follow a real commit, so it cannot establish rejection.
+
+WebSocket upgrade carries no credentials or public data. The first `authenticate`
+frame supplies the key, Dataset, and exact version. Core owns the authentication
+timeout and connection state. Authenticated snapshot release works before a data
+subscription. [OpenAPI](openapi.json) defines controls and complete change frames.
 
 ## Parsing and edits
 
@@ -61,12 +71,17 @@ request to a new Dataset automatically. Ordinary Restart retains Dataset-scoped
 identities; Reset invalidates them. API-key creation has installation lifetime,
 but still needs an intentional current-Dataset request.
 
+Alias lookups use an `alias` query value. This preserves aliases such as `..`
+that URL parsers would normalize inside a path.
+
 ## Lists
 
 Filters are explicit: AND between fields, OR within a field, and an empty array
 matches nothing. Reject unsupported filters. Ordinary lists are moving keyset
 views, not frozen snapshots; IDs sort bytewise. Default pages contain 100 items,
-maximum 1,000. Tokens bind source, Dataset, kind, filters, size, and continuation;
+maximum 1,000. Encode an array filter as one JSON-array query value, such as `ids=[]`. Reject
+repeated decoded query names. Omission and an empty array remain distinct.
+Tokens bind source, Dataset, kind, filters, size, and continuation;
 ordinary tokens expire after 60 seconds. Assigned-work lists also bind queue revision.
 
 [Next: synchronization](synchronization.md)

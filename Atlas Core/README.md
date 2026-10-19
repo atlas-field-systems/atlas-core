@@ -47,10 +47,9 @@ Use stock configuration; no custom schema language, endpoint-specific templates,
 patched generated files, or duplicate wrapper API. A narrow handwritten binding
 is preferable when generation makes an exceptional route harder to understand.
 
-Tool versions and the supported schema profile are not yet pinned or qualified.
-This repo contains no qualified locks or generated packages. Measure saved
-maintenance, not generated line count. Removing repeated declarations is the goal;
-generating most of Core is not.
+The [Protocol package](../Atlas%20Protocol/README.md#verify-and-consume) pins its
+generators, dependencies, and executable boundary fixtures. This folder remains a
+server design. Protocol verification does not qualify Core runtime behavior.
 
 ## Scope
 

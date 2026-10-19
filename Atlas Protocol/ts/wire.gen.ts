@@ -41,23 +41,6 @@ export interface paths {
         patch: operations["UpdateAsset"];
         trace?: never;
     };
-    "/assets/by-alias/{alias}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** GetAssetByAlias */
-        get: operations["GetAssetByAlias"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/assets/{asset_id}/objects": {
         parameters: {
             query?: never;
@@ -129,23 +112,6 @@ export interface paths {
         patch: operations["EditTrack"];
         trace?: never;
     };
-    "/tracks/by-alias/{alias}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** GetTrackByAlias */
-        get: operations["GetTrackByAlias"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/tracks/{track_id}/objects": {
         parameters: {
             query?: never;
@@ -215,23 +181,6 @@ export interface paths {
         head?: never;
         /** EditGeofeature */
         patch: operations["EditGeofeature"];
-        trace?: never;
-    };
-    "/geofeatures/by-alias/{alias}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** GetGeofeatureByAlias */
-        get: operations["GetGeofeatureByAlias"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/geofeatures/{geofeature_id}/objects": {
@@ -877,6 +826,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assets/by-alias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetAssetByAlias */
+        get: operations["GetAssetByAlias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracks/by-alias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetTrackByAlias */
+        get: operations["GetTrackByAlias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/geofeatures/by-alias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GetGeofeatureByAlias */
+        get: operations["GetGeofeatureByAlias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1165,8 +1165,8 @@ export interface components {
             observed_at: string | null;
         };
         Coordinate: [
-            number,
-            number
+            components["schemas"]["Longitude"],
+            components["schemas"]["Longitude"]
         ];
         PointGeometry: {
             /**
@@ -2051,7 +2051,7 @@ export interface components {
             scheduling: "immediate";
             expires_at?: components["schemas"]["Timestamp"];
         };
-        TaskCommand: components["schemas"]["QueuedMoveTo"] | components["schemas"]["ImmediateMoveTo"] | components["schemas"]["PauseCommand"] | components["schemas"]["ResumeCommand"];
+        TaskCommand: components["schemas"]["MoveToCommand"] | components["schemas"]["PauseCommand"] | components["schemas"]["ResumeCommand"];
         /** @enum {string} */
         TaskState: "pending" | "acknowledged" | "in_progress" | "paused" | "cancellation_requested" | "completed" | "failed" | "cancelled";
         ExecutionFault: {
@@ -2659,10 +2659,11 @@ export interface components {
             request_id: components["schemas"]["Identifier"];
             key_id: components["schemas"]["Identifier"];
         };
+        /** @description expected_* describes current Core requirements; actual_* describes the submitted request. Diagnostic versions may differ from this package version. */
         ErrorDetails: {
             expected_dataset_id?: components["schemas"]["Identifier"];
             actual_dataset_id?: components["schemas"]["Identifier"];
-            expected_protocol_version?: components["schemas"]["ProtocolVersion"];
+            expected_protocol_version?: string;
             actual_protocol_version?: string;
             expected_revision?: components["schemas"]["Counter"];
             actual_revision?: components["schemas"]["Counter"];
@@ -2922,6 +2923,9 @@ export interface components {
              */
             type: "error";
             response: components["schemas"]["ErrorResponse"];
+            dataset_id: components["schemas"]["Identifier"];
+            core_run_id: components["schemas"]["Identifier"];
+            protocol_version: string;
         };
         ClientFrame: components["schemas"]["AuthenticateFrame"] | components["schemas"]["SubscribeChangesFrame"] | components["schemas"]["ReleaseSnapshotFrame"];
         ServerFrame: components["schemas"]["AuthenticatedFrame"] | components["schemas"]["SubscriptionAckFrame"] | components["schemas"]["ChangesFrame"] | components["schemas"]["HandoffCompleteFrame"] | components["schemas"]["GapFrame"] | components["schemas"]["RecoveryRequiredFrame"] | components["schemas"]["SnapshotReleasedFrame"] | components["schemas"]["SyncErrorFrame"];
@@ -3219,6 +3223,7 @@ export interface components {
             target_geometry?: "Point";
             expires?: boolean;
         };
+        MoveToCommand: components["schemas"]["QueuedMoveTo"] | components["schemas"]["ImmediateMoveTo"];
     };
     responses: {
         /** @description invalid_request, dataset_required, invalid_json, invalid_geometry, unsupported_geometry, geometry_limit_exceeded, unsupported_filter */
@@ -3406,14 +3411,14 @@ export interface components {
     };
     parameters: {
         Dataset: components["schemas"]["Identifier"];
-        Version: components["schemas"]["ProtocolVersion"];
+        VersionContext: components["schemas"]["ProtocolVersion"];
     };
     requestBodies: never;
     headers: {
         /** @description Actual Dataset for successes and declared errors. */
         Dataset: components["schemas"]["Identifier"];
         /** @description Actual Core Protocol version, including mismatch errors. */
-        Version: components["schemas"]["ProtocolVersion"];
+        Version: string;
     };
     pathItems: never;
 }
@@ -3424,13 +3429,13 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                ids?: components["schemas"]["Identifier"][];
-                aliases?: components["schemas"]["Alias"][];
-                names?: components["schemas"]["Name"][];
+                ids?: string;
+                aliases?: string;
+                names?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -3468,7 +3473,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -3510,7 +3515,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -3550,7 +3555,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -3594,7 +3599,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -3633,57 +3638,17 @@ export interface operations {
             507: components["responses"]["Error507"];
         };
     };
-    GetAssetByAlias: {
-        parameters: {
-            query?: never;
-            header: {
-                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
-            };
-            path: {
-                alias: components["schemas"]["Alias"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Result. */
-            200: {
-                headers: {
-                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
-                    "Atlas-Protocol-Version": components["headers"]["Version"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GetAssetByAliasResponse"];
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            410: components["responses"]["Error410"];
-            413: components["responses"]["Error413"];
-            415: components["responses"]["Error415"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-            507: components["responses"]["Error507"];
-        };
-    };
     GetAssetObjects: {
         parameters: {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                entity_ids?: components["schemas"]["Identifier"][];
-                task_ids?: components["schemas"]["Identifier"][];
+                entity_ids?: string;
+                task_ids?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -3728,7 +3693,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -3768,13 +3733,13 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                ids?: components["schemas"]["Identifier"][];
-                aliases?: components["schemas"]["Alias"][];
-                names?: components["schemas"]["Name"][];
+                ids?: string;
+                aliases?: string;
+                names?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -3812,7 +3777,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -3854,7 +3819,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 track_id: components["schemas"]["Identifier"];
@@ -3894,7 +3859,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 track_id: components["schemas"]["Identifier"];
@@ -3938,7 +3903,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 track_id: components["schemas"]["Identifier"];
@@ -3977,57 +3942,17 @@ export interface operations {
             507: components["responses"]["Error507"];
         };
     };
-    GetTrackByAlias: {
-        parameters: {
-            query?: never;
-            header: {
-                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
-            };
-            path: {
-                alias: components["schemas"]["Alias"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Result. */
-            200: {
-                headers: {
-                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
-                    "Atlas-Protocol-Version": components["headers"]["Version"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GetTrackByAliasResponse"];
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            410: components["responses"]["Error410"];
-            413: components["responses"]["Error413"];
-            415: components["responses"]["Error415"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-            507: components["responses"]["Error507"];
-        };
-    };
     GetTrackObjects: {
         parameters: {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                entity_ids?: components["schemas"]["Identifier"][];
-                task_ids?: components["schemas"]["Identifier"][];
+                entity_ids?: string;
+                task_ids?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 track_id: components["schemas"]["Identifier"];
@@ -4072,7 +3997,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 track_id: components["schemas"]["Identifier"];
@@ -4112,13 +4037,13 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                ids?: components["schemas"]["Identifier"][];
-                aliases?: components["schemas"]["Alias"][];
-                names?: components["schemas"]["Name"][];
+                ids?: string;
+                aliases?: string;
+                names?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -4156,7 +4081,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -4198,7 +4123,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 geofeature_id: components["schemas"]["Identifier"];
@@ -4238,7 +4163,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 geofeature_id: components["schemas"]["Identifier"];
@@ -4282,7 +4207,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 geofeature_id: components["schemas"]["Identifier"];
@@ -4321,57 +4246,17 @@ export interface operations {
             507: components["responses"]["Error507"];
         };
     };
-    GetGeofeatureByAlias: {
-        parameters: {
-            query?: never;
-            header: {
-                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
-            };
-            path: {
-                alias: components["schemas"]["Alias"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Result. */
-            200: {
-                headers: {
-                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
-                    "Atlas-Protocol-Version": components["headers"]["Version"];
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GetGeofeatureByAliasResponse"];
-                };
-            };
-            400: components["responses"]["Error400"];
-            401: components["responses"]["Error401"];
-            403: components["responses"]["Error403"];
-            404: components["responses"]["Error404"];
-            409: components["responses"]["Error409"];
-            410: components["responses"]["Error410"];
-            413: components["responses"]["Error413"];
-            415: components["responses"]["Error415"];
-            422: components["responses"]["Error422"];
-            429: components["responses"]["Error429"];
-            500: components["responses"]["Error500"];
-            503: components["responses"]["Error503"];
-            507: components["responses"]["Error507"];
-        };
-    };
     GetGeofeatureObjects: {
         parameters: {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                entity_ids?: components["schemas"]["Identifier"][];
-                task_ids?: components["schemas"]["Identifier"][];
+                entity_ids?: string;
+                task_ids?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 geofeature_id: components["schemas"]["Identifier"];
@@ -4411,7 +4296,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -4451,7 +4336,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 track_id: components["schemas"]["Identifier"];
@@ -4495,7 +4380,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -4539,7 +4424,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -4583,12 +4468,12 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                asset_ids?: components["schemas"]["Identifier"][];
-                states?: components["schemas"]["TaskState"][];
+                asset_ids?: string;
+                states?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -4626,7 +4511,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -4668,7 +4553,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 task_id: components["schemas"]["Identifier"];
@@ -4708,7 +4593,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 task_id: components["schemas"]["Identifier"];
@@ -4752,7 +4637,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 task_id: components["schemas"]["Identifier"];
@@ -4796,7 +4681,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 task_id: components["schemas"]["Identifier"];
@@ -4840,12 +4725,12 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                entity_ids?: components["schemas"]["Identifier"][];
-                task_ids?: components["schemas"]["Identifier"][];
+                entity_ids?: string;
+                task_ids?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 task_id: components["schemas"]["Identifier"];
@@ -4889,7 +4774,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -4929,7 +4814,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -4973,7 +4858,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 asset_id: components["schemas"]["Identifier"];
@@ -5017,12 +4902,12 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                entity_ids?: components["schemas"]["Identifier"][];
-                task_ids?: components["schemas"]["Identifier"][];
+                entity_ids?: string;
+                task_ids?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5060,7 +4945,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
                 /** @description Unpadded base64url of UTF-8 UploadObjectDescriptor JSON. Bound before decoding. The body is its complete binary stream. */
                 "Atlas-Object-Descriptor": string;
             };
@@ -5104,7 +4989,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 object_id: components["schemas"]["Identifier"];
@@ -5144,7 +5029,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 object_id: components["schemas"]["Identifier"];
@@ -5188,7 +5073,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 object_id: components["schemas"]["Identifier"];
@@ -5234,7 +5119,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 object_id: components["schemas"]["Identifier"];
@@ -5255,7 +5140,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/octet-stream": string;
+                    "*/*": string;
                 };
             };
             400: components["responses"]["Error400"];
@@ -5281,7 +5166,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5319,7 +5204,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 plugin_id: components["schemas"]["Identifier"];
@@ -5359,7 +5244,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 plugin_id: components["schemas"]["Identifier"];
@@ -5403,48 +5288,12 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                plugin_ids?: components["schemas"]["Identifier"][];
-                states?: [
-                ] | [
-                    components["schemas"]["OperationState"]
-                ] | [
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"]
-                ] | [
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"]
-                ] | [
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"]
-                ] | [
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"]
-                ] | [
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"]
-                ] | [
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"],
-                    components["schemas"]["OperationState"]
-                ];
+                plugin_ids?: string;
+                states?: string;
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5482,7 +5331,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 plugin_id: components["schemas"]["Identifier"];
@@ -5523,7 +5372,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 plugin_id: components["schemas"]["Identifier"];
@@ -5571,7 +5420,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5614,7 +5463,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5655,7 +5504,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5693,7 +5542,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5735,7 +5584,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 key_id: components["schemas"]["Identifier"];
@@ -5782,7 +5631,7 @@ export interface operations {
             };
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5820,7 +5669,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -5862,7 +5711,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 operator_id: components["schemas"]["Identifier"];
@@ -5902,7 +5751,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 operator_id: components["schemas"]["Identifier"];
@@ -5946,7 +5795,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path: {
                 operator_id: components["schemas"]["Identifier"];
@@ -6025,7 +5874,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -6063,7 +5912,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -6102,7 +5951,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -6140,7 +5989,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -6182,7 +6031,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -6224,7 +6073,7 @@ export interface operations {
             query?: never;
             header: {
                 "Atlas-Dataset-ID": components["parameters"]["Dataset"];
-                "Atlas-Protocol-Version": components["parameters"]["Version"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
             };
             path?: never;
             cookie?: never;
@@ -6281,6 +6130,126 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetAssetByAlias: {
+        parameters: {
+            query: {
+                alias: components["schemas"]["Alias"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetAssetByAliasResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetTrackByAlias: {
+        parameters: {
+            query: {
+                alias: components["schemas"]["Alias"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetTrackByAliasResponse"];
+                };
+            };
+            400: components["responses"]["Error400"];
+            401: components["responses"]["Error401"];
+            403: components["responses"]["Error403"];
+            404: components["responses"]["Error404"];
+            409: components["responses"]["Error409"];
+            410: components["responses"]["Error410"];
+            413: components["responses"]["Error413"];
+            415: components["responses"]["Error415"];
+            422: components["responses"]["Error422"];
+            429: components["responses"]["Error429"];
+            500: components["responses"]["Error500"];
+            503: components["responses"]["Error503"];
+            507: components["responses"]["Error507"];
+        };
+    };
+    GetGeofeatureByAlias: {
+        parameters: {
+            query: {
+                alias: components["schemas"]["Alias"];
+            };
+            header: {
+                "Atlas-Dataset-ID": components["parameters"]["Dataset"];
+                "Atlas-Protocol-Version": components["parameters"]["VersionContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Result. */
+            200: {
+                headers: {
+                    "Atlas-Dataset-ID": components["headers"]["Dataset"];
+                    "Atlas-Protocol-Version": components["headers"]["Version"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetGeofeatureByAliasResponse"];
+                };
             };
             400: components["responses"]["Error400"];
             401: components["responses"]["Error401"];

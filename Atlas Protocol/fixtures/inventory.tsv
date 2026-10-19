@@ -1,7 +1,7 @@
 RegisterAsset	POST	/assets
 ListAssets	GET	/assets
 GetAsset	GET	/assets/{asset_id}
-GetAssetByAlias	GET	/assets/by-alias/{alias}
+GetAssetByAlias	GET	/assets/by-alias
 UpdateAsset	PATCH	/assets/{asset_id}
 DeleteAsset	DELETE	/assets/{asset_id}
 GetAssetStatus	GET	/assets/{asset_id}/status
@@ -10,7 +10,7 @@ GetAssetObjects	GET	/assets/{asset_id}/objects
 CreateTrack	POST	/tracks
 ListTracks	GET	/tracks
 GetTrack	GET	/tracks/{track_id}
-GetTrackByAlias	GET	/tracks/by-alias/{alias}
+GetTrackByAlias	GET	/tracks/by-alias
 EditTrack	PATCH	/tracks/{track_id}
 DeleteTrack	DELETE	/tracks/{track_id}
 ReportTrackObservations	POST	/tracks/{track_id}/observations
@@ -19,7 +19,7 @@ GetTrackObjects	GET	/tracks/{track_id}/objects
 CreateGeofeature	POST	/geofeatures
 ListGeofeatures	GET	/geofeatures
 GetGeofeature	GET	/geofeatures/{geofeature_id}
-GetGeofeatureByAlias	GET	/geofeatures/by-alias/{alias}
+GetGeofeatureByAlias	GET	/geofeatures/by-alias
 EditGeofeature	PATCH	/geofeatures/{geofeature_id}
 DeleteGeofeature	DELETE	/geofeatures/{geofeature_id}
 GetGeofeatureObjects	GET	/geofeatures/{geofeature_id}/objects
