@@ -139,6 +139,20 @@ func TestGeneratedPluginPresence(t *testing.T) {
 	}
 }
 
+func TestGeometryNullBoundary(t *testing.T) {
+	for _, name := range []string{"Geometry", "PointGeometry", "LineGeometry", "PolygonGeometry"} {
+		if err := ValidateJSON(name, []byte("null"), DefaultLimits()); err == nil || err.Error() != "invalid_geometry" {
+			t.Fatalf("%s accepted null or returned the wrong refusal: %v", name, err)
+		}
+	}
+	if err := ValidateJSON("GeometryObservation", []byte(`{"geometry":null,"observed_at":null}`), DefaultLimits()); err == nil || err.Error() != "invalid_geometry" {
+		t.Fatalf("nested null geometry: %v", err)
+	}
+	if _, err := Decode[GeometryObservation]("GeometryObservation", []byte(`{"geometry":{"type":"Point","coordinates":[0,90]},"observed_at":null}`), DefaultLimits()); err != nil {
+		t.Fatal("valid geometry with unknown observation time refused", err)
+	}
+}
+
 func TestConcreteGeometryVertexLimit(t *testing.T) {
 	for _, count := range []int{1024, 1025} {
 		points := make([][2]float64, count)

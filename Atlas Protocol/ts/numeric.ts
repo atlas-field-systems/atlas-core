@@ -42,7 +42,6 @@ export class NumericSources {
  at(holder: object, key: string): NumberSite | undefined {return this.holders.get(holder)?.get(key);}
 }
 
-// Significant digits remain spans of the token until the output budget is checked.
 export class Decimal {
  private first = -1;
  private last = 0;

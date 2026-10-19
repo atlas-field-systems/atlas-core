@@ -46,33 +46,32 @@ ajv.addFormat('date-time', value => {
 });
 ajv.addFormat('uint64-decimal', value => /^(0|[1-9][0-9]{0,19})$/.test(value) && BigInt(value) <= 18446744073709551615n);
 ajv.addFormat('base64url-json', /^[A-Za-z0-9_-]+$/);
-ajv.addSchema({$id: 'urn:atlas:protocol', components: {schemas: Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, schemaWithGeometryPolicy(schema, 'urn:atlas:protocol', 'validate')]))}});
+ajv.addSchema({$id: 'urn:atlas:protocol', components: {schemas: Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, candidateSchemaWithGeometryPolicy(schema, 'urn:atlas:protocol', 'validate')]))}});
 const references: Record<string, object> = Object.fromEntries(schemaNames.map(name => [name, {$ref: 'urn:atlas:protocol#/components/schemas/' + name}]));
 export function isSchemaName(name: string): name is SchemaName { return schemaNames.some(n => n === name); }
 
 type GeometryPolicy = 'validate' | 'ignoreForBranchSelection';
-function schemaWithGeometryPolicy(schema: Schema, root: string, policy: GeometryPolicy): Schema {
+function candidateSchemaWithGeometryPolicy(schema: Schema, root: string, policy: GeometryPolicy): Schema {
  if (schema['x-go-type'] === 'json.RawMessage') return {};
  if (policy === 'ignoreForBranchSelection' && schema['x-atlas-geometry']) return {};
  const copy = {...schema};
  if (schema.$ref) copy.$ref = root + schema.$ref;
- if (schema.properties) copy.properties = Object.fromEntries(Object.entries(schema.properties).map(([key, child]) => [key, schemaWithGeometryPolicy(child, root, policy)]));
- if (schema.items) copy.items = schemaWithGeometryPolicy(schema.items, root, policy);
- for (const keyword of ['oneOf', 'anyOf', 'allOf'] as const) if (schema[keyword]) copy[keyword] = schema[keyword].map(branch => schemaWithGeometryPolicy(branch, root, policy));
- // Exact branch acceptance belongs to semantics, including oneOf cardinality and not.
+ if (schema.properties) copy.properties = Object.fromEntries(Object.entries(schema.properties).map(([key, child]) => [key, candidateSchemaWithGeometryPolicy(child, root, policy)]));
+ if (schema.items) copy.items = candidateSchemaWithGeometryPolicy(schema.items, root, policy);
+ for (const keyword of ['oneOf', 'anyOf', 'allOf'] as const) if (schema[keyword]) copy[keyword] = schema[keyword].map(branch => candidateSchemaWithGeometryPolicy(branch, root, policy));
  copy.anyOf = [...(copy.anyOf ?? []), ...(copy.oneOf ?? [])];
  if (!copy.anyOf.length) delete copy.anyOf;
  delete copy.oneOf;
  delete copy.not;
- if (typeof schema.additionalProperties === 'object') copy.additionalProperties = schemaWithGeometryPolicy(schema.additionalProperties, root, policy);
+ if (typeof schema.additionalProperties === 'object') copy.additionalProperties = candidateSchemaWithGeometryPolicy(schema.additionalProperties, root, policy);
  return copy;
 }
-ajv.addSchema({$id: 'urn:atlas:shape', components: {schemas: Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, schemaWithGeometryPolicy(schema, 'urn:atlas:shape', 'ignoreForBranchSelection')]))}});
+ajv.addSchema({$id: 'urn:atlas:shape', components: {schemas: Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, candidateSchemaWithGeometryPolicy(schema, 'urn:atlas:shape', 'ignoreForBranchSelection')]))}});
 const shapeValidators = new WeakMap<Schema, ValidateFunction>(), semanticValidators = new WeakMap<Schema, ValidateFunction>();
 function matches(schema: Schema, value: unknown, policy: GeometryPolicy): boolean {
  const cache = policy === 'ignoreForBranchSelection' ? shapeValidators : semanticValidators;
  let validate = cache.get(schema);
- if (!validate) {validate = ajv.compile(schemaWithGeometryPolicy(schema, policy === 'ignoreForBranchSelection' ? 'urn:atlas:shape' : 'urn:atlas:protocol', policy)); cache.set(schema, validate);}
+ if (!validate) {validate = ajv.compile(candidateSchemaWithGeometryPolicy(schema, policy === 'ignoreForBranchSelection' ? 'urn:atlas:shape' : 'urn:atlas:protocol', policy)); cache.set(schema, validate);}
  return validate(value) === true;
 }
 function schemaValue(schema: Schema): Schema {
@@ -90,7 +89,6 @@ function semantics(schema: Schema, value: unknown, site: NumberSite | undefined,
  if (schema.$ref) {semantics(schemaValue(schema), value, site, sources, plan); return;}
  if (schema['x-go-type'] === 'json.RawMessage') {plan.preserve(value, site, sources); return;}
  if (schema['x-atlas-geometry']) {
-  if (value === null) return;
   geometry(value); if (!matches(schema, value, 'validate')) throw new Error('invalid_geometry'); return;
  }
  if ((schema.type === 'integer' || Array.isArray(schema.type) && schema.type.includes('integer')) && typeof value === 'number') {
@@ -115,7 +113,7 @@ function semantics(schema: Schema, value: unknown, site: NumberSite | undefined,
  }
  if (schema.not && matches(schema.not, value, 'ignoreForBranchSelection')) {
   let accepted = false;
-  try {semantics(schema.not, value, site, sources, new NumericPlan()); accepted = true;} catch { /* A failed negated branch accepts this value. */ }
+  try {semantics(schema.not, value, site, sources, new NumericPlan()); accepted = true;} catch {}
   if (accepted) throw new Error('invalid_payload: not');
  }
 

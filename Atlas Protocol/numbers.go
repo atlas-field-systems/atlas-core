@@ -11,7 +11,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// Places share their container links. A mark never copies its path from the root.
 type numberPlace struct {
 	children   map[string]*numberPlace
 	start, end int

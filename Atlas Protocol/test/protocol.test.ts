@@ -120,6 +120,12 @@ test('Tracks with geometry cross complete snapshot and committed frame boundarie
  }
 });
 
+test('null geometry refuses at root and nested boundaries', () => {
+ for (const name of ['Geometry', 'PointGeometry', 'LineGeometry', 'PolygonGeometry'] as const) assert.throws(() => Decode(name, wire(null)), /^Error: invalid_geometry$/);
+ assert.throws(() => Decode('GeometryObservation', wire({geometry: null, observed_at: null})), /^Error: invalid_geometry$/);
+ Decode('GeometryObservation', wire({geometry: {type: 'Point', coordinates: [0, 90]}, observed_at: null}));
+});
+
 test('concrete geometry retains the exact vertex refusal category', () => {
  for (const count of [1024, 1025]) for (const name of ['LineGeometry', 'Geometry'] as const) {
   const data = wire({type: 'LineString', coordinates: Array.from({length: count}, () => [0, 0])});

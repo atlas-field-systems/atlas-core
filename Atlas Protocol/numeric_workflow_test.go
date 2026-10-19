@@ -267,7 +267,6 @@ func TestNumericBudgetsAndDoubleControls(t *testing.T) {
 			t.Fatal("numeric work limit", test, err)
 		}
 	}
-	// Multiple Plugin fields share the enclosing budget, including their source tokens.
 	raw := []byte(`{"state":"completed","observed_at":null,"object_ids":[],"output":[1,42],"known_effects":[1,42]}`)
 	value, err := Decode[RecoveredOutcome]("RecoveredOutcome", raw, DefaultLimits())
 	if err != nil {

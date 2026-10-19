@@ -30,7 +30,6 @@ for (const [id, method, path] of inventory) {
 for (const [name, schema] of Object.entries(doc.components.schemas)) {
  if (schema.type === 'object') assert.equal(schema.additionalProperties, false, name);
 }
-// Numeric interpretation must cover each authored location without competing roles.
 const traversed = new Set(['properties', 'items', 'additionalProperties', 'oneOf', 'anyOf', 'allOf', 'not']);
 const schemaPositions = ['prefixItems', 'contains', 'patternProperties', 'dependentSchemas', 'if', 'then', 'else', 'propertyNames', 'unevaluatedItems', 'unevaluatedProperties', '$defs', 'definitions'];
 function numericRoles(schema, path = [], ancestors = new Set()) {

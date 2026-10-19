@@ -60,12 +60,12 @@ var loadContract = sync.OnceValues(func() (*contract, error) {
 	}
 	c := &contract{T: doc, formats: openapi3.WithStringFormatValidators(formats), branchSchemas: make(map[*openapi3.Schema]*openapi3.Schema)}
 	for _, schema := range doc.Components.Schemas {
-		c.schemaWithoutGeometry(schema.Value)
+		c.branchCandidateSchema(schema.Value)
 	}
 	return c, nil
 })
 
-func (c *contract) schemaWithoutGeometry(schema *openapi3.Schema) *openapi3.Schema {
+func (c *contract) branchCandidateSchema(schema *openapi3.Schema) *openapi3.Schema {
 	if shape, ok := c.branchSchemas[schema]; ok {
 		return shape
 	}
@@ -79,7 +79,7 @@ func (c *contract) schemaWithoutGeometry(schema *openapi3.Schema) *openapi3.Sche
 		if s == nil {
 			return nil
 		}
-		return &openapi3.SchemaRef{Ref: s.Ref, Value: c.schemaWithoutGeometry(s.Value)}
+		return &openapi3.SchemaRef{Ref: s.Ref, Value: c.branchCandidateSchema(s.Value)}
 	}
 	shape.Properties = make(openapi3.Schemas, len(schema.Properties))
 	for key, child := range schema.Properties {
@@ -94,11 +94,10 @@ func (c *contract) schemaWithoutGeometry(schema *openapi3.Schema) *openapi3.Sche
 			(*group.to)[i] = ref(child)
 		}
 	}
-	// Shape checks are necessary predicates. The semantic walk counts exact branches.
 	shape.AnyOf = append(shape.AnyOf, shape.OneOf...)
 	shape.OneOf = nil
 	if schema.Not != nil {
-		c.schemaWithoutGeometry(schema.Not.Value)
+		c.branchCandidateSchema(schema.Not.Value)
 	}
 	shape.Not = nil
 	shape.AdditionalProperties.Schema = ref(schema.AdditionalProperties.Schema)
@@ -287,9 +286,6 @@ func uuidProperty(schema *openapi3.Schema, field string) bool {
 
 func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan) error {
 	if schema.Extensions["x-atlas-geometry"] == true {
-		if value == nil {
-			return nil
-		}
 		if err := geometry(value); err != nil {
 			return err
 		}
