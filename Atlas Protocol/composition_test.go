@@ -28,8 +28,6 @@ func TestSemanticComposition(t *testing.T) {
 		}
 		return
 	}
-	// Equivalent compositions keep the independent resource fixtures unchanged.
-	// Each child loads its own contract before the public boundary's first use.
 	doc, err := openapi3.NewLoader().LoadFromData(document)
 	if err != nil {
 		t.Fatal(err)

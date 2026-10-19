@@ -22,8 +22,8 @@ var document []byte
 
 type contract struct {
 	*openapi3.T
-	formats openapi3.SchemaValidationOption
-	shapes  map[*openapi3.Schema]*openapi3.Schema
+	formats       openapi3.SchemaValidationOption
+	branchSchemas map[*openapi3.Schema]*openapi3.Schema
 }
 
 var loadContract = sync.OnceValues(func() (*contract, error) {
@@ -58,21 +58,19 @@ var loadContract = sync.OnceValues(func() (*contract, error) {
 	if err := doc.Validate(context.Background()); err != nil {
 		return nil, err
 	}
-	c := &contract{T: doc, formats: openapi3.WithStringFormatValidators(formats), shapes: make(map[*openapi3.Schema]*openapi3.Schema)}
+	c := &contract{T: doc, formats: openapi3.WithStringFormatValidators(formats), branchSchemas: make(map[*openapi3.Schema]*openapi3.Schema)}
 	for _, schema := range doc.Components.Schemas {
-		c.shape(schema.Value)
+		c.schemaWithoutGeometry(schema.Value)
 	}
 	return c, nil
 })
 
-// Geometry internals do not select a resource alternative. Its own boundary
-// reports malformed coordinates with the specific Geometry refusal code.
-func (c *contract) shape(schema *openapi3.Schema) *openapi3.Schema {
-	if shape, ok := c.shapes[schema]; ok {
+func (c *contract) schemaWithoutGeometry(schema *openapi3.Schema) *openapi3.Schema {
+	if shape, ok := c.branchSchemas[schema]; ok {
 		return shape
 	}
 	shape := *schema
-	c.shapes[schema] = &shape
+	c.branchSchemas[schema] = &shape
 	if schema.Extensions["x-atlas-geometry"] == true {
 		shape = openapi3.Schema{Type: &openapi3.Types{"null", "boolean", "number", "string", "array", "object"}}
 		return &shape
@@ -81,7 +79,7 @@ func (c *contract) shape(schema *openapi3.Schema) *openapi3.Schema {
 		if s == nil {
 			return nil
 		}
-		return &openapi3.SchemaRef{Ref: s.Ref, Value: c.shape(s.Value)}
+		return &openapi3.SchemaRef{Ref: s.Ref, Value: c.schemaWithoutGeometry(s.Value)}
 	}
 	shape.Properties = make(openapi3.Schemas, len(schema.Properties))
 	for key, child := range schema.Properties {
@@ -265,6 +263,20 @@ func outbound(v reflect.Value, optional bool, depth int, count, size *int, limit
 	return nil
 }
 
+func uuidProperty(schema *openapi3.Schema, field string) bool {
+	if property := schema.Properties[field]; property != nil {
+		return property.Value.Format == "uuid"
+	}
+	for _, group := range []openapi3.SchemaRefs{schema.OneOf, schema.AnyOf, schema.AllOf} {
+		for _, branch := range group {
+			if uuidProperty(branch.Value, field) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 	if value == nil {
 		return nil
@@ -282,7 +294,7 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 		var failure error
 		accepted := false
 		for _, branch := range group {
-			if c.shapes[branch.Value].VisitJSON(value, c.formats) != nil {
+			if c.branchSchemas[branch.Value].VisitJSON(value, c.formats) != nil {
 				continue
 			}
 			if err := c.semantics(branch.Value, value); err != nil {
@@ -334,6 +346,7 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 			}
 			for key, identity := range fields {
 				values, _ := object[key].([]interface{})
+				uuidIdentity := uuidProperty(schema.Properties[key].Value.Items.Value, identity)
 				seen := map[string]bool{}
 				for _, item := range values {
 					if item, ok := item.(map[string]interface{}); ok {
@@ -341,8 +354,7 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 						if !ok {
 							continue
 						}
-						// Reserve IDs are UUIDs. Command and Plugin capability names are case sensitive.
-						if identity == "id" {
+						if uuidIdentity {
 							key = strings.ToLower(key)
 						}
 						if seen[key] {

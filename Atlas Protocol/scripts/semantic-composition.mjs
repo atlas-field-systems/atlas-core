@@ -4,7 +4,6 @@ import document from '../dist/openapi.json' with {type: 'json'};
 
 const composition = process.argv[2];
 assert(['oneOf', 'anyOf', 'allOf'].includes(composition));
-// Equivalent compositions in this process leave the built contract files intact.
 const resource = document.components.schemas.ResourceImage;
 const alternatives = resource.oneOf;
 delete resource.oneOf;
