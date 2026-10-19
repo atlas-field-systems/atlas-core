@@ -69,7 +69,7 @@ func geometry(value interface{}) error {
 		if math.Abs(points[i].x-points[i-1].x) > 180 {
 			return fmt.Errorf("unsupported_geometry")
 		}
-		if points[i] == points[i-1] {
+		if kind == "Polygon" && points[i] == points[i-1] {
 			return fmt.Errorf("invalid_geometry")
 		}
 	}

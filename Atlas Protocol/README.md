@@ -57,10 +57,13 @@ const wire = Encode('Position', position);
 ```
 
 `Decode` validates before typed decoding. `Encode` checks supplied values and
-validates encoded bytes. Go also exposes `ValidateJSON`. Direct generated JSON
+validates encoded bytes. Supply JSON values and omit unused optional properties;
+explicit `undefined` is rejected. Go also exposes `ValidateJSON`. Direct generated JSON
 helpers provide declarations and union access, without validation. Construct a Go
 union variant through `Encode` then `Decode` before nesting it, so unset required
 nullable fields cannot become explicit unknown values during generated marshaling.
+For a nullable component root in Go, wrap its generated alias in
+`nullable.Nullable[T]`, as the generated nullable fields do.
 
 `ValidateRequest` and `ValidateResponse` consume bodies. The caller owns the stream,
 authentication, staging, and commitment. `CheckContent` verifies streaming length

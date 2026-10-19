@@ -83,7 +83,7 @@ export async function ValidateRequest(name: string, request: Request, expectedDa
  const {path, method, op} = operation(name); if (request.method !== method) throw new Error('wrong method');
  const url = new URL(request.url), facts = pathFacts(path, url.pathname);
  if (name !== 'SubscribeChanges') {
-  const key = header(request.headers, 'Authorization'); if (!/^Bearer [A-Za-z0-9_-]{43,128}$/.test(key)) throw new Error('unauthenticated');
+  const key = header(request.headers, 'Authorization'); if (key.slice(0, 7).toLowerCase() !== 'bearer ' || !/^[A-Za-z0-9_-]{43,128}$/.test(key.slice(7))) throw new Error('unauthenticated');
   if (name !== 'GetHealth') {const {dataset, version} = context(request.headers); if (expectedDataset && !sameID(dataset, expectedDataset)) throw new Error('dataset_mismatch'); if (version !== Version) throw new Error('protocol_mismatch');}
  }
  for (const [key, value] of Object.entries(facts)) {

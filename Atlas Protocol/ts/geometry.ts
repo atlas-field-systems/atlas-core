@@ -48,7 +48,7 @@ export function geometry(value: unknown): void {
  for (let i = 1; i < points.length; i++) {
   const a = points[i - 1], b = points[i]; if (!a || !b) fail();
   if (Math.abs(a[0] - b[0]) > 180) fail('unsupported_geometry');
-  if (equal(a, b)) fail();
+  if (kind === 'Polygon' && equal(a, b)) fail();
  }
  if (kind !== 'Polygon') return;
  const first = points[0], last = points.at(-1); if (!first || !last || !equal(first, last)) fail();

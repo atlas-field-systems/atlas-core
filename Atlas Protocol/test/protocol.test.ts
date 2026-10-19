@@ -51,7 +51,7 @@ test('shared independent fixtures execute generated types and both validation bo
    assert.deepEqual(result, sample.value); assert.deepEqual(value, result);
   } else {invalid++; if (sample.error) assert.throws(() => Decode(name, raw), new RegExp(sample.error)); else assert.throws(() => Decode(name, raw));}
  });}
- assert.equal(valid, 234); assert.equal(invalid, 239); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
+ assert.equal(valid, 236); assert.equal(invalid, 239); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
 });
 
 test('every HTTP message validates status, media, context, request and reply', async t => {
@@ -60,6 +60,7 @@ test('every HTTP message validates status, media, context, request and reply', a
  for (const sample of exchanges) {names.push(sample.name); await t.test(sample.name, async () => {
   await ValidateRequest(sample.name, request(sample), dataset);
   await ValidateResponse(sample.name, response(sample), ctx);
+  if (sample.name !== 'SubscribeChanges') { const mixed = request(sample); mixed.headers.set('Authorization', 'bEaReR ' + 'A'.repeat(43)); await ValidateRequest(sample.name, mixed, dataset); }
   const req = request(sample), url = new URL(req.url); url.search = '?unsupported_filter=true';
   const badQuery = new Request(url, req); await assert.rejects(ValidateRequest(sample.name, badQuery, dataset));
   const noAuth = request(sample); if (sample.name === 'SubscribeChanges') noAuth.headers.set('Sec-WebSocket-Key', 'invalid'); else noAuth.headers.delete('Authorization');
@@ -90,6 +91,8 @@ test('consumer facts retain exact spelling, times, precision, null and absence',
  assert.equal(value.observed_at, '2026-10-18T01:02:03.123400000+05:30'); assert.equal(value.position_observed_at, '2026-10-18T01:02:01+05:30'); assert.equal(value.altitude_observed_at, null); assert(!Object.hasOwn(value, 'airspeed'));
  const typed: components['schemas']['Telemetry'] = {position: null, altitude: null, ground_speed: null, observed_at: null};
  assert.deepEqual(Decode('Telemetry', Encode('Telemetry', typed)), typed);
+ const unknownUndefined = {latitude: 0, longitude: 0, unexpected: undefined};
+ assert.throws(() => Encode('Position', unknownUndefined));
  const nan = {...typed, ground_speed: Number.NaN}; assert.throws(() => Encode('Telemetry', nan));
  Reflect.deleteProperty(typed, 'position'); assert.throws(() => Encode('Telemetry', typed));
  assert.throws(() => Encode('Name', '\ud800'));

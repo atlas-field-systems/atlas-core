@@ -21,7 +21,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-var bearerGrammar = regexp.MustCompile(`^Bearer [A-Za-z0-9_-]{43,128}$`)
+var bearerGrammar = regexp.MustCompile(`^(?i:Bearer) [A-Za-z0-9_-]{43,128}$`)
 
 type RequestData struct {
 	JSON   []byte
@@ -205,7 +205,7 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 	}
 	if name != "SubscribeChanges" {
 		key, err := oneHeader(req.Header, "Authorization")
-		if err != nil || !strings.HasPrefix(key, "Bearer ") || !bearerGrammar.MatchString(key) {
+		if err != nil || !bearerGrammar.MatchString(key) {
 			return result, fmt.Errorf("unauthenticated")
 		}
 		if name != "GetHealth" {

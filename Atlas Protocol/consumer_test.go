@@ -122,7 +122,7 @@ func TestSharedFixtures(t *testing.T) {
 			}
 		})
 	}
-	if valid != 234 || invalid != 239 || valid != expected.Valid || invalid != expected.Invalid || !slices.Equal(names, expected.CaseNames) {
+	if valid != 236 || invalid != 239 || valid != expected.Valid || invalid != expected.Invalid || !slices.Equal(names, expected.CaseNames) {
 		t.Fatal("missing, skipped, duplicated, or changed fixture inventory", valid, invalid)
 	}
 	seen := map[string]bool{}
@@ -229,6 +229,13 @@ func TestEveryHTTPExchange(t *testing.T) {
 			ctx := ResponseContext{DatasetID: fixtureDataset, WebSocketKey: handshakeKey, Disposition: "attachment"}
 			if _, err := ValidateResponse(sample.Name, exchangeResponse(t, sample), ctx, DefaultLimits()); err != nil {
 				t.Fatal("response", err)
+			}
+			if sample.Name != "SubscribeChanges" {
+				mixed := exchangeRequest(t, sample)
+				mixed.Header.Set("Authorization", "bEaReR "+strings.Repeat("A", 43))
+				if _, err := ValidateRequest(sample.Name, mixed, fixtureDataset, DefaultLimits()); err != nil {
+					t.Fatal("authentication scheme case", err)
+				}
 			}
 			req = exchangeRequest(t, sample)
 			req.URL.RawQuery = "unsupported_filter=true"

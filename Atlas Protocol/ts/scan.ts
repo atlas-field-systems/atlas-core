@@ -76,17 +76,16 @@ export function stringify(value: unknown, limits: Limits): Uint8Array {
  checkLimits(limits);
  let count = 0, size = 0;
  const active = new Set<object>();
- function walk(v: unknown, depth: number, inArray = false): void {
+ function walk(v: unknown, depth: number): void {
   if (++count > limits.maxValues || depth > limits.maxDepth || size > limits.maxJSONBytes) throw new Error('outbound work limit');
   if (v === null || typeof v === 'boolean') { size++; return; }
   if (typeof v === 'number') { if (!Number.isFinite(v)) throw new Error('nonfinite number'); size++; return; }
   if (typeof v === 'string') {
    size += v.length;
    if (!v.isWellFormed()) throw new Error('lone surrogate');
-  } else if (typeof v === 'undefined' && !inArray) { return;
   } else if (typeof v === 'object') {
    if (active.has(v)) throw new Error('cyclic value'); active.add(v);
-   if (Array.isArray(v)) { size += v.length; if (v.length > limits.maxValues) throw new Error('outbound work limit'); for (const item of v) walk(item, depth + 1, true);
+   if (Array.isArray(v)) { size += v.length; if (v.length > limits.maxValues) throw new Error('outbound work limit'); for (const item of v) walk(item, depth + 1);
    } else {
     if (Object.getPrototypeOf(v) !== Object.prototype && Object.getPrototypeOf(v) !== null) throw new Error('expected plain JSON object');
     for (const key in v) {
