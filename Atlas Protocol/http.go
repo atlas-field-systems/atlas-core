@@ -391,7 +391,6 @@ func CheckContent(descriptor UploadObjectDescriptor, reader io.Reader, limits Li
 	return nil
 }
 
-// ValidateResponse consumes the body. Failure cannot prove that a mutation did not commit.
 type ResponseContext struct {
 	DatasetID    string
 	Object       *Object
@@ -399,6 +398,7 @@ type ResponseContext struct {
 	Disposition  string
 }
 
+// ValidateResponse consumes the body. Failure cannot prove that a mutation did not commit.
 func ValidateResponse(name string, response *http.Response, ctx ResponseContext, limits Limits) ([]byte, error) {
 	expectedDataset, expectedObject := ctx.DatasetID, ctx.Object
 	_, _, op, err := operation(name)
