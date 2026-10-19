@@ -122,7 +122,7 @@ func TestSharedFixtures(t *testing.T) {
 			}
 		})
 	}
-	if valid != 236 || invalid != 239 || valid != expected.Valid || invalid != expected.Invalid || !slices.Equal(names, expected.CaseNames) {
+	if valid != 267 || invalid != 256 || valid != expected.Valid || invalid != expected.Invalid || !slices.Equal(names, expected.CaseNames) {
 		t.Fatal("missing, skipped, duplicated, or changed fixture inventory", valid, invalid)
 	}
 	seen := map[string]bool{}

@@ -215,8 +215,17 @@ func ValidateRequest(name string, req *http.Request, expectedDataset string, lim
 		}
 	}
 	for _, p := range op.Parameters {
+		if p.Value.In == "header" && p.Value.Required {
+			if _, err := oneHeader(req.Header, p.Value.Name); err != nil {
+				return result, err
+			}
+		}
 		if p.Value.In == "path" {
-			if err := p.Value.Schema.Value.VisitJSON(facts[p.Value.Name]); err != nil {
+			doc, err := loadContract()
+			if err != nil {
+				return result, err
+			}
+			if err := p.Value.Schema.Value.VisitJSON(facts[p.Value.Name], doc.formats); err != nil {
 				return result, err
 			}
 		}
@@ -409,6 +418,13 @@ func ValidateResponse(name string, response *http.Response, ctx ResponseContext,
 	if declared == nil {
 		return nil, fmt.Errorf("undeclared response status")
 	}
+	for name, header := range declared.Value.Headers {
+		if header.Value.Required {
+			if _, err := oneHeader(response.Header, name); err != nil {
+				return nil, err
+			}
+		}
+	}
 	refusal := response.StatusCode >= 400
 	dataset, version, err := contextHeaders(response.Header, "", false)
 	if err != nil {
@@ -452,8 +468,11 @@ func ValidateResponse(name string, response *http.Response, ctx ResponseContext,
 			return nil, fmt.Errorf("invalid disposition")
 		}
 		descriptor := UploadObjectDescriptor{ObjectId: dataset, RequestId: dataset, ByteLength: size, Sha256: hex.EncodeToString(hash), ContentType: kind, Metadata: ObjectMetadata{Name: "content", EntityIds: []Identifier{}, TaskIds: []Identifier{}}}
-		if expectedObject != nil && (expectedObject.ByteLength != size || expectedObject.Sha256 != descriptor.Sha256 || expectedObject.ContentType != kind) {
-			return nil, fmt.Errorf("object response mismatch")
+		if expectedObject != nil {
+			expectedMedia, _, err := mime.ParseMediaType(expectedObject.ContentType)
+			if err != nil || expectedObject.ByteLength != size || expectedObject.Sha256 != descriptor.Sha256 || !strings.EqualFold(expectedMedia, kind) {
+				return nil, fmt.Errorf("object response mismatch")
+			}
 		}
 		return nil, CheckContent(descriptor, response.Body, limits)
 	}

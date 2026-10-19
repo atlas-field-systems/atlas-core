@@ -27,6 +27,9 @@ if ! node --test --test-reporter=tap dist-test/test/protocol.test.js > "$scratch
 fi
 node scripts/check-results.mjs ts "$scratch/ts-tests.log"
 printf 'TypeScript consumer fixtures and HTTP/WS bindings passed.\n'
+for composition in oneOf anyOf allOf; do
+  node scripts/semantic-composition.mjs "$composition"
+done
 node scripts/canaries.mjs
 bash scripts/consume.sh
 printf 'Atlas Protocol verification passed.\n'

@@ -20,7 +20,13 @@ import (
 //go:embed openapi.json
 var document []byte
 
-var loadContract = sync.OnceValues(func() (*openapi3.T, error) {
+type contract struct {
+	*openapi3.T
+	formats openapi3.SchemaValidationOption
+	shapes  map[*openapi3.Schema]*openapi3.Schema
+}
+
+var loadContract = sync.OnceValues(func() (*contract, error) {
 	doc, err := openapi3.NewLoader().LoadFromData(document)
 	if err != nil {
 		return nil, err
@@ -29,26 +35,71 @@ var loadContract = sync.OnceValues(func() (*openapi3.T, error) {
 	if err != nil {
 		return nil, err
 	}
-	openapi3.DefineStringFormatValidator("date-time", openapi3.NewCallbackValidator(func(s string) error {
-		if !timestampGrammar.MatchString(s) {
-			return fmt.Errorf("invalid timestamp grammar")
-		}
-		_, err := time.Parse(time.RFC3339Nano, s)
-		return err
-	}))
-	openapi3.DefineStringFormatValidator("uri", openapi3.NewCallbackValidator(func(s string) error {
-		u, err := url.Parse(s)
-		if err != nil {
+	formats := map[string]openapi3.StringFormatValidator{
+		"date-time": openapi3.NewCallbackValidator(func(s string) error {
+			if !timestampGrammar.MatchString(s) {
+				return fmt.Errorf("invalid timestamp grammar")
+			}
+			_, err := time.Parse(time.RFC3339Nano, s)
 			return err
-		}
-		if !u.IsAbs() || strings.ContainsAny(s, " \t\r\n") {
-			return fmt.Errorf("invalid absolute URI")
-		}
-		return nil
-	}))
-	openapi3.DefineStringFormatValidator("uint64-decimal", openapi3.NewCallbackValidator(func(s string) error { _, err := strconv.ParseUint(s, 10, 64); return err }))
-	return doc, doc.Validate(context.Background())
+		}),
+		"uri": openapi3.NewCallbackValidator(func(s string) error {
+			u, err := url.Parse(s)
+			if err != nil {
+				return err
+			}
+			if !u.IsAbs() || strings.ContainsAny(s, " \t\r\n") {
+				return fmt.Errorf("invalid absolute URI")
+			}
+			return nil
+		}),
+		"uint64-decimal": openapi3.NewCallbackValidator(func(s string) error { _, err := strconv.ParseUint(s, 10, 64); return err }),
+	}
+	if err := doc.Validate(context.Background()); err != nil {
+		return nil, err
+	}
+	c := &contract{T: doc, formats: openapi3.WithStringFormatValidators(formats), shapes: make(map[*openapi3.Schema]*openapi3.Schema)}
+	for _, schema := range doc.Components.Schemas {
+		c.shape(schema.Value)
+	}
+	return c, nil
 })
+
+// Geometry internals do not select a resource alternative. Its own boundary
+// reports malformed coordinates with the specific Geometry refusal code.
+func (c *contract) shape(schema *openapi3.Schema) *openapi3.Schema {
+	if shape, ok := c.shapes[schema]; ok {
+		return shape
+	}
+	shape := *schema
+	c.shapes[schema] = &shape
+	if schema.Extensions["x-atlas-geometry"] == true {
+		shape = openapi3.Schema{Type: &openapi3.Types{"null", "boolean", "number", "string", "array", "object"}}
+		return &shape
+	}
+	ref := func(s *openapi3.SchemaRef) *openapi3.SchemaRef {
+		if s == nil {
+			return nil
+		}
+		return &openapi3.SchemaRef{Ref: s.Ref, Value: c.shape(s.Value)}
+	}
+	shape.Properties = make(openapi3.Schemas, len(schema.Properties))
+	for key, child := range schema.Properties {
+		shape.Properties[key] = ref(child)
+	}
+	shape.Items = ref(schema.Items)
+	for _, group := range []struct{ from, to *openapi3.SchemaRefs }{
+		{&schema.OneOf, &shape.OneOf}, {&schema.AnyOf, &shape.AnyOf}, {&schema.AllOf, &shape.AllOf},
+	} {
+		*group.to = make(openapi3.SchemaRefs, len(*group.from))
+		for i, child := range *group.from {
+			(*group.to)[i] = ref(child)
+		}
+	}
+	shape.Not = ref(schema.Not)
+	shape.AdditionalProperties.Schema = ref(schema.AdditionalProperties.Schema)
+	return &shape
+}
 
 func Version() string {
 	doc, err := loadContract()
@@ -83,10 +134,10 @@ func ValidateJSON(name string, data []byte, limits Limits) error {
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
-	if err := semantics(schema.Value, value); err != nil {
+	if err := doc.semantics(schema.Value, value); err != nil {
 		return err
 	}
-	return schema.Value.VisitJSON(value)
+	return schema.Value.VisitJSON(value, doc.formats)
 }
 
 func Decode[T interface{}](name string, data []byte, limits Limits) (T, error) {
@@ -214,7 +265,7 @@ func outbound(v reflect.Value, optional bool, depth int, count, size *int, limit
 	return nil
 }
 
-func semantics(schema *openapi3.Schema, value interface{}) error {
+func (c *contract) semantics(schema *openapi3.Schema, value interface{}) error {
 	if value == nil {
 		return nil
 	}
@@ -222,22 +273,39 @@ func semantics(schema *openapi3.Schema, value interface{}) error {
 		if err := geometry(value); err != nil {
 			return err
 		}
-		if err := schema.VisitJSON(value); err != nil {
+		if err := schema.VisitJSON(value, c.formats); err != nil {
 			return fmt.Errorf("invalid_geometry")
 		}
 		return nil
 	}
-	for _, group := range []openapi3.SchemaRefs{schema.OneOf, schema.AnyOf, schema.AllOf} {
+	for _, group := range []openapi3.SchemaRefs{schema.OneOf, schema.AnyOf} {
+		var failure error
+		accepted := false
 		for _, branch := range group {
-			if err := semantics(branch.Value, value); err != nil {
-				return err
+			if c.shapes[branch.Value].VisitJSON(value, c.formats) != nil {
+				continue
 			}
+			if err := c.semantics(branch.Value, value); err != nil {
+				if failure == nil {
+					failure = err
+				}
+			} else {
+				accepted = true
+			}
+		}
+		if !accepted && failure != nil {
+			return failure
+		}
+	}
+	for _, branch := range schema.AllOf {
+		if err := c.semantics(branch.Value, value); err != nil {
+			return err
 		}
 	}
 	if object, ok := value.(map[string]interface{}); ok {
 		for key, child := range schema.Properties {
 			if v, ok := object[key]; ok {
-				if err := semantics(child.Value, v); err != nil {
+				if err := c.semantics(child.Value, v); err != nil {
 					return err
 				}
 			}
@@ -284,7 +352,7 @@ func semantics(schema *openapi3.Schema, value interface{}) error {
 	}
 	if values, ok := value.([]interface{}); ok && schema.Items != nil {
 		for _, v := range values {
-			if err := semantics(schema.Items.Value, v); err != nil {
+			if err := c.semantics(schema.Items.Value, v); err != nil {
 				return err
 			}
 		}

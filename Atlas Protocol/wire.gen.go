@@ -3716,12 +3716,12 @@ type CreateGeofeatureResponse struct {
 type CreateOperationRequest struct {
 	Capability Name `json:"capability"`
 
-	// Input Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
-	Input       PluginPayload `json:"input"`
-	OperationId Identifier    `json:"operation_id"`
-	PluginId    Identifier    `json:"plugin_id"`
-	Release     string        `json:"release"`
-	RequestId   Identifier    `json:"request_id"`
+	// Input Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
+	Input       nullable.Nullable[PluginPayload] `json:"input"`
+	OperationId Identifier                       `json:"operation_id"`
+	PluginId    Identifier                       `json:"plugin_id"`
+	Release     string                           `json:"release"`
+	RequestId   Identifier                       `json:"request_id"`
 }
 
 // CreateOperationResponse defines model for CreateOperationResponse.
@@ -4967,19 +4967,19 @@ type Operation struct {
 	Error      *SectionFault `json:"error,omitempty"`
 	Id         Identifier    `json:"id"`
 
-	// Input Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
-	Input PluginPayload `json:"input"`
+	// Input Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
+	Input nullable.Nullable[PluginPayload] `json:"input"`
 
-	// KnownEffects Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
-	KnownEffects *PluginPayload `json:"known_effects,omitempty"`
-	ObjectIds    []Identifier   `json:"object_ids"`
+	// KnownEffects Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
+	KnownEffects nullable.Nullable[PluginPayload] `json:"known_effects,omitempty"`
+	ObjectIds    []Identifier                     `json:"object_ids"`
 
-	// Output Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
-	Output           *PluginPayload    `json:"output,omitempty"`
-	PluginId         Identifier        `json:"plugin_id"`
-	RecoveredOutcome *RecoveredOutcome `json:"recovered_outcome,omitempty"`
-	Release          string            `json:"release"`
-	State            OperationState    `json:"state"`
+	// Output Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
+	Output           nullable.Nullable[PluginPayload] `json:"output,omitempty"`
+	PluginId         Identifier                       `json:"plugin_id"`
+	RecoveredOutcome *RecoveredOutcome                `json:"recovered_outcome,omitempty"`
+	Release          string                           `json:"release"`
+	State            OperationState                   `json:"state"`
 
 	// Version Canonical unsigned 64-bit decimal in 0..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
@@ -5076,7 +5076,7 @@ type PluginPage struct {
 	NextPageToken *PageToken `json:"next_page_token,omitempty"`
 }
 
-// PluginPayload Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
+// PluginPayload Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
 type PluginPayload = json.RawMessage
 
 // PluginSchemaReference defines model for PluginSchemaReference.
@@ -5258,14 +5258,14 @@ type Receipt struct {
 type RecoveredOutcome struct {
 	Error *SectionFault `json:"error,omitempty"`
 
-	// KnownEffects Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
-	KnownEffects *PluginPayload            `json:"known_effects,omitempty"`
-	ObjectIds    []Identifier              `json:"object_ids"`
-	ObservedAt   nullable.Nullable[string] `json:"observed_at"`
+	// KnownEffects Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
+	KnownEffects nullable.Nullable[PluginPayload] `json:"known_effects,omitempty"`
+	ObjectIds    []Identifier                     `json:"object_ids"`
+	ObservedAt   nullable.Nullable[string]        `json:"observed_at"`
 
-	// Output Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.
-	Output *PluginPayload        `json:"output,omitempty"`
-	State  RecoveredOutcomeState `json:"state"`
+	// Output Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.
+	Output nullable.Nullable[PluginPayload] `json:"output,omitempty"`
+	State  RecoveredOutcomeState            `json:"state"`
 }
 
 // RecoveredOutcomeState defines model for RecoveredOutcome.State.

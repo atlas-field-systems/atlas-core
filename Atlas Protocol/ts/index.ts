@@ -1,4 +1,5 @@
 import {Ajv2020} from 'ajv/dist/2020.js';
+import type {ValidateFunction} from 'ajv';
 import addFormats from 'ajv-formats';
 import document from '../openapi.json' with {type: 'json'};
 import type {components} from './wire.gen.js';
@@ -22,6 +23,8 @@ interface Schema {
  oneOf?: Schema[];
  anyOf?: Schema[];
  allOf?: Schema[];
+ not?: Schema;
+ additionalProperties?: boolean | Schema;
  'x-atlas-geometry'?: boolean;
  'x-atlas-dependent-required'?: Record<string, string[]>;
  'x-atlas-unique-by'?: Record<string, string>;
@@ -43,14 +46,40 @@ ajv.addSchema({$id: 'urn:atlas:protocol', components: document.components});
 const references: Record<string, object> = Object.fromEntries(schemaNames.map(name => [name, {$ref: 'urn:atlas:protocol#/components/schemas/' + name}]));
 export function isSchemaName(name: string): name is SchemaName { return schemaNames.some(n => n === name); }
 
+function validationSchema(schema: Schema, root: string, geometryOpaque: boolean): Schema {
+ if (geometryOpaque && schema['x-atlas-geometry']) return {};
+ const copy = {...schema};
+ if (schema.$ref) copy.$ref = root + schema.$ref;
+ if (schema.properties) copy.properties = Object.fromEntries(Object.entries(schema.properties).map(([key, child]) => [key, validationSchema(child, root, geometryOpaque)]));
+ if (schema.items) copy.items = validationSchema(schema.items, root, geometryOpaque);
+ for (const keyword of ['oneOf', 'anyOf', 'allOf'] as const) if (schema[keyword]) copy[keyword] = schema[keyword].map(branch => validationSchema(branch, root, geometryOpaque));
+ if (schema.not) copy.not = validationSchema(schema.not, root, geometryOpaque);
+ if (typeof schema.additionalProperties === 'object') copy.additionalProperties = validationSchema(schema.additionalProperties, root, geometryOpaque);
+ return copy;
+}
+// Branch selection leaves Geometry internals to their own refusal boundary.
+ajv.addSchema({$id: 'urn:atlas:shape', components: {schemas: Object.fromEntries(Object.entries(schemas).map(([name, schema]) => [name, validationSchema(schema, 'urn:atlas:shape', true)]))}});
+const shapeValidators = new WeakMap<Schema, ValidateFunction>(), semanticValidators = new WeakMap<Schema, ValidateFunction>();
+function matches(schema: Schema, value: unknown, geometryOpaque: boolean): boolean {
+ const cache = geometryOpaque ? shapeValidators : semanticValidators;
+ let validate = cache.get(schema);
+ if (!validate) {validate = ajv.compile(validationSchema(schema, geometryOpaque ? 'urn:atlas:shape' : 'urn:atlas:protocol', geometryOpaque)); cache.set(schema, validate);}
+ return validate(value) === true;
+}
 function semantics(schema: Schema, value: unknown): void {
  if (value === null) return;
  if (schema.$ref) { const target = schemas[schema.$ref.split('/').at(-1) ?? '']; if (!target) throw new Error('unknown schema reference'); semantics(target, value); return; }
  if (schema['x-atlas-geometry']) {
-  geometry(value); const reference = references.Geometry; if (!reference) throw new Error('missing Geometry schema'); const valid = ajv.compile(reference);
-  if (!valid(value)) throw new Error('invalid_geometry'); return;
+  geometry(value); if (!matches(schema, value, false)) throw new Error('invalid_geometry'); return;
  }
- for (const group of [schema.oneOf, schema.anyOf, schema.allOf]) for (const branch of group ?? []) semantics(branch, value);
+ for (const group of [schema.oneOf, schema.anyOf]) {
+  let failure: unknown, accepted = false;
+  for (const branch of group ?? []) if (matches(branch, value, true)) {
+   try {semantics(branch, value); accepted = true;} catch (error) {failure ??= error;}
+  }
+  if (!accepted && failure) throw failure;
+ }
+ for (const branch of schema.allOf ?? []) semantics(branch, value);
  if (isRecord(value)) {
   for (const [key, child] of Object.entries(schema.properties ?? {})) if (Object.hasOwn(value, key)) semantics(child, value[key]);
   for (const [key, required] of Object.entries(schema['x-atlas-dependent-required'] ?? {})) if (Object.hasOwn(value, key)) for (const other of required) if (!Object.hasOwn(value, other)) throw new Error(`${key} requires ${other}`);

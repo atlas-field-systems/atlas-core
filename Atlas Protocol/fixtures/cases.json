@@ -20473,5 +20473,1327 @@
         ]
       ]
     }
+  },
+  {
+    "name": "Track geometry unknown",
+    "schema": "Track",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "2",
+      "edit_revision": "1",
+      "alias": null,
+      "entity_type": "track",
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "description": {
+        "name": "Observed extent"
+      },
+      "geometry": {
+        "state": "unknown"
+      }
+    }
+  },
+  {
+    "name": "Entity Track geometry unknown",
+    "schema": "Entity",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "2",
+      "edit_revision": "1",
+      "alias": null,
+      "entity_type": "track",
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "description": {
+        "name": "Observed extent"
+      },
+      "geometry": {
+        "state": "unknown"
+      }
+    }
+  },
+  {
+    "name": "ResourceImage Track geometry unknown",
+    "schema": "ResourceImage",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "2",
+      "edit_revision": "1",
+      "alias": null,
+      "entity_type": "track",
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "description": {
+        "name": "Observed extent"
+      },
+      "geometry": {
+        "state": "unknown"
+      }
+    }
+  },
+  {
+    "name": "snapshot Track geometry unknown",
+    "schema": "ReadSnapshotResponse",
+    "valid": true,
+    "value": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "snapshot_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "load_id": "00000000-0000-0000-0000-000000000002",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "baseline": "cursor-N",
+        "expires_at": "2026-10-18T01:03:00Z",
+        "limits": {
+          "max_batch_bytes": "4194304",
+          "max_changes": 1000
+        },
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "2",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "track",
+            "publisher_id": "00000000-0000-0000-0000-000000000002",
+            "description": {
+              "name": "Observed extent"
+            },
+            "geometry": {
+              "state": "unknown"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "commit Track geometry unknown",
+    "schema": "ChangesFrame",
+    "valid": true,
+    "value": {
+      "type": "changes",
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "protocol_version": "0.1.0",
+      "core_run_id": "00000000-0000-0000-0000-000000000002",
+      "batch": {
+        "cursor": "cursor-N1",
+        "changes": [
+          {
+            "kind": "upsert",
+            "resource": {
+              "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "version": "2",
+              "edit_revision": "1",
+              "alias": null,
+              "entity_type": "track",
+              "publisher_id": "00000000-0000-0000-0000-000000000002",
+              "description": {
+                "name": "Observed extent"
+              },
+              "geometry": {
+                "state": "unknown"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Track geometry reported",
+    "schema": "Track",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "2",
+      "edit_revision": "1",
+      "alias": null,
+      "entity_type": "track",
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "description": {
+        "name": "Observed extent"
+      },
+      "geometry": {
+        "state": "reported",
+        "result": {
+          "state": "value",
+          "classification": "dated_measurement",
+          "evidence": {
+            "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "sequence": "2",
+            "correction_revision": "0",
+            "generated_at": "2026-10-18T01:02:03Z",
+            "evidence_kind": "current"
+          },
+          "value": {
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                90
+              ]
+            },
+            "observed_at": "2026-10-18T01:02:03Z"
+          }
+        },
+        "receipt": {
+          "received_at": "2026-10-18T01:02:04Z",
+          "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+          "core_run_id": "00000000-0000-0000-0000-000000000002",
+          "source": {
+            "kind": "publisher",
+            "publisher_id": "00000000-0000-0000-0000-000000000002"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Entity Track geometry reported",
+    "schema": "Entity",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "2",
+      "edit_revision": "1",
+      "alias": null,
+      "entity_type": "track",
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "description": {
+        "name": "Observed extent"
+      },
+      "geometry": {
+        "state": "reported",
+        "result": {
+          "state": "value",
+          "classification": "dated_measurement",
+          "evidence": {
+            "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "sequence": "2",
+            "correction_revision": "0",
+            "generated_at": "2026-10-18T01:02:03Z",
+            "evidence_kind": "current"
+          },
+          "value": {
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                90
+              ]
+            },
+            "observed_at": "2026-10-18T01:02:03Z"
+          }
+        },
+        "receipt": {
+          "received_at": "2026-10-18T01:02:04Z",
+          "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+          "core_run_id": "00000000-0000-0000-0000-000000000002",
+          "source": {
+            "kind": "publisher",
+            "publisher_id": "00000000-0000-0000-0000-000000000002"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "ResourceImage Track geometry reported",
+    "schema": "ResourceImage",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "2",
+      "edit_revision": "1",
+      "alias": null,
+      "entity_type": "track",
+      "publisher_id": "00000000-0000-0000-0000-000000000002",
+      "description": {
+        "name": "Observed extent"
+      },
+      "geometry": {
+        "state": "reported",
+        "result": {
+          "state": "value",
+          "classification": "dated_measurement",
+          "evidence": {
+            "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "sequence": "2",
+            "correction_revision": "0",
+            "generated_at": "2026-10-18T01:02:03Z",
+            "evidence_kind": "current"
+          },
+          "value": {
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                90
+              ]
+            },
+            "observed_at": "2026-10-18T01:02:03Z"
+          }
+        },
+        "receipt": {
+          "received_at": "2026-10-18T01:02:04Z",
+          "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+          "core_run_id": "00000000-0000-0000-0000-000000000002",
+          "source": {
+            "kind": "publisher",
+            "publisher_id": "00000000-0000-0000-0000-000000000002"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "snapshot Track geometry reported",
+    "schema": "ReadSnapshotResponse",
+    "valid": true,
+    "value": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "snapshot_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "load_id": "00000000-0000-0000-0000-000000000002",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "baseline": "cursor-N",
+        "expires_at": "2026-10-18T01:03:00Z",
+        "limits": {
+          "max_batch_bytes": "4194304",
+          "max_changes": 1000
+        },
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "2",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "track",
+            "publisher_id": "00000000-0000-0000-0000-000000000002",
+            "description": {
+              "name": "Observed extent"
+            },
+            "geometry": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "2",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03Z",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                      0,
+                      90
+                    ]
+                  },
+                  "observed_at": "2026-10-18T01:02:03Z"
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04Z",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "publisher",
+                  "publisher_id": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "commit Track geometry reported",
+    "schema": "ChangesFrame",
+    "valid": true,
+    "value": {
+      "type": "changes",
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "protocol_version": "0.1.0",
+      "core_run_id": "00000000-0000-0000-0000-000000000002",
+      "batch": {
+        "cursor": "cursor-N1",
+        "changes": [
+          {
+            "kind": "upsert",
+            "resource": {
+              "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "version": "2",
+              "edit_revision": "1",
+              "alias": null,
+              "entity_type": "track",
+              "publisher_id": "00000000-0000-0000-0000-000000000002",
+              "description": {
+                "name": "Observed extent"
+              },
+              "geometry": {
+                "state": "reported",
+                "result": {
+                  "state": "value",
+                  "classification": "dated_measurement",
+                  "evidence": {
+                    "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "sequence": "2",
+                    "correction_revision": "0",
+                    "generated_at": "2026-10-18T01:02:03Z",
+                    "evidence_kind": "current"
+                  },
+                  "value": {
+                    "geometry": {
+                      "type": "Point",
+                      "coordinates": [
+                        0,
+                        90
+                      ]
+                    },
+                    "observed_at": "2026-10-18T01:02:03Z"
+                  }
+                },
+                "receipt": {
+                  "received_at": "2026-10-18T01:02:04Z",
+                  "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                  "core_run_id": "00000000-0000-0000-0000-000000000002",
+                  "source": {
+                    "kind": "publisher",
+                    "publisher_id": "00000000-0000-0000-0000-000000000002"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "snapshot refuses Track geometry latitude",
+    "schema": "ReadSnapshotResponse",
+    "valid": false,
+    "value": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "snapshot_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "load_id": "00000000-0000-0000-0000-000000000002",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "baseline": "cursor-N",
+        "expires_at": "2026-10-18T01:03:00Z",
+        "limits": {
+          "max_batch_bytes": "4194304",
+          "max_changes": 1000
+        },
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "2",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "track",
+            "publisher_id": "00000000-0000-0000-0000-000000000002",
+            "description": {
+              "name": "Observed extent"
+            },
+            "geometry": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "2",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03Z",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                      0,
+                      179
+                    ]
+                  },
+                  "observed_at": "2026-10-18T01:02:03Z"
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04Z",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "publisher",
+                  "publisher_id": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "commit refuses Track geometry latitude",
+    "schema": "ChangesFrame",
+    "valid": false,
+    "value": {
+      "type": "changes",
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "protocol_version": "0.1.0",
+      "core_run_id": "00000000-0000-0000-0000-000000000002",
+      "batch": {
+        "cursor": "cursor-N1",
+        "changes": [
+          {
+            "kind": "upsert",
+            "resource": {
+              "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "version": "2",
+              "edit_revision": "1",
+              "alias": null,
+              "entity_type": "track",
+              "publisher_id": "00000000-0000-0000-0000-000000000002",
+              "description": {
+                "name": "Observed extent"
+              },
+              "geometry": {
+                "state": "reported",
+                "result": {
+                  "state": "value",
+                  "classification": "dated_measurement",
+                  "evidence": {
+                    "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "sequence": "2",
+                    "correction_revision": "0",
+                    "generated_at": "2026-10-18T01:02:03Z",
+                    "evidence_kind": "current"
+                  },
+                  "value": {
+                    "geometry": {
+                      "type": "Point",
+                      "coordinates": [
+                        0,
+                        179
+                      ]
+                    },
+                    "observed_at": "2026-10-18T01:02:03Z"
+                  }
+                },
+                "receipt": {
+                  "received_at": "2026-10-18T01:02:04Z",
+                  "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                  "core_run_id": "00000000-0000-0000-0000-000000000002",
+                  "source": {
+                    "kind": "publisher",
+                    "publisher_id": "00000000-0000-0000-0000-000000000002"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "snapshot refuses Track geometry 3D",
+    "schema": "ReadSnapshotResponse",
+    "valid": false,
+    "value": {
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "data": {
+        "snapshot_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "load_id": "00000000-0000-0000-0000-000000000002",
+        "core_run_id": "00000000-0000-0000-0000-000000000002",
+        "baseline": "cursor-N",
+        "expires_at": "2026-10-18T01:03:00Z",
+        "limits": {
+          "max_batch_bytes": "4194304",
+          "max_changes": 1000
+        },
+        "items": [
+          {
+            "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "version": "2",
+            "edit_revision": "1",
+            "alias": null,
+            "entity_type": "track",
+            "publisher_id": "00000000-0000-0000-0000-000000000002",
+            "description": {
+              "name": "Observed extent"
+            },
+            "geometry": {
+              "state": "reported",
+              "result": {
+                "state": "value",
+                "classification": "dated_measurement",
+                "evidence": {
+                  "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                  "sequence": "2",
+                  "correction_revision": "0",
+                  "generated_at": "2026-10-18T01:02:03Z",
+                  "evidence_kind": "current"
+                },
+                "value": {
+                  "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                      0,
+                      0,
+                      1
+                    ]
+                  },
+                  "observed_at": "2026-10-18T01:02:03Z"
+                }
+              },
+              "receipt": {
+                "received_at": "2026-10-18T01:02:04Z",
+                "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                "core_run_id": "00000000-0000-0000-0000-000000000002",
+                "source": {
+                  "kind": "publisher",
+                  "publisher_id": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "error": "unsupported_geometry"
+  },
+  {
+    "name": "commit refuses Track geometry 3D",
+    "schema": "ChangesFrame",
+    "valid": false,
+    "value": {
+      "type": "changes",
+      "dataset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "protocol_version": "0.1.0",
+      "core_run_id": "00000000-0000-0000-0000-000000000002",
+      "batch": {
+        "cursor": "cursor-N1",
+        "changes": [
+          {
+            "kind": "upsert",
+            "resource": {
+              "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "version": "2",
+              "edit_revision": "1",
+              "alias": null,
+              "entity_type": "track",
+              "publisher_id": "00000000-0000-0000-0000-000000000002",
+              "description": {
+                "name": "Observed extent"
+              },
+              "geometry": {
+                "state": "reported",
+                "result": {
+                  "state": "value",
+                  "classification": "dated_measurement",
+                  "evidence": {
+                    "evidence_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "sequence": "2",
+                    "correction_revision": "0",
+                    "generated_at": "2026-10-18T01:02:03Z",
+                    "evidence_kind": "current"
+                  },
+                  "value": {
+                    "geometry": {
+                      "type": "Point",
+                      "coordinates": [
+                        0,
+                        0,
+                        1
+                      ]
+                    },
+                    "observed_at": "2026-10-18T01:02:03Z"
+                  }
+                },
+                "receipt": {
+                  "received_at": "2026-10-18T01:02:04Z",
+                  "submitting_key_id": "00000000-0000-0000-0000-000000000002",
+                  "core_run_id": "00000000-0000-0000-0000-000000000002",
+                  "source": {
+                    "kind": "publisher",
+                    "publisher_id": "00000000-0000-0000-0000-000000000002"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "error": "unsupported_geometry"
+  },
+  {
+    "name": "concrete geometry pole",
+    "schema": "PointGeometry",
+    "valid": true,
+    "value": {
+      "type": "Point",
+      "coordinates": [
+        0,
+        90
+      ]
+    }
+  },
+  {
+    "name": "concrete geometry south pole",
+    "schema": "PointGeometry",
+    "valid": true,
+    "value": {
+      "type": "Point",
+      "coordinates": [
+        180,
+        -90
+      ]
+    }
+  },
+  {
+    "name": "concrete geometry line",
+    "schema": "LineGeometry",
+    "valid": true,
+    "value": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    }
+  },
+  {
+    "name": "concrete geometry polygon",
+    "schema": "PolygonGeometry",
+    "valid": true,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "name": "concrete geometry pole vertex",
+    "schema": "PolygonGeometry",
+    "valid": true,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            89
+          ],
+          [
+            1,
+            89
+          ],
+          [
+            0,
+            90
+          ],
+          [
+            0,
+            89
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "name": "concrete geometry refuses unclosed",
+    "schema": "PolygonGeometry",
+    "valid": false,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      ]
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "concrete geometry refuses clockwise",
+    "schema": "PolygonGeometry",
+    "valid": false,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      ]
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "concrete geometry refuses zero area",
+    "schema": "PolygonGeometry",
+    "valid": false,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      ]
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "concrete geometry refuses bowtie",
+    "schema": "PolygonGeometry",
+    "valid": false,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      ]
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "concrete geometry refuses latitude",
+    "schema": "PointGeometry",
+    "valid": false,
+    "value": {
+      "type": "Point",
+      "coordinates": [
+        0,
+        91
+      ]
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "concrete geometry refuses holes",
+    "schema": "PolygonGeometry",
+    "valid": false,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.6,
+            0.5
+          ],
+          [
+            0.6,
+            0.6
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ]
+      ]
+    },
+    "error": "unsupported_geometry"
+  },
+  {
+    "name": "concrete geometry refuses 3D",
+    "schema": "PointGeometry",
+    "valid": false,
+    "value": {
+      "type": "Point",
+      "coordinates": [
+        0,
+        0,
+        0
+      ]
+    },
+    "error": "unsupported_geometry"
+  },
+  {
+    "name": "concrete geometry refuses dateline",
+    "schema": "LineGeometry",
+    "valid": false,
+    "value": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          179,
+          1
+        ],
+        [
+          -179,
+          1
+        ]
+      ]
+    },
+    "error": "unsupported_geometry"
+  },
+  {
+    "name": "concrete geometry refuses pole spanning",
+    "schema": "PolygonGeometry",
+    "valid": false,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -170,
+            80
+          ],
+          [
+            -60,
+            80
+          ],
+          [
+            60,
+            80
+          ],
+          [
+            170,
+            80
+          ],
+          [
+            -170,
+            80
+          ]
+        ]
+      ]
+    },
+    "error": "unsupported_geometry"
+  },
+  {
+    "name": "concrete geometry refuses unknown fields",
+    "schema": "PointGeometry",
+    "valid": false,
+    "value": {
+      "type": "Point",
+      "coordinates": [
+        0,
+        0
+      ],
+      "radius": 1
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "concrete LineString stationary positions",
+    "schema": "LineGeometry",
+    "valid": true,
+    "value": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    }
+  },
+  {
+    "name": "concrete LineString repeated vertex",
+    "schema": "LineGeometry",
+    "valid": true,
+    "value": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    }
+  },
+  {
+    "name": "concrete Point rejects longitude as latitude",
+    "schema": "PointGeometry",
+    "valid": false,
+    "value": {
+      "type": "Point",
+      "coordinates": [
+        0,
+        179
+      ]
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "concrete Polygon rejects self overlap",
+    "schema": "PolygonGeometry",
+    "valid": false,
+    "value": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      ]
+    },
+    "error": "invalid_geometry"
+  },
+  {
+    "name": "Plugin payload root null",
+    "schema": "PluginPayload",
+    "valid": true,
+    "value": null
+  },
+  {
+    "name": "Plugin payload false",
+    "schema": "PluginPayload",
+    "valid": true,
+    "value": false
+  },
+  {
+    "name": "Plugin payload zero",
+    "schema": "PluginPayload",
+    "valid": true,
+    "value": 0
+  },
+  {
+    "name": "Plugin payload empty string",
+    "schema": "PluginPayload",
+    "valid": true,
+    "value": ""
+  },
+  {
+    "name": "Plugin payload empty array",
+    "schema": "PluginPayload",
+    "valid": true,
+    "value": []
+  },
+  {
+    "name": "Plugin payload empty object",
+    "schema": "PluginPayload",
+    "valid": true,
+    "value": {}
+  },
+  {
+    "name": "Plugin invocation null input",
+    "schema": "CreateOperationRequest",
+    "valid": true,
+    "value": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "operation_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "capability": "independent",
+      "input": null
+    }
+  },
+  {
+    "name": "Plugin Operation optional payloads omitted",
+    "schema": "Operation",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "1",
+      "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "capability": "independent",
+      "input": null,
+      "state": "completed",
+      "object_ids": [],
+      "recovered_outcome": {
+        "state": "completed",
+        "observed_at": null,
+        "object_ids": []
+      }
+    }
+  },
+  {
+    "name": "Plugin recovery optional payloads omitted",
+    "schema": "RecoveredOutcome",
+    "valid": true,
+    "value": {
+      "state": "completed",
+      "observed_at": null,
+      "object_ids": []
+    }
+  },
+  {
+    "name": "Plugin Operation optional payloads null",
+    "schema": "Operation",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "1",
+      "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "capability": "independent",
+      "input": null,
+      "state": "completed",
+      "object_ids": [],
+      "output": null,
+      "known_effects": null,
+      "recovered_outcome": {
+        "state": "completed",
+        "observed_at": null,
+        "object_ids": [],
+        "output": null,
+        "known_effects": null
+      }
+    }
+  },
+  {
+    "name": "Plugin recovery optional payloads null",
+    "schema": "RecoveredOutcome",
+    "valid": true,
+    "value": {
+      "state": "completed",
+      "observed_at": null,
+      "object_ids": [],
+      "output": null,
+      "known_effects": null
+    }
+  },
+  {
+    "name": "Plugin Operation optional payloads value",
+    "schema": "Operation",
+    "valid": true,
+    "value": {
+      "id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "version": "1",
+      "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "capability": "independent",
+      "input": null,
+      "state": "completed",
+      "object_ids": [],
+      "output": {
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            0,
+            179
+          ]
+        },
+        "precise": 1.2345678901234567
+      },
+      "known_effects": [
+        null,
+        false,
+        0,
+        ""
+      ],
+      "recovered_outcome": {
+        "state": "completed",
+        "observed_at": null,
+        "object_ids": [],
+        "output": {
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              0,
+              179
+            ]
+          },
+          "precise": 1.2345678901234567
+        },
+        "known_effects": [
+          null,
+          false,
+          0,
+          ""
+        ]
+      }
+    }
+  },
+  {
+    "name": "Plugin recovery optional payloads value",
+    "schema": "RecoveredOutcome",
+    "valid": true,
+    "value": {
+      "state": "completed",
+      "observed_at": null,
+      "object_ids": [],
+      "output": {
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            0,
+            179
+          ]
+        },
+        "precise": 1.2345678901234567
+      },
+      "known_effects": [
+        null,
+        false,
+        0,
+        ""
+      ]
+    }
+  },
+  {
+    "name": "Plugin raw numeric spelling",
+    "schema": "PluginPayload",
+    "valid": true,
+    "raw": "{\"integer\":9007199254740993,\"decimal\":1.234567890123456789,\"exponent\":1e-20}",
+    "value": {
+      "integer": 9007199254740992,
+      "decimal": 1.2345678901234567,
+      "exponent": 1e-20
+    }
+  },
+  {
+    "name": "Plugin null input does not permit omission",
+    "schema": "CreateOperationRequest",
+    "valid": false,
+    "value": {
+      "request_id": "00000000-0000-0000-0000-000000000002",
+      "operation_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "plugin_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+      "release": "example-1",
+      "capability": "independent"
+    }
   }
 ]

@@ -7974,7 +7974,8 @@
         "required": [
           "type",
           "coordinates"
-        ]
+        ],
+        "x-atlas-geometry": true
       },
       "LineGeometry": {
         "type": "object",
@@ -7998,7 +7999,8 @@
         "required": [
           "type",
           "coordinates"
-        ]
+        ],
+        "x-atlas-geometry": true
       },
       "PolygonGeometry": {
         "type": "object",
@@ -8027,7 +8029,8 @@
         "required": [
           "type",
           "coordinates"
-        ]
+        ],
+        "x-atlas-geometry": true
       },
       "Geometry": {
         "oneOf": [
@@ -11489,8 +11492,14 @@
         ]
       },
       "PluginPayload": {
-        "description": "Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema.",
-        "x-go-type": "json.RawMessage"
+        "description": "Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null.",
+        "x-go-type": "json.RawMessage",
+        "anyOf": [
+          {
+            "type": "null"
+          },
+          {}
+        ]
       },
       "PluginSchemaReference": {
         "type": "object",
@@ -15802,32 +15811,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -15846,32 +15829,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -15890,32 +15847,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -15934,32 +15865,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -15978,32 +15883,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16022,32 +15901,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16066,32 +15919,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16110,32 +15937,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16154,32 +15955,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16198,32 +15973,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16242,32 +15991,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16286,32 +16009,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {
@@ -16330,32 +16027,6 @@
           },
           "Atlas-Protocol-Version": {
             "$ref": "#/components/headers/Version"
-          },
-          "Upgrade": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "websocket"
-              ]
-            }
-          },
-          "Connection": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "Upgrade"
-              ]
-            }
-          },
-          "Sec-WebSocket-Accept": {
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            }
           }
         },
         "content": {

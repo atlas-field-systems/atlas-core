@@ -8,11 +8,13 @@ import type {Limits} from './scan.js';
 import type {components} from './wire.gen.js';
 type Descriptor = components['schemas']['UploadObjectDescriptor'];
 interface Schema {[keyword: string]: unknown; type?: string | string[]; $ref?: string; properties?: Record<string, Schema>}
-interface Parameter {name?: string; in?: string; schema?: Schema; $ref?: string; content?: Record<string, {schema: Schema}>}
-interface ResponseContract {[keyword: string]: unknown; $ref?: string; content?: Record<string, {schema: Schema}>}
+interface Parameter {name?: string; in?: string; required?: boolean; schema?: Schema; $ref?: string; content?: Record<string, {schema: Schema}>}
+interface HeaderContract {required?: boolean; $ref?: string}
+interface ResponseContract {[keyword: string]: unknown; $ref?: string; headers?: Record<string, HeaderContract>; content?: Record<string, {schema: Schema}>}
 interface Operation {operationId: string; parameters: Parameter[]; responses: Record<string, ResponseContract>; 'x-atlas-binding': {query_schema: string; body_schema: string | null; response_schema: string | null; mutation: boolean}}
 const paths: Record<string, Record<string, Operation>> = document.paths;
 const responses: Record<string, ResponseContract> = document.components.responses;
+const headerContracts: Record<string, HeaderContract> = document.components.headers;
 const schemas: Record<string, Schema> = document.components.schemas;
 const bytes = (s: string) => new TextEncoder().encode(s);
 const sameID = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
@@ -27,12 +29,12 @@ function context(headers: Headers) {
  if (version.includes(',') || version.length > 128) throw new Error('invalid version header');
  return {dataset, version};
 }
-function media(headers: Headers) {
- const raw = header(headers, 'Content-Type');
+function mediaType(raw: string) {
  const [kind, ...parameters] = raw.toLowerCase().split(';');
  for (const p of parameters) if (p.trim().startsWith('charset=') && !['charset=utf-8', 'charset="utf-8"'].includes(p.trim())) throw new Error('unsupported_media_type');
  return kind?.trim() ?? '';
 }
+function media(headers: Headers) {return mediaType(header(headers, 'Content-Type'));}
 async function* chunks(body: ReadableStream<Uint8Array> | null) {
  if (!body) return;
  const reader = body.getReader();
@@ -86,6 +88,7 @@ export async function ValidateRequest(name: string, request: Request, expectedDa
   const key = header(request.headers, 'Authorization'); if (key.slice(0, 7).toLowerCase() !== 'bearer ' || !/^[A-Za-z0-9_-]{43,128}$/.test(key.slice(7))) throw new Error('unauthenticated');
   if (name !== 'GetHealth') {const {dataset, version} = context(request.headers); if (expectedDataset && !sameID(dataset, expectedDataset)) throw new Error('dataset_mismatch'); if (version !== Version) throw new Error('protocol_mismatch');}
  }
+ for (const parameter of op.parameters) if (parameter.in === 'header' && parameter.required && parameter.name) header(request.headers, parameter.name);
  for (const [key, value] of Object.entries(facts)) {
   const param = op.parameters.find(p => p.in === 'path' && p.name === key), schema = param?.schema?.$ref?.split('/').at(-1);
   if (!schema || !isSchemaName(schema)) throw new Error('unknown path schema'); Decode(schema, bytes(JSON.stringify(value)), limits);
@@ -123,6 +126,10 @@ export async function ValidateResponse(name: string, response: HTTPResponse, ctx
  const expectedDataset = ctx.datasetID, expectedObject = ctx.object;
  const {op} = operation(name); let declared = op.responses[String(response.status)]; if (!declared) throw new Error('undeclared response status');
  if (declared.$ref) declared = responses[declared.$ref.split('/').at(-1) ?? '']; if (!declared) throw new Error('unknown response');
+ for (const [name, declaration] of Object.entries(declared.headers ?? {})) {
+  const contract = declaration.$ref ? headerContracts[declaration.$ref.split('/').at(-1) ?? ''] : declaration;
+  if (!contract) throw new Error('unknown header contract'); if (contract.required) header(response.headers, name);
+ }
  const {dataset, version} = context(response.headers), refusal = response.status >= 400;
  if (!refusal && (version !== Version || expectedDataset && !sameID(dataset, expectedDataset))) throw new Error('response context mismatch');
  if (response.status === 101) {
@@ -137,7 +144,7 @@ export async function ValidateResponse(name: string, response: HTTPResponse, ctx
   if (!/^(inline|attachment)(;.*)?$/.test(header(response.headers, 'Content-Disposition'))) throw new Error('invalid disposition');
   if (ctx.disposition && header(response.headers, 'Content-Disposition').split(';')[0] !== ctx.disposition) throw new Error('wrong disposition');
   const descriptor: Descriptor = {object_id: dataset, request_id: dataset, byte_length: size, sha256: hash.toString('hex'), content_type: kind, metadata: {name: 'content', entity_ids: [], task_ids: []}};
-  if (expectedObject && (expectedObject.byte_length !== size || expectedObject.sha256 !== descriptor.sha256 || expectedObject.content_type !== kind)) throw new Error('object response mismatch');
+  if (expectedObject && (expectedObject.byte_length !== size || expectedObject.sha256 !== descriptor.sha256 || mediaType(expectedObject.content_type) !== kind)) throw new Error('object response mismatch');
   await CheckContent(descriptor, chunks(response.body), limits); return;
  }
  const content = declared.content?.[kind]; if (!content) throw new Error('undeclared response media');

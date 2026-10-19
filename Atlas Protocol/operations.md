@@ -2,6 +2,8 @@
 
 **An Operation invokes one Plugin capability, separately from an Asset Task.**
 Core records the invocation and outcome. The Plugin performs the processing.
+Inputs, outputs, and known effects are Plugin-owned JSON, including null. An
+omitted output or effect is distinct from an explicit null payload.
 
 ## Admission and state
 

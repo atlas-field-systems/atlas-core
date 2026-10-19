@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {Ajv2020} from 'ajv/dist/2020.js';
 import {Decode, Encode, Version, Catalog, isSchemaName, DefaultLimits, ValidateRequest, ValidateResponse, ValidateFrame, CheckContent} from '../ts/index.js';
-import type {ResponseContext, FrameContext, components} from '../ts/index.js';
+import type {ResponseContext, FrameContext, components, operations} from '../ts/index.js';
 interface Fixture {name: string; schema: string; valid: boolean; value?: unknown; raw?: string; hex?: string; error?: string}
 interface Exchange {name: string; request_schema: string | null; request: unknown; response_schema: string | null; response: unknown; status: number; query: string}
 interface Manifest {case_names: string[]; exchange_names: string[]; valid: number; invalid: number}
@@ -51,7 +51,7 @@ test('shared independent fixtures execute generated types and both validation bo
    assert.deepEqual(result, sample.value); assert.deepEqual(value, result);
   } else {invalid++; if (sample.error) assert.throws(() => Decode(name, raw), new RegExp(sample.error)); else assert.throws(() => Decode(name, raw));}
  });}
- assert.equal(valid, 236); assert.equal(invalid, 239); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
+ assert.equal(valid, 267); assert.equal(invalid, 256); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
 });
 
 test('every HTTP message validates status, media, context, request and reply', async t => {
@@ -79,6 +79,70 @@ test('declared refusal statuses use their real error schemas', async () => {
  assert.equal(count, 13);
  const h = headers(); h.set('Atlas-Protocol-Version', '0.2.0');
  await ValidateResponse('GetAsset', {status: 409, headers: h, body: new Response(JSON.stringify({dataset_id: dataset, error: {code: 'protocol_mismatch', message: 'Exact version required', request_id: coreRun, details: {expected_protocol_version: '0.2.0', actual_protocol_version: '0.1.0'}}})).body}, {datasetID: dataset});
+});
+
+test('ordinary error contracts require only actual Dataset and version headers', async () => {
+ const ordinary: operations['GetAsset']['responses'][401]['headers'] = {'Atlas-Dataset-ID': dataset, 'Atlas-Protocol-Version': Version};
+ assert.deepEqual(Object.keys(ordinary).sort(), ['Atlas-Dataset-ID', 'Atlas-Protocol-Version']);
+ for (const sample of cases) if (sample.name.startsWith('HTTP error ')) {
+  for (const operation of ['GetAsset', 'SubscribeChanges']) for (const missing of ['', 'Atlas-Dataset-ID', 'Atlas-Protocol-Version']) {
+   const h = headers(); if (missing) h.delete(missing);
+   const validation = ValidateResponse(operation, {status: Number(sample.name.slice(11)), headers: h, body: new Response(JSON.stringify(sample.value)).body}, {datasetID: dataset});
+   if (missing) await assert.rejects(validation); else await validation;
+  }
+ }
+});
+
+test('Plugin null and optional payloads retain their generated presence states', async () => {
+ assert.equal(Decode('PluginPayload', Encode('PluginPayload', null)), null);
+ const sample = exchanges.find(x => x.name === 'CreateOperation'); assert(sample);
+ const invocation = {...Decode('CreateOperationRequest', wire(sample.request)), input: null};
+ assert.deepEqual(Decode('CreateOperationRequest', Encode('CreateOperationRequest', invocation)), invocation);
+ const req = new Request(request(sample), {body: JSON.stringify(invocation)});
+ await ValidateRequest('CreateOperation', req, dataset);
+ const base: components['schemas']['Operation'] = {id: dataset, version: '1', plugin_id: dataset, release: 'independent', capability: 'null-result', input: null, state: 'completed', object_ids: []};
+ for (const fields of [{}, {output: null, known_effects: null}, {output: {precise: 1.2345678901234567}, known_effects: [null, false, 0, '']}]) {
+  const operation = {...base, ...fields, recovered_outcome: {state: 'completed', observed_at: null, object_ids: [], ...fields}} satisfies components['schemas']['Operation'];
+  const out = Decode('Operation', Encode('Operation', operation));
+  assert.deepEqual(out, operation); assert.equal(Object.hasOwn(out, 'output'), Object.hasOwn(fields, 'output')); assert.equal(Object.hasOwn(out, 'known_effects'), Object.hasOwn(fields, 'known_effects'));
+ }
+});
+
+test('Tracks with geometry cross complete snapshot and committed frame boundaries', () => {
+ for (const sample of cases) if (sample.name.startsWith('commit Track geometry ') || sample.name.startsWith('commit refuses Track geometry ')) {
+  const validate = () => ValidateFrame('server', wire(sample.value), {datasetID: dataset, coreRunID: coreRun, authenticated: true, subscribed: true});
+  if (sample.valid) validate(); else assert.throws(validate, new RegExp(sample.error ?? ''));
+ }
+});
+
+test('concrete geometry retains the exact vertex refusal category', () => {
+ for (const count of [1024, 1025]) for (const name of ['LineGeometry', 'Geometry'] as const) {
+  const data = wire({type: 'LineString', coordinates: Array.from({length: count}, () => [0, 0])});
+  if (count === 1024) Decode(name, data); else assert.throws(() => Decode(name, data), /^Error: geometry_limit_exceeded$/);
+ }
+});
+
+test('downloads compare media case while preserving descriptor facts and checking bytes', async () => {
+ const stored = exchanges.find(sample => sample.name === 'GetObject'); assert(stored);
+ const original = {...Decode('GetObjectResponse', wire(stored.response)).data, content_type: 'Text/Plain'};
+ const object = Decode('Object', Encode('Object', original));
+ const digest = 'sha-256=:ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=:';
+ for (const [kind, body, length, hash, valid] of [
+  ['Text/Plain', 'abc', '3', digest, true],
+  ['text/plain', 'abc', '3', digest, true],
+  ['TEXT/PLAIN; charset=UTF-8', 'abc', '3', digest, true],
+  ['image/png', 'abc', '3', digest, false],
+  ['Text/Plain', 'abd', '3', digest, false],
+  ['Text/Plain', 'ab', '3', digest, false],
+  ['Text/Plain', 'abcd', '3', digest, false],
+  ['Text/Plain', 'abc', '4', digest, false],
+  ['Text/Plain', 'abc', '3', 'sha-256=:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=:', false],
+ ] satisfies [string, string, string, string, boolean][]) {
+  const h = headers(); h.set('Content-Type', kind); h.set('Content-Length', length); h.set('Content-Digest', hash); h.set('Content-Disposition', 'attachment');
+  const result = ValidateResponse('ReadObjectContent', {status: 200, headers: h, body: new Response(body).body}, {datasetID: dataset, object, disposition: 'attachment'});
+  if (valid) await result; else await assert.rejects(result);
+ }
+ assert.equal(object.content_type, 'Text/Plain'); assert.deepEqual(Decode('Object', Encode('Object', object)), original);
 });
 
 test('consumer facts retain exact spelling, times, precision, null and absence', () => {

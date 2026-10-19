@@ -28,7 +28,8 @@ closing pair. Command altitude uses the explicit [Altitude](telemetry.md#altitud
 
 Refuse malformed shapes as `invalid_geometry`, excluded representations as
 `unsupported_geometry`, and excess vertices as `geometry_limit_exceeded`. Never
-silently close, simplify, reorient, split, or repair submitted geometry.
+silently close, simplify, reorient, split, or repair submitted geometry. These rules
+apply to `Geometry` and each concrete geometry schema.
 
 ## Examples
 

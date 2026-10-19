@@ -2150,8 +2150,8 @@ export interface components {
             metadata: components["schemas"]["ObjectMetadata"];
             published_at: components["schemas"]["Timestamp"];
         };
-        /** @description Only Plugin-owned capability input, output, and effect payloads may contain arbitrary JSON. The Plugin release owns validation against its independently published schema. */
-        PluginPayload: unknown;
+        /** @description Plugin-owned arbitrary JSON, including null. The Plugin release owns its independently published input, output and effect schemas. Optional payloads distinguish omission from explicit null. */
+        PluginPayload: null | unknown;
         PluginSchemaReference: {
             /** Format: uri */
             uri: string;
@@ -3231,9 +3231,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3245,9 +3242,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3259,9 +3253,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3273,9 +3264,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3287,9 +3275,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3301,9 +3286,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3315,9 +3297,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3329,9 +3308,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3343,9 +3319,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3357,9 +3330,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3371,9 +3341,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3385,9 +3352,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {
@@ -3399,9 +3363,6 @@ export interface components {
             headers: {
                 "Atlas-Dataset-ID": components["headers"]["Dataset"];
                 "Atlas-Protocol-Version": components["headers"]["Version"];
-                Upgrade: "websocket";
-                Connection: "Upgrade";
-                "Sec-WebSocket-Accept": string;
                 [name: string]: unknown;
             };
             content: {

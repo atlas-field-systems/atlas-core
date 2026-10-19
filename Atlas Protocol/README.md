@@ -62,8 +62,9 @@ explicit `undefined` is rejected. Go also exposes `ValidateJSON`. Direct generat
 helpers provide declarations and union access, without validation. Construct a Go
 union variant through `Encode` then `Decode` before nesting it, so unset required
 nullable fields cannot become explicit unknown values during generated marshaling.
-For a nullable component root in Go, wrap its generated alias in
-`nullable.Nullable[T]`, as the generated nullable fields do.
+Nullable object or scalar root aliases in Go use `nullable.Nullable[T]`, as the
+generated nullable fields do. The `PluginPayload` root uses its generated
+`json.RawMessage` alias directly.
 
 `ValidateRequest` and `ValidateResponse` consume bodies. The caller owns the stream,
 authentication, staging, and commitment. `CheckContent` verifies streaming length

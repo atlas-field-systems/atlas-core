@@ -37,6 +37,8 @@ explicitly empty responses are declared exceptions to the JSON data envelope.
 Upload uses an unpadded base64url `Atlas-Object-Descriptor` header containing its
 UTF-8 JSON descriptor, followed by one complete binary body. Content reads expose
 length, content type, SHA-256 `Content-Digest`, and read disposition.
+Only the 101 success requires WebSocket handshake response headers. Ordinary
+HTTP errors use their declared Dataset and version headers.
 Validate status, media, headers, and body at both ends. A malformed mutation response
 may follow a real commit, so it cannot establish rejection.
 
