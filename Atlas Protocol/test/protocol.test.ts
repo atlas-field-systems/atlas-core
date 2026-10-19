@@ -54,7 +54,7 @@ test('shared independent fixtures execute generated types and both validation bo
    assert.deepEqual(result, sample.value); assert.deepEqual(value, result);
   } else {invalid++; if (sample.error) assert.throws(() => Decode(name, raw), new RegExp(sample.error)); else assert.throws(() => Decode(name, raw));}
  });}
- assert.equal(valid, 270); assert.equal(invalid, 265); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
+ assert.equal(valid, 276); assert.equal(invalid, 287); assert.equal(valid, manifest.valid); assert.equal(invalid, manifest.invalid); assert.deepEqual(names, manifest.case_names); assert.equal(new Set(names).size, names.length);
 });
 
 test('every HTTP message validates status, media, context, request and reply', async t => {

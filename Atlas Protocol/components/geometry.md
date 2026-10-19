@@ -21,8 +21,15 @@ double precision. Coordinate tuples reference the same longitude and latitude sc
 definitions in the schemas. The single polygon ring is the exterior. The exterior ring uses counterclockwise winding. A polygon must have nonzero area and must not intersect itself.
 
 Accept only these two-dimensional geometry objects. Feature wrappers, collections,
-holes, multipart geometry, and dateline- or pole-spanning shapes are unsupported.
-A Point at either pole is valid. A pole vertex alone does not make an area unsupported.
+holes, and multipart geometry are unsupported. The initial profile excludes these
+dateline and pole representations before planar topology checks:
+
+- An adjacent pair's absolute longitude step exceeds 180 degrees. Exactly 180 is allowed.
+- A non-Point geometry's longitude extent is the full 360 degrees, including both -180 and +180.
+- A Polygon edge joins distinct longitudes at the same pole, latitude +90 or -90.
+
+A Point at either pole and an isolated polygon pole vertex are valid. These limits
+define the initial representation profile, not general spherical topology.
 The initial maximum is 1,024 coordinate pairs in total, including a ring's repeated
 closing pair. Command altitude uses the explicit [Altitude](telemetry.md#altitude) value.
 

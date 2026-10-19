@@ -37,6 +37,7 @@ export function geometry(value: unknown): void {
  if (raw.length > 1024) fail('geometry_limit_exceeded');
  if (kind === 'LineString' && raw.length < 2 || kind === 'Polygon' && raw.length < 4) fail();
  const points: Point[] = [];
+ let minLongitude = 180, maxLongitude = -180;
  for (const pair of raw) {
   if (!Array.isArray(pair)) fail();
   if (pair.length > 2) fail('unsupported_geometry');
@@ -44,10 +45,13 @@ export function geometry(value: unknown): void {
   const x: unknown = pair[0], y: unknown = pair[1];
   if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y) || x < -180 || x > 180 || y < -90 || y > 90) fail();
   points.push([x, y]);
+  minLongitude = Math.min(minLongitude, x); maxLongitude = Math.max(maxLongitude, x);
  }
+ if (kind !== 'Point' && minLongitude === -180 && maxLongitude === 180) fail('unsupported_geometry');
  for (let i = 1; i < points.length; i++) {
   const a = points[i - 1], b = points[i]; if (!a || !b) fail();
   if (Math.abs(a[0] - b[0]) > 180) fail('unsupported_geometry');
+  if (kind === 'Polygon' && a[0] !== b[0] && a[1] === b[1] && Math.abs(a[1]) === 90) fail('unsupported_geometry');
   if (kind === 'Polygon' && equal(a, b)) fail();
  }
  if (kind !== 'Polygon') return;

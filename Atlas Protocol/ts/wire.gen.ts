@@ -1194,7 +1194,7 @@ export interface components {
                 components["schemas"]["Coordinate"][][]
             ];
         };
-        /** @description 2D GeoJSON. Maximum 1024 pairs including closure. No holes, crossings, multipart, date-line crossings or pole-spanning areas. Never repair or reorient. Point latitude +/-90 is valid. */
+        /** @description 2D GeoJSON. Maximum 1024 pairs including closure. No holes, self-intersections or multipart geometry. The initial profile excludes adjacent absolute longitude steps over 180 degrees (180 allowed), non-Point longitude extent of 360 degrees, and Polygon edges joining distinct longitudes at the same pole. Point latitude +/-90 and an isolated polygon pole vertex are valid. These representation limits do not define general spherical topology. Refuse excluded representations as unsupported_geometry and malformed shapes as invalid_geometry. Excess vertices are geometry_limit_exceeded. Never repair or reorient. */
         Geometry: components["schemas"]["PointGeometry"] | components["schemas"]["LineGeometry"] | components["schemas"]["PolygonGeometry"];
         MediaReferences: {
             object_ids: components["schemas"]["Identifier"][];

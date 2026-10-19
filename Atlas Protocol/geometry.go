@@ -47,6 +47,7 @@ func geometry(value interface{}) error {
 		return fmt.Errorf("invalid_geometry")
 	}
 	points := make([]coordinate, 0, len(pairs))
+	minLongitude, maxLongitude := 180.0, -180.0
 	for _, pair := range pairs {
 		pair, ok := pair.([]interface{})
 		if !ok {
@@ -64,12 +65,21 @@ func geometry(value interface{}) error {
 			return fmt.Errorf("invalid_geometry")
 		}
 		points = append(points, coordinate{x, y})
+		minLongitude = math.Min(minLongitude, x)
+		maxLongitude = math.Max(maxLongitude, x)
+	}
+	if kind != "Point" && minLongitude == -180 && maxLongitude == 180 {
+		return fmt.Errorf("unsupported_geometry")
 	}
 	for i := 1; i < len(points); i++ {
-		if math.Abs(points[i].x-points[i-1].x) > 180 {
+		a, b := points[i-1], points[i]
+		if math.Abs(b.x-a.x) > 180 {
 			return fmt.Errorf("unsupported_geometry")
 		}
-		if kind == "Polygon" && points[i] == points[i-1] {
+		if kind == "Polygon" && a.x != b.x && a.y == b.y && math.Abs(a.y) == 90 {
+			return fmt.Errorf("unsupported_geometry")
+		}
+		if kind == "Polygon" && a == b {
 			return fmt.Errorf("invalid_geometry")
 		}
 	}
