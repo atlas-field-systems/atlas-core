@@ -183,7 +183,7 @@ func outbound(v reflect.Value, optional bool, depth int, count, size *int, limit
 		}
 	case reflect.Slice, reflect.Array:
 		*size += v.Len()
-		if v.Len() > limits.MaxValues || *size > limits.MaxJSONBytes {
+		if *size > limits.MaxJSONBytes {
 			return fmt.Errorf("outbound size limit")
 		}
 		if v.Type().Elem().Kind() == reflect.Uint8 {
@@ -191,6 +191,9 @@ func outbound(v reflect.Value, optional bool, depth int, count, size *int, limit
 				return scan(v.Bytes(), limits)
 			}
 			return nil
+		}
+		if v.Len() > limits.MaxValues {
+			return fmt.Errorf("outbound size limit")
 		}
 		for i := 0; i < v.Len(); i++ {
 			if err := outbound(v.Index(i), false, depth+1, count, size, limits); err != nil {
