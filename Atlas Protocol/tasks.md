@@ -55,14 +55,14 @@ are internal and do not appear in the eligible `task_ids`.
 
 Assigned-work `page_size` bounds Task bodies, not queue metadata. Every page repeats
 the first page's complete `task_queue`, including its captured `confirmed_revision`.
-A supplied `queue_revision` must match. Continuations pin revision and query context.
+Continuations pin revision and query context. The optional `queue_revision`
+precondition may be omitted or supplied on any page and must match that revision.
 Changed requested order or eligibility refuses `409 queue_changed`. Discard that
 sequence and read afresh. Confirmation alone does not invalidate pages. Fresh reads
 or Asset synchronization expose newer adoption metadata.
 
 Queue changes, including confirmation alone, advance the owning Asset's `version`.
 Core atomically commits its final Asset image with any related Task changes.
-The queue shares the Asset's identity and lifecycle in synchronization.
 
 Pause and Resume are immediate Tasks, not an emergency-stop guarantee. Pause
 requires actual suspension and keeps queue order. Resume continues the same Task

@@ -3271,7 +3271,7 @@ type AssetUpdateResult struct {
 	FreshContact bool                 `json:"fresh_contact"`
 }
 
-// AssignedTaskPage Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.
+// AssignedTaskPage Task bodies sort by bytewise ID and page_size is an upper bound on those bodies. Pages may be shorter to fit JSON byte and value budgets; next_page_token determines continuation. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. The optional queue_revision precondition may be omitted or supplied on any page and is checked against the pinned revision, outside token-bound query context. A precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.
 type AssignedTaskPage struct {
 	Items         []Task     `json:"items"`
 	NextPageToken *PageToken `json:"next_page_token,omitempty"`
@@ -3285,7 +3285,7 @@ type AssignedTaskQuery struct {
 	PageSize  *int       `json:"page_size,omitempty"`
 	PageToken *PageToken `json:"page_token,omitempty"`
 
-	// QueueRevision Optional requested queue revision precondition. A mismatch refuses 409 queue_changed.
+	// QueueRevision Optional requested queue revision precondition, checked against the pinned revision on continuation. May be omitted or supplied on any page, outside token-bound query context. A mismatch refuses 409 queue_changed.
 	QueueRevision *PositiveCounter `json:"queue_revision,omitempty"`
 }
 
@@ -4641,7 +4641,7 @@ type GetAssetStatusResponse struct {
 
 // GetAssignedTasksResponse defines model for GetAssignedTasksResponse.
 type GetAssignedTasksResponse struct {
-	// Data Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.
+	// Data Task bodies sort by bytewise ID and page_size is an upper bound on those bodies. Pages may be shorter to fit JSON byte and value budgets; next_page_token determines continuation. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. The optional queue_revision precondition may be omitted or supplied on any page and is checked against the pinned revision, outside token-bound query context. A precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.
 	Data AssignedTaskPage `json:"data"`
 
 	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
@@ -6793,7 +6793,7 @@ type GetAssignedTasksParams struct {
 	PageSize  *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
 	PageToken *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
 
-	// QueueRevision Optional requested queue revision precondition. A mismatch refuses 409 queue_changed.
+	// QueueRevision Optional requested queue revision precondition, checked against the pinned revision on continuation. May be omitted or supplied on any page, outside token-bound query context. A mismatch refuses 409 queue_changed.
 	QueueRevision        *PositiveCounter `form:"queue_revision,omitempty" json:"queue_revision,omitempty"`
 	AtlasDatasetID       Dataset          `json:"Atlas-Dataset-ID"`
 	AtlasProtocolVersion VersionContext   `json:"Atlas-Protocol-Version"`

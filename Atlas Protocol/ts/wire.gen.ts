@@ -2382,7 +2382,7 @@ export interface components {
             items: components["schemas"]["ActivityRecord"][];
             next_page_token?: components["schemas"]["PageToken"];
         };
-        /** @description Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata. */
+        /** @description Task bodies sort by bytewise ID and page_size is an upper bound on those bodies. Pages may be shorter to fit JSON byte and value budgets; next_page_token determines continuation. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. The optional queue_revision precondition may be omitted or supplied on any page and is checked against the pinned revision, outside token-bound query context. A precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata. */
         AssignedTaskPage: {
             items: components["schemas"]["Task"][];
             task_queue: components["schemas"]["TaskQueue"];
@@ -2631,7 +2631,7 @@ export interface components {
             /** @default 100 */
             page_size: number;
             page_token?: components["schemas"]["PageToken"];
-            /** @description Optional requested queue revision precondition. A mismatch refuses 409 queue_changed. */
+            /** @description Optional requested queue revision precondition, checked against the pinned revision on continuation. May be omitted or supplied on any page, outside token-bound query context. A mismatch refuses 409 queue_changed. */
             queue_revision?: components["schemas"]["PositiveCounter"];
         };
         ReadObjectContentQuery: {
@@ -4745,7 +4745,7 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
-                /** @description Optional requested queue revision precondition. A mismatch refuses 409 queue_changed. */
+                /** @description Optional requested queue revision precondition, checked against the pinned revision on continuation. May be omitted or supplied on any page, outside token-bound query context. A mismatch refuses 409 queue_changed. */
                 queue_revision?: components["schemas"]["PositiveCounter"];
             };
             header: {

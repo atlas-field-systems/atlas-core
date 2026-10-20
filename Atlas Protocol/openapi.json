@@ -3437,7 +3437,7 @@
             "name": "queue_revision",
             "in": "query",
             "required": false,
-            "description": "Optional requested queue revision precondition. A mismatch refuses 409 queue_changed.",
+            "description": "Optional requested queue revision precondition, checked against the pinned revision on continuation. May be omitted or supplied on any page, outside token-bound query context. A mismatch refuses 409 queue_changed.",
             "schema": {
               "$ref": "#/components/schemas/PositiveCounter"
             },
@@ -12353,7 +12353,7 @@
       "AssignedTaskPage": {
         "type": "object",
         "additionalProperties": false,
-        "description": "Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.",
+        "description": "Task bodies sort by bytewise ID and page_size is an upper bound on those bodies. Pages may be shorter to fit JSON byte and value budgets; next_page_token determines continuation. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. The optional queue_revision precondition may be omitted or supplied on any page and is checked against the pinned revision, outside token-bound query context. A precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.",
         "properties": {
           "items": {
             "type": "array",
@@ -13377,7 +13377,7 @@
           },
           "queue_revision": {
             "$ref": "#/components/schemas/PositiveCounter",
-            "description": "Optional requested queue revision precondition. A mismatch refuses 409 queue_changed."
+            "description": "Optional requested queue revision precondition, checked against the pinned revision on continuation. May be omitted or supplied on any page, outside token-bound query context. A mismatch refuses 409 queue_changed."
           }
         },
         "required": []

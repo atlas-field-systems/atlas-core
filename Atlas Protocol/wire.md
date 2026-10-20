@@ -88,13 +88,14 @@ that URL parsers would normalize inside a path.
 
 ## Lists
 
-Filters are explicit: AND between fields, OR within a field, and an empty array
-matches nothing. Reject unsupported filters. Ordinary lists are moving keyset
-views, not frozen snapshots; IDs sort bytewise. Default pages contain 100 items,
-maximum 1,000. Encode an array filter as one JSON-array query value, such as `ids=[]`. Reject
-repeated decoded query names. Omission and an empty array remain distinct.
-Tokens bind source, Dataset, kind, filters, size, and continuation;
-ordinary tokens expire after 60 seconds. Assigned-work tokens also pin queue revision
-and captured adoption metadata under [Task paging rules](tasks.md#scheduling-and-controls).
-Bytewise Task-body order is independent of `task_queue.task_ids` execution order.
+Filters use AND between fields and OR within a field. An empty array matches nothing.
+Ordinary lists are moving keyset views with bytewise ID ordering, not snapshots.
+`page_size` caps items, default 100, maximum 1,000. Core may return fewer items
+to fit JSON byte and value budgets. `next_page_token` determines continuation.
+Encode an array filter as one JSON-array query value, such as `ids=[]`.
+Reject unsupported filters and repeated decoded query names. Omission and empty arrays differ.
+Tokens bind source, Dataset, kind, filters, size, and continuation and expire after 60 seconds.
+Assigned-work tokens also pin queue revision and captured adoption metadata under
+[Task paging rules](tasks.md#scheduling-and-controls).
+
 [Next: synchronization](synchronization.md)
