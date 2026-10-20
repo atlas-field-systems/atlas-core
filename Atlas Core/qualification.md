@@ -63,9 +63,26 @@ encoded-byte accounting is not a memory guarantee. Resource counts include all
 canonical readings and tombstones. Qualify bounded active history views and their
 reference counts, including a commit that fits only after view expiry and one
 that remains resource-limited. Limits never authorize a history window or eviction.
-At the target Asset rate, two new readings per report produce 2,304,000 readings
+At the target Asset rate, two new readings per report would produce 2,304,000 readings
 over eight hours. The 100,000-resource starting limit cannot cover that case.
-Qualify a sufficient resource count and aggregate memory budget together.
+This projection establishes a count mismatch, not observed memory overload.
+Qualify a sufficient resource count and aggregate memory budget together. Raising
+the resource limit alone does not prove memory fit.
+
+Full-history memory capacity remains unverified. No representative measurement
+establishes whether the 512 MiB picture budget or 8 GB client is sufficient.
+Core and SDK reading storage, indexes, and query views are not implemented.
+The [disposable prototypes](../prototypes/flight-lab/report.md#limits) use small
+private fixtures and do not qualify aggregate RAM.
+
+Qualification must use concrete schemas and implemented SDK/Core with 2,304,000
+distinct, fully populated readings plus the remaining workload. Verify all retained
+readings remain locally queryable, including after Asset deletion and replacement.
+Measure steady-state and peak resident and heap memory during initial load, live
+commits, active views with retained corrections, and rebuild with old and staged
+pictures together. Record commands, runtime, limits, and repeated run results.
+Eight hours is a fixture duration; qualify longer Datasets under the
+[retention rules](storage.md#retention-and-capacity).
 
 Qualification targets include p95 ordinary requests below 250 ms, picture lag below
 one second, and initial load below ten seconds. All values require measurement and
