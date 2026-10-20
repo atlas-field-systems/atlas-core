@@ -3,6 +3,10 @@
 **An Operation invokes one Plugin capability, separately from an Asset Task.**
 Core records the invocation and outcome. The Plugin performs the processing.
 
+The wire contract must distinguish an omitted payload from explicit null.
+Accepted Plugin numeric ranges, preservation of numeric token spelling, and equality
+for retry facts remain to be specified. A generic JSON type does not settle these rules.
+
 ## Admission and state
 
 An Operation records its original capability, release, and input under a durable

@@ -4,7 +4,7 @@ Geometry describes a point, line, or polygon using a shared spatial value.
 Geofeatures require it. Applicable Tracks can report an observed extent. Asset
 location uses [Position](telemetry.md#position).
 
-## Agreed geometry profile
+## Geometry profile
 
 Use a two-dimensional subset of [GeoJSON Geometry](https://www.rfc-editor.org/rfc/rfc7946.html#section-3.1).
 Each object has required, non-null `type` and `coordinates` fields. Its geometry
@@ -18,7 +18,7 @@ Each object has required, non-null `type` and `coordinates` fields. Its geometry
 
 Use WGS84 degrees and the bounds from [Position](telemetry.md#position), preserving
 double precision. Coordinate tuples reference the same longitude and latitude scalar
-definitions in the schemas. The single polygon ring is the exterior. Follow GeoJSON
+definitions in the eventual schemas. The single polygon ring is the exterior. Follow GeoJSON
 winding rules. A polygon must have nonzero area and must not intersect itself.
 
 Accept only these two-dimensional geometry objects. Feature wrappers, collections,
@@ -30,9 +30,15 @@ Refuse malformed shapes as `invalid_geometry`, excluded representations as
 `unsupported_geometry`, and excess vertices as `geometry_limit_exceeded`. Never
 silently close, simplify, reorient, split, or repair submitted geometry.
 
+Before implementation, specify acceptance examples for exactly 180-degree edges,
+pole vertices, and winding. The broad exclusions above do not settle every boundary.
+The vertex cap alone does not establish bounded validation cost. Qualification must
+cover adversarial valid shapes and complete messages, as described in
+[Core qualification](../../Atlas%20Core/protocol-qualification.md).
+
 ## Examples
 
-Valid point under the agreed profile:
+Valid point under this profile:
 
 ```json
 {"type": "Point", "coordinates": [-0.1278, 51.5074]}

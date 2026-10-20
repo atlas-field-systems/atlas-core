@@ -48,8 +48,7 @@ and a commandless tracker that reports its own telemetry.
 until changed and dated measurements. [Reports](../reports.md#shared-context)
 owns complete-section replacement, errors, ordering, and sparse report behavior.
 Those rules apply to all proposed sections.
-Component value-field requirements do not require healthy values in an error or
-withdrawn result. Their exact wire representations remain to be specified.
+Exact value, error, and withdrawal layouts remain to be specified.
 
 ## Shared proposed section fields
 

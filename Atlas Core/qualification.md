@@ -28,6 +28,9 @@ Qualify the supported schema profile, independent cross-language examples, packa
 consumption, and binary adapters. Do not buffer a large file in a JSON validator.
 A generated type check is not a request/response-validation test.
 
+Use the [Protocol boundary qualification cases](protocol-qualification.md) to retain
+demonstrated validator pitfalls without treating the experiment as a qualified runtime.
+
 A test must fail when its required assertion cannot run. Observe the promised
 path, not just an eventual value that a hidden fallback could produce. Test the
 actual failure boundary, including cleanup after owner interruption. Preserve both

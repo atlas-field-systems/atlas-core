@@ -13,10 +13,10 @@ Historical evidence retains its identity. A new packet ID cannot make it fresh.
 
 Apply [reported section classifications](entities.md#reported-sections) independently.
 An omitted section preserves its accepted result, classification, and source times.
-A supplied value section is a complete replacement, validated against its full schema.
-Never merge its subfields with the prior section. Missing required value fields
-reject that update. Omitted optional fields do not retain old values. Null subfields
-are valid only where their schemas permit them.
+A supplied section replaces its prior result in full, whether it carries values,
+an error, or a withdrawal. Core validates the required fields for that result.
+Never merge subfields with the prior section. Omitted optional fields do not retain
+old values. Null subfields are valid only where their schemas permit them.
 
 The Asset detects failures and reports a section-level error with a code and optional
 message. Core records and exposes it without diagnosing hardware, reconstructing
@@ -91,8 +91,8 @@ Asset's health nor its bandwidth capability; unknown capability stays unknown.
 
 ## Movement and recovery
 
-Append movement only for newly accepted explicit position, speed, or altitude,
-including historical evidence. Preserve sparse quantity times and deduplicate
+Append movement only from newly accepted position, speed, or altitude,
+including historical evidence. Preserve quantity times and deduplicate
 corrections. Never create samples by copying an entire merged Entity snapshot.
 History survives Entity deletion until Reset. Bounded history queries distinguish
 unknown Entity IDs from known Entities with no matching samples.

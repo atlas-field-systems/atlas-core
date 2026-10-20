@@ -63,7 +63,14 @@ Protocol defines this metadata, not a logger, diagnostic event schema, or log fe
 
 Accept one bounded UTF-8 JSON document. Reject duplicate decoded member names at
 any depth, malformed UTF-8, unpaired surrogates, and nonfinite numbers. Validate
-original text before normalizing typed values.
+original text before normalizing typed values. A numeric token must not pass a
+declared range or integer constraint solely because conversion rounds it.
+For example, `100.0000000000000000001` is not an integer even if a double rounds
+it to `100`. Accepted integer spellings remain to be specified.
+
+Encoded bytes, JSON value count, nesting depth, and semantic validation work are
+different limits. A long JSON string is one value. Apply whole-message limits to
+requests, responses, and frames, including metadata and repeated resource images.
 
 Patches leave omitted fields unchanged, replace scalars and arrays, merge defined
 objects, and use null only for permitted removal/clearing. Validate the complete
@@ -89,8 +96,10 @@ but still needs an intentional current-Dataset request.
 
 Filters are explicit: AND between fields, OR within a field, and an empty array
 matches nothing. Reject unsupported filters. Ordinary lists are moving keyset
-views, not frozen snapshots; IDs sort bytewise. Default pages contain 100 items,
-maximum 1,000. Tokens bind source, Dataset, kind, filters, size, and continuation;
+views, not frozen snapshots; IDs sort bytewise. Requested page size defaults to 100,
+maximum 1,000. It is an upper bound; byte and value limits may require shorter pages.
+The continuation token determines whether more items remain, not the item count.
+Tokens bind source, Dataset, kind, filters, size, and continuation;
 ordinary tokens expire after 60 seconds. Assigned-work lists also bind queue revision.
 
 [Next: synchronization](synchronization.md)
