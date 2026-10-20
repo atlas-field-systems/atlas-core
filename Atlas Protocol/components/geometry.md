@@ -23,8 +23,9 @@ winding rules. A polygon must have nonzero area and must not intersect itself.
 
 Accept only these two-dimensional geometry objects. Feature wrappers, collections,
 holes, multipart geometry, and dateline- or pole-spanning shapes are unsupported.
-The initial maximum is 1,024 coordinate pairs in total, including a ring's repeated
-closing pair. Command altitude uses the explicit [Altitude](telemetry.md#altitude) value.
+The proposed initial cap is 1,024 coordinate pairs in total, including a ring's
+repeated closing pair. It requires qualification. Command altitude uses the explicit
+[Altitude](telemetry.md#altitude) value.
 
 Refuse malformed shapes as `invalid_geometry`, excluded representations as
 `unsupported_geometry`, and excess vertices as `geometry_limit_exceeded`. Never

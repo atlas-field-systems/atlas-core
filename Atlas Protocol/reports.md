@@ -54,8 +54,9 @@ expected generation with its first check-in. Any valid API key may request this
 replacement. Only one replacement wins. Reconnect is not replacement; an obsolete
 generation cannot publish new execution state. A gateway restart is not an Asset restart.
 
-The gateway envelope, source-identity fields, and challenge exchange remain
-unspecified. The gateway translates attributable Asset evidence, including a
+Refusals identify the precise failed authority, generation, or challenge check.
+The gateway envelope, source-identity fields, challenge exchange, and exact refusal
+codes remain unspecified. The gateway translates attributable Asset evidence, including a
 response to Core's challenge; its own response cannot stand in for the Asset.
 Radio encoding and edge-link retries remain external.
 
