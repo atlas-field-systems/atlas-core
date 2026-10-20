@@ -56,4 +56,5 @@ until credentials change. Do not calculate clock offsets or automatically replay
 mutations after reconnect.
 
 [Requests](requests.md) explains write outcomes. [Picture](picture.md) explains
-local state and recovery. Neither is generated from Core implementation.
+local state and recovery. [Diagnostics](diagnostics.md) explains observation of
+traffic and failures. These workflows are handwritten.

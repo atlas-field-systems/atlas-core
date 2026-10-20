@@ -61,6 +61,6 @@ Core restart are outside scope.
 ## Reading order
 
 [Storage](storage.md) → [Lifecycle](lifecycle.md) → [Plugins](plugins.md) →
-[Qualification](qualification.md).
+[Diagnostics](diagnostics.md) → [Qualification](qualification.md).
 
 Shared behavior remains in [Protocol](../Atlas%20Protocol/README.md).

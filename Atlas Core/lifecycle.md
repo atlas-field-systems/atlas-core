@@ -50,6 +50,10 @@ Missing, damaged, or unavailable proof is not permission to wipe. Refuse unsafe 
 and expose repair. Record a Plugin's explicit startup fault rather than leaving
 Reset permanently pending because that Plugin cannot become ready.
 
+[Diagnostics](diagnostics.md#collection-and-lifetime) defines collection ownership,
+retained copies, and optional export for this cleanup boundary. Diagnostic copies
+must not escape Reset through an unmanaged container log or host journal.
+
 Ordinary retained startup preserves Task evidence and unresolved execution.
 Apply [Operation recovery rules](../Atlas%20Protocol/operations.md#runtime-loss-and-recovery)
 before new Plugin execution.
