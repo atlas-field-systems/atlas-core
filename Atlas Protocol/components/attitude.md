@@ -19,8 +19,8 @@ must be converted by the external source before submission.
 | `roll` | Number or null | Required | Rotation about the forward axis, positive right side down, -180 inclusive to 180 exclusive |
 
 All numbers are finite. Null means the angle is unknown. Actual measurement
-failures use the [shared section error representation](README.md#shared-proposed-section-fields).
-Include the shared `observed_at` field and report the complete Attitude section.
+failures use the [shared section error representation](README.md#shared-section-results).
+The enclosing result carries `observed_at`; report the complete Attitude value.
 The source declares state until changed or dated measurement under [Entity rules](../entities.md#reported-sections).
 
 True north defines the horizontal reference. Pitch and roll are tilt angles in
@@ -35,8 +35,7 @@ Valid under the proposed field contract:
 {
 	"heading": 90,
 	"pitch": 5,
-	"roll": -10,
-	"observed_at": "2026-10-17T12:00:00Z"
+	"roll": -10
 }
 ```
 
@@ -46,8 +45,7 @@ Invalid because 360 is outside the proposed heading interval:
 {
 	"heading": 360,
 	"pitch": 0,
-	"roll": 0,
-	"observed_at": "2026-10-17T12:00:00Z"
+	"roll": 0
 }
 ```
 

@@ -34,8 +34,10 @@ Real reconnection, durable queues, concurrent Core consumers, and SDK picture
 application still require the [integration workflows](qualification.md).
 Test agreement against independent expected results, not only the other language.
 
-[Queue projection](../Atlas%20Protocol/tasks.md#scheduling-and-controls),
-[Plugin numeric policy](../Atlas%20Protocol/operations.md), and
-[geometry boundary examples](../Atlas%20Protocol/components/geometry.md#geometry-profile)
-remain open in Protocol. Qualify the selected contracts before expanding
-implementation. An experimental choice is not an approved requirement.
+Protocol now selects the [embedded queue](../Atlas%20Protocol/tasks.md#scheduling-and-controls),
+[lossless Plugin payloads](../Atlas%20Protocol/operations.md#payload-facts), and
+[geometry boundary examples](../Atlas%20Protocol/components/geometry.md#boundary-examples).
+Qualify these contracts before expanding implementation. Include queue and adoption
+images in page and whole-commit budgets. The queue bound, proposed 1,024-pair geometry
+cap, 16-reserve Power limit, and browser codec still need qualification.
+Archive regressions do not establish durable behavior or deployment capacity.

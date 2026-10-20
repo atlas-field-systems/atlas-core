@@ -66,7 +66,11 @@ any depth, malformed UTF-8, unpaired surrogates, and nonfinite numbers. Validate
 original text before normalizing typed values. A numeric token must not pass a
 declared range or integer constraint solely because conversion rounds it.
 For example, `100.0000000000000000001` is not an integer even if a double rounds
-it to `100`. Accepted integer spellings remain to be specified.
+it to `100`. Typed integer fields accept mathematical integers such as `100`,
+`100.0`, and `1e2`. Check the exact source value and field bounds before conversion.
+Emit canonical integers and account for their encoded size. Counter strings retain
+their separate canonical spelling. [Plugin numbers](operations.md#payload-facts)
+have spelling-sensitive retry facts.
 
 Encoded bytes, JSON value count, nesting depth, and semantic validation work are
 different limits. A long JSON string is one value. Apply whole-message limits to
@@ -100,6 +104,7 @@ views, not frozen snapshots; IDs sort bytewise. Requested page size defaults to 
 maximum 1,000. It is an upper bound; byte and value limits may require shorter pages.
 The continuation token determines whether more items remain, not the item count.
 Tokens bind source, Dataset, kind, filters, size, and continuation;
-ordinary tokens expire after 60 seconds. Assigned-work lists also bind queue revision.
+ordinary tokens expire after 60 seconds. Assigned-work tokens also bind queue revision
+and carry captured adoption under [Task paging rules](tasks.md#scheduling-and-controls).
 
 [Next: synchronization](synchronization.md)

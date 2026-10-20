@@ -12,7 +12,7 @@ Current magnification belongs in [Camera](camera.md), independently of this cali
 | `horizontal_fov` | Number or null | Required | Full horizontal angle at 1x, in degrees; greater than 0 and less than 180 for rectilinear optics |
 | `vertical_fov` | Number or null | Required | Full vertical angle at 1x, in degrees; greater than 0 and less than 180 for rectilinear optics |
 
-Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
+The enclosing result carries [shared section metadata](README.md#shared-section-results).
 Both fields are present in every replacement. Null means unknown calibration.
 
 ## Examples
@@ -22,8 +22,7 @@ Valid under the proposed field contract:
 ```json
 {
 	"horizontal_fov": 90,
-	"vertical_fov": 60,
-	"observed_at": "2026-10-16T12:00:00Z"
+	"vertical_fov": 60
 }
 ```
 
@@ -32,8 +31,7 @@ Invalid under the proposed rectilinear bounds:
 ```json
 {
 	"horizontal_fov": 200,
-	"vertical_fov": 60,
-	"observed_at": "2026-10-16T12:00:00Z"
+	"vertical_fov": 60
 }
 ```
 

@@ -3,9 +3,24 @@
 **An Operation invokes one Plugin capability, separately from an Asset Task.**
 Core records the invocation and outcome. The Plugin performs the processing.
 
-The wire contract must distinguish an omitted payload from explicit null.
-Accepted Plugin numeric ranges, preservation of numeric token spelling, and equality
-for retry facts remain to be specified. A generic JSON type does not settle these rules.
+## Payload facts
+
+Inputs, outputs, and known effects are Plugin-owned JSON. Omission differs from
+explicit null. Preserve accepted numeric token spelling, including large integers,
+precise decimals, and underflow such as `1e-400`. Reject tokens whose conversion
+overflows finite binary64 range, such as `1e400`. Do not replace underflow with zero.
+Plugins own the arithmetic meaning of accepted values. Larger ranges need
+Plugin-defined strings. [Wire limits](wire.md#parsing-and-edits) still apply.
+
+Retry equality compares JSON structure. Object member order and whitespace do not
+matter. Compare decoded member names and string values, preserve array order, and
+compare numeric tokens by exact spelling. Thus `1` and `1.0` conflict under the same
+retry identity. Omitted fields and explicit null also differ.
+
+SDK exposes a lossless JSON representation for these payloads. Callers retain their
+prepared inputs for retries. Supported browsers must preserve the same facts as
+other runtimes. Qualify a browser-compatible codec before claiming support; ordinary
+number parsing is not a fallback. Native JSON APIs are not Protocol requirements.
 
 ## Admission and state
 

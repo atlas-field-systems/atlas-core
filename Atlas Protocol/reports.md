@@ -7,8 +7,9 @@ Accepting evidence and establishing fresh contact remain distinct outcomes.
 
 Updates identify the Dataset and Asset. Reported sections also identify the process
 generation and a positive sequence number. Their context includes `generated_at`,
-original evidence identity, whether the evidence is current or historical,
-source times for each quantity, and contact proof. Unknown original time stays null.
+original evidence identity, whether the evidence is current or historical, and
+contact proof. Section results carry [quantity times](components/README.md#shared-section-results).
+Unknown original time stays null.
 Historical evidence retains its identity. A new packet ID cannot make it fresh.
 
 Apply [reported section classifications](entities.md#reported-sections) independently.
@@ -22,6 +23,8 @@ old values. Null subfields are valid only where their schemas permit them.
 The Asset detects failures and reports a section-level error with a code and optional
 message. Core records and exposes it without diagnosing hardware, reconstructing
 healthy subfields, or falling back to a prior value. Normal validation and ordering apply.
+The [section result layout](components/README.md#shared-section-results) carries the
+classification, one value/error/withdrawn alternative, and original quantity times.
 Preserve original observation times within complete sections. Fresh contact or
 bundling fields together does not make older observations fresh.
 
@@ -54,11 +57,14 @@ expected generation with its first check-in. Any valid API key may request this
 replacement. Only one replacement wins. Reconnect is not replacement; an obsolete
 generation cannot publish new execution state. A gateway restart is not an Asset restart.
 
-Refusals identify the precise failed authority, generation, or challenge check.
-The gateway envelope, source-identity fields, challenge exchange, and exact refusal
-codes remain unspecified. The gateway translates attributable Asset evidence, including a
-response to Core's challenge; its own response cannot stand in for the Asset.
-Radio encoding and edge-link retries remain external.
+Direct and relayed evidence share one source context naming the Asset and process
+generation, separately from the submitting key and gateway. The challenge exchange
+binds the Dataset, Asset, process generation, Core run, and challenge identity.
+Replacement also carries the expected generation. Typed refusals distinguish failed
+authority, generation mismatch, challenge expiry, and challenge-context mismatch.
+Schemas must declare their exact message fields and refusal codes before implementation.
+The gateway translates attributable Asset proof; its own response cannot stand in
+for the Asset. Radio encoding and edge-link retries remain external.
 
 ## Time and contact
 

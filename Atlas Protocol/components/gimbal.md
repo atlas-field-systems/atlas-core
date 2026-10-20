@@ -10,7 +10,7 @@ Whole-section reporting is agreed. The fields and coordinate frame below are pro
 | `bearing` | Number or null | Required | Viewing direction clockwise from true north, in degrees, 0 inclusive to 360 exclusive |
 | `elevation` | Number or null | Required | Viewing direction above the local horizon, in degrees, -90 through 90 inclusive |
 
-Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
+The enclosing result carries [shared section metadata](README.md#shared-section-results).
 Propose null for an unknown required angle. Actual failures need error information
 rather than a silent unknown reading.
 
@@ -21,20 +21,19 @@ Live zoom belongs in [Camera](camera.md). Baseline field of view belongs in
 
 ## Examples
 
-Valid under the proposed field contract, with a healthy section omitting `error`:
+Valid Gimbal value under the proposed field contract:
 
 ```json
 {
 	"bearing": 135,
-	"elevation": -10,
-	"observed_at": "2026-10-16T12:00:00Z"
+	"elevation": -10
 }
 ```
 
 Invalid as a section replacement because elevation is missing:
 
 ```json
-{"bearing": 135, "observed_at": "2026-10-16T12:00:00Z"}
+{"bearing": 135}
 ```
 
 [Component index](README.md)
