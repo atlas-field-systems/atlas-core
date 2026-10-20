@@ -48,8 +48,14 @@ Diagnostic records alone cannot establish that work committed or executed.
 | Server delay and cleanup | Separate writer wait from commit time, file publication from cleanup, and Plugin channel loss from confirmed process death |
 | Correlation headers | Missing, malformed, and duplicate header fields preserve domain behavior; reused attempt values need no registry; trusted browser origins can send/read headers; validate IDs on success, error, binary, and empty responses |
 | Diagnostic pressure and privacy | Flood producers and block/fail sinks; memory and disk remain bounded, known omissions stay visible, requests keep their real outcomes, and prohibited fields appear in no retained copy or export |
+| Go output outside `slog` | Recovered HTTP panics, fatal panics, and dependency writes retain no prohibited fields; validated events and safe observed container-exit records remain available |
 | SDK observer lifecycle | Throw from the observer and fail its exporter without changing requests or picture recovery; closing SDK stops diagnostic deliveries and timers |
 | Restart and Reset | Retain bounded logs across Restart; verify old container, Plugin, and manager copies disappear on Reset, even after interrupted cleanup; preserve separate management authority |
+
+Exercise Core HTTP panic recovery and uncaught background panics in both Go processes.
+Include sentinel filenames and secrets in panic values, an error's `Error()` output,
+and dependency stdout/stderr writes. Inspect container logs, manager files, journals,
+crash dumps, and exports for those sentinels while verifying valid events remain observable.
 
 ## Workload targets, not measured capability
 

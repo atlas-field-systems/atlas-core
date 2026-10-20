@@ -67,15 +67,21 @@ Downstream loss may be uncounted, so diagnostics never promise a complete record
 
 ## Collection and lifetime
 
-The host manager configures Docker's `local` logging driver with rotation and
-non-blocking delivery for Core. It disables Docker logging for Plugin containers.
-A manager-owned collector bounds Plugin stdout/stderr before buffering or parsing,
-using the event and queue limits above. It retains only validated, allowlisted
-structured records in installation-owned rotated Plugin files. It drops raw,
-malformed, or unsafe output before retention and reports known omissions.
-The manager's diagnostics, stdout, and stderr use installation-owned rotated files.
-There is no journal or syslog mirror. Restart reuses existing containers and logs.
-No cloud collector is required.
+The host manager disables Docker logging for Core and Plugin containers. Before either
+Go process starts, its launcher directs raw stdout/stderr to `/dev/null`, including
+manager output under systemd. Disable additional crash-output files and dumps.
+Fatal runtime output and dependency writes therefore have no persistent sink.
+Set `http.Server.ErrorLog` to discard raw messages, including recovered-panic text.
+HTTP recovery may emit a fixed safe event, without formatting the panic value or stack.
+
+Core sends `slog` events over a private local diagnostic channel to a manager-owned
+collector. The manager validates its own structured events before writing. A separate
+manager collector bounds Plugin stdout/stderr before buffering or parsing. Every writer
+uses the event and queue limits above and retains only validated, allowlisted records
+in installation-owned rotated files. Drop unsafe or malformed output before storage.
+Report known omissions. The manager records observed container exits using safe status
+or signal metadata, never crash text. There is no journal, syslog, or raw-output mirror.
+Restart reuses containers and retained events. No cloud collector is required.
 
 Before launch, assign byte quotas to each container and the manager. Their sum,
 including rotated copies, storage overhead, and export staging, is at most 256 MiB.
@@ -83,14 +89,14 @@ Rotate oldest records within each source's quota. Account for transient buffers
 under [aggregate capacity](storage.md#retention-and-capacity). Target eight hours of
 default-detail history, including a four-hour mission; age is not a hard expiry.
 Expose retained ranges and known gaps. Actual retention and disk bounds require
-[qualification](qualification.md); driver payload limits alone are not disk proof.
+[qualification](qualification.md); event limits alone are not disk proof.
 
 [Lifecycle](lifecycle.md#reset-recovery) owns Restart and Reset semantics.
 Reset cleanup covers managed container, Plugin, and manager diagnostic copies.
 The action owner stops or completes exports, verifies container emitters have stopped,
-and stops and drains collectors. It switches or closes every manager output stream,
-including diagnostics, stdout, and stderr, then verifies pending writes to old storage
-have drained before clearing old logs.
+and stops and drains collectors. It switches or closes every manager diagnostic writer
+and verifies pending writes to old storage have drained before clearing old logs.
+Raw stdout/stderr remain discarded throughout Reset.
 Use supported per-installation storage or container lifecycle controls. Never edit
 Docker-owned files or vacuum unrelated host logs. Failure to verify cleanup leaves
 Reset incomplete. Durable management authority stays outside this cleanup.
