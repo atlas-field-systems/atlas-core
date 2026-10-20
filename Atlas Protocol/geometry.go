@@ -5,9 +5,17 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/bits"
 )
 
 type coordinate struct{ x, y float64 }
+type exactCoordinate struct {
+	coordinate
+	rx, ry big.Int
+}
+type geometryArithmetic struct {
+	dx1, dy1, dx2, dy2, left, right big.Int
+}
 
 func geometry(value interface{}) error {
 	object, ok := value.(map[string]interface{})
@@ -92,27 +100,42 @@ func geometry(value interface{}) error {
 	if points[0] != points[len(points)-1] {
 		return fmt.Errorf("invalid_geometry")
 	}
-	for i := 0; i < len(points)-1; i++ {
-		for j := i + 1; j < len(points)-1; j++ {
+	scale := 0
+	for _, point := range points {
+		_, x := geometryNumber(point.x)
+		_, y := geometryNumber(point.y)
+		scale = min(scale, x, y)
+	}
+	polygon := make([]exactCoordinate, len(points))
+	for i, point := range points {
+		polygon[i].coordinate = point
+		setGeometryInteger(&polygon[i].rx, point.x, scale)
+		setGeometryInteger(&polygon[i].ry, point.y, scale)
+	}
+	var exact geometryArithmetic
+	for i := 0; i < len(polygon)-1; i++ {
+		for j := i + 1; j < len(polygon)-1; j++ {
 			if j == i+1 {
-				if orientation(points[i], points[j], points[j+1]) == 0 && (between(points[i], points[j], points[j+1]) || between(points[j+1], points[i], points[j])) {
+				if exact.orientation(&polygon[i], &polygon[j], &polygon[j+1]) == 0 && (between(points[i], points[j], points[j+1]) || between(points[j+1], points[i], points[j])) {
 					return fmt.Errorf("invalid_geometry")
 				}
 				continue
 			}
-			if i == 0 && j == len(points)-2 {
+			if i == 0 && j == len(polygon)-2 {
 				continue
 			}
-			if intersects(points[i], points[i+1], points[j], points[j+1]) {
+			if exact.intersects(&polygon[i], &polygon[i+1], &polygon[j], &polygon[j+1]) {
 				return fmt.Errorf("invalid_geometry")
 			}
 		}
 	}
-	area := new(big.Rat)
-	for i := 0; i < len(points)-1; i++ {
-		a, b := points[i], points[i+1]
-		cross := new(big.Rat).Sub(new(big.Rat).Mul(rat(a.x), rat(b.y)), new(big.Rat).Mul(rat(b.x), rat(a.y)))
-		area.Add(area, cross)
+	var area big.Int
+	for i := 0; i < len(polygon)-1; i++ {
+		a, b := &polygon[i], &polygon[i+1]
+		exact.left.Mul(&a.rx, &b.ry)
+		exact.right.Mul(&b.rx, &a.ry)
+		exact.left.Sub(&exact.left, &exact.right)
+		area.Add(&area, &exact.left)
 	}
 	if area.Sign() <= 0 {
 		return fmt.Errorf("invalid_geometry")
@@ -120,8 +143,36 @@ func geometry(value interface{}) error {
 	return nil
 }
 func isFinite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
-func rat(v float64) *big.Rat  { return new(big.Rat).SetFloat64(v) }
-func orientation(a, b, c coordinate) int {
+
+func geometryNumber(value float64) (int64, int) {
+	raw := math.Float64bits(value)
+	mantissa, exponent := raw&((1<<52)-1), int(raw>>52&2047)
+	power := -1074
+	if exponent != 0 {
+		mantissa |= 1 << 52
+		power = exponent - 1075
+	}
+	if mantissa == 0 {
+		return 0, 0
+	}
+	shift := bits.TrailingZeros64(mantissa)
+	coefficient := int64(mantissa >> shift)
+	if raw>>63 != 0 {
+		coefficient = -coefficient
+	}
+	return coefficient, power + shift
+}
+
+// Finite coordinates bounded by 180 degrees need at most 1082 bits at a shared scale of 2^-1074.
+func setGeometryInteger(target *big.Int, value float64, scale int) {
+	coefficient, exponent := geometryNumber(value)
+	target.SetInt64(coefficient)
+	if coefficient != 0 {
+		target.Lsh(target, uint(exponent-scale))
+	}
+}
+
+func (work *geometryArithmetic) orientation(a, b, c *exactCoordinate) int {
 	left := (b.x - a.x) * (c.y - a.y)
 	right := (b.y - a.y) * (c.x - a.x)
 	det := left - right
@@ -131,14 +182,21 @@ func orientation(a, b, c coordinate) int {
 		}
 		return -1
 	}
-	x := new(big.Rat).Mul(new(big.Rat).Sub(rat(b.x), rat(a.x)), new(big.Rat).Sub(rat(c.y), rat(a.y)))
-	y := new(big.Rat).Mul(new(big.Rat).Sub(rat(b.y), rat(a.y)), new(big.Rat).Sub(rat(c.x), rat(a.x)))
-	return x.Sub(x, y).Sign()
+	work.dx1.Sub(&b.rx, &a.rx)
+	work.dy2.Sub(&c.ry, &a.ry)
+	work.dy1.Sub(&b.ry, &a.ry)
+	work.dx2.Sub(&c.rx, &a.rx)
+	work.left.Mul(&work.dx1, &work.dy2)
+	work.right.Mul(&work.dy1, &work.dx2)
+	return work.left.Cmp(&work.right)
 }
 func between(p, a, b coordinate) bool {
 	return p.x >= math.Min(a.x, b.x) && p.x <= math.Max(a.x, b.x) && p.y >= math.Min(a.y, b.y) && p.y <= math.Max(a.y, b.y)
 }
-func intersects(a, b, c, d coordinate) bool {
-	abC, abD, cdA, cdB := orientation(a, b, c), orientation(a, b, d), orientation(c, d, a), orientation(c, d, b)
-	return abC*abD < 0 && cdA*cdB < 0 || abC == 0 && between(c, a, b) || abD == 0 && between(d, a, b) || cdA == 0 && between(a, c, d) || cdB == 0 && between(b, c, d)
+func (work *geometryArithmetic) intersects(a, b, c, d *exactCoordinate) bool {
+	if math.Max(a.x, b.x) < math.Min(c.x, d.x) || math.Max(c.x, d.x) < math.Min(a.x, b.x) || math.Max(a.y, b.y) < math.Min(c.y, d.y) || math.Max(c.y, d.y) < math.Min(a.y, b.y) {
+		return false
+	}
+	abC, abD, cdA, cdB := work.orientation(a, b, c), work.orientation(a, b, d), work.orientation(c, d, a), work.orientation(c, d, b)
+	return abC*abD < 0 && cdA*cdB < 0 || abC == 0 && between(c.coordinate, a.coordinate, b.coordinate) || abD == 0 && between(d.coordinate, a.coordinate, b.coordinate) || cdA == 0 && between(a.coordinate, c.coordinate, d.coordinate) || cdB == 0 && between(b.coordinate, c.coordinate, d.coordinate)
 }

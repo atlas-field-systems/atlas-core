@@ -263,9 +263,16 @@ func uuidSchema(schema *openapi3.Schema) bool {
 }
 
 func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan) error {
+	return c.semanticsWithGeometry(schema, value, place, plan, false)
+}
+
+// Composition branches share a value. Property and item traversal starts a fresh topology check.
+func (c *contract) semanticsWithGeometry(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan, topologyChecked bool) error {
 	if schema.Extensions["x-atlas-geometry"] == true {
-		if err := geometry(value); err != nil {
-			return err
+		if !topologyChecked {
+			if err := geometry(value); err != nil {
+				return err
+			}
 		}
 		if err := c.schemas[schema].visit(value, c.formats, true); err != nil {
 			if errors.Is(err, errUnpreparedRule) {
@@ -273,7 +280,7 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 			}
 			return fmt.Errorf("invalid_geometry")
 		}
-		if err := c.semanticRules(schema, value, place, plan); err != nil {
+		if err := c.semanticRules(schema, value, place, plan, true); err != nil {
 			if errors.Is(err, errUnpreparedRule) {
 				return err
 			}
@@ -284,10 +291,10 @@ func (c *contract) semantics(schema *openapi3.Schema, value interface{}, place *
 	if schema.Extensions["x-go-type"] == "json.RawMessage" {
 		return nil
 	}
-	return c.semanticRules(schema, value, place, plan)
+	return c.semanticRules(schema, value, place, plan, topologyChecked)
 }
 
-func (c *contract) semanticRules(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan) error {
+func (c *contract) semanticRules(schema *openapi3.Schema, value interface{}, place *numberPlace, plan integerPlan, topologyChecked bool) error {
 	if text, ok := value.(string); ok && schema.Pattern != "" {
 		pattern := c.patterns[schema.Pattern]
 		if pattern == nil {
@@ -324,7 +331,7 @@ func (c *contract) semanticRules(schema *openapi3.Schema, value interface{}, pla
 				continue
 			}
 			candidate := make(integerPlan)
-			if err := c.semantics(branch.Value, value, place, candidate); err != nil {
+			if err := c.semanticsWithGeometry(branch.Value, value, place, candidate, topologyChecked); err != nil {
 				if errors.Is(err, errUnpreparedRule) {
 					return err
 				}
@@ -354,7 +361,7 @@ func (c *contract) semanticRules(schema *openapi3.Schema, value interface{}, pla
 			}
 			return fmt.Errorf("invalid_payload: allOf")
 		}
-		if err := c.semantics(branch.Value, value, place, plan); err != nil {
+		if err := c.semanticsWithGeometry(branch.Value, value, place, plan, topologyChecked); err != nil {
 			return err
 		}
 	}
@@ -364,7 +371,7 @@ func (c *contract) semanticRules(schema *openapi3.Schema, value interface{}, pla
 			return err
 		}
 		if err == nil {
-			err = c.semantics(schema.Not.Value, value, place, make(integerPlan))
+			err = c.semanticsWithGeometry(schema.Not.Value, value, place, make(integerPlan), topologyChecked)
 			if errors.Is(err, errUnpreparedRule) {
 				return err
 			}
