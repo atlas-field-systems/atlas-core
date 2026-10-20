@@ -1878,6 +1878,7 @@ export interface components {
             /** @enum {string} */
             kind: "asset" | "track" | "geofeature" | "task" | "object";
         };
+        /** @description Complete Asset image, including its TaskQueue. Queue metadata changes advance this Asset's version and commit its final image atomically with any related Tasks. The queue shares the Asset's identity and lifecycle. */
         Asset: {
             id: components["schemas"]["Identifier"];
             version: components["schemas"]["PositiveCounter"];
@@ -1898,6 +1899,7 @@ export interface components {
                 health: components["schemas"]["Health"];
             };
             heartbeat: components["schemas"]["Heartbeat"];
+            task_queue: components["schemas"]["TaskQueue"];
             telemetry?: components["schemas"]["RetainedTelemetrySection"];
             attitude?: components["schemas"]["RetainedAttitudeSection"];
             power?: components["schemas"]["RetainedPowerSection"];
@@ -2120,10 +2122,14 @@ export interface components {
             last_receipt?: components["schemas"]["Receipt"];
         };
         NullablePositiveCounter: components["schemas"]["PositiveCounter"] | null;
+        /** @description Complete requested eligible, unstarted Task order for one Asset, including an empty queue. Revision advances when requested order or eligible membership changes. Confirmation alone changes confirmed_revision and the owning Asset version, not revision. Cancellation-reserved slots stay internal. The 1,000-ID wire bound does not define retention or admission of other Tasks. See tasks.md#scheduling-and-controls. */
         TaskQueue: {
+            /** @description The owning Asset ID, equal to the enclosing Asset ID or assigned-work route Asset ID. */
             asset_id: components["schemas"]["Identifier"];
             revision: components["schemas"]["PositiveCounter"];
+            /** @description Complete requested execution order, independent of immutable submission sequence and bytewise Task-body pagination. */
             task_ids: components["schemas"]["Identifier"][];
+            /** @description Last Asset-confirmed adoption revision, or null before any adoption. Required even when null. Historical confirmed task_ids are not retained here. */
             confirmed_revision: components["schemas"]["NullablePositiveCounter"];
         };
         ObjectMetadata: {
@@ -2376,9 +2382,10 @@ export interface components {
             items: components["schemas"]["ActivityRecord"][];
             next_page_token?: components["schemas"]["PageToken"];
         };
+        /** @description Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata. */
         AssignedTaskPage: {
             items: components["schemas"]["Task"][];
-            queue_revision: components["schemas"]["PositiveCounter"];
+            task_queue: components["schemas"]["TaskQueue"];
             next_page_token?: components["schemas"]["PageToken"];
         };
         BatchLimits: {
@@ -2624,6 +2631,7 @@ export interface components {
             /** @default 100 */
             page_size: number;
             page_token?: components["schemas"]["PageToken"];
+            /** @description Optional requested queue revision precondition. A mismatch refuses 409 queue_changed. */
             queue_revision?: components["schemas"]["PositiveCounter"];
         };
         ReadObjectContentQuery: {
@@ -4737,6 +4745,7 @@ export interface operations {
             query?: {
                 page_size?: number;
                 page_token?: components["schemas"]["PageToken"];
+                /** @description Optional requested queue revision precondition. A mismatch refuses 409 queue_changed. */
                 queue_revision?: components["schemas"]["PositiveCounter"];
             };
             header: {

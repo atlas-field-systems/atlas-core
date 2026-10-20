@@ -194,6 +194,12 @@
                     "process_generation": "00000000-0000-0000-0000-000000000002"
                   }
                 }
+              },
+              "task_queue": {
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "revision": "1",
+                "task_ids": [],
+                "confirmed_revision": null
               }
             }
           },

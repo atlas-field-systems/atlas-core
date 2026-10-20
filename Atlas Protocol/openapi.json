@@ -3437,6 +3437,7 @@
             "name": "queue_revision",
             "in": "query",
             "required": false,
+            "description": "Optional requested queue revision precondition. A mismatch refuses 409 queue_changed.",
             "schema": {
               "$ref": "#/components/schemas/PositiveCounter"
             },
@@ -10493,6 +10494,7 @@
       "Asset": {
         "type": "object",
         "additionalProperties": false,
+        "description": "Complete Asset image, including its TaskQueue. Queue metadata changes advance this Asset's version and commit its final image atomically with any related Tasks. The queue shares the Asset's identity and lifecycle.",
         "properties": {
           "id": {
             "$ref": "#/components/schemas/Identifier"
@@ -10551,6 +10553,9 @@
           "heartbeat": {
             "$ref": "#/components/schemas/Heartbeat"
           },
+          "task_queue": {
+            "$ref": "#/components/schemas/TaskQueue"
+          },
           "telemetry": {
             "$ref": "#/components/schemas/RetainedTelemetrySection"
           },
@@ -10582,7 +10587,8 @@
           "process_generation",
           "status",
           "communications",
-          "heartbeat"
+          "heartbeat",
+          "task_queue"
         ]
       },
       "Track": {
@@ -11340,9 +11346,11 @@
       "TaskQueue": {
         "type": "object",
         "additionalProperties": false,
+        "description": "Complete requested eligible, unstarted Task order for one Asset, including an empty queue. Revision advances when requested order or eligible membership changes. Confirmation alone changes confirmed_revision and the owning Asset version, not revision. Cancellation-reserved slots stay internal. The 1,000-ID wire bound does not define retention or admission of other Tasks. See tasks.md#scheduling-and-controls.",
         "properties": {
           "asset_id": {
-            "$ref": "#/components/schemas/Identifier"
+            "$ref": "#/components/schemas/Identifier",
+            "description": "The owning Asset ID, equal to the enclosing Asset ID or assigned-work route Asset ID."
           },
           "revision": {
             "$ref": "#/components/schemas/PositiveCounter"
@@ -11354,10 +11362,12 @@
             },
             "minItems": 0,
             "maxItems": 1000,
-            "uniqueItems": true
+            "uniqueItems": true,
+            "description": "Complete requested execution order, independent of immutable submission sequence and bytewise Task-body pagination."
           },
           "confirmed_revision": {
-            "$ref": "#/components/schemas/NullablePositiveCounter"
+            "$ref": "#/components/schemas/NullablePositiveCounter",
+            "description": "Last Asset-confirmed adoption revision, or null before any adoption. Required even when null. Historical confirmed task_ids are not retained here."
           }
         },
         "required": [
@@ -12343,6 +12353,7 @@
       "AssignedTaskPage": {
         "type": "object",
         "additionalProperties": false,
+        "description": "Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.",
         "properties": {
           "items": {
             "type": "array",
@@ -12352,8 +12363,8 @@
             "minItems": 0,
             "maxItems": 1000
           },
-          "queue_revision": {
-            "$ref": "#/components/schemas/PositiveCounter"
+          "task_queue": {
+            "$ref": "#/components/schemas/TaskQueue"
           },
           "next_page_token": {
             "$ref": "#/components/schemas/PageToken"
@@ -12361,7 +12372,7 @@
         },
         "required": [
           "items",
-          "queue_revision"
+          "task_queue"
         ]
       },
       "BatchLimits": {
@@ -13365,7 +13376,8 @@
             "$ref": "#/components/schemas/PageToken"
           },
           "queue_revision": {
-            "$ref": "#/components/schemas/PositiveCounter"
+            "$ref": "#/components/schemas/PositiveCounter",
+            "description": "Optional requested queue revision precondition. A mismatch refuses 409 queue_changed."
           }
         },
         "required": []

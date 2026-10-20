@@ -94,6 +94,7 @@ views, not frozen snapshots; IDs sort bytewise. Default pages contain 100 items,
 maximum 1,000. Encode an array filter as one JSON-array query value, such as `ids=[]`. Reject
 repeated decoded query names. Omission and an empty array remain distinct.
 Tokens bind source, Dataset, kind, filters, size, and continuation;
-ordinary tokens expire after 60 seconds. Assigned-work lists also bind queue revision.
-
+ordinary tokens expire after 60 seconds. Assigned-work tokens also pin queue revision
+and captured adoption metadata under [Task paging rules](tasks.md#scheduling-and-controls).
+Bytewise Task-body order is independent of `task_queue.task_ids` execution order.
 [Next: synchronization](synchronization.md)

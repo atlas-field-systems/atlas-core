@@ -3146,7 +3146,7 @@ type ApiKeyPage struct {
 	NextPageToken *PageToken `json:"next_page_token,omitempty"`
 }
 
-// Asset defines model for Asset.
+// Asset Complete Asset image, including its TaskQueue. Queue metadata changes advance this Asset's version and commit its final image atomically with any related Tasks. The queue shares the Asset's identity and lifecycle.
 type Asset struct {
 	Alias          nullable.Nullable[string]    `json:"alias"`
 	Attitude       *RetainedAttitudeSection     `json:"attitude,omitempty"`
@@ -3170,10 +3170,13 @@ type Asset struct {
 	Power *RetainedPowerSection `json:"power,omitempty"`
 
 	// ProcessGeneration UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
-	ProcessGeneration Identifier                `json:"process_generation"`
-	Status            RetainedStatusSection     `json:"status"`
-	Telemetry         *RetainedTelemetrySection `json:"telemetry,omitempty"`
-	Type              AssetType                 `json:"type"`
+	ProcessGeneration Identifier            `json:"process_generation"`
+	Status            RetainedStatusSection `json:"status"`
+
+	// TaskQueue Complete requested eligible, unstarted Task order for one Asset, including an empty queue. Revision advances when requested order or eligible membership changes. Confirmation alone changes confirmed_revision and the owning Asset version, not revision. Cancellation-reserved slots stay internal. The 1,000-ID wire bound does not define retention or admission of other Tasks. See tasks.md#scheduling-and-controls.
+	TaskQueue TaskQueue                 `json:"task_queue"`
+	Telemetry *RetainedTelemetrySection `json:"telemetry,omitempty"`
+	Type      AssetType                 `json:"type"`
 
 	// Version Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Version PositiveCounter `json:"version"`
@@ -3262,18 +3265,19 @@ type AssetType struct {
 
 // AssetUpdateResult defines model for AssetUpdateResult.
 type AssetUpdateResult struct {
+	// Asset Complete Asset image, including its TaskQueue. Queue metadata changes advance this Asset's version and commit its final image atomically with any related Tasks. The queue shares the Asset's identity and lifecycle.
 	Asset        Asset                `json:"asset"`
 	Dispositions []SectionDisposition `json:"dispositions"`
 	FreshContact bool                 `json:"fresh_contact"`
 }
 
-// AssignedTaskPage defines model for AssignedTaskPage.
+// AssignedTaskPage Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.
 type AssignedTaskPage struct {
 	Items         []Task     `json:"items"`
 	NextPageToken *PageToken `json:"next_page_token,omitempty"`
 
-	// QueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
-	QueueRevision PositiveCounter `json:"queue_revision"`
+	// TaskQueue Complete requested eligible, unstarted Task order for one Asset, including an empty queue. Revision advances when requested order or eligible membership changes. Confirmation alone changes confirmed_revision and the owning Asset version, not revision. Cancellation-reserved slots stay internal. The 1,000-ID wire bound does not define retention or admission of other Tasks. See tasks.md#scheduling-and-controls.
+	TaskQueue TaskQueue `json:"task_queue"`
 }
 
 // AssignedTaskQuery defines model for AssignedTaskQuery.
@@ -3281,7 +3285,7 @@ type AssignedTaskQuery struct {
 	PageSize  *int       `json:"page_size,omitempty"`
 	PageToken *PageToken `json:"page_token,omitempty"`
 
-	// QueueRevision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
+	// QueueRevision Optional requested queue revision precondition. A mismatch refuses 409 queue_changed.
 	QueueRevision *PositiveCounter `json:"queue_revision,omitempty"`
 }
 
@@ -3668,8 +3672,10 @@ type ConfirmTaskOrderRequest struct {
 
 // ConfirmTaskOrderResponse defines model for ConfirmTaskOrderResponse.
 type ConfirmTaskOrderResponse struct {
-	CommitCursor Cursor    `json:"commit_cursor"`
-	Data         TaskQueue `json:"data"`
+	CommitCursor Cursor `json:"commit_cursor"`
+
+	// Data Complete requested eligible, unstarted Task order for one Asset, including an empty queue. Revision advances when requested order or eligible membership changes. Confirmation alone changes confirmed_revision and the owning Asset version, not revision. Cancellation-reserved slots stay internal. The 1,000-ID wire bound does not define retention or admission of other Tasks. See tasks.md#scheduling-and-controls.
+	Data TaskQueue `json:"data"`
 
 	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
@@ -4593,6 +4599,7 @@ type GeometryObservationWithdrawnState string
 
 // GetAssetByAliasResponse defines model for GetAssetByAliasResponse.
 type GetAssetByAliasResponse struct {
+	// Data Complete Asset image, including its TaskQueue. Queue metadata changes advance this Asset's version and commit its final image atomically with any related Tasks. The queue shares the Asset's identity and lifecycle.
 	Data Asset `json:"data"`
 
 	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
@@ -4617,6 +4624,7 @@ type GetAssetObjectsResponse struct {
 
 // GetAssetResponse defines model for GetAssetResponse.
 type GetAssetResponse struct {
+	// Data Complete Asset image, including its TaskQueue. Queue metadata changes advance this Asset's version and commit its final image atomically with any related Tasks. The queue shares the Asset's identity and lifecycle.
 	Data Asset `json:"data"`
 
 	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
@@ -4633,6 +4641,7 @@ type GetAssetStatusResponse struct {
 
 // GetAssignedTasksResponse defines model for GetAssignedTasksResponse.
 type GetAssignedTasksResponse struct {
+	// Data Task bodies sort by bytewise ID and page_size bounds only those bodies. Every page, including empty items, repeats the first page's complete TaskQueue and captured confirmed_revision. Continuations pin requested revision and query context. A queue_revision precondition mismatch or changed order or eligibility refuses 409 queue_changed. Confirmation alone leaves the sequence valid; fresh reads or Asset synchronization expose newer adoption metadata.
 	Data AssignedTaskPage `json:"data"`
 
 	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
@@ -5628,7 +5637,9 @@ type RegisterAssetRequest struct {
 // RegisterAssetResponse defines model for RegisterAssetResponse.
 type RegisterAssetResponse struct {
 	CommitCursor Cursor `json:"commit_cursor"`
-	Data         Asset  `json:"data"`
+
+	// Data Complete Asset image, including its TaskQueue. Queue metadata changes advance this Asset's version and commit its final image atomically with any related Tasks. The queue shares the Asset's identity and lifecycle.
+	Data Asset `json:"data"`
 
 	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
@@ -6171,8 +6182,10 @@ type SetTaskOrderRequest struct {
 
 // SetTaskOrderResponse defines model for SetTaskOrderResponse.
 type SetTaskOrderResponse struct {
-	CommitCursor Cursor    `json:"commit_cursor"`
-	Data         TaskQueue `json:"data"`
+	CommitCursor Cursor `json:"commit_cursor"`
+
+	// Data Complete requested eligible, unstarted Task order for one Asset, including an empty queue. Revision advances when requested order or eligible membership changes. Confirmation alone changes confirmed_revision and the owning Asset version, not revision. Cancellation-reserved slots stay internal. The 1,000-ID wire bound does not define retention or admission of other Tasks. See tasks.md#scheduling-and-controls.
+	Data TaskQueue `json:"data"`
 
 	// DatasetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
 	DatasetId Identifier `json:"dataset_id"`
@@ -6394,15 +6407,19 @@ type TaskPage struct {
 	NextPageToken *PageToken `json:"next_page_token,omitempty"`
 }
 
-// TaskQueue defines model for TaskQueue.
+// TaskQueue Complete requested eligible, unstarted Task order for one Asset, including an empty queue. Revision advances when requested order or eligible membership changes. Confirmation alone changes confirmed_revision and the owning Asset version, not revision. Cancellation-reserved slots stay internal. The 1,000-ID wire bound does not define retention or admission of other Tasks. See tasks.md#scheduling-and-controls.
 type TaskQueue struct {
-	// AssetId UUID identity ignores letter case, including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
-	AssetId           Identifier                                 `json:"asset_id"`
+	// AssetId The owning Asset ID, equal to the enclosing Asset ID or assigned-work route Asset ID.
+	AssetId Identifier `json:"asset_id"`
+
+	// ConfirmedRevision Last Asset-confirmed adoption revision, or null before any adoption. Required even when null. Historical confirmed task_ids are not retained here.
 	ConfirmedRevision nullable.Nullable[NullablePositiveCounter] `json:"confirmed_revision"`
 
 	// Revision Canonical unsigned 64-bit decimal in 1..18446744073709551615, never a JSON number.
 	Revision PositiveCounter `json:"revision"`
-	TaskIds  []Identifier    `json:"task_ids"`
+
+	// TaskIds Complete requested execution order, independent of immutable submission sequence and bytewise Task-body pagination.
+	TaskIds []Identifier `json:"task_ids"`
 }
 
 // TaskState defines model for TaskState.
@@ -6773,8 +6790,10 @@ type GetAssetStatusParams struct {
 
 // GetAssignedTasksParams defines parameters for GetAssignedTasks.
 type GetAssignedTasksParams struct {
-	PageSize             *int             `form:"page_size,omitempty" json:"page_size,omitempty"`
-	PageToken            *PageToken       `form:"page_token,omitempty" json:"page_token,omitempty"`
+	PageSize  *int       `form:"page_size,omitempty" json:"page_size,omitempty"`
+	PageToken *PageToken `form:"page_token,omitempty" json:"page_token,omitempty"`
+
+	// QueueRevision Optional requested queue revision precondition. A mismatch refuses 409 queue_changed.
 	QueueRevision        *PositiveCounter `form:"queue_revision,omitempty" json:"queue_revision,omitempty"`
 	AtlasDatasetID       Dataset          `json:"Atlas-Dataset-ID"`
 	AtlasProtocolVersion VersionContext   `json:"Atlas-Protocol-Version"`

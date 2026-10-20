@@ -24,12 +24,14 @@ Result declarations follow [References and results](../tasks.md#references-and-r
 
 | Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
-| `GetAssignedTasks` | Asset runtime retrieves current instructions, including when reconciling after reconnect | Asset ID and bounded query context | Assigned Tasks with queue revision and paging context |
+| `GetAssignedTasks` | Asset runtime retrieves current instructions, including when reconciling after reconnect | Asset ID and bounded query context, with optional `queue_revision` precondition | Bounded Task bodies and complete `task_queue` on every page, even when items are empty |
 | `SetTaskOrder` | Operator app or planning automation requests a new order for eligible unstarted Tasks | Asset ID, complete eligible order, retry identity, and revision precondition | Recorded requested order and revision |
 | `ConfirmTaskOrder` | Asset runtime confirms the requested queue order it actually adopted | Asset and process context, plus original evidence of the adopted order | Recorded confirmation, distinct from the requested order |
 
 Queue eligibility, pagination consistency, and adopted order follow
 [Scheduling and controls](../tasks.md#scheduling-and-controls). Asset execution and
 order-confirmation evidence also follow the [report rules](../reports.md).
+A fresh reader recovers requested order from `task_queue.task_ids` and confirms
+`task_queue.revision`, without retaining another client's mutation response.
 
 [Messaging index](../messaging.md)

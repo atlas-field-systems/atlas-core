@@ -233,6 +233,12 @@
               "process_generation": "00000000-0000-0000-0000-000000000002"
             }
           }
+        },
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [],
+          "confirmed_revision": null
         }
       },
       "commit_cursor": "cursor-committed"
@@ -380,6 +386,12 @@
               "process_generation": "00000000-0000-0000-0000-000000000002"
             }
           }
+        },
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [],
+          "confirmed_revision": null
         }
       },
       "commit_cursor": "cursor-committed"
@@ -530,6 +542,12 @@
                   "process_generation": "00000000-0000-0000-0000-000000000002"
                 }
               }
+            },
+            "task_queue": {
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "revision": "1",
+              "task_ids": [],
+              "confirmed_revision": null
             }
           }
         ],
@@ -681,6 +699,12 @@
                   "process_generation": "00000000-0000-0000-0000-000000000002"
                 }
               }
+            },
+            "task_queue": {
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "revision": "1",
+              "task_ids": [],
+              "confirmed_revision": null
             }
           }
         ],
@@ -831,6 +855,12 @@
               "process_generation": "00000000-0000-0000-0000-000000000002"
             }
           }
+        },
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [],
+          "confirmed_revision": null
         }
       }
     }
@@ -977,6 +1007,12 @@
               "process_generation": "00000000-0000-0000-0000-000000000002"
             }
           }
+        },
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [],
+          "confirmed_revision": null
         }
       }
     }
@@ -1124,6 +1160,12 @@
               "process_generation": "00000000-0000-0000-0000-000000000002"
             }
           }
+        },
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [],
+          "confirmed_revision": null
         }
       }
     }
@@ -1270,6 +1312,12 @@
               "process_generation": "00000000-0000-0000-0000-000000000002"
             }
           }
+        },
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [],
+          "confirmed_revision": null
         }
       }
     }
@@ -1541,6 +1589,12 @@
                 "process_generation": "00000000-0000-0000-0000-000000000002"
               }
             }
+          },
+          "task_queue": {
+            "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "revision": "1",
+            "task_ids": [],
+            "confirmed_revision": null
           }
         },
         "dispositions": [
@@ -1697,6 +1751,12 @@
                 "process_generation": "00000000-0000-0000-0000-000000000002"
               }
             }
+          },
+          "task_queue": {
+            "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "revision": "1",
+            "task_ids": [],
+            "confirmed_revision": null
           }
         },
         "dispositions": [
@@ -3919,6 +3979,12 @@
                 "process_generation": "00000000-0000-0000-0000-000000000002"
               }
             }
+          },
+          "task_queue": {
+            "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "revision": "1",
+            "task_ids": [],
+            "confirmed_revision": null
           }
         },
         "dispositions": [],
@@ -4070,6 +4136,12 @@
                 "process_generation": "00000000-0000-0000-0000-000000000002"
               }
             }
+          },
+          "task_queue": {
+            "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+            "revision": "1",
+            "task_ids": [],
+            "confirmed_revision": null
           }
         },
         "dispositions": [],
@@ -4671,7 +4743,14 @@
             "results": []
           }
         ],
-        "queue_revision": "1",
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [
+            "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+          ],
+          "confirmed_revision": null
+        },
         "next_page_token": "queue-page"
       }
     }
@@ -4703,7 +4782,14 @@
             "results": []
           }
         ],
-        "queue_revision": "1",
+        "task_queue": {
+          "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+          "revision": "1",
+          "task_ids": [
+            "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6"
+          ],
+          "confirmed_revision": null
+        },
         "next_page_token": "queue-page"
       }
     }
@@ -6333,6 +6419,12 @@
                   "process_generation": "00000000-0000-0000-0000-000000000002"
                 }
               }
+            },
+            "task_queue": {
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "revision": "1",
+              "task_ids": [],
+              "confirmed_revision": null
             }
           },
           {
@@ -6596,6 +6688,12 @@
                   "process_generation": "00000000-0000-0000-0000-000000000002"
                 }
               }
+            },
+            "task_queue": {
+              "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+              "revision": "1",
+              "task_ids": [],
+              "confirmed_revision": null
             }
           },
           {
@@ -6881,6 +6979,12 @@
                         "process_generation": "00000000-0000-0000-0000-000000000002"
                       }
                     }
+                  },
+                  "task_queue": {
+                    "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "revision": "1",
+                    "task_ids": [],
+                    "confirmed_revision": null
                   }
                 }
               },
@@ -7049,6 +7153,12 @@
                         "process_generation": "00000000-0000-0000-0000-000000000002"
                       }
                     }
+                  },
+                  "task_queue": {
+                    "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                    "revision": "1",
+                    "task_ids": [],
+                    "confirmed_revision": null
                   }
                 }
               },
@@ -19102,6 +19212,12 @@
             "process_generation": "00000000-0000-0000-0000-000000000002"
           }
         }
+      },
+      "task_queue": {
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "revision": "1",
+        "task_ids": [],
+        "confirmed_revision": null
       }
     }
   },
@@ -19218,6 +19334,12 @@
             "process_generation": "00000000-0000-0000-0000-000000000002"
           }
         }
+      },
+      "task_queue": {
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "revision": "1",
+        "task_ids": [],
+        "confirmed_revision": null
       }
     }
   },
@@ -19952,6 +20074,12 @@
                     "process_generation": "00000000-0000-0000-0000-000000000002"
                   }
                 }
+              },
+              "task_queue": {
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "revision": "1",
+                "task_ids": [],
+                "confirmed_revision": null
               }
             }
           },
@@ -20118,6 +20246,12 @@
                     "process_generation": "00000000-0000-0000-0000-000000000002"
                   }
                 }
+              },
+              "task_queue": {
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "revision": "1",
+                "task_ids": [],
+                "confirmed_revision": null
               }
             }
           },
@@ -20284,6 +20418,12 @@
                     "process_generation": "00000000-0000-0000-0000-000000000002"
                   }
                 }
+              },
+              "task_queue": {
+                "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+                "revision": "1",
+                "task_ids": [],
+                "confirmed_revision": null
               }
             }
           },
@@ -20816,6 +20956,12 @@
       "heartbeat": {
         "last_contact_at": null,
         "core_run_id": "00000000-0000-0000-0000-000000000002"
+      },
+      "task_queue": {
+        "asset_id": "A0B1C2D3-E4F5-4A67-8B90-C1D2E3F4A5B6",
+        "revision": "1",
+        "task_ids": [],
+        "confirmed_revision": null
       }
     }
   },

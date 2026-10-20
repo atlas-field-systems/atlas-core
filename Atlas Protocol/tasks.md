@@ -40,10 +40,29 @@ concurrently. Delayed reports can temporarily make Core's view look different.
 Queue edits submit the complete eligible, unstarted order with retry identity and
 a revision precondition. Requested order and Asset-confirmed adoption are distinct.
 
+Every Asset and assigned-work page includes the complete `task_queue`, even when
+empty. Its ordered `task_ids` are the requested eligible queue, bounded to 1,000
+unique UUIDs. This wire bound does not define retention or admission of other Tasks.
+`revision` advances when requested order or eligible membership changes.
+`confirmed_revision` is required and nullable; null means no confirmed adoption.
+It records adoption separately, without retaining historical confirmed orders.
+Task submission sequence and bytewise list order never define execution order.
+
 Started, paused-started, cancellation-requested, and terminal Tasks are not
 reorderable. An unstarted cancellation-requested Task retains its internal queue
-slot so refusal can restore it amid the latest eligible edits. Assigned-work
-pagination pins the queue revision and refuses a changed page sequence.
+slot so refusal can restore it amid the latest eligible edits. These reserved slots
+are internal and do not appear in the eligible `task_ids`.
+
+Assigned-work `page_size` bounds Task bodies, not queue metadata. Every page repeats
+the first page's complete `task_queue`, including its captured `confirmed_revision`.
+A supplied `queue_revision` must match. Continuations pin revision and query context.
+Changed requested order or eligibility refuses `409 queue_changed`. Discard that
+sequence and read afresh. Confirmation alone does not invalidate pages. Fresh reads
+or Asset synchronization expose newer adoption metadata.
+
+Queue changes, including confirmation alone, advance the owning Asset's `version`.
+Core atomically commits its final Asset image with any related Task changes.
+The queue shares the Asset's identity and lifecycle in synchronization.
 
 Pause and Resume are immediate Tasks, not an emergency-stop guarantee. Pause
 requires actual suspension and keeps queue order. Resume continues the same Task

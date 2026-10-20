@@ -11,6 +11,13 @@ message contains one complete commit: final resource images or versioned deletio
 Validate and apply the entire message atomically before advancing the cursor.
 Transport segmentation does not authorize application-level fragments.
 
+An Asset image includes its complete `task_queue`, including an empty queue.
+Queue edits, eligibility changes, and adoption confirmations use the Asset's
+identity, lifecycle, and increasing `version`. Confirmation alone can change
+`confirmed_revision` without changing the requested queue `revision`.
+Each commit includes the final Asset image and any related Task images atomically.
+Snapshots and replay recover that same state under [Task rules](tasks.md#scheduling-and-controls).
+
 Versions prevent stale overwrites and resurrection. Identical duplicates are harmless;
 conflicting copies are errors. Replay uses the same durable change log, fixed replay
 boundary, and whole-commit pagination. Page continuation is not applied progress.
