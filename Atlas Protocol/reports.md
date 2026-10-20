@@ -14,7 +14,8 @@ Historical evidence retains its identity. A new packet ID cannot make it fresh.
 Apply [reported section classifications](entities.md#reported-sections) independently.
 An omitted section preserves its accepted result, classification, and source times.
 A supplied section replaces its prior result in full, whether it carries values,
-an error, or a withdrawal. Core validates the required fields for that result.
+an error, or a withdrawal. Core validates the complete result against its schema.
+Missing required fields reject the update.
 Never merge subfields with the prior section. Omitted optional fields do not retain
 old values. Null subfields are valid only where their schemas permit them.
 

@@ -17,12 +17,12 @@ helpers, generator versions, or wire layouts.
   lacked enough information to recover edited order from Task items and a revision.
   Reconstruct order and adoption from reads, snapshots, and later changes without
   retaining the editor's state. Stateless examples do not prove durable queue behavior.
-- [Numeric and generated Go construction cases](https://github.com/atlas-field-systems/atlas-core/blob/75dac30/Atlas%20Protocol/numeric_workflow_test.go)
+- [Numeric and generated Go construction cases](https://github.com/atlas-field-systems/atlas-core/blob/75dac3029615695f29cca754a345440578f09a8d/Atlas%20Protocol/numeric_workflow_test.go)
   reproduced rounded fractions passing integer checks and missing telemetry becoming
   zero readings. Later envelope validation accepted those fabricated readings.
   Test original numeric tokens and missing, null, and explicit zero through
   construction and serialization, before information is lost.
-- [Shared Go validator settings](https://github.com/atlas-field-systems/atlas-core/blob/bf808db/Atlas%20Protocol/first_use_test.go)
+- [Shared Go validator settings](https://github.com/atlas-field-systems/atlas-core/blob/bf808dbb3a46ce64e292c040fa718dd3542db4ec/Atlas%20Protocol/first_use_test.go)
   changed acceptance. Test host format, regex, and uniqueness policies before,
   during, and after Protocol use, including concurrent consumers.
 
