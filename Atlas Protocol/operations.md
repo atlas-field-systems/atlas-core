@@ -2,11 +2,6 @@
 
 **An Operation invokes one Plugin capability, separately from an Asset Task.**
 Core records the invocation and outcome. The Plugin performs the processing.
-Inputs, outputs, and known effects are Plugin-owned JSON, including null. An
-omitted output or effect is distinct from an explicit null payload. Protocol
-preserves numeric tokens at declared Plugin payload locations, including precise
-decimals, underflow, and large integers. Plugins own their specialized numeric
-interpretation. Invalid JSON or exhausted caller budgets fail as local diagnostics.
 
 ## Admission and state
 

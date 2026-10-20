@@ -5,7 +5,7 @@ The Plugin performs the requested processing.
 
 ## Messages
 
-| Message | Expected user and purpose | Input | Observable result |
+| Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `ListPlugins` | Operator app or integration discovers installed processing capabilities | Bounded Plugin query | Installed capability information |
 | `GetPlugin` | Invoking application checks one Plugin's capabilities before requesting work | Plugin identity | Installed capability information |

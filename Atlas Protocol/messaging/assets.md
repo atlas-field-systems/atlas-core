@@ -6,7 +6,7 @@ advertise no Commands.
 
 ## Messages
 
-| Message | Expected user and purpose | Input | Observable result |
+| Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `RegisterAsset` | Asset runtime or provisioning tool enrolls a camera, aircraft, or tracker | Initial Asset description, capability manifest, process generation, caller-prepared credential facts, and stable registration and request IDs | Registered identity and current Asset under [enrollment rules](../identity.md#enrollment-and-credentials) |
 | `ListAssets` | Operator app browses or searches available Assets | Bounded filters | Matching Asset views |
@@ -14,8 +14,6 @@ advertise no Commands.
 | `GetAssetByAlias` | Integration resolves a configured alias to an Asset | Asset alias | Matching Asset view |
 | `UpdateAsset` | Operator app, provisioning tool, or Asset runtime replaces complete writable Asset sections | Asset ID, complete writable sections, retry identity, and applicable [revision and source-evidence conditions](../entities.md#data-ownership) | Committed Asset view and evidence disposition, or an explicit refusal |
 | `DeleteAsset` | Operator app removes an Asset that is no longer needed | Asset ID and retry identity | Removed Asset under [deletion rules](../identity.md#deletion-and-revocation) |
-| `RequestContactChallenge` | Asset runtime or trusted gateway obtains contact proof context | Retry identity, Asset, process, and optional expected generation | Original ten-second challenge bound to Dataset and Core run |
-| `ReplaceAssetProcess` | Asset runtime replaces its source process | Expected generation, proposed generation, current challenge, and first check-in | Atomic replacement plus first check-in, or generation conflict |
 | `GetAssetStatus` | Operator app displays reported status alongside Core-derived contact information | Asset ID | Current status and derived contact information |
 | `GetAssetMovementHistory` | Operator app or analysis tool reviews where an Asset has been | Asset ID and bounded history query | Retained movement evidence |
 | `GetAssetObjects` | Operator app finds images or other files associated with an Asset | Asset ID and bounded query | Associated Object metadata |
@@ -31,8 +29,7 @@ contact fields remain read-only under [Entity rules](../entities.md#data-ownersh
 Supply the sections you intend to replace under the [update rules](../reports.md#shared-context).
 Each section keeps its applicable revision, source evidence, and ordering rules.
 The [component reference](../components/README.md) lists descriptions and reported data.
-The [report contract](../reports.md#process-generations) defines contact challenges
-and atomic process replacement.
+Concrete contact-challenge and process-replacement messages remain unspecified.
 
 [Task messages](tasks.md#assigned-work) define assigned work, queue ordering, and
 adoption confirmations.

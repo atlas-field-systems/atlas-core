@@ -1,32 +1,46 @@
 # Communications
 
-Communications separates reported link capacity from Core-derived contact health.
-[Reports](../reports.md#time-and-contact) owns contact freshness and thresholds.
-[OpenAPI](../openapi.json) owns the exact input and read compositions.
+Communications presents contact health separately from link capacity.
+Core derives contact health under [Reports](../reports.md#time-and-contact).
+The field names and numeric capacity representation below are proposals.
 
-## Reported value
+## Proposed read fields
 
-| Field | Type | Presence | Meaning |
+| Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
-| `bandwidth_bps` | Number or null | Required | Nominal bits per second, greater than zero; null when unknown |
-| `observed_at` | Timestamp or null | Required | Original capacity evidence time |
+| `health` | String | Required, read-only | Existing Core-derived `healthy`, `degraded`, or `offline` result |
+| `bandwidth_bps` | Number or null | Required | Declared nominal Asset link capacity in bits per second, greater than zero; null when unknown |
 
-The source or a trusted gateway may declare capacity through `UpdateAsset`.
-It uses the [reported result variants](README.md#reported-results). Its time is
-separate from the age of Core's contact proof. Errors replace the complete result.
-
-```json
-{"bandwidth_bps": 1200, "observed_at": "2026-10-17T12:00:00Z"}
-```
-
-## Read composition
-
-`Asset.communications` contains `reported`, a retained capacity result, and required
-`health`, one of `healthy`, `degraded`, or `offline`. `Heartbeat` exposes accepted
-contact. The writable schema omits health and receipts; `{"health":"healthy"}`
-is an invalid submitted Communications value.
+Reported capacity uses the [shared reported-section fields](README.md#shared-proposed-section-fields).
+Their timestamp describes capacity evidence, not the age of Core's contact proof.
+The source or a gateway may declare capacity through `UpdateAsset`. The writable
+schema omits `health`. Replacing reported information never sets derived health.
 
 A high-capacity link can be offline. Gateway IP connectivity alone supplies neither
-downstream Asset contact nor known capacity. Capacity is not measured throughput.
+downstream Asset contact nor a known capacity. Nominal capacity is not a promise
+of current throughput. Contact details are referenced through [Heartbeat](heartbeat.md).
+
+## Examples
+
+Valid read view under the proposed field layout:
+
+```json
+{
+	"health": "offline",
+	"bandwidth_bps": 1200,
+	"observed_at": "2026-10-17T12:00:00Z"
+}
+```
+
+Invalid update fragment because health is Core-owned:
+
+```json
+{"health": "healthy"}
+```
+
+## Decisions to settle
+
+Confirm whether capacity should be numeric or a defined class and define exact
+capacity attribution. Section failures follow [Reports](../reports.md#shared-context).
 
 [Component index](README.md)

@@ -2,9 +2,9 @@
 
 Power groups supply state and remaining energy reserves in one section.
 A glider can report its avionics battery without having propulsion. A camera can
-report an external supply. [OpenAPI](../openapi.json) owns the reserve variants and bounds.
+report an external supply. The fields, limits, and reserve layout below are proposals.
 
-## Fields
+## Proposed fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -16,7 +16,7 @@ Each reserve has these common fields:
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
 | `id` | UUID string | Required, non-null | Stable identity of this reported reserve, not an Entity ID |
-| `kind` | String | Required, non-null | Closed set: `battery` or `fuel` |
+| `kind` | String | Required, non-null | Proposed closed set: `battery` or `fuel` |
 | `remaining_percent` | Number or null | Required | Remaining reserve, 0 through 100 inclusive; null when unknown |
 
 Battery reserves also require `voltage_volts` and `current_amperes`, each
@@ -24,14 +24,14 @@ a finite number or null when unknown. Voltage is nonnegative. Current is signed.
 Positive means discharge, negative means charging. Fuel reserves omit both fields.
 The variants use named schemas, not a dictionary of arbitrary measurements.
 
-Include the [shared section fields](README.md#reported-results).
+Include the [shared section fields](README.md#shared-proposed-section-fields).
 An update replaces the complete supplied Power section, including its reserve
-list. Static nameplate details are not part of this live snapshot.
+list. Static nameplate details are not part of this proposed live snapshot.
 Reserve percentage does not itself promise remaining flight time or range.
 
 ## Examples
 
-Valid battery snapshot:
+Valid proposed battery snapshot:
 
 ```json
 {
@@ -57,10 +57,11 @@ Invalid reserve value because the percentage exceeds its bound:
 }
 ```
 
-## Scope
+## Decisions to settle
 
-Each reserve carries its original `observed_at`, including null for unknown time.
-A source reports a whole-section error when Power fails. Core does not reconstruct
-unaffected reserve values. Hardware replacement uses a new reserve ID.
+Confirm reserve variants, the instance limit, percentage representation, and
+replacement identity across hardware changes. Mixed-time readings still need
+representation without refreshing older evidence. Actual section failures follow
+[Reports](../reports.md#shared-context), without reconstructing healthy reserves.
 
 [Component index](README.md)

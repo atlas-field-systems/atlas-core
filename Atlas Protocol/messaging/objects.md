@@ -5,7 +5,7 @@ An Object becomes public only after verified publication.
 
 ## Messages
 
-| Message | Expected user and purpose | Input | Observable result |
+| Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `UploadObject` | Asset runtime, operator app, or integration publishes a complete image or other file | Stable Object and upload request IDs, descriptor, initial metadata and associations, and complete binary content | Ready Object after verified publication under [upload rules](../objects.md#upload-and-retry) |
 | `ListObjects` | Operator app browses or searches available file metadata | Bounded filters | Matching ready Object metadata |

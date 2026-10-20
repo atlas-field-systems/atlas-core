@@ -63,4 +63,4 @@ Operation provenance remain until Reset. Failed cleanup blocks unsafe reuse.
 
 No marketplace, dependency graph, automatic updates, or generic UI builder is part of this baseline.
 
-[Next: qualification](qualification.md)
+[Next: diagnostics](diagnostics.md)

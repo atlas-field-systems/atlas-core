@@ -3,9 +3,9 @@
 Attitude owns body heading, pitch, and roll in a frame aligned to true north.
 Heading belongs here rather than in Telemetry. Gimbal bearing describes the
 camera's viewing direction, which can differ from the body's heading.
-[OpenAPI](../openapi.json) owns the angle bounds and nullable fields.
+The angle representation, bounds, and null choices below are proposals.
 
-## Frame and fields
+## Proposed frame and fields
 
 Use a local North-East-Down frame aligned to true north, with heading, pitch, and roll
 Euler rotations in intrinsic Z-Y-X order. Angles use degrees. A level body pointing
@@ -19,7 +19,7 @@ must be converted by the external source before submission.
 | `roll` | Number or null | Required | Rotation about the forward axis, positive right side down, -180 inclusive to 180 exclusive |
 
 All numbers are finite. Null means the angle is unknown. Actual measurement
-failures use the [shared section error representation](README.md#reported-results).
+failures use the [shared section error representation](README.md#shared-proposed-section-fields).
 Include the shared `observed_at` field and report the complete Attitude section.
 The source declares state until changed or dated measurement under [Entity rules](../entities.md#reported-sections).
 
@@ -29,7 +29,7 @@ quantity. Attitude does not infer it from heading.
 
 ## Examples
 
-Valid component value:
+Valid under the proposed field contract:
 
 ```json
 {
@@ -40,7 +40,7 @@ Valid component value:
 }
 ```
 
-Invalid because 360 is outside the heading interval:
+Invalid because 360 is outside the proposed heading interval:
 
 ```json
 {
@@ -51,10 +51,10 @@ Invalid because 360 is outside the heading interval:
 }
 ```
 
-## Scope
+## Decisions to settle
 
-Unknown angles remain null, including when the source cannot determine them at
-a vertical orientation. Optional per-angle time overrides retain different source
-ages. Their omission uses the common time; null records unknown time.
+Confirm the Euler convention and behavior at vertical orientations, where heading
+and roll are not independently determined. Angle readings from different times
+must retain those times rather than imply one coherent new orientation.
 
 [Component index](README.md)

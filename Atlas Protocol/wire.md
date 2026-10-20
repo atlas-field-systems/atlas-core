@@ -7,13 +7,9 @@ Binary content remains binary, not JSON-encoded bytes.
 
 ## Common representation
 
-Use UUID identifiers and snake_case wire fields. UUID identity ignores letter case,
-including uniqueness in Identifier arrays. Preserve accepted spelling and array order.
-Encode 64-bit counters as
+Use UUID identifiers and snake_case wire fields. Encode 64-bit counters as
 canonical decimal strings, not JavaScript numbers. Validate their numeric range,
-not only their spelling. Preserve double precision for spatial values. Timestamp strings use uppercase `T`,
-`Z` or an explicit numeric offset, and at most nine fractional digits. Reject
-impossible calendar dates and leap seconds; retain accepted spelling.
+not only their spelling. Preserve double precision for spatial values.
 
 Requests identify `Atlas-Dataset-ID` and `Atlas-Protocol-Version`. Responses carry
 the actual Dataset and Core's Protocol version, including declared error responses.
@@ -32,32 +28,42 @@ not URLs or browser persistent storage.
 JSON success uses `{dataset_id, data, commit_cursor?}`. Mutations with public
 changes include their committed cursor. Errors use
 `{error: {code, message, request_id, details?}, dataset_id?}`.
-The error's request ID is diagnostic correlation, not retry identity or commit proof.
+The error's request ID follows the correlation rules below.
 
 The authenticated raw OpenAPI document, documentation HTML, binary content, and
 explicitly empty responses are declared exceptions to the JSON data envelope.
-Upload uses an unpadded base64url `Atlas-Object-Descriptor` header containing its
-UTF-8 JSON descriptor, followed by one complete binary body. Content reads expose
-length, content type, SHA-256 `Content-Digest`, and read disposition.
-Only the 101 success requires WebSocket handshake response headers. Ordinary
-HTTP errors use their declared Dataset and version headers.
 Validate status, media, headers, and body at both ends. A malformed mutation response
 may follow a real commit, so it cannot establish rejection.
 
-WebSocket upgrade carries no credentials or public data. The first `authenticate`
-frame supplies the key, Dataset, and exact version. Core owns the authentication
-timeout and connection state. Authenticated snapshot release works before a data
-subscription. [OpenAPI](openapi.json) defines controls and complete change frames.
+## HTTP correlation
+
+An optional `Atlas-Attempt-ID` request header identifies one client-visible HTTP attempt.
+Its value is one canonical lowercase UUIDv4. SDK supplies a fresh value per attempt,
+including deliberate retries of the same mutation. Core records a valid value at
+ingress. Missing, malformed, or multiple header fields leave correlation unavailable;
+ignore them without recording their raw contents. Normal header size limits apply.
+Core does not track or reject reuse of an attempt value across requests.
+Transport retransmissions and redirects hidden by the client runtime may share
+the same attempt context; this ID is not a count of physical transmissions.
+
+Core assigns its own request ID and returns `Atlas-Request-ID` on every Core-served
+HTTP response, including discovery, errors, binary content, and empty responses.
+Its value is a canonical lowercase UUIDv4. An error's `request_id` is the same ID.
+This Core-assigned ID differs from stable request IDs in a mutation's retry facts.
+The IP binding permits the attempt header for trusted browser origins and exposes
+the response header to them. Browser WebSocket handshakes need no custom header.
+
+These IDs are diagnostic context, never authority, retry facts, or commit proof.
+Discard malformed correlation headers at the consuming boundary. A header defect
+alone does not change an otherwise validated domain outcome. A lost response may
+leave only the sent attempt ID available to match client and server diagnostics.
+Protocol defines this metadata, not a logger, diagnostic event schema, or log feed.
 
 ## Parsing and edits
 
 Accept one bounded UTF-8 JSON document. Reject duplicate decoded member names at
 any depth, malformed UTF-8, unpaired surrogates, and nonfinite numbers. Validate
-original text before normalizing typed values. Typed integers accept mathematical
-integer forms such as `100.0` and `1e2`. Reject real fractions even when double
-rounding hides them. Canonical typed integers must also fit the caller's JSON byte
-budget. Plugin numeric tokens retain their exact spelling. Spatial quantities
-keep finite double behavior.
+original text before normalizing typed values.
 
 Patches leave omitted fields unchanged, replace scalars and arrays, merge defined
 objects, and use null only for permitted removal/clearing. Validate the complete
@@ -67,10 +73,6 @@ Asset updates use [whole-section replacement](reports.md#shared-context) instead
 of subfield merging, including on bindings that use PATCH.
 
 ## Retry and Dataset rules
-
-Optional `error.details.retry_after_seconds` is integer advice from 0 through
-9007199254740991, the portable range shared by Go int64 and JavaScript numbers.
-It does not cap spatial doubles or Plugin JSON.
 
 Each mutation declares its retry identity and original facts. Repeating those
 facts recovers the original effect; changed facts conflict; ended identities do
@@ -83,19 +85,12 @@ request to a new Dataset automatically. Ordinary Restart retains Dataset-scoped
 identities; Reset invalidates them. API-key creation has installation lifetime,
 but still needs an intentional current-Dataset request.
 
-Alias lookups use an `alias` query value. This preserves aliases such as `..`
-that URL parsers would normalize inside a path.
-
 ## Lists
 
-Filters use AND between fields and OR within a field. An empty array matches nothing.
-Ordinary lists are moving keyset views with bytewise ID ordering, not snapshots.
-`page_size` caps items, default 100, maximum 1,000. Core may return fewer items
-to fit JSON byte and value budgets. `next_page_token` determines continuation.
-Encode an array filter as one JSON-array query value, such as `ids=[]`.
-Reject unsupported filters and repeated decoded query names. Omission and empty arrays differ.
-Tokens bind source, Dataset, kind, filters, size, and continuation and expire after 60 seconds.
-Assigned-work tokens also pin queue revision and captured adoption metadata under
-[Task paging rules](tasks.md#scheduling-and-controls).
+Filters are explicit: AND between fields, OR within a field, and an empty array
+matches nothing. Reject unsupported filters. Ordinary lists are moving keyset
+views, not frozen snapshots; IDs sort bytewise. Default pages contain 100 items,
+maximum 1,000. Tokens bind source, Dataset, kind, filters, size, and continuation;
+ordinary tokens expire after 60 seconds. Assigned-work lists also bind queue revision.
 
 [Next: synchronization](synchronization.md)

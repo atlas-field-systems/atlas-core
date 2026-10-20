@@ -5,18 +5,18 @@ Accepting evidence and establishing fresh contact remain distinct outcomes.
 
 ## Shared context
 
-Updates identify Dataset and Asset. Each reported section identifies the process
-generation and a positive sequence. Source context records `generated_at`, original
-evidence identity, current or historical evidence, quantity times, and contact proof.
-Unknown original time is null. Historical evidence keeps its identity. A new packet
-ID cannot make it fresh.
+Updates identify the Dataset and Asset. Reported sections also identify the process
+generation and a positive sequence number. Their context includes `generated_at`,
+original evidence identity, whether the evidence is current or historical,
+source times for each quantity, and contact proof. Unknown original time stays null.
+Historical evidence retains its identity. A new packet ID cannot make it fresh.
 
 Apply [reported section classifications](entities.md#reported-sections) independently.
-Omission preserves accepted result, classification, and source times. A supplied
-section is a complete replacement. Core validates it against its full schema.
-Never merge its subfields with the prior section. Missing required fields reject
-the update. Omitted optional fields do not retain old values. Null subfields are
-valid only where their schemas permit them.
+An omitted section preserves its accepted result, classification, and source times.
+A supplied value section is a complete replacement, validated against its full schema.
+Never merge its subfields with the prior section. Missing required value fields
+reject that update. Omitted optional fields do not retain old values. Null subfields
+are valid only where their schemas permit them.
 
 The Asset detects failures and reports a section-level error with a code and optional
 message. Core records and exposes it without diagnosing hardware, reconstructing
@@ -34,9 +34,11 @@ Duplicate evidence alone cannot refresh contact, append movement, repeat activit
 or produce a public change. Order each section, Task stream, and queue stream independently.
 New telemetry must not discard a previously unseen earlier Task outcome.
 
-Original evidence identity excludes credentials, gateways, and delivery-packet IDs.
-Core deduplicates it at the IP-facing boundary. Independent edge-link deduplication
-does not replace Core's protection against repeated effects.
+Core deduplicates direct and relayed submissions at its IP-facing update boundary.
+Original evidence identity excludes the submitting key, gateway, and delivery-packet
+identity. Delivering the same evidence through another key or gateway does not
+change its identity. Edge connections and data links may deduplicate independently.
+Core does not depend on them to prevent repeated effects.
 
 ## Process generations
 
@@ -44,23 +46,24 @@ Direct-IP and gateway reports use the [shared API-key permissions](identity.md#p
 Keep the reported Asset and process separate from the submitting key. Preserve
 original validated identifier and timestamp spellings in retained report facts.
 
-Registration records the initial process without establishing contact.
-`RequestContactChallenge` names the Asset, current or proposed process, retry identity,
-and replacement's expected generation. Its response retains the challenge ID,
-Dataset, Asset, process, Core run, issue time, and original ten-second expiry on retry.
-`ReplaceAssetProcess` supplies proof, expected generation, and first check-in.
-One atomic compare-and-swap commits replacement and first check-in. Only one wins.
-Any valid key may request replacement. Reconnect is not replacement; an obsolete
+Registration records the initial process generation without establishing contact.
+Core can issue a challenge bound to that process or a proposed replacement.
+Replacing a process uses a current challenge and an atomic compare-and-swap of the
+expected generation with its first check-in. Any valid API key may request this
+replacement. Only one replacement wins. Reconnect is not replacement; an obsolete
 generation cannot publish new execution state. A gateway restart is not an Asset restart.
-A gateway preserves `AssetSource` and `SourceEvidence`; submitting-key and receipt
-facts are read-only. Its own response cannot stand in for the Asset. Radio encoding
-and edge-link retries remain external. [OpenAPI](openapi.json) owns exact fields.
+
+The gateway envelope, source-identity fields, and challenge exchange remain
+unspecified. The gateway translates attributable Asset evidence, including a
+response to Core's challenge; its own response cannot stand in for the Asset.
+Radio encoding and edge-link retries remain external.
 
 ## Time and contact
 
-Deployment supplies correct UTC clocks. Atlas does not calculate offsets, correct
-drift, or rewrite event times. Observation, receipt, and state-change times remain
-distinct. Unchanged fresh status is not a new status change.
+Deployment supplies correct UTC clocks. Atlas does not estimate offsets, correct
+drift, or rewrite source event times. Keep source observation time, Core receipt
+time, and actual state-change time separate. Unchanged fresh status is not a new
+status-change time.
 
 Accept otherwise valid future-dated observations as time-uncertain, with no usable
 fresh age. Unknown time remains unknown. Optional clock-uncertainty compatibility
@@ -75,11 +78,12 @@ Historical reports, duplicates, Track-only observations, open connections, and
 description changes alone do not establish contact. Gateway IP health does not
 prove a downstream Asset is reachable.
 
-`healthy` lasts less than 15 seconds after fresh contact; `degraded` lasts from
-15 seconds until 60; `offline` starts at 60. No proven contact this Core run means
-offline. These thresholds need field qualification,
-separately from challenge expiry. Use Core's monotonic elapsed time, never source
-timestamps. Timer transitions are public committed changes even without another report.
+Communications health is `healthy` for less than 15 seconds after accepted fresh
+contact, `degraded` from 15 seconds until 60 seconds, and `offline` at 60 seconds.
+No proven contact in the current Core run means offline. These are initial defaults
+subject to field qualification, separate from the 10-second challenge expiry.
+Use Core's monotonic elapsed time; source timestamps do not reset this timer.
+Expiry transitions are public committed changes even when no new packet arrives.
 
 Keep bandwidth capability separate from communications health. A high-bandwidth
 link can be offline. Gateway connectivity alone establishes neither the downstream
@@ -87,10 +91,11 @@ Asset's health nor its bandwidth capability; unknown capability stays unknown.
 
 ## Movement and recovery
 
-Append movement only from newly accepted position, speed, or altitude, including
-historical evidence. Preserve quantity times and deduplicate corrections. Never copy
-merged Entity snapshots into samples. History survives Entity deletion until Reset.
-Bounded queries distinguish unknown IDs from known Entities with no matching samples.
+Append movement only for newly accepted explicit position, speed, or altitude,
+including historical evidence. Preserve sparse quantity times and deduplicate
+corrections. Never create samples by copying an entire merged Entity snapshot.
+History survives Entity deletion until Reset. Bounded history queries distinguish
+unknown Entity IDs from known Entities with no matching samples.
 
 On reconnect, reconcile retained reports and current instructions. Neither a new
 connection nor a new process authorizes automatically repeating uncertain physical

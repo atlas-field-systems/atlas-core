@@ -23,8 +23,6 @@ a committed upload or cancel an Asset Task.
 ## Metadata, references, and deletion
 
 Metadata may be edited; content type, size, and digest remain storage facts.
-Retain the original content type spelling. Downloads compare parsed media types
-case-insensitively and still verify byte length and digest.
 Associations are references, not cascade ownership. Deleting an Entity or removing
 a metadata association does not delete its Objects.
 

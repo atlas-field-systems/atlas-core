@@ -1,8 +1,8 @@
 # Component field reference
 
-The [OpenAPI contract](../openapi.json) owns exact fields, bounds, unions, and
-permitted resource compositions. These pages explain the component meanings.
-Remaining design questions do not expand the executable contract.
+This reference proposes fields, types, units, bounds, null and omission rules,
+and JSON examples for Atlas resources. Exact field details remain proposals
+unless explicitly agreed.
 
 ## Descriptions and type
 
@@ -37,8 +37,8 @@ Telemetry documents the reusable [Position](telemetry.md#position) and
 same definitions without adopting the complete Telemetry section. Position quality
 remains deferred. This reference adds no field contract for it.
 
-These components do not create new Entity types or an arbitrary field registry.
-Concrete schemas select permitted Entity components. Reference Asset examples
+These are component proposals, not new Entity types or an arbitrary field registry.
+Exact permitted Entity compositions still need schemas. Reference Asset examples
 are a mounted gimbal camera, powered fixed-wing aircraft, a glider, a quadcopter,
 and a commandless tracker that reports its own telemetry.
 
@@ -47,21 +47,31 @@ and a commandless tracker that reports its own telemetry.
 [Entities](../entities.md#reported-sections) owns the distinction between state
 until changed and dated measurements. [Reports](../reports.md#shared-context)
 owns complete-section replacement, errors, ordering, and sparse report behavior.
-Those rules apply to all reported sections.
+Those rules apply to all proposed sections.
+Component value-field requirements do not require healthy values in an error or
+withdrawn result. Their exact wire representations remain to be specified.
 
-## Reported results
+## Shared proposed section fields
 
-Each supplied section has `state`, `classification`, and original `evidence`.
-`value` carries the complete named component snapshot. `error` carries a required
-code, optional message, and observation time, with no usable value. `withdrawn`
-retains evidence and observation time and requires `state_until_changed`.
-[Reports](../reports.md#shared-context) owns replacement and ordering behavior.
+These fields apply to complete reported sections. Reusable values and authored
+sections do not inherit them. Contact evidence has its own linked representation.
 
-A component value carries `observed_at`, which may be null. Quantity-specific times
-preserve constituent ages. Error and withdrawal results carry their own time.
-Required read containers stay present. A retained container is `unknown` before
-any report, or `reported` with the source result and a separate Core receipt.
-Callers cannot submit receipt time, submitting-key attribution, or derived health.
+| Field | Type | Presence | Proposed meaning |
+| --- | --- | --- | --- |
+| `observed_at` | UTC timestamp string or null | Required | Original source observation time; null when unknown |
+| `error` | Error object | Omitted when healthy | Present only for an actual reported error |
 
-Examples show component values, not full authenticated requests or retained reads.
-The [OpenAPI contract](../openapi.json) owns exact structure and validation.
+An Asset reports an actual section failure with a required string `code` and optional
+string `message`. Reads expose the section error rather than reconstructing partial
+success. Withdrawal follows [Reports](../reports.md#shared-context). A single
+`observed_at` describes a coherent observation; mixed-time values retain their own ages.
+
+Examples show values or section snapshots, not full authenticated API requests.
+The proposed `state` and `measurements` group names remain undecided.
+
+## Contract source
+
+These pages are the human-readable place to refine field proposals. Accepted
+machine-readable definitions belong in the [OpenAPI artifact](../README.md#contract-ownership).
+Once authored, its schemas own exact structure and validation. These pages explain
+them. There is no executable schema or generated package here yet.

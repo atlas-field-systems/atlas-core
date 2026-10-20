@@ -5,7 +5,7 @@ They expose work as Tasks rather than arbitrary resource state edits.
 
 ## Work and execution
 
-| Message | Expected user and purpose | Input | Observable result |
+| Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `CreateTask` | Operator app or automation requests an advertised Asset Command, such as Move To or Pause | Stable Task and request IDs, target Asset, Command inputs, scheduling choice, and validity terms | Recorded Task and per-Asset submission sequence, or refusal under [Task rules](../tasks.md#creation-and-state) |
 | `ListTasks` | Operator app reviews requested work and its reported progress | Bounded filters | Matching Task views |
@@ -22,16 +22,14 @@ Result declarations follow [References and results](../tasks.md#references-and-r
 
 ## Assigned work
 
-| Message | Expected user and purpose | Input | Observable result |
+| Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
-| `GetAssignedTasks` | Asset runtime retrieves current instructions, including when reconciling after reconnect | Asset ID and bounded query context, with optional `queue_revision` precondition | Bounded Task bodies and complete `task_queue` on every page, even when items are empty |
+| `GetAssignedTasks` | Asset runtime retrieves current instructions, including when reconciling after reconnect | Asset ID and bounded query context | Assigned Tasks with queue revision and paging context |
 | `SetTaskOrder` | Operator app or planning automation requests a new order for eligible unstarted Tasks | Asset ID, complete eligible order, retry identity, and revision precondition | Recorded requested order and revision |
 | `ConfirmTaskOrder` | Asset runtime confirms the requested queue order it actually adopted | Asset and process context, plus original evidence of the adopted order | Recorded confirmation, distinct from the requested order |
 
 Queue eligibility, pagination consistency, and adopted order follow
 [Scheduling and controls](../tasks.md#scheduling-and-controls). Asset execution and
 order-confirmation evidence also follow the [report rules](../reports.md).
-A fresh reader recovers requested order from `task_queue.task_ids` and confirms
-`task_queue.revision`, without retaining another client's mutation response.
 
 [Messaging index](../messaging.md)

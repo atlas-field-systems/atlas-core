@@ -52,4 +52,4 @@ restart every case from zero or reuse an expired allocation context.
 Authorization failure pauses until credentials change. Closing SDK stops its owned
 connections and recovery, not Core, physical work, or accepted Plugin Operations.
 
-This completes the SDK reading path.
+[Next: diagnostics](diagnostics.md)
