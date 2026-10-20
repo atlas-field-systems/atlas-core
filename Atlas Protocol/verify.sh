@@ -21,7 +21,7 @@ if ! go test -race -count=1 -json ./... > "$scratch/go-tests.log"; then
 fi
 node scripts/check-results.mjs go "$scratch/go-tests.log"
 printf 'Go consumer fixtures and HTTP/WS bindings passed.\n'
-if ! node --test --test-reporter=tap dist-test/test/protocol.test.js > "$scratch/ts-tests.log" 2>&1; then
+if ! node --test --test-reporter=tap dist-test/test/*.test.js > "$scratch/ts-tests.log" 2>&1; then
   cat "$scratch/ts-tests.log"
   exit 1
 fi
