@@ -11,7 +11,9 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | --- | --- |
 | Shared components | Independent valid/invalid examples; allowed Entity compositions; Go/TypeScript agreement; SDK input/response validation and direct-HTTP refusal of malformed input |
 | Wire and identity | Absent/null, exact counters and identifiers; authenticated discovery and exact-version refusal; equal API permissions across keys; wrong Dataset; lost enrollment reply; revoked-key rejection |
-| Asset updates and Tracks | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; deduplication across keys/gateways, ordering, and history; contact expiry without new packets; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
+| Asset updates | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; direct/relayed deduplication, section ordering, correction identity and age, and movement history; contact expiry without new packets; competing process replacement; obsolete-generation rejection |
+| Observations and default fusion | Stable publisher; continuing Observation versus report and constituent measurement identities; direct/relayed deduplication; whole-section ordering and correction age; atomic Observation/Track creation and updates; lost replies and racing retries; errors, withdrawals, and unknowns remain visible |
+| Retained Tracks and evidence | Independent publishers initially yield separate Tracks; inactivity and Restart preserve identities, history, source provenance, and Object associations; no individual Observation or Track deletion; Reset clears all retained records |
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
 | Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, Asset deletion without invented outcomes or transferred Tasks |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
@@ -22,6 +24,15 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Recovered outcomes | Original Operation reads expose recovered outcomes, effects, and result links; state remains interrupted; no new Operation or execution |
 | Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
 | Full synchronization | Whole-message interruption, immutable capture under concurrent writes and paging, failed-build cleanup, fixed handoff, capture retry/release, replay expiry, slow clients, rebuild, Dataset change and capacity pause |
+
+For example, create O17 and record its assigned T42. Move O17 with R2 and verify
+both IDs remain. Replay creation and R2 through another gateway with no new Track,
+movement sample, or public change. Force rollback and verify neither side publishes.
+Make O17 silent, resume it, and verify T42 remains the same retained Track.
+Include a churn case with new Observations alongside accumulated inactive records.
+Neither silence nor picture capacity permits eviction of the retained records.
+Use the independent [history-only evidence example](../Atlas%20Protocol/report-evidence.md#independent-acceptance-example)
+and [retained-Dataset qualification](workload-qualification.md) requirements.
 
 For generation, delete outputs and regenerate deterministically with pinned tools.
 Qualify the supported schema profile, independent cross-language examples, package
@@ -62,31 +73,11 @@ crash dumps, and exports for those sentinels while verifying valid events remain
 
 ## Workload targets, not measured capability
 
-Target one server, one or two operators, about 20 Assets and 200 Tracks. Initial
-rates are two Asset reports and one Track report per second per source. Qualify
-four-hour missions and eight-hour retained Datasets, including bursts and backlog.
-Use a four-CPU, 8 GB RAM, local-SSD Core host and an 8 GB client as the reference.
-
-The eight-hour fixture has 6,912,000 reports, 9,600 Tasks, and 28,800 Operations.
-Include accumulated identities/history, terminal records, old and replacement
-pictures, and decoded memory. Test a 10× burst, ten-minute backlog, slow consumer,
-and four concurrent 1 GB uploads plus downloads. Typical files are 100 MB;
-plan for 10 GB of content per day.
-
-Initial admission settings are 1 MiB JSON, 2 GB files, four uploads, 1,000 outstanding
-Tasks per Asset, and 32 sync connections. Initial Object quota/headroom are
-16 GB/8 GB. Use typed `413 payload_too_large`, `429 resource_limit`, and
-`507 storage_limit` refusals. Lower limits govern new admission, not silent deletion
-or cancellation of accepted work.
-
-Initial sync budgets are 4 MiB/1,000 changes per complete message, 4 MiB pending per
-connection, and 64 MiB/15 minutes of replay. SDK picture and journal budgets start
-at 512 MiB/100,000 resources and 16 MiB/10,000 commits. Measure actual aggregate RAM;
-encoded-byte accounting is not a memory guarantee.
-
-Qualification targets include p95 ordinary requests below 250 ms, picture lag below
-one second, and initial load below ten seconds. All values require measurement and
-may need reviewed tuning; none justifies weakening retention or atomicity.
+The [workload qualification inputs](workload-qualification.md) own initial targets,
+resource and byte budgets, proposed cumulative-turnover fixtures, and Full recovery
+acceptance. The proposed rates and retained totals need confirmation and measurement.
+No workload qualification has run in this documentation-only baseline.
+Neither tuning nor capacity failure permits weaker retention or atomicity.
 
 ## Report honestly
 

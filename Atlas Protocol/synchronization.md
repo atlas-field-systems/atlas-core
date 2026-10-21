@@ -1,8 +1,8 @@
 # Synchronization contract
 
 **Synchronize committed facts, not delivery guesses.** The picture contains all
-Entities, Tasks, and ready Object metadata. Object bytes, history, Plugin Operations,
-and administration use direct requests instead.
+Assets, Observations, Tracks, Geofeatures, Tasks, and ready Object metadata.
+Object bytes, history, Plugin Operations, and administration use direct requests instead.
 
 ## Complete changes
 
@@ -10,6 +10,7 @@ A Core cursor is opaque and bound to Dataset and durable commit order. One data
 message contains one complete commit: final resource images or versioned deletions.
 Validate and apply the entire message atomically before advancing the cursor.
 Transport segmentation does not authorize application-level fragments.
+An Observation and its default Track changes arrive in the same complete commit.
 
 Versions prevent stale overwrites and resurrection. Identical duplicates are harmless;
 conflicting copies are errors. Replay uses the same durable change log, fixed replay

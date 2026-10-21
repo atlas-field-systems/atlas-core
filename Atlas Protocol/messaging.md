@@ -26,14 +26,16 @@ A lost result leaves uncertainty. Another link must not silently create new work
 ## Resource message families
 
 - [Asset messages](messaging/assets.md): registration, section updates, reads, and deletion.
-- [Track messages](messaging/tracks.md): publisher-owned Tracks and observations.
+- [Observation messages](messaging/observations.md): publisher-owned detections and successive reports.
+- [Track messages](messaging/tracks.md): shared targets, source associations, and evidence reads.
 - [Geofeature messages](messaging/geofeatures.md): authored geometry and descriptions.
 - [Task messages](messaging/tasks.md): Commands, assigned work, execution, and results.
 - [Object messages](messaging/objects.md): complete file publication, metadata, and content.
 
-`RegisterAsset`, `CreateTrack`, and `CreateGeofeature` have distinct input schemas.
+`RegisterAsset`, `CreateObservation`, and `CreateGeofeature` have distinct input schemas.
 Each exposes only the fields and components permitted for its Entity type under
-[Entities](entities.md#component-composition).
+[Entities](entities.md#component-composition). Tracks are created by the active
+[fusion policy](tracks.md), not by an Asset creation message.
 
 Different public messages may share a Core API operation or internal mechanism.
 That mapping does not merge their public input contracts or require one HTTP
@@ -92,7 +94,6 @@ resumable-upload exchange, or remote Core-configuration message.
 | `SubscribeChanges` | Synchronizing application catches up and follows live commits | Subscription and handoff context | Ordered committed changes and synchronization replies |
 | `ReleaseSnapshot` | Loading application frees its capture after paging or cancellation | Capture identity | Release acknowledgment or explicit refusal |
 
-Core sends synchronization replies for release, handoff, replay, gaps, and recovery
-as defined by [Synchronization](synchronization.md). Exact reply message names remain open.
+Exact synchronization reply names remain open under [Synchronization](synchronization.md).
 
 [Next: wire conventions](wire.md)

@@ -1,37 +1,37 @@
 # Track messages
 
-Track messages publish observations about something, under one stable publisher.
-Creation identifies that publisher and accepts Track components. It does not enroll
-an Asset or establish Asset contact.
+Track messages read shared targets and manage their authored descriptions.
+The active [fusion policy](../tracks.md) creates Tracks, maintains Observation
+associations, and determines their reported state. Asset runtimes publish through
+[Observation messages](observations.md).
 
-## Creation and descriptions
-
-| Proposed message | Expected user and purpose | Input | Observable result |
-| --- | --- | --- | --- |
-| `CreateTrack` | Sensor runtime or publishing integration starts a Track for a new detection | Stable Track and request IDs, publisher identity, and permitted initial Track data | Created Track attributed to that publisher |
-| `ListTracks` | Operator app browses or searches reported detections | Bounded filters | Matching Track views |
-| `GetTrack` | Operator app or analysis tool inspects a known Track | Track ID | Current Track view |
-| `GetTrackByAlias` | Integration resolves a configured alias to a Track | Track alias | Matching Track view |
-| `EditTrack` | Operator app or publisher corrects descriptive metadata separately from observations | Track ID, permitted descriptive edits, retry identity, and `expected_edit_revision` | Committed Track description under [Entity rules](../entities.md#data-ownership) |
-| `DeleteTrack` | Publisher or operator app removes a Track that is no longer useful | Track ID and retry identity | Deletion or an explicit refusal under [reference guards](../entities.md#geometry-and-references) |
-
-Track schemas select their allowed components from the shared definitions,
-including applicable [Telemetry](../components/telemetry.md). Initial descriptions
-and observations must remain distinguishable. Exact creation fields are undecided.
-Reported [Type](../components/type.md#track-type) describes the observed subject and
-follows the Track's source-observation rules.
-
-## Observations and evidence
+## Reads and descriptions
 
 | Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
-| `ReportTrackObservations` | Sensor runtime or publishing integration adds an observation or corrects earlier evidence | Track and publisher identities, complete applicable sections, and original observation or correction evidence | Accepted, duplicate, or rejected observations under [Track rules](../entities.md#tracks) |
-| `GetTrackMovementHistory` | Analysis tool or operator app reviews observed motion over time | Track ID and bounded history query | Retained movement evidence |
-| `GetTrackObjects` | Operator app finds images or other files associated with a detection | Track ID and bounded query | Associated Object metadata |
+| `ListTracks` | Operator app browses or searches shared targets | Bounded filters | Matching Track views |
+| `GetTrack` | Operator app or analysis tool inspects a target | Track ID | Current Track view with Observation and evidence provenance |
+| `GetTrackByAlias` | Integration resolves a configured alias | Track alias | Matching Track view |
+| `EditTrack` | Operator app corrects authored descriptive metadata | Track ID, permitted descriptive edits, retry identity, and `expected_edit_revision` | Committed description under [Entity rules](../entities.md#data-ownership) |
 
-Preserve publisher identity separately from the delivering gateway or credential.
-Apply Track observation ordering, not Asset process and contact requirements.
-The exact observation envelope and its relationship to complete section updates
-remain unspecified.
+Edits do not overwrite policy-owned state, source evidence, or associations.
+There is no individual deletion message for retained Tracks.
+
+## Sources and evidence
+
+| Proposed message | Expected user and purpose | Input | Observable result |
+| --- | --- | --- | --- |
+| `GetTrackObservations` | Operator app or processing integration inspects a target's sources | Track ID and bounded query | Contributing Observation views with association provenance |
+| `GetTrackMovementHistory` | Analysis tool or operator app reviews target movement | Track ID and bounded history query | Retained movement with original source evidence and times |
+| `GetTrackObjects` | Operator app finds files explicitly associated with a target | Track ID and bounded query | Directly associated ready Object metadata |
+
+Source photographs remain associated with their Observations. Follow the source
+association and `GetObservationObjects` to inspect that evidence. Fusion does not
+silently rewrite Object metadata or duplicate files.
+
+Track schemas select applicable [shared components](../components/README.md).
+[Type](../components/type.md#observed-subject-type) describes the target, with provenance
+from the policy's inputs. The exact derived-state schema remains a proposal.
+External fusion publication and handover messages require a later contract.
 
 [Messaging index](../messaging.md)

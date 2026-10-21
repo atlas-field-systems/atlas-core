@@ -2,8 +2,9 @@
 
 Telemetry is the complete section for an Entity's location and motion.
 A report supplies the whole section, including defined null values.
-The same whole-snapshot ordering applies to Asset and Track Telemetry. The source
-assembles the snapshot; Core does not merge independently arriving quantities.
+The same whole-snapshot ordering applies to Asset and Observation Telemetry. The
+source assembles the snapshot; Core does not merge independently arriving quantities.
+The default Track retains that snapshot and its source evidence.
 
 ## Fields
 
@@ -89,16 +90,18 @@ The enclosing result's `observed_at` is the default source time. Its `source_tim
 may override `position`, `altitude`, `ground_speed`, and supplied `airspeed`.
 Position is one complete quantity, not separate latitude and longitude observations.
 Explicit null means an unknown time. A fresh snapshot cannot refresh older readings.
-Uncertainty fields remain deferred. Schemas must declare exact Track applicability.
+Uncertainty fields remain deferred. Schemas must declare exact Observation and Track applicability.
 
 ## Constituent observation identity
 
 Each supplied quantity carries a source-assigned observation ID and correction revision
 as source evidence, separate from the complete section's sequence and delivery identity.
+This constituent ID identifies a reading, not the persistent Observation Entity.
 Scope the ID by Dataset, Entity, originating source, and quantity. The originating
-source is the Asset process generation or the Track's stable publisher. A carried-forward
-reading retains its original scope, including across Asset process replacement.
-Credentials and gateways do not affect observation identity.
+source is the Asset process generation or the Observation's stable publisher.
+A carried-forward reading retains its original scope, including across Asset process
+replacement. Credentials and gateways do not affect constituent observation identity.
+Derived Tracks retain their contributors' original scopes, IDs, and revisions.
 
 Carrying a reading into a later snapshot preserves its ID, revision, value, and original
 source time, including unknown time. Supply `source_times` when that time differs from

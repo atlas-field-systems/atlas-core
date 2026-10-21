@@ -26,7 +26,7 @@ The evidence envelope and challenge exchange remain proposed, not a complete han
 Core uses monotonic elapsed time for expiry. This UTC display timestamp is not
 permission to calculate a different freshness clock. [Communications](communications.md)
 owns the derived health view. Heartbeat is not an independently writable sensor
-section and does not refresh other sections' observation times.
+section and does not refresh other sections' measurement times.
 
 ## Examples
 

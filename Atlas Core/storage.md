@@ -3,8 +3,9 @@
 **An accepted change must survive, and its related facts must agree.**
 One SQLite database holds operational and installation-lifetime tables. Core is
 its exclusive writer; the host manager does not edit live SQL behind its back.
-Core stores accepted Asset sections with their source and ordering facts. It
-builds the public Asset JSON from those values.
+Core stores accepted Asset and Observation sections with their source and ordering
+facts. Track results and associations remain distinct from that source evidence.
+Public resource images are built from these committed facts.
 
 ## One commit boundary
 
@@ -12,6 +13,8 @@ Under one transaction, recheck authorization, Dataset, revisions, retry identity
 and reference guards. Commit resource changes, original retry facts, required
 history/activity, and the complete public change batch together. A rollback publishes
 nothing. Return success after commit, not after a client receives the change feed.
+The [default fusion commit](fusion.md#the-default-commit-path) includes both the
+Observation and Track. Unique associations and retry records prevent a second pair.
 
 A retry distinguishes first execution, exact replay, conflicting facts, and an ended
 identity. Compare original submitted facts, not the resource's later edited state.
@@ -56,6 +59,8 @@ erase evidence.
 
 Object holds, accepted report identities, correction bindings, movement, and terminal
 work accumulate until Reset. Bounded replay is not a bound on the entire Dataset.
+Observations, Tracks, and their historical associations are retained records with
+no individual delete or automatic eviction. Inactivity does not release their storage.
 Charge uploads, active downloads awaiting reclamation, Plugin work, logs, database
 and indexes, and snapshot staging against real aggregate storage budgets.
 

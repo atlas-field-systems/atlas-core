@@ -77,7 +77,9 @@ Accept valid delayed evidence of execution before the cutoff; terminal states re
 
 ## References and results
 
-Geofeature references and deletion guards follow [Entity rules](entities.md).
+Geofeature deletion guards follow [Entity rules](entities.md). Tracks remain retained records.
+Commands that target a detected subject reference its shared Track ID, not an
+Observation ID. Fusion changes cannot silently replace a Task's immutable inputs.
 Asset deletion and retained Tasks follow [Identity](identity.md#deletion-and-revocation).
 Removing advertised support does not delete existing Tasks; the Asset reports
 an honest unsupported outcome.

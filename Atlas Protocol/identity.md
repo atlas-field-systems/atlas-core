@@ -19,8 +19,8 @@ do not prove which person used a key. Equal permissions do not bypass Dataset,
 identity, ordering, or state-transition validation.
 
 A trusted gateway can translate radio evidence. Core validates the reported facts,
-not physical truth. Gateway or key replacement preserves source-scoped observation
-identity without making the new credential a different observation source.
+not physical truth. Gateway or key replacement preserves Observation publisher and
+original report evidence identity. It does not create a new reporting source.
 
 ## Enrollment and credentials
 

@@ -3,6 +3,8 @@
 **One owner maintains the picture, applied Core cursor, local journal, and recovery.**
 Only validated snapshots and complete feed commits enter it. HTTP write responses
 and unrelated reads never become an alternate update path.
+The picture includes retained Observations and Tracks with their source associations,
+including inactive records. Their history remains an explicit HTTP read.
 
 ## Readiness is explicit
 
@@ -21,6 +23,8 @@ Follow [Protocol handoff and recovery](../Atlas%20Protocol/synchronization.md).
 Apply each entire commit before notifying anyone. One local journal position covers
 one whole commit. Queries, changes, and subscriptions share that journal; local
 cursors are not Core cursors. Prune whole batches, never partial commits.
+Apply the Observation and its default Track changes together under this rule.
+Clients must not synthesize missing Tracks, rematch sources, or expire inactive records.
 
 A subscription without a cursor starts atomically at the current local boundary;
 it does not enumerate existing resources. A supplied cursor replays then joins live

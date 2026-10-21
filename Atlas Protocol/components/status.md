@@ -18,7 +18,7 @@ Condition values belong in the value alternative, separately from reporting fail
 
 Status uses `UpdateAsset` and the [source evidence and ordering rules](../reports.md#shared-context).
 It may be state until changed or a dated assessment, as declared by the source.
-Fresh contact does not advance its observation time. A healthy condition alone
+Fresh contact does not advance its measurement time. A healthy condition alone
 does not promise that a Task can start or that physical work has completed.
 
 ## Examples
