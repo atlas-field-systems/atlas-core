@@ -91,4 +91,39 @@ Position is one complete quantity, not separate latitude and longitude observati
 Explicit null means an unknown time. A fresh snapshot cannot refresh older readings.
 Uncertainty fields remain deferred. Schemas must declare exact Track applicability.
 
+## Constituent observation identity
+
+Each supplied quantity carries a source-assigned observation ID and correction revision
+as source evidence, separate from the complete section's sequence and delivery identity.
+Scope the ID by Dataset, Entity, originating source, and quantity. The originating
+source is the Asset process generation or the Track's stable publisher. A carried-forward
+reading retains its original scope, including across Asset process replacement.
+Credentials and gateways do not affect observation identity.
+
+Carrying a reading into a later snapshot preserves its ID, revision, value, and original
+source time, including unknown time. Supply `source_times` when that time differs from
+the new `observed_at`, including explicit null. Core never fills from the prior section.
+A genuinely new reading gets a new ID even when its value and source time are identical.
+Neither equal values nor equal or unknown timestamps establish duplicate observations.
+
+A correction keeps the observation identity and original source time and increases its
+revision. The same identity and revision must repeat identical facts. Conflicting reuse
+or a revision below the highest accepted revision rejects the update atomically.
+A newer section sequence cannot authorize a stale constituent revision. Observation IDs
+and correction revisions do not change whole-section ordering or permit subfield updates.
+
+These examples use one Entity and source. Every row supplies a complete snapshot with
+position, altitude, and ground speed. Other quantities carry forward unless stated.
+
+| Case | Constituent evidence in the later snapshot | Movement result |
+| --- | --- | --- |
+| Carried-forward reading | Sequence 11 adds a new speed reading but repeats position `P1`, revision 0, coordinates, and source time null from sequence 10 | Retain the new speed observation only; no extra position observation or fresh position age |
+| New equal reading | Sequence 12 supplies position `P2`, revision 0, with the same coordinates and null source time as `P1` | Retain a distinct position observation despite the identical value and unknown time |
+| Correction | Sequence 13 supplies corrected coordinates for `P2`, revision 1, keeping its null source time | Retain the correction against `P2`; no new reading or fresh age; repeating revision 1 adds no correction |
+
+For known equal times, `P1` and new reading `P2` can both have source time
+`2026-10-20T12:00:00Z`. The correction of `P2` keeps that time even in a snapshot
+whose `observed_at` is later. A conflicting revision 1 or later reuse of revision 0
+is rejected. Exact metadata fields remain for the concrete message schemas.
+
 [Component index](README.md)

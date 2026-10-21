@@ -99,9 +99,11 @@ Asset's health nor its bandwidth capability; unknown capability stays unknown.
 
 ## Movement and recovery
 
-Append movement only from newly accepted position, speed, or altitude,
-including historical evidence. Preserve quantity times and deduplicate
-corrections. Never create samples by copying an entire merged Entity snapshot.
+Append movement only from newly accepted position, speed, or altitude observations,
+including historical evidence, under [Telemetry identity rules](components/telemetry.md#constituent-observation-identity).
+Carried-forward readings and retries add no observation. Retain corrections against
+the same observation without creating a new reading or refreshing its age.
+Never create samples by copying an entire merged Entity snapshot.
 History survives Entity deletion until Reset. Bounded history queries distinguish
 unknown Entity IDs from known Entities with no matching samples.
 

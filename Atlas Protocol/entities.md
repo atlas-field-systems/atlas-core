@@ -69,9 +69,10 @@ remain last-known observations until deletion or Reset. A fusion process publish
 a new Track. Command-specific age requirements still apply to using a Track.
 
 Order each complete reported section by its source sequence, not arrival time.
-Telemetry replaces position, altitude, and speed together as one snapshot. Preserve
-constituent source times, observation identity, and correction revision. Corrections
-do not refresh original ages. Reject conflicting identity reuse and stale replacement.
+Telemetry replaces position, altitude, and speed together as one snapshot. Its
+[constituent observation rules](components/telemetry.md#constituent-observation-identity)
+define identity and correction revisions independently of section ordering. Preserve
+original ages and reject stale replacement.
 
 ## Geometry and references
 
