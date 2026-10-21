@@ -31,6 +31,8 @@ movement sample, or public change. Force rollback and verify neither side publis
 Make O17 silent, resume it, and verify T42 remains the same retained Track.
 Include a churn case with new Observations alongside accumulated inactive records.
 Neither silence nor picture capacity permits eviction of the retained records.
+Use the independent [history-only evidence example](../Atlas%20Protocol/report-evidence.md#independent-acceptance-example)
+and [retained-Dataset qualification](workload-qualification.md) requirements.
 
 For generation, delete outputs and regenerate deterministically with pinned tools.
 Qualify the supported schema profile, independent cross-language examples, package
@@ -71,37 +73,11 @@ crash dumps, and exports for those sentinels while verifying valid events remain
 
 ## Workload targets, not measured capability
 
-Target one server, one or two operators, about 20 Assets and 200 Observations
-reporting concurrently. The baseline fixture retains 200 Observations and 200 Tracks
-under the default policy. Rates are two reports per Asset and one report per
-Observation per second. Track changes are derived effects, not incoming reports.
-Qualify four-hour missions and eight-hour retained Datasets, including bursts and
-backlog. Eight hours is a workload target, not a retention limit.
-Use a four-CPU, 8 GB RAM, local-SSD Core host and an 8 GB client as the reference.
-
-The churn fixture's turnover rate and total retained record target remain open.
-Capacity applies to all retained records, not just the sources currently reporting.
-
-The eight-hour baseline fixture has 6,912,000 reports, 9,600 Tasks, and 28,800 Operations.
-Include accumulated identities/history, terminal records, old and replacement
-pictures, and decoded memory. Test a 10× burst, ten-minute backlog, slow consumer,
-and four concurrent 1 GB uploads plus downloads. Typical files are 100 MB;
-plan for 10 GB of content per day.
-
-Initial admission settings are 1 MiB JSON, 2 GB files, four uploads, 1,000 outstanding
-Tasks per Asset, and 32 sync connections. Initial Object quota/headroom are
-16 GB/8 GB. Use typed `413 payload_too_large`, `429 resource_limit`, and
-`507 storage_limit` refusals. Lower limits govern new admission, not silent deletion
-or cancellation of accepted work.
-
-Initial sync budgets are 4 MiB/1,000 changes per complete message, 4 MiB pending per
-connection, and 64 MiB/15 minutes of replay. SDK picture and journal budgets start
-at 512 MiB/100,000 resources and 16 MiB/10,000 commits. Measure actual aggregate RAM;
-encoded-byte accounting is not a memory guarantee.
-
-Qualification targets include p95 ordinary requests below 250 ms, picture lag below
-one second, and initial load below ten seconds. All values require measurement and
-may need reviewed tuning; none justifies weakening retention or atomicity.
+The [workload qualification inputs](workload-qualification.md) own initial targets,
+resource and byte budgets, proposed cumulative-turnover fixtures, and Full recovery
+acceptance. The proposed rates and retained totals need confirmation and measurement.
+No workload qualification has run in this documentation-only baseline.
+Neither tuning nor capacity failure permits weaker retention or atomicity.
 
 ## Report honestly
 

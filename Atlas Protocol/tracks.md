@@ -28,12 +28,13 @@ change batch is atomic. If the complete change cannot commit, reject creation.
 A lost reply is an unknown outcome. An exact retry recovers the existing pair.
 Concurrent retries cannot allocate another Track for that Observation.
 
-New accepted reports update the existing Observation and its Track in one commit.
+Commit admitted evidence and any current Observation/Track changes together.
 The Track mirrors its Observation's applicable section results, including errors,
 withdrawals, unknown values, classification, and original quantity times. It retains
 [Telemetry constituent identities and revisions](components/telemetry.md#constituent-observation-identity)
-under their original source scope. A duplicate has no repeated effect. Newly accepted
-historical measurements may extend history; stale snapshots cannot replace newer sections.
+under their original source scope. Follow [evidence admission](report-evidence.md)
+for history-only reports, historical corrections, and replays. Their retained history
+does not replace current Observation or Track sections.
 
 Two publishers reporting the same vehicle initially produce two Observations and
 two Tracks. This policy does not match targets across publishers, average positions,

@@ -32,8 +32,10 @@ source times, and ordering facts required for later reports.
 Order complete reported sections by source sequence, not arrival time. Telemetry's
 [constituent identity rules](components/telemetry.md#constituent-observation-identity)
 keep measurement identity and correction revision independent of section ordering.
-Reject stale section replacements, conflicting identity reuse, and stale constituent
-revisions. Corrections preserve original measurement age. Unknown source time stays null.
+Apply [evidence admission and current-section rules](report-evidence.md) separately.
+Older sections can contribute history without replacing current state. Conflicting
+identity reuse and stale constituent revisions still reject new submissions atomically.
+Corrections preserve original measurement age. Unknown source time stays null.
 
 Apply complete-section validation, classification, and value/error/withdrawn results
 from [Reports](reports.md). Withdrawal ends a section assertion, not the Observation record.

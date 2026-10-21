@@ -10,7 +10,7 @@ Core applies the [Observation rules](../observations.md) and active
 | Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `CreateObservation` | Asset runtime or publishing integration starts a record for a detected subject | Stable Observation and request IDs, publisher identity, optional publisher-local subject identity, permitted initial data, and original report evidence and source times for supplied reported sections | Created Observation and its Track in one commit under the default policy |
-| `ReportObservation` | Asset runtime or publishing integration reports movement, another measurement, or a correction | Observation and publisher identities, complete applicable sections, and original report or correction evidence | Accepted, duplicate, or rejected evidence, with default Track changes in the same commit |
+| `ReportObservation` | Asset runtime or publishing integration reports movement, another measurement, or a correction | Observation and publisher identities, complete applicable sections, and original report or correction evidence | Accepted, duplicate, or rejected evidence, with any default Track changes in the same commit |
 | `EditObservation` | Operator app or publisher corrects descriptive metadata separately from measurements | Observation ID, permitted descriptive edits, retry identity, and `expected_edit_revision` | Committed description under [Entity rules](../entities.md#data-ownership) |
 
 Reports address the continuing Observation, not a newly allocated record for every
