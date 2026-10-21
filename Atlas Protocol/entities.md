@@ -68,10 +68,10 @@ There is no automatic publisher transfer, Track fusion, or expiry. Silent Tracks
 remain last-known observations until deletion or Reset. A fusion process publishes
 a new Track. Command-specific age requirements still apply to using a Track.
 
-Order observations per quantity, not by whole-resource arrival time. Preserve
-observation identity, sequence, source time, and correction revision. A correction
-changes the currently accepted observation, not its original age. Reject conflicting
-identity reuse; an older observation cannot overwrite newer state.
+Order each complete reported section by its source sequence, not arrival time.
+Telemetry replaces position, altitude, and speed together as one snapshot. Preserve
+constituent source times, observation identity, and correction revision. Corrections
+do not refresh original ages. Reject conflicting identity reuse and stale replacement.
 
 ## Geometry and references
 

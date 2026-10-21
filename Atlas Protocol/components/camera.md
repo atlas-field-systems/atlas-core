@@ -17,7 +17,7 @@ can report `zoom_ratio: 1`. Magnification is not a vendor's uncalibrated slider 
 percentage. The proposed capture flags are independent because still capture and
 video recording can overlap. The exact activity fields remain open for review.
 
-Include the [shared section fields](README.md#shared-proposed-section-fields).
+The enclosing result carries [shared section metadata](README.md#shared-section-results).
 An accepted source update uses `UpdateAsset` with the whole Camera section.
 Omitting Camera leaves it unchanged. Reported activity is evidence, not a request
 to start recording, nor proof that a result Object has been published.
@@ -29,15 +29,14 @@ Valid proposed snapshot for a camera supporting video recording only:
 ```json
 {
 	"zoom_ratio": 2,
-	"recording": true,
-	"observed_at": "2026-10-17T12:00:00Z"
+	"recording": true
 }
 ```
 
 Invalid because magnification is below the proposed baseline minimum:
 
 ```json
-{"zoom_ratio": 0.5, "observed_at": "2026-10-17T12:00:00Z"}
+{"zoom_ratio": 0.5}
 ```
 
 ## Decisions to settle

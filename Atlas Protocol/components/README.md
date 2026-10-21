@@ -48,24 +48,35 @@ and a commandless tracker that reports its own telemetry.
 until changed and dated measurements. [Reports](../reports.md#shared-context)
 owns complete-section replacement, errors, ordering, and sparse report behavior.
 Those rules apply to all proposed sections.
+Each section carries its own classification. Do not divide the resource into
+separate `state` and `measurements` containers.
+The section's `state` field below names its result alternative, not a resource group.
 
-## Shared proposed section fields
+## Shared section results
 
 These fields apply to complete reported sections. Reusable values and authored
 sections do not inherit them. Contact evidence has its own linked representation.
+Report identity and ordering use the [shared context](../reports.md#shared-context).
 
-| Field | Type | Presence | Proposed meaning |
+| Field | Type | Presence | Meaning |
 | --- | --- | --- | --- |
-| `observed_at` | UTC timestamp string or null | Required | Original source observation time; null when unknown |
-| `error` | Error object | Omitted when healthy | Present only for an actual reported error |
+| `state` | String | Required | Exactly `value`, `error`, or `withdrawn` |
+| `classification` | String | Required | `state_until_changed` or `dated_measurement` under Entity rules |
+| `observed_at` | UTC timestamp string or null | Required | Default original source time; null when unknown |
+| `source_times` | Named timestamp overrides | Optional, only for `value` | Original times for defined quantities that differ from the default |
+| `value` | Complete component payload | Required only for `value` | The section's complete values, including required nulls |
+| `error` | Error object | Required only for `error` | Required string `code` and optional string `message` |
 
-Propose an error object with a required string `code` and optional string `message`.
-The allowed codes and handling of failures affecting only part of a section remain
-undecided. A single `observed_at` works for a coherent observation. The representation
-of mixed source times is also undecided. Bundling must preserve original ages.
+A result carries exactly one alternative. An error has no `value`; a withdrawal has
+neither `value` nor `error`. All alternatives retain ordering evidence. Reads expose
+the current result without reconstructing partial success. Withdrawal ends a
+state-until-changed assertion under [Reports](../reports.md#shared-context).
 
-Examples show values or section snapshots, not full authenticated API requests.
-The proposed `state` and `measurements` group names remain undecided.
+An omitted quantity timestamp inherits `observed_at`; explicit null means unknown.
+Schemas permit only their named quantities in `source_times`, including defined
+nested reserve timing. Replacing a result never inherits earlier timestamps.
+Component examples show `value` payloads, without this result metadata or authenticated
+report context. Unknown values are not zero or an actual section error.
 
 ## Contract source
 

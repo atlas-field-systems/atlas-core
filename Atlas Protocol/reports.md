@@ -7,21 +7,30 @@ Accepting evidence and establishing fresh contact remain distinct outcomes.
 
 Updates identify the Dataset and Asset. Reported sections also identify the process
 generation and a positive sequence number. Their context includes `generated_at`,
-original evidence identity, whether the evidence is current or historical,
-source times for each quantity, and contact proof. Unknown original time stays null.
+original evidence identity, whether the evidence is current or historical, and
+contact proof. Section results carry [quantity times](components/README.md#shared-section-results).
+Unknown original time stays null.
 Historical evidence retains its identity. A new packet ID cannot make it fresh.
 
 Apply [reported section classifications](entities.md#reported-sections) independently.
 An omitted section preserves its accepted result, classification, and source times.
-A supplied section is a complete replacement. Core validates it against its full schema.
-Never merge its subfields with the prior section. Missing required fields reject
-the update. Omitted optional fields do not retain old values. Null subfields are
-valid only where their schemas permit them.
+A supplied section replaces its prior result in full, whether it carries values,
+an error, or a withdrawal. Core validates the complete result against its schema.
+Missing required fields reject the update.
+Never merge subfields with the prior section. Omitted optional fields do not retain
+old values. Null subfields are valid only where their schemas permit them.
 
-An accepted error report becomes the affected section's current result. Reads expose
-the error without falling back to a prior value. Error reports follow normal validation and ordering.
+The Asset detects failures and reports a section-level error with a code and optional
+message. Core records and exposes it without diagnosing hardware, reconstructing
+healthy subfields, or falling back to a prior value. Normal validation and ordering apply.
+The [section result layout](components/README.md#shared-section-results) carries the
+classification, one value/error/withdrawn alternative, and original quantity times.
 Preserve original observation times within complete sections. Fresh contact or
 bundling fields together does not make older observations fresh.
+
+An explicit withdrawn result ends a state-until-changed assertion. Omission still
+preserves it. Retain withdrawal evidence and ordering so older reports cannot restore
+the assertion. Required section containers remain present with their withdrawn result.
 
 Validate identity, API-key validity, original facts, and all effects atomically.
 Classify evidence as accepted, duplicate, or rejected, separately from freshness.
@@ -48,10 +57,14 @@ expected generation with its first check-in. Any valid API key may request this
 replacement. Only one replacement wins. Reconnect is not replacement; an obsolete
 generation cannot publish new execution state. A gateway restart is not an Asset restart.
 
-The gateway envelope, source-identity fields, and challenge exchange remain
-unspecified. The gateway translates attributable Asset evidence, including a
-response to Core's challenge; its own response cannot stand in for the Asset.
-Radio encoding and edge-link retries remain external.
+Direct and relayed evidence share one source context naming the Asset and process
+generation, separately from the submitting key and gateway. The challenge exchange
+binds the Dataset, Asset, process generation, Core run, and challenge identity.
+Replacement also carries the expected generation. Typed refusals distinguish failed
+authority, generation mismatch, challenge expiry, and challenge-context mismatch.
+Schemas must declare their exact message fields and refusal codes before implementation.
+The gateway translates attributable Asset proof; its own response cannot stand in
+for the Asset. Radio encoding and edge-link retries remain external.
 
 ## Time and contact
 
@@ -86,8 +99,8 @@ Asset's health nor its bandwidth capability; unknown capability stays unknown.
 
 ## Movement and recovery
 
-Append movement only for newly accepted explicit position, speed, or altitude,
-including historical evidence. Preserve sparse quantity times and deduplicate
+Append movement only from newly accepted position, speed, or altitude,
+including historical evidence. Preserve quantity times and deduplicate
 corrections. Never create samples by copying an entire merged Entity snapshot.
 History survives Entity deletion until Reset. Bounded history queries distinguish
 unknown Entity IDs from known Entities with no matching samples.

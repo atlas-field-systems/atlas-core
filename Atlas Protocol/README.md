@@ -48,6 +48,8 @@ Use standard generation for Go and TypeScript declarations and ordinary HTTP
 bindings. Runtime validation must be integrated explicitly. Keep algorithms,
 authorization, transitions, storage, and synchronization implementation out of
 schemas and generator templates.
+Schema validity alone does not establish authorization, identifier relationships,
+or valid state transitions. Consuming Core and SDK code must check the relevant context.
 
 Keep this folder self-contained so it can become its own repository. A separate
 repository does not itself change compatibility policy: initially Core, SDK, and

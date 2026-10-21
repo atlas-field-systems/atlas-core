@@ -1,10 +1,11 @@
 # Telemetry
 
-Telemetry is the proposed complete section for an Entity's location and motion.
-The name and exact field layout remain proposals. A report supplies this whole
-section, including defined null values, rather than a single-value update.
+Telemetry is the complete section for an Entity's location and motion.
+A report supplies the whole section, including defined null values.
+The same whole-snapshot ordering applies to Asset and Track Telemetry. The source
+assembles the snapshot; Core does not merge independently arriving quantities.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -13,7 +14,7 @@ section, including defined null values, rather than a single-value update.
 | `ground_speed` | Number or null | Required | Horizontal metres per second, at least zero; null when unknown |
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
-Also include the [shared proposed section fields](README.md#shared-proposed-section-fields).
+The enclosing result carries [shared section metadata](README.md#shared-section-results).
 Unknown readings do not imply an error. Actual failures use the shared error
 representation. Body heading belongs in [Attitude](attitude.md), separately from
 direction of travel.
@@ -24,13 +25,14 @@ Position is a reusable coordinate pair for Telemetry and Command inputs.
 [Spatial conventions](../entities.md#spatial-conventions) establish WGS84 degrees,
 complete pairs, valid zero coordinates, and double precision.
 
-| Field | Type | Presence | Proposed bounds |
+| Field | Type | Presence | Bounds |
 | --- | --- | --- | --- |
 | `latitude` | Number | Required, non-null | -90 through 90 inclusive |
 | `longitude` | Number | Required, non-null | -180 through 180 inclusive |
 
 Numbers must be finite under [Wire](../wire.md#parsing-and-edits).
-Preserve precision without rounding.
+Preserve binary64 precision without decimal truncation. Accept and retain both
+longitude endpoint spellings, `-180` and `180`, without canonicalizing either.
 
 - Valid: `{"latitude": 0, "longitude": 0}`.
 - Invalid latitude: `{"latitude": 91, "longitude": 0}`.
@@ -42,51 +44,51 @@ Altitude is a reusable height value for Telemetry and Command inputs.
 [Spatial conventions](../entities.md#spatial-conventions) require metres and an
 explicit `wgs84_ellipsoid` reference. AGL and MSL must not be silently substituted.
 
-| Field | Type | Presence | Proposed meaning |
+| Field | Type | Presence | Meaning |
 | --- | --- | --- | --- |
 | `metres` | Number | Required, non-null | Finite signed metres; negative and zero are allowed |
 | `reference` | String | Required, non-null | Exactly `wgs84_ellipsoid` |
 
-The object layout and absence of an operational height limit remain proposals.
+This object has no operational height limit beyond finite binary64 representation.
 The containing field defines how unknown altitude uses null or omission.
 
 - Valid: `{"metres": -12.5, "reference": "wgs84_ellipsoid"}`.
 - Invalid reference: `{"metres": 120, "reference": "agl"}`.
 
-## Complete section example
+## Value examples
 
-Valid under the proposed field contract:
+Valid complete Telemetry value:
 
 ```json
 {
 	"position": {"latitude": 51.5074, "longitude": -0.1278},
 	"altitude": {"metres": 142.6, "reference": "wgs84_ellipsoid"},
-	"ground_speed": 0,
-	"observed_at": "2026-10-16T12:00:00Z"
+	"ground_speed": 0
 }
 ```
 
-Omitted `airspeed` is allowed by this proposal. Neither omission nor null
+Omitted `airspeed` is allowed. Neither omission nor null
 substitutes an older subfield value.
 
 This fragment is an invalid replacement because required fields are missing:
 
 ```json
-{"ground_speed": 0, "observed_at": "2026-10-16T12:00:00Z"}
+{"ground_speed": 0}
 ```
 
-## Use and decisions
+## Use and source times
 
 A mounted camera can retain a complete Telemetry section as state until changed.
 Aircraft and a commandless vehicle tracker can report it as dated measurements.
 This does not require every Entity to have Telemetry.
 
-The proposed [`UpdateAsset`](../messaging/assets.md#updating-sections) message
+The [`UpdateAsset`](../messaging/assets.md#updating-sections) message
 carries this Asset section.
 
-Settle the section name, required nullable fields, optional airspeed, and source-time
-layout. A single section timestamp must not conceal older constituent readings.
-Longitude endpoint canonicalization and Altitude's object layout remain open.
-Uncertainty fields and exact Track field applicability remain undefined.
+The enclosing result's `observed_at` is the default source time. Its `source_times`
+may override `position`, `altitude`, `ground_speed`, and supplied `airspeed`.
+Position is one complete quantity, not separate latitude and longitude observations.
+Explicit null means an unknown time. A fresh snapshot cannot refresh older readings.
+Uncertainty fields remain deferred. Schemas must declare exact Track applicability.
 
 [Component index](README.md)

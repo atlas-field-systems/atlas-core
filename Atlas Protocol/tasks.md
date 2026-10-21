@@ -2,7 +2,8 @@
 
 **Core records intent. The Asset runtime schedules and executes it.**
 Protocol owns the Command Catalog; each Asset advertises its supported subset.
-Plugins are not Task targets and cannot add Asset Commands.
+The initial Catalog contains only Move To, Pause, and Resume. Plugins are not Task
+targets and cannot add Asset Commands.
 
 ## Creation and state
 
@@ -44,6 +45,23 @@ reorderable. An unstarted cancellation-requested Task retains its internal queue
 slot so refusal can restore it amid the latest eligible edits. Assigned-work
 pagination pins the queue revision and refuses a changed page sequence.
 
+Asset reads and synchronized images embed a bounded `task_queue`, including empty
+queues. It contains the complete requested Task IDs in execution order, their
+revision, and the last confirmed revision with its confirming process generation.
+Confirmation is null before any adoption. An older revision or process is older
+evidence, not adoption of the current request. Do not retain a second historical
+order list. Submission sequence and Task-list sorting do not define execution order.
+
+Order or eligible-membership changes advance the queue revision and Asset version.
+Adoption alone advances the Asset version. Related Task changes and the final Asset
+image commit atomically. Qualify the queue bound against page and whole-commit limits
+before fixing its numeric limit in the schema.
+
+Assigned-work pages repeat the first page's complete queue and captured adoption,
+including empty work. Task bodies page by ID. Changed order or eligibility refuses
+`409 queue_changed`; the caller starts a fresh read. Adoption alone leaves the page
+sequence valid. Fresh reads and synchronization expose later adoption.
+
 Pause and Resume are immediate Tasks, not an emergency-stop guarantee. Pause
 requires actual suspension and keeps queue order. Resume continues the same Task
 first; inability to resume fails that Task and leaves the queue paused until another
@@ -52,6 +70,10 @@ explicit Resume. Pending cancellation must be resolved before resumption.
 Controls follow Core acceptance order, not packet arrival. Superseded controls
 cannot later take effect. Pause does not expire; expired Resume cannot unpause or
 fall back to an older control. Command-specific deadlines remain explicit.
+
+An Asset that confirms a control never applied reports `failed` with an `expired`
+or `superseded` reason. Without that evidence, its outcome remains unresolved.
+Accept valid delayed evidence of execution before the cutoff; terminal states remain immutable.
 
 ## References and results
 
