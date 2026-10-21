@@ -1,16 +1,18 @@
 # Reports, time, and contact
 
-`UpdateAsset` changes an Asset's descriptions, status, and observations.
-Accepting evidence and establishing fresh contact remain distinct outcomes.
+`UpdateAsset` changes Asset descriptions, status, and measurements. Accepting evidence
+and establishing fresh contact remain distinct outcomes. [Observation reports](observations.md)
+describe detected subjects separately from the reporting Asset's own measurements.
 
 ## Shared context
 
-Updates identify the Dataset and Asset. Reported sections also identify the process
+Asset updates identify the Dataset and Asset. Reported sections also identify the process
 generation and a positive sequence number. Their context includes `generated_at`,
 original evidence identity, whether the evidence is current or historical, and
 contact proof. Section results carry [quantity times](components/README.md#shared-section-results).
 Unknown original time stays null.
 Historical evidence retains its identity. A new packet ID cannot make it fresh.
+Observation reports use publisher and Observation identities under their own rules.
 
 Apply [reported section classifications](entities.md#reported-sections) independently.
 An omitted section preserves its accepted result, classification, and source times.
@@ -20,13 +22,13 @@ Missing required fields reject the update.
 Never merge subfields with the prior section. Omitted optional fields do not retain
 old values. Null subfields are valid only where their schemas permit them.
 
-The Asset detects failures and reports a section-level error with a code and optional
+The reporting source detects failures and reports a section-level error with a code and optional
 message. Core records and exposes it without diagnosing hardware, reconstructing
 healthy subfields, or falling back to a prior value. Normal validation and ordering apply.
 The [section result layout](components/README.md#shared-section-results) carries the
 classification, one value/error/withdrawn alternative, and original quantity times.
-Preserve original observation times within complete sections. Fresh contact or
-bundling fields together does not make older observations fresh.
+Preserve original measurement times within complete sections. Fresh contact or
+bundling fields together does not make older measurements fresh.
 
 An explicit withdrawn result ends a state-until-changed assertion. Omission still
 preserves it. Retain withdrawal evidence and ordering so older reports cannot restore
@@ -69,11 +71,11 @@ for the Asset. Radio encoding and edge-link retries remain external.
 ## Time and contact
 
 Deployment supplies correct UTC clocks. Atlas does not estimate offsets, correct
-drift, or rewrite source event times. Keep source observation time, Core receipt
+drift, or rewrite source event times. Keep source measurement time, Core receipt
 time, and actual state-change time separate. Unchanged fresh status is not a new
 status-change time.
 
-Accept otherwise valid future-dated observations as time-uncertain, with no usable
+Accept otherwise valid future-dated measurements as time-uncertain, with no usable
 fresh age. Unknown time remains unknown. Optional clock-uncertainty compatibility
 metadata must not reintroduce an offset-calculation subsystem.
 
@@ -82,7 +84,7 @@ challenge, within its monotonic expiry. Bind the challenge to Dataset, Asset,
 process, and Core run; Restart invalidates it. The initial challenge window is
 10 seconds, subject to field qualification.
 
-Historical reports, duplicates, Track-only observations, open connections, and
+Historical reports, duplicates, Observation-only reports, fusion updates, open connections, and
 description changes alone do not establish contact. Gateway IP health does not
 prove a downstream Asset is reachable.
 
@@ -99,10 +101,10 @@ Asset's health nor its bandwidth capability; unknown capability stays unknown.
 
 ## Movement and recovery
 
-Append movement only from newly accepted position, speed, or altitude observations,
+Append movement only from newly accepted position, speed, or altitude measurements,
 including historical evidence, under [Telemetry identity rules](components/telemetry.md#constituent-observation-identity).
-Carried-forward readings and retries add no observation. Retain corrections against
-the same observation without creating a new reading or refreshing its age.
+Carried-forward readings and retries add no measurement. Retain corrections against
+the same constituent identity without creating a new reading or refreshing its age.
 Never create samples by copying an entire merged Entity snapshot.
 History survives Entity deletion until Reset. Bounded history queries distinguish
 unknown Entity IDs from known Entities with no matching samples.

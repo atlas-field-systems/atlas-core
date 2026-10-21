@@ -25,6 +25,8 @@ a committed upload or cancel an Asset Task.
 Metadata may be edited; content type, size, and digest remain storage facts.
 Associations are references, not cascade ownership. Deleting an Entity or removing
 a metadata association does not delete its Objects.
+Source evidence files can reference an Observation. A Track exposes its source
+associations without changing the Object's original metadata or copying its bytes.
 
 A required Task result creates a deletion hold until Reset, even after the Task
 terminates. Any remaining hold blocks deletion. Holds and deletes serialize: a

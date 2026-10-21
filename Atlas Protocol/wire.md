@@ -80,7 +80,7 @@ Patches leave omitted fields unchanged, replace scalars and arrays, merge define
 objects, and use null only for permitted removal/clearing. Validate the complete
 merged result atomically. Never insert defaults, coerce values, or drop unknown
 input properties to make validation pass. Complete positions remain complete pairs.
-Asset updates use [whole-section replacement](reports.md#shared-context) instead
+Asset updates and Observation reports use [whole-section replacement](reports.md#shared-context) instead
 of subfield merging, including on bindings that use PATCH.
 
 ## Retry and Dataset rules

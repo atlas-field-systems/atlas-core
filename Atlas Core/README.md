@@ -23,15 +23,16 @@ require a cloud service.
 | Owner | Responsibility |
 | --- | --- |
 | Identity | Authenticate keys, record attribution, and enforce revocation |
-| Entities/reporting | Descriptions, accepted observations, contact, and movement |
+| Entities/reporting | Descriptions, accepted Asset and Observation reports, retained Tracks and associations, contact, and movement |
+| Fusion policy | Observation-to-Track decisions and derived state, initially one-to-one |
 | Tasks | Command admission, intent, requested order, and reported execution |
 | Objects | Complete content publication, metadata, holds, and cleanup |
 | Plugins | Installed capability policy and recorded Operation attempts |
 | Synchronization | Publish and replay whole committed changes |
 | Host manager | Container control and destructive work that must outlive Core |
 
-These are responsibilities, not seven microservices. Use direct calls and a shared
-transaction boundary. Keep each domain's tables private behind its owner. Add no
+Core's internal owners use direct calls and a shared transaction boundary.
+Keep each domain's tables private behind its owner. Add no
 generic event bus, scheduler service, or module framework without a concrete need.
 
 ## Generation boundary
@@ -60,7 +61,7 @@ Core restart are outside scope.
 
 ## Reading order
 
-[Storage](storage.md) → [Lifecycle](lifecycle.md) → [Plugins](plugins.md) →
+[Storage](storage.md) → [Lifecycle](lifecycle.md) → [Plugins](plugins.md) → [Fusion](fusion.md) →
 [Diagnostics](diagnostics.md) → [Qualification](qualification.md).
 
 Shared behavior remains in [Protocol](../Atlas%20Protocol/README.md).

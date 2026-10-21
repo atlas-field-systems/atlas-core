@@ -25,7 +25,9 @@ pages own the detailed behavior. Unconfirmed design assumptions are marked below
 ## Existing design assumptions to confirm
 
 - A small field team uses one Linux installation. Initial targets are one or two
-  operators, about 20 Assets, and 200 Tracks. See [deployment](Atlas%20Core/README.md#deployment)
+  operators, about 20 Assets, and 200 Observations reporting concurrently. The baseline
+  fixture retains 200 Tracks under the default policy. Total retained counts can grow
+  until Reset. See [deployment](Atlas%20Core/README.md#deployment)
   and [workload targets](Atlas%20Core/qualification.md#workload-targets-not-measured-capability).
 - Deployment supplies correct UTC clocks and certificate trust. See
   [time](Atlas%20Protocol/reports.md#time-and-contact) and [setup](Atlas%20Core/lifecycle.md#configuration-and-access).

@@ -19,7 +19,8 @@ it is not a second public API or a Plugin-defined Command Catalog.
 Keep stable publisher identity separate from installation ID and credential.
 Updates preserve installation identity; reinstallations get a new installation and
 principal. Reinstallation names an existing publisher explicitly. Publisher identity
-does not depend on the submitting API key.
+does not depend on the submitting API key. Observation publishers follow
+[source attribution rules](../Atlas%20Protocol/observations.md#identity-and-attribution).
 
 ## Delivery without accidental reruns
 
@@ -61,6 +62,10 @@ disabled, and faulted Plugins. Setup/reference data survives Reset. Uninstall re
 owned private state and credentials after verified exit; published resources and
 Operation provenance remain until Reset. Failed cleanup blocks unsafe reuse.
 
+Specialized fusion can be a separate project under the [fusion boundary](fusion.md).
+Installing a Plugin does not replace the active policy or define its handover.
+Published Observations and Tracks retain their Core-owned lifetime if a Plugin is removed.
+
 No marketplace, dependency graph, automatic updates, or generic UI builder is part of this baseline.
 
-[Next: diagnostics](diagnostics.md)
+[Next: fusion](fusion.md)

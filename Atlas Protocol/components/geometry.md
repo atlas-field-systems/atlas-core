@@ -1,8 +1,8 @@
 # Geometry
 
 Geometry describes a point, line, or polygon using a shared spatial value.
-Geofeatures require it. Applicable Tracks can report an observed extent. Asset
-location uses [Position](telemetry.md#position).
+Geofeatures require it. Applicable Observations can report an extent, which a Track
+can expose through its fusion policy. Asset location uses [Position](telemetry.md#position).
 
 ## Geometry profile
 

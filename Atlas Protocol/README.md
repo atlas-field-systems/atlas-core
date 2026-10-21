@@ -18,9 +18,11 @@ contract. The compaction method remains undecided.
 | Term | Meaning |
 | --- | --- |
 | Dataset | One operational data lifetime, ending at Reset |
-| Entity | An Asset, Track, or Geofeature with a stable identity |
+| Entity | An Asset, Observation, Track, or Geofeature with a stable identity |
 | Asset | A system that reports state and can execute supported Commands |
-| Track | Observations about something, owned by one publisher |
+| Observation | One publisher's ongoing record of a detected subject |
+| Track | Atlas's shared target identity and state, built from Observations |
+| Fusion policy | Decides Observation-to-Track associations and Track state |
 | Geofeature | An authored point, line, or polygon |
 | Command | A Protocol-defined instruction and its validity rules |
 | Task | One recorded request for an Asset to execute a Command |
@@ -59,7 +61,8 @@ automatic downgrade, or translation between versions. Plugins release independen
 
 ## Reading order
 
-[Entities](entities.md) → [Identity](identity.md) → [Reports](reports.md) →
+[Entities](entities.md) → [Observations](observations.md) → [Tracks](tracks.md) →
+[Identity](identity.md) → [Reports](reports.md) →
 [Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
 [Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
 

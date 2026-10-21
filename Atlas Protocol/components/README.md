@@ -9,7 +9,7 @@ unless explicitly agreed.
 | Component | Purpose | Used by |
 | --- | --- | --- |
 | [Description](description.md) | Human-readable name and details | Entities |
-| [Type](type.md) | Asset family, observed subject kind, or authored purpose | Assets, Tracks, Geofeatures |
+| [Type](type.md) | Asset family, observed subject kind, or authored purpose | Assets, Observations, Tracks, Geofeatures |
 | [Capabilities](capabilities.md) | Supported Protocol Commands and scheduling | Assets, including commandless trackers |
 
 ## Reported sections
@@ -17,8 +17,8 @@ unless explicitly agreed.
 | Section | Purpose | Used by |
 | --- | --- | --- |
 | [Status](status.md) | Reported overall condition | Assets |
-| [Telemetry](telemetry.md) | One complete location and motion section | Assets and applicable Track observations |
-| [Attitude](attitude.md) | True-north body heading, pitch, and roll | Applicable Assets and Track observations |
+| [Telemetry](telemetry.md) | One complete location and motion section | Assets, applicable Observations, and derived Track state |
+| [Attitude](attitude.md) | True-north body heading, pitch, and roll | Applicable Assets, Observations, and derived Track state |
 | [Power](power.md) | Supply state and energy reserves | Applicable Assets |
 | [Gimbal](gimbal.md) | One complete pointing section | Assets with a gimbal |
 | [Camera](camera.md) | Live zoom and capture activity | Assets with a camera |
@@ -30,7 +30,7 @@ unless explicitly agreed.
 | --- | --- | --- |
 | [Communications](communications.md) | Declared link information and Core-derived contact health | Assets |
 | [Heartbeat](heartbeat.md) | Contact evidence and its accepted read metadata | Assets |
-| [Geometry](geometry.md) | Reusable point, line, or polygon | Geofeatures and applicable Tracks |
+| [Geometry](geometry.md) | Reusable point, line, or polygon | Geofeatures, applicable Observations, and derived Track state |
 
 Telemetry documents the reusable [Position](telemetry.md#position) and
 [Altitude](telemetry.md#altitude) values inline. Command inputs can reference those
@@ -47,7 +47,8 @@ and a commandless tracker that reports its own telemetry.
 [Entities](../entities.md#reported-sections) owns the distinction between state
 until changed and dated measurements. [Reports](../reports.md#shared-context)
 owns complete-section replacement, errors, ordering, and sparse report behavior.
-Those rules apply to all proposed sections.
+Those rules apply to reported sections. Track state retains source evidence under
+the active [fusion policy](../tracks.md), including its original times.
 Each section carries its own classification. Do not divide the resource into
 separate `state` and `measurements` containers.
 The section's `state` field below names its result alternative, not a resource group.

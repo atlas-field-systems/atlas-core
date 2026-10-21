@@ -19,6 +19,10 @@ SDK to reach Core. A gateway translates radio traffic; the Asset runtime execute
 Both remain outside Core. The operator UI is a separate Atlas project outside
 Core and Protocol. Adequate IP connectivity is the SDK boundary.
 
+Assets publish Observations about detected subjects. Core maintains shared Tracks
+through replaceable fusion. The [initial policy](Atlas%20Protocol/tracks.md#default-policy)
+creates one Track per Observation. These records remain until a deliberate Reset.
+
 **Contract-first, not generator-first.** Generate repetitive declarations where
 stock tools help. Write Core behavior and SDK workflows as ordinary code.
 

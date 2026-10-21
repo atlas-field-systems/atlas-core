@@ -1,9 +1,10 @@
 # Type
 
 Type describes what a resource represents, for display and explicit system behavior.
-The Entity category remains Asset, Track, or Geofeature. Geometry's `type` remains
+The Entity category remains Asset, Observation, Track, or Geofeature. Geometry's `type` remains
 Point, LineString, or Polygon. This separate Type value describes an Asset family,
-a Track's reported kind, or a Geofeature's purpose. Wire names and enums are proposals.
+an Observation's subject kind, a Track's derived kind, or a Geofeature's purpose.
+Wire names and enums are proposals.
 
 ## Proposed shared fields
 
@@ -12,7 +13,7 @@ a Track's reported kind, or a Geofeature's purpose. Wire names and enums are pro
 | `kind` | String or null | Required | Value from the resource-specific set below; null when unknown |
 | `variant` | String or null | Required for a drone Asset; otherwise omitted | More specific drone form; null when not yet known |
 
-Define named AssetType, TrackType, and GeofeatureType schemas using these shared
+Define named AssetType, ObservationType, TrackType, and GeofeatureType schemas using these shared
 value definitions and their own allowed fields. Plugins cannot register arbitrary
 values. Exact initial enum sets still need review.
 
@@ -33,13 +34,13 @@ Valid proposed glider value:
 {"kind": "drone", "variant": "fixed_wing_glider"}
 ```
 
-## Track type
+## Observed subject type
 
 Proposed kinds are `person`, `ground_vehicle`, `aircraft`, `animal`, and `other`.
-These values describe the observed subject, not its publisher. Updates are source
-claims under [Track observation rules](../entities.md#tracks), with publisher,
-original observation identity, and time retained. Type does not add a confidence
-score or an automatic inference service.
+ObservationType and TrackType reuse this set. Observation values are publisher
+claims under [Observation rules](../observations.md), with original report identity
+and time retained. Track values follow the active [fusion policy](../tracks.md)
+with source provenance. Type adds no confidence score or automatic inference service.
 
 Valid proposed value for a vehicle detection:
 
@@ -69,7 +70,7 @@ Invalid Asset Type because a security camera cannot carry a drone variant:
 ```
 
 Confirm `kind` and `variant` names, initial enum sets, and compatibility rules
-between purpose and geometry. These examples are reusable values. Reported Track
+between purpose and geometry. These examples are reusable values. Reported Observation
 sections also carry their source evidence. The exact enclosing layout remains
 incomplete.
 

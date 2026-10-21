@@ -35,24 +35,27 @@ Mission displays Task progress from accepted reports.
 
 ## Share observations and files
 
-Drone 1 detects a possible match and publishes Track 1 through the gateway.
-The publisher remains Drone 1. Mission shows its reported location and observation
-time. Core retains the reported observation.
+Drone 1 detects a possible match and creates Observation 1 through the gateway.
+Drone 1 remains its publisher. Core's built-in policy creates Track 1 in the same
+commit. Mission shows that Track with its source Observation and measurement time.
 
-Drone 1 also uploads a photograph as an Object associated with Track 1. Once the
-complete file is published, Mission can retrieve and display it. The operator
-reviews it to assess whether it matches the missing vehicle. A delayed upload
-does not prevent the Track from appearing.
+As the vehicle moves, Drone 1 reports new evidence under Observation 1. Core updates
+Track 1 without changing either ID. Replaying a report creates no new movement.
+If Drone 2 independently detects the same vehicle, its new Observation initially
+gets a separate Track. Cross-source matching requires a later fusion policy.
+
+Drone 1 uploads a photograph as an Object associated with Observation 1. Mission
+follows Track 1's source association to retrieve the published image. A delayed
+upload does not prevent the Observation and Track from appearing.
 
 ## Edit the search area
 
 The operator extends Valley Search to include a nearby road. Core stores a new
 geometry revision under the same Geofeature ID. Both Tasks still reference it.
 
-For this scenario, Drone 1's runtime adopts the changed shape. Drone 2's runtime
-keeps the geometry it selected when it began. These are illustrative Asset choices,
-not Core policies. A saved shape alone does not tell Mission which shape a drone
-is using; a report identifying that revision supplies the evidence.
+For this scenario, Drone 1 adopts the changed shape. Drone 2 keeps its original
+revision. These are Asset choices. A saved edit alone does not prove adoption;
+a report identifying the revision used supplies that evidence.
 
 ## Cancel while a drone is unreachable
 
@@ -64,15 +67,13 @@ The operator requests cancellation of Drone 2's search Task. Core commits
 Core confirms the save, even if its local picture has not received the change yet.
 The Task stays in that state while the drone is unreachable.
 
-On reconnect, Drone 2's external runtime retrieves the request and handles
-cancellation. It then reports `cancelled` to Core. Core accepts the report and
-records `cancelled`; Mission shows **Cancelled** when its picture receives that
-change. [Task rules](Atlas%20Protocol/tasks.md) define this confirmation loop.
+On reconnect, Drone 2 handles the request and reports `cancelled`. Core records it;
+Mission shows **Cancelled** when its picture receives that change.
+[Task rules](Atlas%20Protocol/tasks.md) define this confirmation loop.
 
-If Drone 2 instead finished before receiving the request, it reports `completed`.
-Core records **Completed**, superseding the cancellation request. Mission shows
-the actual outcome. An explicit refusal instead restores the reported execution
-state, so Mission can show that the Task is still active.
+If Drone 2 finished before receiving the request, it reports `completed`. Core
+records **Completed**, superseding cancellation. An explicit refusal instead
+restores the reported execution state, so Mission shows the Task as still active.
 
 If the request's save reply is lost, Mission shows that the save is unconfirmed.
 Reconciliation uses the original cancellation request identity.
@@ -84,8 +85,9 @@ the result when its picture receives the change. Any remaining result files can
 arrive later without changing that Task outcome.
 
 Closing Mission leaves Core running. The team ends the field operation through
-its external operating procedures. A later Core update may clear this mission's
-data; preserving it across updates is not part of this workflow.
+its external procedures. Inactive Observations and Tracks retain their identities,
+history, and associations until deliberate Reset. They have no individual delete.
+A later Core update requires Reset and clears this mission's data.
 
 ## Show confirmed status immediately
 

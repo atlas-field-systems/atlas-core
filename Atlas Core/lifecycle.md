@@ -54,7 +54,9 @@ Reset permanently pending because that Plugin cannot become ready.
 retained copies, and optional export for this cleanup boundary. Diagnostic copies
 must not escape Reset through an unmanaged container log or host journal.
 
-Ordinary retained startup preserves Task evidence and unresolved execution.
+Ordinary retained startup preserves Task evidence and unresolved execution, plus
+Observation and Track identities, associations, and report retry facts. Reset
+clears those records with the old Dataset, including inactive retained records.
 Apply [Operation recovery rules](../Atlas%20Protocol/operations.md#runtime-loss-and-recovery)
 before new Plugin execution.
 Partial uploads restart from zero. Mission continuity across whole-Core restart
