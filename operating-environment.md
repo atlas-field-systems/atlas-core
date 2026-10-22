@@ -10,8 +10,12 @@ pages own the detailed behavior. Unconfirmed design assumptions are marked below
 - The Core host has internet access. This does not imply reliable connectivity
   between Core, clients, gateways, and Assets.
 - Host placement and local administration depend on the deployment.
-- Clients reach Core over adequate IP connectivity. External gateways handle
-  constrained radio, and Asset runtimes execute physical work.
+- SDK clients run on computers with Raspberry Pi 5-class or better compute,
+  adequate power, and good Wi-Fi or equivalent IP connectivity. External gateways
+  handle constrained radio, and Asset runtimes execute physical work.
+- Most Asset integrations use on-demand HTTP and reporting. Full synchronization
+  is an opt-in for clients that need a maintained local picture; optional coverage
+  still needs measured memory and initial-load budgets on the selected computer.
 - Each participant has a separate API key with identical public-API permissions.
   A valid key is sufficient to report for any Asset. See [identity](Atlas%20Protocol/identity.md).
 

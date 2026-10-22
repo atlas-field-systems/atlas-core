@@ -1,32 +1,23 @@
 # Diagnostics and logging
 
-Diagnostics explain traffic, delay, and failure without becoming recovery evidence.
-Required activity, retry facts, Operation evidence, and management authority retain
-their [durable storage rules](storage.md). Missing logs never prove no effect occurred.
+Diagnostics explain traffic, delay, and failure. Required evidence follows
+[durable storage rules](storage.md); missing logs never prove no effect or authorize reruns.
 
-## Events and fields
+## Structured events
 
-Core and the host manager use Go `slog` with line-delimited JSON. Each record has
-UTC time, severity, a stable event name, component, and release. Add Dataset, Core
-run, management action, resource, or verified Plugin runtime identity when relevant.
-Preserve identifiers and opaque cursors exactly. Encode 64-bit counters as decimal
-strings. Measure elapsed phases with monotonic clocks.
+Core and manager use Go `slog` JSON lines with UTC time, severity, stable event name, component,
+and release. Add relevant Dataset, run, action, resource, and verified Plugin context.
+Preserve IDs/cursors exactly, encode 64-bit counters as decimal strings, and use monotonic durations.
 
 HTTP records link the IDs from [Wire correlation](../Atlas%20Protocol/wire.md#http-correlation).
-Record a committed cursor only after commit. Keep database outcome, response
-delivery, client application, and physical execution distinct. Plugin-supplied
-identities do not establish verified runtime identity.
+Record cursors after commit. Database outcome, reply delivery, client apply, and execution
+stay distinct. Plugin claims do not verify runtime identity.
 
-Allowlist fields at each producer before any retained copy. Use route templates,
-safe error codes, counts, and phase durations. Exclude credentials, request and
-response bodies, raw URLs, coordinates, filenames, SQL text, and arbitrary Plugin
-error text. Exclude configuration values from logs. Exports permit only the subset
-defined below. Keep credential attribution separate from the reported Asset or
-publisher. Plugins apply the same exclusions to their own output.
-
-## Coverage by owner
-
-Each existing owner records its decisions and measures its work.
+Allowlist before normal retention: route templates, safe codes, counts, and durations.
+Exclude credentials, bodies, raw URLs, coordinates, operational/payload filenames,
+SQL, configuration values, and arbitrary Plugin errors. Exports use the subset below.
+Credential attribution stays separate from Asset/publisher identity. Atlas producers
+and Plugins never deliberately log credentials; raw capture has the separate boundary below.
 
 | Owner | Events and aggregate measurements |
 | --- | --- |
@@ -38,74 +29,71 @@ Each existing owner records its decisions and measures its work.
 | Plugins | Readiness, exposure, redelivery, accepted evidence, runtime-loss decision, receipt capacity, drain time |
 | Host manager | Startup, observed process exit, action handoff, verified writer exit, Reset phase, cleanup failure |
 
-The manager records observed crashes that Core cannot report itself. Records
-describe observations, not inferred execution or automatic permission to rerun work.
-
 ## Detail and resource bounds
 
-Default INFO output contains state transitions, active-work summaries every
-30 seconds, and one correlated completion record per non-report mutation attempt.
-Include attempt and Core request IDs, route, committed or refused outcome, and
-first execution or exact replay disposition. Failed response delivery is separate.
-Observation-only Asset and Track reports use counts at INFO and attempt detail at
-DEBUG. Lost-reply correlation for those reports therefore needs DEBUG capture.
-Normal field outages produce disconnect and recovery summaries. WARN marks an
-actionable degraded condition; ERROR marks failed work or a broken invariant.
-Coalesce repeated faults with counts. DEBUG adds rate-limited attempt details.
+Default INFO records state changes, active-work summaries every 30 seconds, and one
+completion per non-report mutation attempt with attempt/request IDs, route, commit/refusal,
+and first execution/exact replay. Failed reply delivery stays separate. Asset/Observation
+reports use INFO counts and DEBUG attempts. Summarize normal outages and repeated faults.
+WARN marks actionable degradation; ERROR marks failed work or a broken invariant.
+DEBUG adds rate-limited metadata.
 
-Counters and timing buckets use fixed operation, route, outcome, and reason
-categories. Resource IDs and arbitrary strings are not metric grouping keys.
-The process owns summary timers and its output queue; shutdown stops both.
-Diagnostics run outside database transactions and do not control readiness or retries.
+Metrics use fixed operation, route, outcome, and reason groups, never resource IDs or
+arbitrary strings. The process owns timers/queues and stops them on shutdown. Diagnostics
+run outside transactions and never control readiness or retries.
 
-Initial limits are 8 KiB per event, 1 MiB queued output per process, and 100 DEBUG
-events per second per process. Apply limits before copying or serializing values.
-Oversized details are omitted with an explicit marker. Full queues drop diagnostics,
-never required durable evidence. Expose collection health and known dropped or
-suppressed counts through local inspection, without recursive logging on failure.
-Downstream loss may be uncounted, so diagnostics never promise a complete record.
+Initial limits: 8 KiB/event, 1 MiB queued output/process, and 100 DEBUG events/second/process.
+Bound before copying/serialization; mark omitted oversized details. Full queues drop
+diagnostics, never required evidence. Local inspection exposes collection health and known
+dropped/suppressed counts without recursive logging. Downstream loss may be uncounted;
+diagnostics do not promise a complete record.
+
+## Local troubleshooting
+
+Local administration enables troubleshooting for selected process runs. It defaults off,
+is separate from DEBUG, and is not inherited by later runs or Restart. Expose its status.
+Atlas-owned error paths add safe context and bounded source-code frames: module-relative
+files, functions, and line numbers, never absolute host paths, URL query/fragment values,
+arguments, locals, or arbitrary panic values. Authentication and TLS remain unchanged.
+
+The selected run also captures bounded raw stdout/stderr for otherwise lost fatal/runtime/
+dependency evidence. These separate files are sensitive: third-party output may contain
+operational data or secrets that generic redaction cannot guarantee to remove. Help/status
+state this boundary. Restrict access to the service owner/host administrator. Never send raw
+capture to ordinary logs, journals, SDK observers, or standard exports. No memory dumps.
+Disabling switches output to discard, then drains/closes retained writers without breaking output.
 
 ## Collection and lifetime
 
-The host manager disables Docker logging for Core and Plugin containers. Before either
-Go process starts, its launcher directs raw stdout/stderr to `/dev/null`, including
-manager output under systemd. Disable additional crash-output files and dumps.
-Fatal runtime output and dependency writes therefore have no persistent sink.
-Set `http.Server.ErrorLog` to discard raw messages, including recovered-panic text.
-HTTP recovery may emit a fixed safe event, without formatting the panic value or stack.
+Disable Docker logging and unmanaged crash files. Discard normal Core/manager raw output,
+including `http.Server.ErrorLog`; recovered HTTP panics emit safe events. Core sends structured
+events privately to the manager, which validates its own records and bounds/parses Plugin
+output before normal retention. Drop malformed/prohibited records and report known omissions.
+The manager owns Core/Plugin collectors; its launcher owns manager crash capture and outlives
+the crashing process for a bounded drain. Select sinks before launch. Raw capture follows the
+same byte/queue bounds before buffering and must not block workload writes. Drop/truncate
+under pressure and report gaps. No unbounded buffers or duplicate host log sinks.
 
-Core sends `slog` events over a private local diagnostic channel to a manager-owned
-collector. The manager validates its own structured events before writing. A separate
-manager collector bounds Plugin stdout/stderr before buffering or parsing. Every writer
-uses the event and queue limits above and retains only validated, allowlisted records
-in installation-owned rotated files. Drop unsafe or malformed output before storage.
-Report known omissions. The manager records observed container exits using safe status
-or signal metadata, never crash text. There is no journal, syslog, or raw-output mirror.
-Restart reuses containers and retained events. No cloud collector is required.
-
-Before launch, assign byte quotas to each container and the manager. Their sum,
-including rotated copies, storage overhead, and export staging, is at most 256 MiB.
-Rotate oldest records within each source's quota. Account for transient buffers
-under [aggregate capacity](storage.md#retention-and-capacity). Target eight hours of
-default-detail history, including a four-hour mission; age is not a hard expiry.
-Expose retained ranges and known gaps. Actual retention and disk bounds require
-[qualification](qualification.md); event limits alone are not disk proof.
+Assign source quotas before launch: normal logs, raw captures, rotation, overhead, and export
+staging total at most 256 MiB. Rotate oldest records within each source's quota. Include
+transient buffers in [aggregate capacity](storage.md#retention-and-capacity). Target eight hours
+of default-detail history, including a four-hour mission; age is not a hard expiry and
+troubleshooting can shorten retention. Expose retained ranges/gaps. Disk bounds and retention
+need [qualification](qualification.md); event limits alone are not proof.
 
 [Lifecycle](lifecycle.md#reset-recovery) owns Restart and Reset semantics.
-Reset cleanup covers managed container, Plugin, and manager diagnostic copies.
-The action owner stops or completes exports, verifies container emitters have stopped,
-and stops and drains collectors. It switches or closes every manager diagnostic writer
-and verifies pending writes to old storage have drained before clearing old logs.
-Raw stdout/stderr remain discarded throughout Reset.
-Use supported per-installation storage or container lifecycle controls. Never edit
-Docker-owned files or vacuum unrelated host logs. Failure to verify cleanup leaves
-Reset incomplete. Durable management authority stays outside this cleanup.
+Restart reuses containers and bounded files but disables troubleshooting.
+Reset disables capture and covers
+container, Plugin, manager, and launcher copies. The action owner stops/completes exports,
+verifies emitters stopped, drains collectors, and switches/closes all manager and launcher
+writers. Verify old writes drained before deletion; discard raw output during Reset.
+Use supported installation storage/container controls, never Docker-owned file edits or
+unrelated journal cleanup. Unverified cleanup leaves Reset incomplete; management authority survives.
 
-Local administration can explicitly export a bounded diagnostic bundle before Reset.
-Include versions, Dataset and run context, and known gaps. For configuration, include
-only the diagnostic severity threshold and numeric diagnostic limits. Paths,
-destinations, and all other configuration values remain excluded.
-Report partial or failed exports. No upload or export is a Reset prerequisite.
-A user-selected export is user-owned and is not erased by Atlas Reset.
+Local administration can export a bounded bundle with versions, Dataset/run context, and
+known gaps. Configuration includes only the severity threshold and numeric diagnostic limits;
+paths, destinations, and other values remain excluded. Report partial/failed exports.
+A separately selected sensitive export may include raw capture and identifies its sensitivity.
+Neither export uploads automatically or gates Reset. User-owned exports survive Reset.
 
 [Next: qualification](qualification.md)

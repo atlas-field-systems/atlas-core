@@ -5,22 +5,32 @@ It consumes [Protocol](../Atlas%20Protocol/README.md), exchanges messages with C
 over HTTP/JSON and WebSocket, and provides handwritten workflows that use generated
 declarations.
 It must not import Core's database, private types, or internal service interfaces.
+The [operating environment](../operating-environment.md) defines the intended
+Pi 5-class-or-better computers, power, and IP connectivity.
 
 ## Two explicit read modes
 
 | Mode | Behavior |
 | --- | --- |
 | HTTP, default | Read on demand from Core; no maintained replica |
-| Full synchronization, opt-in | Maintain Assets, Observations, Tracks, Geofeatures, Tasks, and ready Object metadata in one in-memory picture |
+| Full synchronization, opt-in | Maintain Assets, Tracks, Geofeatures, Tasks, and ready Object metadata in one in-memory picture, with optional Observation and movement-history coverage |
 
-Both modes use SDK. In Full mode, resource reads, full queries, changed-since, and
-subscriptions use the local picture. No hidden HTTP fallback or per-call bypass
-pretends to repair incomplete coverage. The public query semantics stay consistent.
+Full mode has two independent switches, both off by default: maintain retained
+Observations, and maintain retained movement history for Assets, Observations, and
+Tracks. Each covers the whole Dataset, including inactive records and retained
+history for deleted Assets. These are fixed coverage options, not per-Entity replication.
 
-Object bytes, Plugin Operations/discovery, operator/key administration, and movement/
-activity history use explicit HTTP operations in both modes. They are outside the
-picture. All mutations go to Core. There is no persistent SDK cache, offline write
-queue, hybrid/selective mode, or shared cross-tab replica.
+Reads, queries, changed-since, and subscriptions for ready coverage use local state.
+When an option is off, its reads use explicit HTTP operations, including Observation
+queries by Track or recorded source Asset and per-Entity movement history. When it
+is enabled but loading or unavailable, report that state; never silently fall back
+to HTTP or present missing data as an empty result. Query meanings stay consistent.
+
+Object bytes, Plugin Operations/discovery, operator/key administration, and activity
+history remain explicit HTTP operations in both modes. All mutations go to Core.
+All synchronized data is in memory: SDK/application restart rebuilds the selected
+coverage from Core. There is no persistent SDK cache, offline write queue, or shared
+cross-tab replica. Most Asset reporting clients need only HTTP mode.
 
 ## Package boundary
 

@@ -14,7 +14,7 @@ and summary records. This is SDK behavior, not a Protocol event schema.
 | --- | --- |
 | Disabled, default | No diagnostic records, queue, serialization, or summary timer |
 | Summary | State transitions, failed attempts, non-report mutation completions, counts and timing buckets |
-| Debug | Summary plus rate-limited per-attempt metadata |
+| Debug | Summary plus rate-limited attempt metadata, safe error context, and code-location frames |
 
 Atlas applications can explicitly enable Summary and connect the observer to
 their logger or local support export. Applications own retention and asynchronous
@@ -24,13 +24,11 @@ behavior even when the diagnostic observer is disabled.
 
 ## What the SDK observes
 
-Events include UTC time, stable event kind, SDK release, instance, read mode,
-diagnostic detail, and relevant Dataset or picture generation. Use local monotonic
-durations. Request records include available attempt and Core request IDs.
-Add the prepared mutation's retry identity when applicable. Read sources and
-outcomes remain explicit.
-Summary retains these IDs on failures, including `unknown_outcome`, and non-report
-mutation completions. Successful observation-only reports and reads use counts.
+Events include UTC time, stable kind, SDK release, instance, read mode, detail, and
+relevant Dataset/picture generation. Use monotonic durations. Preserve available attempt,
+Core request, and prepared mutation retry IDs; keep read sources/outcomes explicit.
+Summary retains IDs for failures (including `unknown_outcome`) and non-report mutation
+completions. Successful observation-only reports and reads use counts.
 
 | Area | Events and aggregate measurements |
 | --- | --- |
@@ -62,16 +60,21 @@ Time since the last update is not synchronization lag on an idle Dataset. Do not
 subtract opaque cursors or infer network latency from client and server clock
 differences. Record phase durations and known handoff progress instead.
 
-Events contain typed, allowlisted metadata. Omit credentials, payload values,
-geometry, filenames, raw URLs, arbitrary response details, and validation input.
-Do not retain raw exceptions or headers to produce a diagnostic event.
+Events allowlist typed metadata. Exclude credentials, payload values, geometry,
+operational/payload filenames, raw URLs, arbitrary response details, and validation input.
+Debug adds operation, phase, safe error code/category, and bounded source-code frames:
+module-relative files, functions, and line/column numbers; unavailable frames are explicit.
+Exclude absolute host paths, URL query/fragment values, arguments, and locals. Never forward
+raw exceptions, messages, causes, headers, or stack strings. Debug is per SDK instance,
+needs no server capture, and changes no TLS, authentication, retry, or read behavior.
 
 ## Bounds and observer failure
 
 Summary uses fixed operation and reason categories, not per-resource identity maps.
 Each variant has a fixed shape and bounded collections, with no arbitrary nesting.
-Initial limits are 128 queued records per instance and 256 UTF-16 code units per
-string field. Omit oversized fields with a marker; never truncate identifiers.
+Initial limits are 128 queued records per instance, 16 code-location frames per
+error, and 256 UTF-16 code units per string field. Omit oversized fields with a marker;
+never truncate identifiers.
 Check lengths before copying. Debug emits at most 100 events per second. Summary
 flushes active counters every 30 seconds; idle intervals produce no event.
 Drop excess diagnostic records and expose known omissions in the next summary.

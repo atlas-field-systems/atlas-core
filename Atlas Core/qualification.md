@@ -23,7 +23,7 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Operation recovery | Plugin loss before possible delivery keeps pending work; loss after possible delivery interrupts it; Core restart interrupts both |
 | Recovered outcomes | Original Operation reads expose recovered outcomes, effects, and result links; state remains interrupted; no new Operation or execution |
 | Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
-| Full synchronization | Whole-message interruption, immutable capture under concurrent writes and paging, failed-build cleanup, fixed handoff, capture retry/release, replay expiry, slow clients, rebuild, Dataset change and capacity pause |
+| Full synchronization | All four Observation/history coverage combinations; local versus explicit HTTP reads; independent base readiness; online backfill/cutover/disable; whole-message interruption, capture cleanup, fixed handoff, replay expiry, slow clients, restart rebuild, Reset and isolated optional capacity failure |
 
 For example, create O17 and record its assigned T42. Move O17 with R2 and verify
 both IDs remain. Replay creation and R2 through another gateway with no new Track,
@@ -58,18 +58,21 @@ Diagnostic records alone cannot establish that work committed or executed.
 | --- | --- |
 | Lost non-report write reply | At default Core and SDK Summary detail, match the attempt; keep SDK outcome unknown; retry has new attempt context and the same prepared identity; one durable effect and complete picture application |
 | Read routing and transfers | Covered Full-mode reads send zero HTTP requests; default reads and repeated uploads report the observed source and byte category without buffering whole files |
-| Recovery and authorization | Explain replay versus rebuild, capacity pause, and subscriber gaps; ordinary outages and revoked credentials cause no diagnostic or recovery hot loop |
+| Recovery and authorization | Explain requested/ready coverage, replay versus rebuild, capacity pause, and subscriber gaps; ordinary outages and revoked credentials cause no diagnostic or recovery hot loop |
 | Server delay and cleanup | Separate writer wait from commit time, file publication from cleanup, and Plugin channel loss from confirmed process death |
 | Correlation headers | Missing, malformed, and duplicate header fields preserve domain behavior; reused attempt values need no registry; trusted browser origins can send/read headers; validate IDs on success, error, binary, and empty responses |
-| Diagnostic pressure and privacy | Flood producers and block/fail sinks; memory and disk remain bounded, known omissions stay visible, requests keep their real outcomes, and prohibited fields appear in no retained copy or export |
-| Go output outside `slog` | Recovered HTTP panics, fatal panics, and dependency writes retain no prohibited fields; validated events and safe observed container-exit records remain available |
-| SDK observer lifecycle | Throw from the observer and fail its exporter without changing requests or picture recovery; closing SDK stops diagnostic deliveries and timers |
-| Restart and Reset | Retain bounded logs across Restart; verify old container, Plugin, and manager copies disappear on Reset, even after interrupted cleanup; preserve separate management authority |
+| Diagnostic pressure and privacy | Flood producers and block/fail sinks; memory and disk stay bounded, omissions remain visible, request outcomes are unchanged, and prohibited fields appear in no normal log or standard export |
+| Local troubleshooting | Off by default and enabled only for selected runs; recovered/fatal panics produce useful bounded context and frames or explicitly sensitive crash evidence; private raw capture never leaks into normal logs or standard exports |
+| SDK observer lifecycle | Debug frames and context obey field/count bounds; raw Error/stack/input objects never reach observers; throwing observers or failed exports do not change requests or recovery; close stops deliveries and timers |
+| Restart and Reset | Restart retains bounded files but disables troubleshooting; Reset verifies container, Plugin, manager, and launcher capture writers and old copies are cleared, including interrupted cleanup; management authority stays separate |
 
-Exercise Core HTTP panic recovery and uncaught background panics in both Go processes.
-Include sentinel filenames and secrets in panic values, an error's `Error()` output,
-and dependency stdout/stderr writes. Inspect container logs, manager files, journals,
-crash dumps, and exports for those sentinels while verifying valid events remain observable.
+Exercise recovered HTTP panics, fatal background panics, and dependency writes in
+both Go processes with troubleshooting off and on. Inject sentinel filenames and
+secrets into panic/error text: none may reach normal logs, structured debug fields,
+journals, or standard exports. Sensitive raw capture may contain them only within
+its declared private boundary; verify access, quotas, truncation, deliberate export,
+disable, and Reset cleanup. Verify useful fault locations survive without argument
+values, and that unavailable evidence is reported honestly. No capture blocks work.
 
 ## Workload targets, not measured capability
 

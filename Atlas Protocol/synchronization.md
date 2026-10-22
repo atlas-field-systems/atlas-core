@@ -1,16 +1,28 @@
 # Synchronization contract
 
-**Synchronize committed facts, not delivery guesses.** The picture contains all
-Assets, Observations, Tracks, Geofeatures, Tasks, and ready Object metadata.
-Object bytes, history, Plugin Operations, and administration use direct requests instead.
+**Synchronize committed facts, not delivery guesses.** The base picture contains
+all Assets, Tracks, Geofeatures, Tasks, and ready Object metadata, including retained
+inactive Tracks. Observation records and [movement history](movement-history.md)
+are independent, opt-in additions, disabled by default. Each enabled addition covers
+all retained data of that kind in the Dataset; it has no implicit time window or
+per-Entity selection. Object bytes, activity, Plugin Operations, and administration
+remain direct requests.
 
 ## Complete changes
 
-A Core cursor is opaque and bound to Dataset and durable commit order. One data
-message contains one complete commit: final resource images or versioned deletions.
-Validate and apply the entire message atomically before advancing the cursor.
+A Core cursor is opaque and bound to Dataset and durable commit order. Snapshots,
+replay, and subscriptions bind their declared coverage. One data message contains
+all effects of one commit within that coverage: final resource images, versioned
+deletions, and selected history changes. Apply it atomically before advancing the cursor.
 Transport segmentation does not authorize application-level fragments.
-An Observation and its default Track changes arrive in the same complete commit.
+All ready coverage shares one applied cursor. When Observations are enabled, their
+changes and default Track changes arrive together. When disabled, Track images
+still contain their current values, source IDs, and provenance without requiring
+local Observation records. Omitting unselected data never splits a selected effect.
+
+Commits with no selected effects may be skipped only with explicit ordered progress
+through the same durable log. Progress does not fabricate resource changes. Expanding
+coverage requires loading it; a cursor for narrower coverage cannot prove it complete.
 
 Versions prevent stale overwrites and resurrection. Identical duplicates are harmless;
 conflicting copies are errors. Replay uses the same durable change log, fixed replay
@@ -29,9 +41,30 @@ do not move H. A subscription acknowledgment is not progress. A complete staged
 picture can resume from its last complete cursor after disconnection; an incomplete
 snapshot needs the same valid capture or a fresh rebuild.
 
+## Changing coverage
+
+Load an optional addition with the same snapshot and replay rules while the existing
+ready picture remains usable and continues updating. At a negotiated common complete
+commit boundary, finish its catch-up and atomically join it to the active projection.
+Bound buffering and any cutover wait. If alignment cannot finish within those bounds,
+leave existing coverage running and report the addition's failure. Do not publish
+an addition at a different cursor or silently miss changes during the switch.
+Initial base readiness also does not wait for optional additions to finish loading.
+
+Expose readiness separately for base, Observations, and movement history. Loading,
+disabled, and failed coverage are not empty results. Reads of an enabled but unready
+addition report unavailable coverage; they do not silently fall back to HTTP.
+With the addition disabled, explicit on-demand requests remain available.
+
+Disabling an addition stops its maintenance and releases its local data at a complete
+boundary. Cancel or release its pending load and invalidate its local query cursors;
+late replies cannot re-enable it. Core retention and other coverage are unaffected.
+Re-enabling performs a fresh load. SDK persistence and local cursor lifetimes belong
+to the SDK contract, not the Core cursor.
+
 ## Lost replies and release
 
-Snapshot allocation has a stable load ID within a Dataset/Core-run context with
+Snapshot allocation binds coverage and a stable load ID in a Dataset/Core-run context with
 finite monotonic expiry. Exact retries recover the same capture and original expiry,
 not another allocation. Changed facts conflict. Expired, released, or old-run
 contexts cannot resurrect a capture, even after their retry records are pruned.
@@ -46,19 +79,22 @@ Reject excess allocation without blocking ordinary operational writes.
 
 ## Capacity and recovery
 
-Negotiate batch byte and change-count limits before loading. Core must account for
-both future allowed commits and the largest retained replay message. Reserve room
-for a whole batch. Increased requirements during a stream force explicit recovery,
+Negotiate coverage, batch byte and change-count limits before loading. Core must account for
+future allowed commits and the largest retained replay message within that coverage.
+Reserve room for a whole batch. Increased requirements force explicit recovery,
 not partial application. Control messages remain usable when data cannot fit.
 
 A slow client gets an explicit gap or connection closure and resumes from its last
 complete cursor. Expired replay requires rebuilding; do not silently skip changes.
-Capacity failure pauses recovery until explicit retry or a relevant capacity change,
-rather than allocating snapshots in a hot loop. Never evict part of the picture or
-split an atomic domain change to fit a client limit.
+Capacity failure pauses affected coverage until explicit retry or a relevant capacity
+change. If an active optional addition fails, withdraw its ready coverage at the last
+complete applied boundary and resume the narrower projection from that cursor.
+Never advance past unapplied effects still selected by the narrower projection.
+Keep the addition requested but unavailable; do not silently disable it or use HTTP.
+Optional loading reserves capacity without consuming the running base picture's
+budget. Never evict part of declared coverage, split an atomic domain change, or
+allocate replacement snapshots in a hot loop.
 
 Same-release Restart preserves complete cursors and retained replay but expires
 temporary captures. Reset invalidates the Dataset, old pictures, pending submissions,
 and cursors. A fresh Dataset must not inherit old requests or apparent freshness.
-
-This completes the Protocol reading path.

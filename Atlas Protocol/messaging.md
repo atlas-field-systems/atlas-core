@@ -89,11 +89,12 @@ resumable-upload exchange, or remote Core-configuration message.
 
 | Proposed message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
-| `ReadSnapshot` | Application maintaining a synchronized picture stages its initial resource views | Snapshot capture and paging context | Captured resource views under [Synchronization](synchronization.md) |
-| `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Bounded replay context | Whole committed change batches |
-| `SubscribeChanges` | Synchronizing application catches up and follows live commits | Subscription and handoff context | Ordered committed changes and synchronization replies |
+| `ReadSnapshot` | Application stages base, Observation, or movement-history coverage | Declared coverage, snapshot capture, and paging context | Captured data under [Synchronization](synchronization.md) |
+| `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Declared coverage and bounded replay context | Complete committed effects within coverage and ordered progress |
+| `SubscribeChanges` | Synchronizing application catches up and follows live commits | Declared coverage, subscription, and handoff context | Ordered committed effects, progress, and synchronization replies |
 | `ReleaseSnapshot` | Loading application frees its capture after paging or cancellation | Capture identity | Release acknowledgment or explicit refusal |
 
-Exact synchronization reply names remain open under [Synchronization](synchronization.md).
+Changing coverage follows the staged cutover in [Synchronization](synchronization.md#changing-coverage).
+Exact synchronization reply names and coverage-change envelopes remain open.
 
 [Next: wire conventions](wire.md)

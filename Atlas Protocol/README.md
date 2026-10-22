@@ -63,6 +63,7 @@ automatic downgrade, or translation between versions. Plugins release independen
 
 [Entities](entities.md) → [Observations](observations.md) → [Tracks](tracks.md) →
 [Identity](identity.md) → [Reports](reports.md) →
+[Movement history](movement-history.md) →
 [Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
 [Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
 

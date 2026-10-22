@@ -110,9 +110,10 @@ the same constituent identity without creating a new reading or refreshing its a
 Never create samples by copying an entire merged Entity snapshot.
 History survives Entity deletion until Reset. Bounded history queries distinguish
 unknown Entity IDs from known Entities with no matching samples.
+Both on-demand reads and optional synchronized history follow [movement history](movement-history.md).
 
 On reconnect, reconcile retained reports and current instructions. Neither a new
 connection nor a new process authorizes automatically repeating uncertain physical
 work. Keep uncertainty visible until evidence or an explicit operator decision resolves it.
 
-[Next: tasks](tasks.md)
+[Next: movement history](movement-history.md)
