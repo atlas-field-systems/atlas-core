@@ -2,15 +2,14 @@
 
 Power groups supply state and remaining energy reserves in one section.
 A glider can report its avionics battery without having propulsion. A camera can
-report an external supply. The fields and reserve layout are selected. The instance
-limit needs qualification.
+report an external supply. One complete replacement includes every declared reserve.
 
 ## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
 | `external_power` | Boolean or null | Required | External supply is present; null when unknown |
-| `reserves` | Array of typed reserves | Required, non-null | Proposed limit of 16 entries, requiring qualification; unique IDs; empty when none are declared |
+| `reserves` | Array of typed reserves | Required, non-null | At most 16 entries; unique IDs; empty when none are declared |
 
 Each reserve has these common fields:
 
@@ -63,9 +62,13 @@ Keep a reserve ID stable for the same physical reserve. Replacement hardware rec
 a new ID. This identity is separate from the Asset's process generation.
 Quantity times default to the enclosing result's `observed_at`. In `source_times`,
 `external_power` overrides supply time. A `reserves` object keys overrides by current
-reserve ID, with only that variant's named quantity fields. Explicit null means an
-unknown time. Whole-section replacement never refreshes an older constituent reading.
-Actual section failures follow [Reports](../reports.md#shared-context), without
-reconstructing healthy reserves. Qualify the proposed instance limit before implementation.
+reserve ID. Each entry permits `remaining_percent`, plus `voltage_volts` and
+`current_amperes` for batteries only. Each leaf is a UTC timestamp or null.
+Fuel entries forbid battery keys. Undeclared reserve IDs and other keys are refused.
+Explicit null means unknown time. Whole-section replacement never refreshes
+an older constituent reading.
+Actual section failures follow [report evidence](../report-evidence.md), without
+reconstructing healthy reserves. The 16-reserve cap is the initial engineering limit,
+not a measured capacity claim.
 
 [Component index](README.md)

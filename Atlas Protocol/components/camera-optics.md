@@ -1,47 +1,42 @@
 # Camera Optics
 
-Camera Optics is a proposed section for baseline field of view at 1x zoom.
-A mounted camera can supply it once as state until changed. Changing calibration
-would replace the whole section.
-Current magnification belongs in [Camera](camera.md), independently of this calibration.
+Camera Optics reports the exposed camera's baseline rectilinear field of view at 1x.
+Its wire section name is `camera_optics`. [Camera](camera.md) reports live magnification.
+A calibration can remain state until changed. Recalibration replaces it whole.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
-| `horizontal_fov` | Number or null | Required | Full horizontal angle at 1x, in degrees; greater than 0 and less than 180 for rectilinear optics |
-| `vertical_fov` | Number or null | Required | Full vertical angle at 1x, in degrees; greater than 0 and less than 180 for rectilinear optics |
+| `horizontal_fov` | Number or null | Required | Full horizontal angle at 1x, in degrees, greater than 0 and less than 180 |
+| `vertical_fov` | Number or null | Required | Full vertical angle at 1x, in degrees, greater than 0 and less than 180 |
 
-The enclosing result carries [shared section metadata](README.md#shared-section-results).
-Both fields are present in every replacement. Null means unknown calibration.
+Both numbers must be finite. Null means unknown calibration. The external source
+defines 1x as the widest calibrated rectilinear configuration of the exposed set.
+It converts hardware zoom to magnification relative to that reference. Digital
+crop or internal camera switching requires a calibrated equivalent before a known
+ratio can be reported. Unsupported optical models expose unknown FOV values.
+
+The [section result](../report-evidence.md) allows `source_times` keys exactly
+`horizontal_fov` and `vertical_fov`. Calibration time is not current capture time.
+The Asset owns coherence when its [exposed camera changes](camera.md#exposed-hardware-ownership).
+
+These angles and a zoom ratio do not define a universal projection model.
+Consumer tools own derived viewing geometry. Atlas promises neither exact ground
+footprints nor a media transport from this calibration.
 
 ## Examples
 
-Valid under the proposed field contract:
+Valid baseline calibration:
 
 ```json
-{
-	"horizontal_fov": 90,
-	"vertical_fov": 60
-}
+{"horizontal_fov": 90, "vertical_fov": 60}
 ```
 
-Invalid under the proposed rectilinear bounds:
+Invalid rectilinear calibration:
 
 ```json
-{
-	"horizontal_fov": 200,
-	"vertical_fov": 60
-}
+{"horizontal_fov": 200, "vertical_fov": 60}
 ```
-
-## Decisions to settle
-
-Settle the section name, optical models, and definition of 1x zoom. Baseline
-calibration plus a vendor's raw zoom setting is not a universal projection model.
-[ONVIF](https://www.onvif.org/specs/srv/ptz/ONVIF-PTZ-Service-Spec-v1612.pdf)
-does not require generic zoom positions to map to physical magnification or FOV.
-Consumer tools own derived viewing geometry. Atlas does not promise an exact
-ground footprint from these two angles alone.
 
 [Component index](README.md)

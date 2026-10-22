@@ -3,7 +3,7 @@
 **Atlas coordinates field systems: observe what exists, ask Assets to do work,
 and retain what they report.**
 
-This repository is a documentation-only design experiment. Nothing here claims
+This repository is the documentation baseline for building Atlas. Nothing here claims
 an implemented API, generated package, passing runtime, or qualified deployment.
 
 ## Three layers, one contract
@@ -29,8 +29,8 @@ stock tools help. Write Core behavior and SDK workflows as ordinary code.
 ## Read in this order
 
 Start with the [operating environment](operating-environment.md) for deployment
-expectations and remaining assumptions. The [draft mission example](mission-example.md)
-shows how an operator, Atlas Mission, Core, and external Assets could work together.
+requirements. The [mission example](mission-example.md) shows how an operator,
+Atlas Mission, Core, and external Assets work together within the initial scope.
 
 1. [Protocol](Atlas%20Protocol/README.md): what Atlas means and promises.
 2. [Core](Atlas%20Core/README.md): how the server provides those promises.
@@ -41,5 +41,7 @@ Each folder's README gives its short reading order. Contributors also read
 folder to reconcile. Earlier explanations remain in Git history, not as a second
 active specification.
 
-These pages are the current design baseline, not a complete executable wire
-specification. Concrete schemas and independent acceptance examples remain incomplete.
+Build Protocol's machine-readable schemas from these definitions before implementing
+Core or SDK behavior. Schemas, generated packages, and executable acceptance workflows
+are implementation outputs; none is supplied by this documentation baseline.
+Qualify them against the documented outcomes before claiming runtime support.

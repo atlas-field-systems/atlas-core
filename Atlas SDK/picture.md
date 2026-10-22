@@ -3,9 +3,8 @@
 **One owner maintains the picture, applied Core cursor, local journal, and recovery.**
 Only validated snapshots and complete feed commits enter it. HTTP write responses
 and unrelated reads never become an alternate update path.
-The base picture includes retained Tracks and source provenance, including inactive
-records. Observation records and movement history are independent optional coverage
-defined by [Protocol](../Atlas%20Protocol/synchronization.md).
+The base includes inactive Tracks and provenance. Observation and movement-history
+coverage are independent [Protocol options](../Atlas%20Protocol/synchronization.md).
 
 ## Readiness is explicit
 
@@ -14,8 +13,8 @@ last synchronized time, and a safe error. States distinguish initializing, synch
 recovering, disconnected, resource-limited, authorization-required, and stopped.
 Each optional coverage also distinguishes disabled. Not ready is not an empty Dataset.
 
-A complete picture can remain readable as explicitly stale while disconnected from
-the same Dataset. Once Reset or a required rebuild is known, invalidate its coverage
+A complete picture remains readable as explicitly stale during same-Dataset outages
+and [known authorization failure](authorization.md). Known Reset or rebuild invalidates coverage
 immediately. Stage replacement state privately; never display a half-loaded replacement.
 Follow [Protocol handoff and recovery](../Atlas%20Protocol/synchronization.md).
 
@@ -33,9 +32,8 @@ coverage and query tokens, and releases its local data. Core retains the records
 Late pages or callbacks from the old load cannot repopulate disabled coverage.
 Disabling Observations does not disable history, and neither changes Track results.
 
-Both options start off unless configured. SDK/application restart discards all
-cache data and rebuilds the selected coverage from Core; no disk cache is created.
-The base picture can become ready before enabled optional coverage finishes loading.
+SDK/application restart discards cache data and rebuilds configured coverage from Core.
+Base readiness does not wait for optional loads. No disk cache is created.
 
 ## Queries and subscriptions
 
@@ -75,14 +73,16 @@ a replacement to hide expiry. Recheck authorization and view validity after wait
 
 ## Capacity and retry
 
-Check negotiated complete-message limits before allocating a snapshot. Account for
+Initial configurable defaults are 512 MiB and 100,000 images/history readings for
+all coverage, a 16 MiB/10,000-commit journal, and four 60-second local views sharing
+100,000 references. All allocations share the 512 MiB budget, including reserved updates.
+Check negotiated complete-message limits before allocating. Account for
 base and optional records, old picture, new staging, indexes, decoded values, and
-journal, query references, and frozen revisions together. Count history readings as well
-as Entity images. Expire temporary history views and retry the whole capacity check
-before making otherwise viable coverage unavailable; never evict retained readings.
+journal, query references, and frozen revisions together. Expire temporary views and
+recheck capacity before making viable coverage unavailable; never evict retained readings.
 An optional load must fit without consuming the ready picture's bounded-update reserve.
 Stop with an explicit capacity state rather than evicting resources or repeatedly rebuilding.
-Explicit retry or a relevant capacity change can restart one recovery owner.
+Explicit retry or a relevant capacity change restarts one recovery owner.
 If an enabled option cannot continue within its bounds, mark that coverage unavailable
 and stop serving it as current; release its allocations and let base coverage continue
 when its own limits permit. Report affected subscription gaps. Never silently change
@@ -92,8 +92,10 @@ An ordinary network outage resumes from the last complete applied cursor when
 Protocol permits it. Expired replay requires replacement. Incomplete captures,
 complete staging, and a published picture are different recovery states; do not
 restart every case from zero or reuse an expired allocation context.
+Fetch a fresh Core allocation context immediately before each new remote allocation.
+Exact allocation retries retain their original context and identity.
 
-Authorization failure pauses until credentials change. Closing SDK stops its owned
-connections and recovery, not Core, physical work, or accepted Plugin Operations.
+Closing SDK stops its connections, local views, and recovery. Core, physical work,
+and accepted Plugin Operations continue under their own owners.
 
 [Next: diagnostics](diagnostics.md)

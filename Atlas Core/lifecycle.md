@@ -7,7 +7,7 @@
 | Start | Open retained data, or initialize first use | Reapply retained setup |
 | Stop | Retain; stop managed execution | Retain |
 | Restart | Retain | Retain |
-| Reset | Clear; establish a new Dataset | Retain |
+| Reset | Clear; establish a new Dataset | Retain, including operator profiles |
 | Hard Reset | Clear all Atlas-owned state | Clear setup, keys, trust, and Plugin artifacts |
 
 Hard Reset needs explicit destructive confirmation, keeps Core software and unrelated
@@ -35,6 +35,9 @@ Confirmed force stop continues the original update, uninstall, or settings actio
 only after verified process exit. Unconfirmed exit leaves it incomplete. A confirmed
 whole-installation action supersedes the earlier action through the same owner.
 Record handoffs before effects so manager interruption cannot create two continuations.
+The [manager recovery contract](manager-recovery.md) fixes action records, process
+verification, takeover, and local activity import. Manager restart may recover the
+same owner; it never authorizes an automatic Core or Plugin restart.
 
 ## Reset recovery
 
@@ -75,5 +78,8 @@ and the first credential. No cloud login or TLS bypass; credentials stay out of 
 and normal diagnostic records. Explicit [local troubleshooting](diagnostics.md#local-troubleshooting)
 defines the private boundary for potentially sensitive crash output.
 Plugin faults do not make unrelated Core services unready.
+Operator profiles and key bindings follow [Protocol identity](../Atlas%20Protocol/identity.md).
+Deletion and new bindings serialize in Core's transaction; a deleted profile cannot
+gain an active binding. Past attribution remains, with no permission tiers.
 
 [Next: plugins](plugins.md)

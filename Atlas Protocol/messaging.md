@@ -3,8 +3,8 @@
 Protocol defines what a message means. Its link defines how it is carried.
 Requests, results, reports, and notifications reuse Protocol's component schemas.
 Core validates the contract independently of the link that delivers the message.
-Message names, exact payloads, type identifiers, and reply envelopes remain
-proposals.
+The linked contracts select message names, control fields, and reply envelopes.
+Machine OpenAPI output remains implementation work.
 
 ## Message contracts
 
@@ -13,7 +13,7 @@ Required values, behavior for null and omitted values, bounds, and component
 references belong in shared OpenAPI schemas. Bindings define how the link represents
 and exchanges messages.
 
-Expected users describe proposed workflows, not permissions.
+Expected users describe callers and purposes, not permissions.
 Any valid key has the same public permissions under [Identity](identity.md).
 The named caller originates the request or report. A gateway may carry it on their behalf.
 
@@ -37,9 +37,8 @@ Each exposes only the fields and components permitted for its Entity type under
 [Entities](entities.md#component-composition). Tracks are created by the active
 [fusion policy](tracks.md), not by an Asset creation message.
 
-Different public messages may share a Core API operation or internal mechanism.
-That mapping does not merge their public input contracts or require one HTTP
-endpoint per message.
+Shared internal mechanisms do not merge public message contracts. The initial
+[static IP mapping](wire.md#deterministic-ip-mapping) assigns each message its binding.
 
 ## Plugin and Operation messages
 
@@ -50,12 +49,11 @@ invocation, progress, and cancellation under [Operation rules](operations.md).
 
 Core's IP binding uses HTTP/JSON and a WebSocket change feed as defined in
 [Wire](wire.md). Atlas SDK implements that IP binding for application callers.
-Another link defines its supported messages, encoding, packetization, correlation,
-and delivery behavior. It preserves Protocol meaning, exact version, source evidence,
-and retry identity. A link need not carry every message or a full synchronized picture.
+Compact and constrained-radio bindings are unsupported initially. External gateway
+translation must preserve Protocol meaning, exact version, evidence, and retry identity.
 
-Authentication and reference-data disclosure follow Wire. Message labels are not
-HTTP paths; concrete IP routes belong to the authored OpenAPI binding.
+Authentication and reference-data disclosure follow Wire. Wire selects a deterministic
+route mapping; the implementation records it in OpenAPI.
 The Command Catalog remains a local Protocol artifact, not a network discovery service.
 
 Core configuration, lifecycle control, Plugin installation, updates, and runtime
@@ -64,30 +62,18 @@ resumable-upload exchange, or remote Core-configuration message.
 
 ## Administration messages
 
-| Proposed message | Expected user and purpose | Request | Result |
-| --- | --- | --- | --- |
-| `ListResources` | Administration app inspects resource usage and capacity | Bounded inspection query | Resource usage |
-| `ReadActivity` | Operator app or diagnostic tool investigates recorded activity | Bounded activity query | Activity records |
-| `ListApiKeys` | Administration app reviews provisioned credentials | Bounded key query | Key metadata |
-| `CreateApiKey` | Provisioning tool creates a credential for an additional participant | Caller-prepared credential facts and stable creation identity | Committed creation under [Identity](identity.md#enrollment-and-credentials) |
-| `RevokeApiKey` | Administration app withdraws an unneeded or compromised credential | Key identity and retry facts | Committed revocation under [Identity](identity.md#deletion-and-revocation) |
-| `ListOperators` | Administration app browses operator profiles | Bounded profile query | Matching profiles |
-| `GetOperator` | Operator app displays a known operator's profile | Operator identity | Operator profile |
-| `CreateOperator` | Administration app records a new operator profile | Profile creation facts and retry identity | Created profile |
-| `EditOperator` | Operator app maintains an operator's profile details | Operator identity and permitted profile edits | Committed profile change |
-| `DeleteOperator` | Administration app removes an unneeded operator profile | Operator identity and retry facts | Committed deletion |
+[Administration and discovery](messaging/administration.md) defines key and
+operator-profile messages, health, readiness, reference, activity, and resource reads.
+Operator lifecycle and atomic key revocation follow [Identity](identity.md#operator-profiles).
 
 ## Discovery messages
 
-| Proposed message | Expected user and purpose | Request | Result |
-| --- | --- | --- | --- |
-| `GetHealth` | Connecting application discovers the Dataset, exact Protocol version, and health | Authenticated health and discovery request | Dataset, exact Protocol version, and health under [Wire](wire.md) |
-| `GetReadiness` | Deployment monitor checks whether Core is ready to serve requests | Authenticated readiness request | Readiness information |
-| `GetReference` | Developer or documentation UI reads the contract and schema reference | Authenticated reference request | Documentation or schema information |
+Authenticated discovery returns Dataset, exact version, current Core run, effective
+limits, and a temporary allocation context under [Wire](wire.md#common-representation).
 
 ## Synchronization messages
 
-| Proposed message | Expected user and purpose | Request | Result |
+| Message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
 | `ReadSnapshot` | Application stages base, Observation, or movement-history coverage | Declared coverage, snapshot capture, and paging context | Captured data under [Synchronization](synchronization.md) |
 | `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Declared coverage and bounded replay context | Complete committed effects within coverage and ordered progress |
@@ -95,15 +81,17 @@ resumable-upload exchange, or remote Core-configuration message.
 | `ReleaseSnapshot` | Loading application frees its capture after paging or cancellation | Capture identity | Release acknowledgment or explicit refusal |
 
 Changing coverage follows the staged cutover in [Synchronization](synchronization.md#changing-coverage).
-Exact synchronization reply names and coverage-change envelopes remain open.
+[Synchronization envelopes](synchronization-messages.md) and
+[coverage-change controls](coverage-changes.md) fix the concrete requests and replies.
 
 ## History query control
 
-| Proposed message | Expected user and purpose | Request | Result |
+| Message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
 | `ReleaseHistoryView` | Query caller frees an Asset, Observation, or Track history view after paging or cancellation | The view's source-bound release token | Idempotent release acknowledgment or explicit refusal under [history query rules](history-queries.md#release-expiry-and-capacity) |
 
-Continuation and release keep the original HTTP or local owner across cache-option
+[History messages](messaging/history.md) define exact allocation, query, page, and
+release fields. Continuation and release keep the original HTTP or local owner across cache-option
 changes. Release of a local view is local and does not mutate Core's retained history.
 
 [Next: wire conventions](wire.md)

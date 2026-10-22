@@ -1,10 +1,8 @@
 # Telemetry
 
 Telemetry is the complete section for an Entity's location and motion.
-A report supplies the whole section, including defined null values.
-The same whole-snapshot ordering applies to Asset and Observation Telemetry. The
-source assembles the snapshot; Core does not merge independently arriving quantities.
-The default Track retains that snapshot and its source evidence.
+A report supplies the whole section, including defined null values. The source
+assembles it without Core merging quantities. Default Tracks retain its source evidence.
 
 ## Fields
 
@@ -15,10 +13,8 @@ The default Track retains that snapshot and its source evidence.
 | `ground_speed` | Number or null | Required | Horizontal metres per second, at least zero; null when unknown |
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
-The enclosing result carries [shared section metadata](README.md#shared-section-results).
-Unknown readings do not imply an error. Actual failures use the shared error
-representation. Body heading belongs in [Attitude](attitude.md), separately from
-direction of travel.
+Use [shared section metadata](README.md#shared-section-results) and its error result
+for acquisition failures. Body heading belongs in [Attitude](attitude.md).
 
 ## Position
 
@@ -50,9 +46,6 @@ explicit `wgs84_ellipsoid` reference. AGL and MSL must not be silently substitut
 | `metres` | Number | Required, non-null | Finite signed metres; negative and zero are allowed |
 | `reference` | String | Required, non-null | Exactly `wgs84_ellipsoid` |
 
-This object has no operational height limit beyond finite binary64 representation.
-The containing field defines how unknown altitude uses null or omission.
-
 - Valid: `{"metres": -12.5, "reference": "wgs84_ellipsoid"}`.
 - Invalid reference: `{"metres": 120, "reference": "agl"}`.
 
@@ -68,9 +61,6 @@ Valid complete Telemetry value:
 }
 ```
 
-Omitted `airspeed` is allowed. Neither omission nor null
-substitutes an older subfield value.
-
 This fragment is an invalid replacement because required fields are missing:
 
 ```json
@@ -79,54 +69,28 @@ This fragment is an invalid replacement because required fields are missing:
 
 ## Use and source times
 
-A mounted camera can retain a complete Telemetry section as state until changed.
-Aircraft and a commandless vehicle tracker can report it as dated measurements.
-This does not require every Entity to have Telemetry.
+Telemetry is optional on Assets, Observations, and derived Tracks. A mounted camera
+can retain state until changed. Moving sources can report dated measurements.
+The `source_times` keys are exactly `position`, `altitude`, `ground_speed`, and
+supplied `airspeed`. Position is one quantity, not separate coordinate times.
+Explicit null means unknown time. A new snapshot cannot refresh older readings.
 
-The [`UpdateAsset`](../messaging/assets.md#updating-sections) message
-carries this Asset section.
+## Constituent reading identity
 
-The enclosing result's `observed_at` is the default source time. Its `source_times`
-may override `position`, `altitude`, `ground_speed`, and supplied `airspeed`.
-Position is one complete quantity, not separate latitude and longitude observations.
-Explicit null means an unknown time. A fresh snapshot cannot refresh older readings.
-Uncertainty fields remain deferred. Schemas must declare exact Observation and Track applicability.
+Every supplied Telemetry quantity, including a null value, carries the exact
+`constituents` evidence defined in [report format](../report-format.md).
+A constituent identifies a reading, not the Observation Entity. Position has one
+identity for the complete pair. Corrections preserve identity and source time.
+Tracks retain original Observation scopes. Whole-section ordering stays separate.
 
-## Constituent observation identity
+| Later complete snapshot | Required history outcome |
+| --- | --- |
+| Sequence 11 repeats position P1 revision 0, value, and source time null while adding new speed | No extra position reading or fresh position age |
+| Sequence 12 uses new P2 revision 0 with the same coordinates and null time as P1 | A distinct position reading |
+| Sequence 13 corrects P2 at revision 1, preserving its original time | A correction to P2, with no new reading or fresh age |
 
-Each supplied quantity carries a source-assigned observation ID and correction revision
-as source evidence, separate from the complete section's sequence and delivery identity.
-This constituent ID identifies a reading, not the persistent Observation Entity.
-Scope the ID by Dataset, Entity, originating source, and quantity. The originating
-source is the Asset process generation or the Observation's stable publisher.
-A carried-forward reading retains its original scope, including across Asset process
-replacement. Credentials and gateways do not affect constituent observation identity.
-Derived Tracks retain their contributors' original scopes, IDs, and revisions.
-
-Carrying a reading into a later snapshot preserves its ID, revision, value, and original
-source time, including unknown time. Supply `source_times` when that time differs from
-the new `observed_at`, including explicit null. Core never fills from the prior section.
-A genuinely new reading gets a new ID even when its value and source time are identical.
-Neither equal values nor equal or unknown timestamps establish duplicate observations.
-
-A correction keeps the observation identity and original source time and increases its
-revision. The same identity and revision must repeat identical facts. Conflicting reuse
-or a revision below the highest accepted revision rejects the update atomically.
-A newer section sequence cannot authorize a stale constituent revision. Observation IDs
-and correction revisions do not change whole-section ordering or permit subfield updates.
-
-These examples use one Entity and source. Every row supplies a complete snapshot with
-position, altitude, and ground speed. Other quantities carry forward unless stated.
-
-| Case | Constituent evidence in the later snapshot | Movement result |
-| --- | --- | --- |
-| Carried-forward reading | Sequence 11 adds a new speed reading but repeats position `P1`, revision 0, coordinates, and source time null from sequence 10 | Retain the new speed observation only; no extra position observation or fresh position age |
-| New equal reading | Sequence 12 supplies position `P2`, revision 0, with the same coordinates and null source time as `P1` | Retain a distinct position observation despite the identical value and unknown time |
-| Correction | Sequence 13 supplies corrected coordinates for `P2`, revision 1, keeping its null source time | Retain the correction against `P2`; no new reading or fresh age; repeating revision 1 adds no correction |
-
-For known equal times, `P1` and new reading `P2` can both have source time
-`2026-10-20T12:00:00Z`. The correction of `P2` keeps that time even in a snapshot
-whose `observed_at` is later. A conflicting revision 1 or later reuse of revision 0
-is rejected. Exact metadata fields remain for the concrete message schemas.
+Equal known timestamps also never merge readings. Changed equal-revision facts
+and new submissions carrying stale revisions reject atomically. Accepted replay
+remains harmless. See the [history-only admission example](../report-evidence.md#independent-acceptance-example).
 
 [Component index](README.md)

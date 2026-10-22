@@ -19,8 +19,8 @@ retry identity. Omitted fields and explicit null also differ.
 
 SDK exposes a lossless JSON representation for these payloads. Callers retain their
 prepared inputs for retries. Supported browsers must preserve the same facts as
-other runtimes. Qualify a browser-compatible codec before claiming support; ordinary
-number parsing is not a fallback. Native JSON APIs are not Protocol requirements.
+other runtimes. A browser-compatible lossless codec is required; ordinary
+number parsing is not a fallback. Codec conformance remains unmeasured.
 
 ## Admission and state
 
@@ -67,5 +67,35 @@ outcome under the original Operation identity. Reads of that Operation include t
 recovered outcome, known effects, and any result links. The original state remains
 `interrupted`. Recording recovery does not create another Operation or authorize
 another execution.
+
+## Public Operation view
+
+Every read returns `operation_id`, `plugin_installation_id`, `capability_id`,
+`plugin_release`, `input`, `state`, `known_effects`, `result_object_ids`, and
+`recovered_outcome`. The selected release is an opaque nonblank string of at most
+256 scalar values from Plugin discovery. It stays immutable after uninstall.
+`input` and `known_effects` are lossless Plugin JSON. Null means no known effects;
+an accepted non-null effect record must remain visible. `result_object_ids` is a
+unique UUID array, initially empty. Missing files do not reverse processing outcome.
+
+`completed` requires `output`; other states omit it. Explicit null is valid.
+`failed` requires `error`, with `code` and optional `message`; other states omit it.
+`interrupted` does not invent an output or hide known effects.
+`recovered_outcome` is initially null. After recovery it is exactly:
+
+| Field | Required meaning |
+| --- | --- |
+| `outcome_id`, `revision` | Original terminal evidence UUID and positive uint64 revision, retained unchanged across replay |
+| `state` | `completed`, `failed`, or `cancelled`, never another invocation |
+| `known_effects`, `result_object_ids` | Retained Plugin JSON and unique Object IDs |
+| `output`, `error` | The same state-dependent presence rules as the ordinary outcome |
+
+Exact evidence repeats return the accepted revision without another effect.
+Conflicting reuse is refused. Before a recovered terminal outcome, cumulative
+progress may add known effects without restoring execution. The first accepted
+terminal recovery fixes the outcome, output/error, effects, and result links.
+Later evidence cannot rewrite that terminal result.
+Recovery never changes the original `interrupted` state or dispatches work anew.
+Private evidence delivery and acknowledgments belong to Core, not this public view.
 
 [Next: Objects](objects.md)

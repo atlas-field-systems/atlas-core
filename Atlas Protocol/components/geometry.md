@@ -28,15 +28,18 @@ checks on binary64 coordinates without grid snapping or decimal truncation.
 Accept only these two-dimensional geometry objects. Feature wrappers, collections,
 holes, and multipart geometry are unsupported. The planar boundary profile below
 defines the excluded dateline and pole cases.
-The proposed initial cap is 1,024 coordinate pairs in total, including a ring's
-repeated closing pair. It requires qualification. Command altitude uses the explicit
+The initial cap is 1,024 coordinate pairs in total, including a ring's
+repeated closing pair. Command altitude uses the explicit
 [Altitude](telemetry.md#altitude) value.
 
 Refuse malformed shapes as `invalid_geometry`, excluded representations as
 `unsupported_geometry`, and excess vertices as `geometry_limit_exceeded`. Never
 silently close, simplify, reorient, split, or repair submitted geometry.
 
-The vertex cap alone does not establish bounded validation cost. Qualification must
+For reported Geometry, the only `source_times` key is `geometry`, dating the whole
+shape. Authored Geofeature Geometry has no measurement timestamps.
+
+The vertex cap does not replace a bound on validation work. Qualification must
 cover adversarial valid shapes and complete messages, as described in
 [Core qualification](../../Atlas%20Core/protocol-qualification.md).
 

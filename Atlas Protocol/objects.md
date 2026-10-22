@@ -32,6 +32,8 @@ A required Task result creates a deletion hold until Reset, even after the Task
 terminates. Any remaining hold blocks deletion. Holds and deletes serialize: a
 hold committed first protects the Object; a deletion committed first cannot be
 undone by a later declaration or upload retry. Neither result changes Task outcome.
+Ready-file discovery also follows [Task declarations](tasks.md#references-and-results),
+so a declared file is discoverable without a duplicate upload association.
 
 Deleting an unprotected Object cuts off new public reads when the tombstone
 commits. An already-open download may finish. Physical cleanup can follow, but

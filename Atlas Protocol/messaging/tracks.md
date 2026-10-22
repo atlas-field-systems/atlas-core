@@ -7,7 +7,7 @@ associations, and determines their reported state. Asset runtimes publish throug
 
 ## Reads and descriptions
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `ListTracks` | Operator app browses or searches shared targets | Bounded filters | Matching Track views |
 | `GetTrack` | Operator app or analysis tool inspects a target | Track ID | Current Track view with Observation and evidence provenance |
@@ -19,7 +19,7 @@ There is no individual deletion message for retained Tracks.
 
 ## Sources and evidence
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `GetTrackObservations` | Operator app or processing integration inspects a target's sources | Track ID and bounded query, optionally filtered by recorded source Asset or publisher | Contributing Observation views with association provenance |
 | `GetTrackMovementHistory` | Analysis tool or operator app reviews target movement | Track ID and [bounded history query](../history-queries.md) | Frozen pages of retained movement with original source evidence and times |
@@ -36,7 +36,8 @@ silently rewrite Object metadata or duplicate files.
 
 Track schemas select applicable [shared components](../components/README.md).
 [Type](../components/type.md#observed-subject-type) describes the target, with provenance
-from the policy's inputs. The exact derived-state schema remains a proposal.
-External fusion publication and handover messages require a later contract.
+from the policy's inputs. Initial composition and derivation follow [Entities](../entities.md#component-composition)
+and the [default policy](../tracks.md#default-policy). External fusion publication,
+merge/split, and handover are unsupported initially.
 
 [Messaging index](../messaging.md)

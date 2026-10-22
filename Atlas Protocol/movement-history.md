@@ -3,7 +3,7 @@
 **Movement history retains accepted measurements and their corrections.**
 It is separate from the latest Entity section and from general activity records.
 [Reports](reports.md#movement-and-recovery) owns measurement admission and retention;
-[Telemetry](components/telemetry.md#constituent-observation-identity) owns reading
+[Telemetry](components/telemetry.md#constituent-reading-identity) owns reading
 identity, original source times, and correction revisions.
 
 ## Query coverage
@@ -61,7 +61,28 @@ retained volume. Bound snapshots, whole change batches, decoded data, and total
 client storage before allocation. No implicit eviction or history window may make
 an enabled cache claim complete coverage. Unsupported capacity is explicit.
 
-Exact history schemas, correction representation, and query envelopes remain
-to be authored with independent HTTP/Full equivalence and recovery fixtures.
+## Reading representation
+
+A history `reading` requires `source_entity_kind`, `source_entity_id`, `quantity`,
+`value`, `observed_at`, `source_evidence`, `time_status`, and `track_ids`. Source kind is `asset`
+or `observation`; quantity is `position`, `altitude`, `ground_speed`, or `airspeed`.
+Value uses that quantity's shared component type and permitted nulls. `source_evidence`
+is exactly the constituent metadata from [report format](report-format.md), retaining
+its original origin, identity, and correction revision. It is not another report envelope.
+`observed_at` is the effective original quantity time after the section's timestamp
+override, retaining its spelling or null. `time_status` is `known`, `unknown`, or
+`uncertain`; unknown requires null, while known and uncertain require a timestamp.
+`track_ids` is a unique UUID array of associated Tracks at the captured boundary,
+empty for Asset readings. The default policy shares the original Observation reading
+with its Track, without a second measurement identity. Corrections replace that
+reading's retained revision and keep the original time.
+
+The full identity tuple in [history queries](history-queries.md#selection-and-exact-order)
+identifies a reading. Pages and synchronization carry its complete retained revision.
+A `history_entity` marker supplies kind, ID, version, and deletion status for known
+Entities, including those with no readings. It is coverage metadata, not a measurement.
+Snapshots include these markers; commits maintain them atomically with Entity changes.
+No reading tombstone or automatic history expiry exists in the initial Dataset.
+HTTP/Full equivalence and recovery fixtures remain unexecuted implementation work.
 
 [Next: tasks](tasks.md)

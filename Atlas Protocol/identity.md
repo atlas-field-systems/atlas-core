@@ -22,6 +22,14 @@ A trusted gateway can translate radio evidence. Core validates the reported fact
 not physical truth. Gateway or key replacement preserves Observation publisher and
 original report evidence identity. It does not create a new reporting source.
 
+## Entity identity
+
+Entity IDs are immutable and unique across Entity types within the Dataset.
+Deleted Asset and Geofeature IDs remain reserved until Reset. Observations and
+Tracks retain their IDs until Reset. Optional Entity aliases are unique across
+all Entity types, ignoring Unicode case. Preserve the submitted spelling.
+Deleting an Entity releases its alias, without permitting reuse of its ID.
+
 ## Enrollment and credentials
 
 Prepare stable registration/request IDs and recoverable credential material before
@@ -34,8 +42,7 @@ identity and current resource, not defaults, and does not replace or reveal the 
 Local administration provisions the first API key before public-API use. An existing
 valid key authorizes public enrollment under the same permissions as other writes.
 Open enrollment is local-only and off by default. Record its provenance; warn
-while it is enabled or unrevoked open
-enrollments remain. Turning it off does not revoke existing bindings. Cleanup must
+while enabled or unrevoked open enrollments remain. Turning it off does not revoke existing bindings. Cleanup must
 identify and confirm the exact bindings, including bindings whose Entities were
 cleared by Reset, without affecting a later replacement.
 
@@ -52,8 +59,7 @@ First-key provisioning and credential replacement are local administration.
 Asset deletion atomically removes the Entity, revokes associated credentials, and
 publishes the deletion. Unfinished Tasks do not block it. Their records, original
 Asset references, and accepted evidence remain. Deletion does not change their
-execution state or release their reference guards. Deletion closes reporting for
-the Asset ID. Core refuses new Tasks and updates for that identity, regardless of
+execution state or release their reference guards. Deletion closes the Asset's own reporting for that ID. Core refuses new Tasks and updates for that identity, regardless of
 submitting key. This includes `UpdateAsset`, `ReportTaskExecution`,
 `ReportTaskResults`, and `ConfirmTaskOrder`, even for evidence generated before
 deletion.
@@ -65,7 +71,10 @@ T retains its last accepted execution state and reference guards.
 Updates and registration retries cannot recreate a deleted Asset. Deleted IDs follow
 [Entity lifetime rules](entities.md). The physical system may register again with
 a new Asset ID and credentials under the normal [enrollment rules](#enrollment-and-credentials).
-Previous Tasks remain attached to their original Asset ID.
+Previous Tasks remain attached to their original Asset ID. Existing Observations
+remain reportable under their recorded publisher and current valid authority,
+even after source Asset deletion. Keep deleted source attribution. New Observations
+cannot name a deleted source Asset. A replacement Asset never inherits old records.
 
 Credential replacement revokes the previous binding; old actions cannot revoke a
 newly created binding by accidentally reusing an ID.
@@ -73,5 +82,10 @@ newly created binding by accidentally reusing an ID.
 Revocation takes effect at commit, including open feeds and uploads awaiting
 publication. Recheck authorization at the final effect boundary. Refusal after
 revocation says nothing about whether an earlier request already committed.
+
+## Operator profiles
+
+[Operator rules](operators.md) define profile lifetime, explicit key bindings,
+atomic deletion/revocation, and retained attribution. Names grant no authority.
 
 [Next: reports](reports.md)

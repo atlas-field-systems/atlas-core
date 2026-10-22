@@ -3,7 +3,7 @@
 **These are qualification inputs and acceptance requirements, not measured results.**
 This documentation-only baseline has run none of the runtime cases below.
 
-## Existing initial targets
+## Selected baseline targets
 
 Use one server, one or two operators, 20 Assets reporting twice per second, and
 200 Observations reporting once per second concurrently.
@@ -18,11 +18,13 @@ Include retained evidence, terminal records, selected coverage, staging, and dec
 memory. Test a 10× burst, ten-minute backlog, slow consumer, and four concurrent 1 GB
 uploads plus downloads. Typical files are 100 MB; plan for 10 GB per day.
 
-## Proposed cumulative-turnover fixture
+## Selected cumulative-turnover pressure fixtures
 
-These turnover rates are proposed test assumptions, not approved deployment or
-capacity targets. Start with 200 Observations and their default Tracks. Replace one
-reporting Observation per turnover event; keep 200 reporting once per second.
+These are selected pressure tests, not additional supported-workload requirements.
+An explicit resource-limited outcome is valid when selected coverage exceeds its
+configured budget. They require no larger client limit. Start with 200 Observations
+and their default Tracks. Replace one reporting Observation per turnover event;
+keep 200 reporting once per second.
 Retain inactive records and history until Reset. Creation's initial evidence counts
 toward the report rate; seed creation is outside the timed interval. At turnover
 rate r over t seconds, each type has N = 200 + r × t records. Restart does not reduce N.
@@ -48,33 +50,26 @@ readings before any Observation/Track history: a count-pressure case at initial 
 Carried-forward readings add none; corrections replace a revision of the same reading.
 
 Fix payload sizes, disk budget, and headroom before each run; record counts and
-encoded bytes at checkpoints. Supported turnover and retained totals remain unqualified.
+encoded bytes at checkpoints. Resource counts alone do not prove byte or RAM fit.
 
 ## Initial budgets and accounting
 
-Both byte and count limits apply. Settings require measurement and reviewed tuning.
-
-| Boundary | Byte budget | Count or time budget |
-| --- | --- | --- |
-| Request/file admission | 1 MiB JSON; 2 GB per file | Four uploads; 1,000 outstanding Tasks per Asset; 32 sync connections |
-| Object storage | 16 GB quota; 8 GB headroom | Aggregate storage accounting still applies |
-| Complete sync message | 4 MiB | 1,000 changes |
-| Pending sync connection | 4 MiB | Whole messages only |
-| Retained replay | 64 MiB | 15 minutes |
-| SDK picture | 512 MiB | 100,000 resource images and history readings across selected coverage |
-| SDK journal | 16 MiB | 10,000 complete commits |
+Use the selected [Core limits](limits.md) and unchanged initial
+[SDK picture budgets](../Atlas%20SDK/picture.md#capacity-and-retry).
+Both byte and count limits apply. No pressure case implies automatic budget expansion.
 
 Measure aggregate RAM for caches, old picture, staging, indexes, decoded values, journal,
 query references, and frozen revisions. Encoded bytes do not prove fit. Bound views and
 references before allocation. Charge database, history, indexes, captures, files,
 Plugin work, and logs to aggregate disk.
-Use typed `413 payload_too_large`, `429 resource_limit`, and `507 storage_limit`
-refusals. Lower limits govern new admission, not silent deletion or cancellation.
+Use the typed refusals defined in those limits. Lower settings govern new admission,
+not silent deletion or cancellation.
 
 ## Full snapshot, recovery, and capacity acceptance
 
 1. At seed, four hours, and eight hours, test all four Observation/history switch
-   combinations under continued reports. Check retained totals, inactive/deleted-source
+   combinations under continued reports. Declare expected ready or resource-limited
+   coverage from fixed inputs and budgets. Check retained totals, inactive/deleted-source
    evidence, provenance, and ages independently, including unknown IDs versus known-empty
    history for retained/deleted Entities. Ready reads use no HTTP; off reads use explicit
    HTTP. Loading never looks empty.
@@ -92,10 +87,11 @@ refusals. Lower limits govern new admission, not silent deletion or cancellation
    within its own limits, exposes unavailable coverage, and never silently evicts history,
    disables the requested option, falls back to HTTP, or repeatedly rebuilds. Explicit retry
    owns one recovery; unchanged insufficient limits pause again. Core retains all facts.
-5. Measure p95 ordinary requests below 250 ms, ready-picture lag below one second, and
-   initial load below ten seconds where selected coverage fits. Report base readiness and
-   each optional backfill separately. Capacity stops pass only declared pressure cases;
-   qualify larger history budgets on real clients before claiming that workload is supported.
+5. Target p95 ordinary requests below 250 ms, ready-picture lag below one second, and
+   initial load below ten seconds where coverage fits. Report base readiness and each
+   optional backfill separately. Capacity stops pass declared pressure cases only when
+   independently expected. Baseline base-picture failure remains a qualification failure.
+   Do not raise client budgets or reduce retention to make a fixture pass.
 
 Follow [Protocol recovery](../Atlas%20Protocol/synchronization.md) and
 [SDK capacity](../Atlas%20SDK/picture.md#capacity-and-retry). Report revision, inputs,

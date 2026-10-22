@@ -13,7 +13,7 @@ start and exclude the end. Unknown Entity IDs differ from known-empty results,
 including deleted Assets whose retained history has no matching readings.
 
 Known-time readings sort by exact source instant under [Wire](wire.md#common-representation),
-then by complete [constituent identity](components/telemetry.md#constituent-observation-identity).
+then by complete [constituent identity](components/telemetry.md#constituent-reading-identity).
 Within the fixed Dataset, compare the tuple of source Entity kind and ID, origin
 kind and ID, quantity, and constituent ID bytewise by field. A raw constituent ID
 alone is not globally unique. Timestamp string order or rounded milliseconds cannot
@@ -44,7 +44,8 @@ source; continuation also binds its position. HTTP views bind the Core run. Loca
 views bind the SDK instance, picture generation, and required history coverage.
 Continuation and release always use that original owner, including an HTTP query
 opened before local history was enabled. Options never redirect an existing token
-or trigger an invisible replacement query. Recheck validity and authorization after waits.
+or trigger an invisible replacement query. Recheck view validity after waits. HTTP work also rechecks current authority;
+stale local reads follow [temporary-read rules](temporary-reads.md#continuation-and-release).
 
 ## Release, expiry, and capacity
 
@@ -68,7 +69,9 @@ receipts before proportional allocation. An over-limit first page reports
 Charge views and their retained data to aggregate capacity. Under pressure, expire
 temporary history views and recheck whole-commit capacity before pausing otherwise
 viable synchronization or refusing writes. Never evict retained source history or
-silently truncate a query to fit. Exact schemas and error envelopes remain to be authored.
+silently truncate a query to fit. [Temporary contexts](temporary-reads.md) fix
+allocation fields, expiry, finite counts, and release acknowledgment. Full request
+and page fields are defined in [history messages](messaging/history.md).
 
 ## Independent acceptance example
 

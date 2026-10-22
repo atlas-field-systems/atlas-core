@@ -39,6 +39,10 @@ reconciliation, not attaching an old request to the new Dataset. Installation-li
 API-key creation is a specific exception in identity lifetime, not automatic retry
 permission across Dataset changes.
 
+Known key rejection blocks network attempts under [authorization recovery](authorization.md).
+Only authenticated discovery with a changed credential can reopen them. Recovery
+never resubmits prepared writes; the caller must deliberately retry or reconcile.
+
 ## Files and processing
 
 A replayable upload source provides stable descriptor fields plus an `open` function

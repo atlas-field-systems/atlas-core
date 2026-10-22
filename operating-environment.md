@@ -1,7 +1,7 @@
 # Operating environment
 
-This page records the expected conditions around Atlas. Protocol, Core, and SDK
-pages own the detailed behavior. Unconfirmed design assumptions are marked below.
+This page defines the deployment requirements around Atlas. Protocol, Core, and SDK
+pages own the detailed behavior.
 
 ## Expected deployment
 
@@ -26,7 +26,7 @@ pages own the detailed behavior. Unconfirmed design assumptions are marked below
   This is an acceptable operating condition, not a fixed disconnection limit.
 - Extreme disaster-survival guarantees are outside the intended scope.
 
-## Existing design assumptions to confirm
+## Deployment prerequisites
 
 - A small field team uses one Linux installation. Initial targets are one or two
   operators, about 20 Assets, and 200 Observations reporting concurrently. The baseline

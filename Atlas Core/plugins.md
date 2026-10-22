@@ -6,10 +6,26 @@ make its published Atlas results unreadable.
 
 ## Installation and trust
 
-Install an explicitly selected, immutable local bundle with image digest, package
-identity/version, supported public/private editions, capability IDs, and local
-input/output/configuration schemas. No remote schema references. Installed,
-enabled, and runtime-available are different states.
+Install an explicitly selected, immutable local directory bundle. Its `plugin.json`
+manifest declares `package_id`, `package_version`, exact `protocol_version`, private
+`dispatch_version` equal to `1`, `image_digest`, `configuration_schema`, and `capabilities`.
+Package and capability IDs are UUIDs. Versions are nonempty exact strings, not ranges.
+The image is preloaded and named by its SHA-256 digest; installation never pulls it.
+
+Each capability declares its ID and input, output, and known-effects schema references.
+Each schema reference names a relative file and its SHA-256 digest. References stay
+within the bundle under the [selected schema profile](build-profile.md#schema-profile).
+Reject unknown manifest properties, duplicate IDs, digest mismatches, symlinks,
+path escapes, and unsupported editions before changing the installed selection.
+The SHA-256 of the exact manifest bytes identifies the bundle and binds its image
+and schemas. A package/version pair cannot name different bundle digests.
+
+Core validates configuration and Operation payloads against those installed schemas.
+Accepted Operations retain their original manifest/schema copies until Reset,
+including after uninstall, so recovered evidence uses the original definitions.
+Private dispatch carries the selected digests and configuration revision; readiness
+must match them. Installed, enabled, and runtime-available are different states.
+The [finite bundle and runtime limits](limits.md) apply before allocation.
 
 A Plugin is trusted extension code, not a hostile-code sandbox. Give it its own
 credential and owned work area, not Docker access or Core's database/files.
@@ -27,24 +43,11 @@ does not depend on the submitting API key. Observation publishers follow
 Protocol defines [Operation admission, state, and recovery](../Atlas%20Protocol/operations.md).
 Core enforces that contract through durable exposure records and runtime verification.
 
-Use authenticated Plugin-initiated long polling over a private Unix channel. Bind
-runtime identity to installation, principal, Dataset, Core run, and process generation.
-Verify readiness against the selected artifact, configuration, and capabilities.
-
-Core records possible exposure before sending work. The Plugin atomically records
-receipt identity and input digest before effects. Exact redelivery is safe only to
-the same verified live runtime; conflicting input is an error. Retain even completed,
-acknowledged receipts until that runtime ends. A reused container name is not proof
-of runtime continuity.
-
-Reserve cumulative receipt capacity before accepting new Operations. At exhaustion,
-refuse fresh work while keeping retries, reports, and cancellation usable. Do not
-automatically evict receipts or restart. Manual protected restart recovers capacity.
-This prevents duplicate dispatch; it does not promise exactly-once external effects.
-
-Persist unacknowledged terminal evidence and known effects before reporting. Core
-acknowledges its exact accepted revision. Evidence cleanup must not remove live
-receipt protection. Use the durable exposure records to apply Protocol's recovery rules.
+Use the [private execution contract](plugin-runtime.md) for authenticated long polling,
+receipt protection, cancellation, evidence revisions, and exact acknowledgments.
+Core records possible exposure before delivery. Runtime loss never authorizes
+re-execution of possibly exposed work. This prevents duplicate dispatch; it does not
+promise exactly-once external effects.
 
 ## Independent lifecycle and storage
 

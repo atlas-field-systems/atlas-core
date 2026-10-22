@@ -6,7 +6,7 @@ It has no Asset enrollment or Observation publisher inputs.
 
 ## Messages
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `CreateGeofeature` | Operator app or import tool authors a point, line, or area for planning | Stable Geofeature and request IDs, required Geometry, and permitted initial description | Created Geofeature |
 | `ListGeofeatures` | Operator app browses authored geometry for display or Task selection | Bounded filters | Matching Geofeature views |

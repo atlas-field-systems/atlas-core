@@ -1,27 +1,31 @@
 # Description
 
-Description supplies the human-readable name and details shown for an Entity.
-It is authored data. Asset descriptions use `UpdateAsset`. Observation, Track, and Geofeature
-descriptions use their respective edit messages and descriptive revision checks.
-The fields and bounds below are proposals.
+Description supplies an Entity's authored display name and plain-text details.
+It is optional. When supplied, the complete value has the following fields.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
-| `name` | String | Required, non-null | Nonblank display name, at most 128 characters |
-| `description` | String | Optional, non-null | Plain-text details, at most 4,096 characters; omit when absent |
-| `manufacturer` | String | Optional, non-null; Assets only | Nonblank hardware manufacturer, at most 128 characters |
-| `model` | String | Optional, non-null; Assets only | Nonblank hardware model, at most 128 characters |
+| `name` | String | Required, non-null | Nonblank display name, at most 128 Unicode scalar values |
+| `description` | String | Optional, non-null | Plain-text details, at most 4,096 Unicode scalar values |
+| `manufacturer` | String | Optional, non-null, Assets only | Nonblank hardware manufacturer, at most 128 Unicode scalar values |
+| `model` | String | Optional, non-null, Assets only | Nonblank hardware model, at most 128 Unicode scalar values |
 
-Names need not be unique. Stable IDs and unique aliases follow [Entity rules](../entities.md).
-[Type](type.md) describes what the Entity is. A model name does not establish Type.
-Description does not contain measurement timestamps or a standing error field.
-Asset updates replace the complete supplied section under [update rules](../reports.md#shared-context).
+Nonblank means containing a character outside Unicode White_Space. Values retain
+their accepted spelling. Names need not be unique. IDs and aliases follow
+[Entity rules](../entities.md). [Type](type.md) remains separate from model names.
+Omitted optional fields are absent, not null. An absent Description has no generated
+name. Applications can display the Entity ID instead.
+
+Asset descriptions use `UpdateAsset`. Other Entity types use their descriptive
+edit messages. Changes carry `expected_edit_revision` under
+[Entity ownership](../entities.md#data-ownership). An Asset's supplied Description
+replaces the whole section. Description carries neither report timestamps nor errors.
 
 ## Examples
 
-Valid Asset description under the proposal:
+Valid Asset description:
 
 ```json
 {

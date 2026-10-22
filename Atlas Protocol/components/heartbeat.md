@@ -1,51 +1,44 @@
 # Heartbeat
 
-Heartbeat carries contact evidence and exposes the contact Core has accepted.
-It can establish fresh contact without resending unchanged position or camera
-calibration. [Reports](../reports.md#time-and-contact) owns proof acceptance and
-expiry. The input and output layouts below are proposals.
+Heartbeat supplies Asset contact proof without resending measurements.
+[Contact](../contact.md) owns challenge acceptance and expiry.
+The [report envelope](../report-format.md) carries proof separately from sections.
 
-## Proposed evidence fields
-
-| Field | Type | Presence | Meaning |
-| --- | --- | --- | --- |
-| `challenge_id` | UUID string | Required when supplying contact proof | Core challenge answered by the reported Asset/process |
-
-The containing update supplies the [shared source context](../reports.md#shared-context).
-A challenge reference is evidence only when validated with the original source
-facts and the existing challenge rules. A gateway's own response is not Asset proof.
-Heartbeat evidence can accompany `UpdateAsset` without changing a measured section.
-The evidence envelope and challenge exchange remain proposed, not a complete handshake.
-
-## Proposed read fields
+## Evidence fields
 
 | Field | Type | Presence | Meaning |
 | --- | --- | --- | --- |
-| `last_contact_at` | UTC timestamp string or null | Required, read-only | Core receipt time of the latest accepted fresh-contact evidence in the current Core run; null before any |
+| `challenge_id` | UUID string | Required in `contact_proof` | Core challenge answered by the named Asset process |
 
-Core uses monotonic elapsed time for expiry. This UTC display timestamp is not
-permission to calculate a different freshness clock. [Communications](communications.md)
-owns the derived health view. Heartbeat is not an independently writable sensor
-section and does not refresh other sections' measurement times.
+Proof uses the report's Dataset, Entity, and Asset process context. Challenge
+issuance and process replacement use [Asset exchanges](../messaging/assets.md).
+A gateway response alone is not proof from its downstream Asset.
+Heartbeat has no classification, measurement timestamp, or `source_times`.
+
+## Read fields
+
+| Field | Type | Presence | Meaning |
+| --- | --- | --- | --- |
+| `last_contact_at` | UTC timestamp string or null | Required, read-only | Core receipt time of the latest accepted fresh proof in this Core run; null before any |
+
+Core uses monotonic elapsed time for expiry. The display timestamp does not select
+a different freshness clock. [Communications](communications.md) exposes derived
+health. No report can write `last_contact_at` or refresh another section's age by
+changing contact evidence. Registration initially exposes null.
 
 ## Examples
 
-Proposed proof fragment, requiring its enclosing source context:
+Proof payload inside an Asset report:
 
 ```json
 {"challenge_id": "143c5ce7-f80e-4c4e-94af-8af39d995487"}
 ```
 
-Before fresh contact, the proposed read fragment is `{"last_contact_at": null}`.
-Invalid proof fragment because a submitted health flag is not contact evidence:
+Before fresh contact, the read value is `{"last_contact_at": null}`.
+Invalid proof because a health flag is not challenge evidence:
 
 ```json
 {"healthy": true}
 ```
-
-## Decisions to settle
-
-Confirm evidence fields, challenge and result messages, and exactly how the read
-timestamp relates to retained receipt facts.
 
 [Component index](README.md)

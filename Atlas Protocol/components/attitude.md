@@ -1,58 +1,52 @@
 # Attitude
 
-Attitude owns body heading, pitch, and roll in a frame aligned to true north.
-Heading belongs here rather than in Telemetry. Gimbal bearing describes the
-camera's viewing direction, which can differ from the body's heading.
-The angle representation, bounds, and null choices below are proposals.
+Attitude owns body heading, pitch, and roll relative to true north.
+Gimbal describes viewing direction separately. Direction of travel is not inferred.
 
-## Proposed frame and fields
+## Frame and fields
 
-Use a local North-East-Down frame aligned to true north, with heading, pitch, and roll
-Euler rotations in intrinsic Z-Y-X order. Angles use degrees. A level body pointing
-north has zero heading, pitch, and roll. Magnetic or mounting-relative readings
-must be converted by the external source before submission.
+Use a local North-East-Down frame and intrinsic Z-Y-X Euler rotations.
+Angles use degrees. A level body pointing north has all three angles zero.
+The external source converts magnetic and mounting-relative measurements.
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
-| `heading` | Number or null | Required | Body forward direction clockwise from true north, 0 inclusive to 360 exclusive; 90 is east |
+| `heading` | Number or null | Required | Forward direction clockwise from true north, 0 inclusive to 360 exclusive; 90 is east |
 | `pitch` | Number or null | Required | Nose-up angle above the local horizon, -90 through 90 inclusive |
 | `roll` | Number or null | Required | Rotation about the forward axis, positive right side down, -180 inclusive to 180 exclusive |
 
-All numbers are finite. Null means the angle is unknown. Actual measurement
-failures use the [shared section error representation](README.md#shared-section-results).
-The enclosing result carries `observed_at`; report the complete Attitude value.
-The source declares state until changed or dated measurement under [Entity rules](../entities.md#reported-sections).
+All numbers are finite. Null means unknown, including an undefined angle.
+At pitch exactly -90 or 90, both heading and roll must be null. They cannot be
+independently recovered from this Euler representation. Reject non-null values in
+that singular case. At a geographic pole, the source reports heading null when
+true north is undefined. Core does not invent a heading from an earlier reading.
+Actual acquisition failures use a [section error](../report-evidence.md).
 
-True north defines the horizontal reference. Pitch and roll are tilt angles in
-that frame, not separate compass bearings. Direction of travel is a different
-quantity. Attitude does not infer it from heading.
+The complete value declares state until changed or dated measurement.
+Allowed `source_times` keys are exactly `heading`, `pitch`, and `roll`.
+Different quantity times remain different. One complete section is not a claim
+that all three angles were measured simultaneously.
 
 ## Examples
 
-Valid under the proposed field contract:
+Valid ordinary orientation:
 
 ```json
-{
-	"heading": 90,
-	"pitch": 5,
-	"roll": -10
-}
+{"heading": 90, "pitch": 5, "roll": -10}
 ```
 
-Invalid because 360 is outside the proposed heading interval:
+Valid vertical orientation:
 
 ```json
-{
-	"heading": 360,
-	"pitch": 0,
-	"roll": 0
-}
+{"heading": null, "pitch": 90, "roll": null}
 ```
 
-## Decisions to settle
+Invalid singular orientation:
 
-Confirm the Euler convention and behavior at vertical orientations, where heading
-and roll are not independently determined. Angle readings from different times
-must retain those times rather than imply one coherent new orientation.
+```json
+{"heading": 0, "pitch": 90, "roll": 0}
+```
+
+Heading 360 and roll 180 are also invalid endpoint values.
 
 [Component index](README.md)

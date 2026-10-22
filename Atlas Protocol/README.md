@@ -10,8 +10,9 @@ Protocol favors readable, strongly typed contracts that apply across Asset types
 implementation languages, and links. Use descriptive JSON field names and reusable
 schemas that people can inspect.
 
-Compact encodings can reduce bandwidth use without changing the readable public
-contract. The compaction method remains undecided.
+The initial binding is HTTP/JSON over TLS and WSS. Compact encodings and
+constrained-radio bindings are outside the initial contract. Gateways can translate
+external radio traffic while preserving original public evidence and retry facts.
 
 ## Vocabulary
 
@@ -36,15 +37,17 @@ mistaken for a submission to a fresh system.
 
 ## Contract ownership
 
-Author public schemas and Command metadata once in a language-neutral OpenAPI
-artifact. Define reusable JSON components and their permitted compositions in
+The [schema profile](schema-profile.md) selects OpenAPI 3.1.0. Its implementation
+artifact will encode these human-readable contracts and the local
+[Command Catalog](command-catalog.md) once, without another independent definition.
+Define reusable JSON components and their permitted compositions in
 [Entities](entities.md#component-composition). HTTP and non-HTTP messages reuse
 those definitions. [Messaging](messaging.md) describes the supported exchanges;
 [Wire](wire.md) defines Core's IP binding. The Command Catalog is available locally;
 it is not a network discovery service. Plugins may define specialized Operation
 payloads, but cannot invent Entity components or Asset Commands.
 
-Review concrete field proposals in the [component field reference](components/README.md).
+Read concrete field contracts in the [component field reference](components/README.md).
 
 Use standard generation for Go and TypeScript declarations and ordinary HTTP
 bindings. Runtime validation must be integrated explicitly. Keep algorithms,
@@ -67,5 +70,9 @@ automatic downgrade, or translation between versions. Plugins release independen
 [Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
 [Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
 
-These pages specify behavior. Exact schemas, supported generator features, and
-cross-language fixtures remain incomplete and unqualified.
+[Operators](operators.md) defines profile lifecycle. [Report format](report-format.md)
+and [execution evidence](execution-evidence.md) define the separate source envelopes.
+
+These pages select behavior, message fields, and bounds. Machine schemas, dependency
+locks, and executable cross-language fixtures are implementation outputs that do not
+yet exist here. No runtime, codec, durability, or capacity qualification is claimed.
