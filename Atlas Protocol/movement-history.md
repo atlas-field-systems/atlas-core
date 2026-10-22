@@ -28,6 +28,8 @@ or Track. Enabled, ready coverage answers the same bounded queries locally;
 loading or incomplete coverage is not a successful empty result.
 The synchronized history includes the correction facts exposed by those queries;
 it must not silently narrow their meaning to only newly received readings.
+The shared [history query contract](history-queries.md) defines exact ordering,
+frozen pages, source-bound continuation, and bounded release/expiry for both modes.
 
 ## Snapshot and incremental changes
 
@@ -59,7 +61,7 @@ retained volume. Bound snapshots, whole change batches, decoded data, and total
 client storage before allocation. No implicit eviction or history window may make
 an enabled cache claim complete coverage. Unsupported capacity is explicit.
 
-Exact history schemas, correction representation, and paging envelopes remain
+Exact history schemas, correction representation, and query envelopes remain
 to be authored with independent HTTP/Full equivalence and recovery fixtures.
 
 [Next: tasks](tasks.md)

@@ -25,9 +25,11 @@ When an option is off, its reads use explicit HTTP operations, including Observa
 queries by Track or recorded source Asset and per-Entity movement history. When it
 is enabled but loading or unavailable, report that state; never silently fall back
 to HTTP or present missing data as an empty result. Query meanings stay consistent.
+An already opened [history query](../Atlas%20Protocol/history-queries.md) keeps its
+original HTTP or local source for continuation and release across option changes.
 
 Object bytes, Plugin Operations/discovery, operator/key administration, and activity
-history remain explicit HTTP operations in both modes. All mutations go to Core.
+history remain explicit HTTP operations in both modes. All domain mutations go to Core.
 All synchronized data is in memory: SDK/application restart rebuilds the selected
 coverage from Core. There is no persistent SDK cache, offline write queue, or shared
 cross-tab replica. Most Asset reporting clients need only HTTP mode.

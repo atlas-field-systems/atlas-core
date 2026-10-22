@@ -11,6 +11,10 @@ Use UUID identifiers and snake_case wire fields. Encode 64-bit counters as
 canonical decimal strings, not JavaScript numbers. Validate their numeric range,
 not only their spelling. Preserve double precision for spatial values.
 
+UTC timestamps use `YYYY-MM-DDTHH:mm:ss[.fraction]Z` with valid calendar fields.
+Seconds range from `00` through `59`. An optional fraction has one to nine digits.
+Reject finer precision. Preserve accepted spelling and compare exact nanoseconds.
+
 Requests identify `Atlas-Dataset-ID` and `Atlas-Protocol-Version`. Responses carry
 the actual Dataset and Core's Protocol version, including declared error responses.
 Require the exact version shared by Core, SDK, and Protocol for that release.
@@ -106,5 +110,9 @@ The continuation token determines whether more items remain, not the item count.
 Tokens bind source, Dataset, kind, filters, size, and continuation;
 ordinary tokens expire after 60 seconds. Assigned-work tokens also bind queue revision
 and carry captured adoption under [Task paging rules](tasks.md#scheduling-and-controls).
+
+[Movement history queries](history-queries.md) use frozen views and their own
+finite view expiry instead of ordinary moving-list token lifetime. Page-size,
+byte, and value limits still apply; tokens never change their original source.
 
 [Next: synchronization](synchronization.md)

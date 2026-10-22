@@ -8,9 +8,9 @@ This documentation-only baseline has run none of the runtime cases below.
 Use one server, one or two operators, 20 Assets reporting twice per second, and
 200 Observations reporting once per second concurrently.
 Track changes are derived effects, not incoming reports. Use a four-CPU, 8 GB RAM,
-local-SSD Core host and an 8 GB, Pi 5-class-or-better SDK client with good Wi-Fi or
-equivalent IP connectivity. This client RAM is a test fixture, not a universal SDK
-minimum. Target four-hour missions and eight-hour retained Datasets; neither is a retention limit.
+local-SSD Core host and an 8 GB, Pi 5-class-or-better SDK client with good Wi-Fi/IP.
+Client RAM is a fixture, not a universal minimum. Target four-hour missions and
+eight-hour retained Datasets; neither is a retention limit.
 
 The fixed baseline retains 200 Observations and 200 default Tracks without turnover.
 Over eight hours it has 6,912,000 reports, 9,600 Tasks, and 28,800 Operations.
@@ -64,9 +64,10 @@ Both byte and count limits apply. Settings require measurement and reviewed tuni
 | SDK picture | 512 MiB | 100,000 resource images and history readings across selected coverage |
 | SDK journal | 16 MiB | 10,000 complete commits |
 
-Measure actual aggregate RAM, including base and optional caches, old picture, staging,
-indexes, decoded values, and journal. Encoded bytes are not a RAM guarantee. Charge database,
-history, indexes, temporary captures, files, Plugin work, and logs to aggregate disk.
+Measure aggregate RAM for caches, old picture, staging, indexes, decoded values, journal,
+query references, and frozen revisions. Encoded bytes do not prove fit. Bound views and
+references before allocation. Charge database, history, indexes, captures, files,
+Plugin work, and logs to aggregate disk.
 Use typed `413 payload_too_large`, `429 resource_limit`, and `507 storage_limit`
 refusals. Lower limits govern new admission, not silent deletion or cancellation.
 
@@ -85,7 +86,8 @@ refusals. Lower limits govern new admission, not silent deletion or cancellation
    and rebuild. Check complete commits, projected cursor progress, subscriber gaps, and
    cleanup. Restart Core preserves retained facts; SDK restart rebuilds selected caches
    from empty memory. Reset invalidates all coverage and outstanding loads immediately.
-4. Cross count and byte limits independently. Measure journal, whole-batch, replay, staging,
+4. Cross count and byte limits independently. Expire query views and recheck capacity
+   before pausing otherwise viable coverage. Measure journal, whole-batch, replay, staging,
    and aggregate RAM too. Optional load/update capacity failure leaves base coverage usable
    within its own limits, exposes unavailable coverage, and never silently evicts history,
    disables the requested option, falls back to HTTP, or repeatedly rebuilds. Explicit retry

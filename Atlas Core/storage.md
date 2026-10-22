@@ -37,6 +37,12 @@ the [synchronization contract](../Atlas%20Protocol/synchronization.md).
 The same owner projects committed batches to each client's coverage. A coverage
 change never creates another source of truth or extends replay retention indefinitely.
 
+HTTP [history queries](../Atlas%20Protocol/history-queries.md) reuse this capture owner
+and its allocation/retry/cleanup discipline. Freeze matching reading revisions and
+provenance from one consistent view; end the read transaction before serving pages.
+The owner bounds active views and membership references before allocation, owns
+finite expiry and explicit release, and invalidates Core-run views on Restart.
+
 ## Publishing files
 
 Core's Object owner gives each upload attempt distinct private staging and installed
@@ -65,7 +71,10 @@ work accumulate until Reset. Bounded replay is not a bound on the entire Dataset
 Observations, Tracks, and their historical associations are retained records with
 no individual delete or automatic eviction. Inactivity does not release their storage.
 Charge uploads, active downloads awaiting reclamation, Plugin work, logs, database
-and indexes, and snapshot staging against real aggregate storage budgets.
+and indexes, snapshot staging, history-query references, and frozen revisions against
+real aggregate storage budgets. Under pressure, expire temporary history views and
+recheck ordinary write admission before refusing it. Release only view allocations,
+never retained source evidence or corrections.
 
 Reserve headroom for required commits and failure reporting. Object quota alone
 cannot isolate a Plugin that fills the disk. Refuse admission honestly; never

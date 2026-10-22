@@ -97,4 +97,13 @@ resumable-upload exchange, or remote Core-configuration message.
 Changing coverage follows the staged cutover in [Synchronization](synchronization.md#changing-coverage).
 Exact synchronization reply names and coverage-change envelopes remain open.
 
+## History query control
+
+| Proposed message | Expected user and purpose | Request | Result |
+| --- | --- | --- | --- |
+| `ReleaseHistoryView` | Query caller frees an Asset, Observation, or Track history view after paging or cancellation | The view's source-bound release token | Idempotent release acknowledgment or explicit refusal under [history query rules](history-queries.md#release-expiry-and-capacity) |
+
+Continuation and release keep the original HTTP or local owner across cache-option
+changes. Release of a local view is local and does not mutate Core's retained history.
+
 [Next: wire conventions](wire.md)

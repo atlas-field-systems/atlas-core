@@ -22,7 +22,7 @@ There is no individual deletion message for retained Tracks.
 | Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `GetTrackObservations` | Operator app or processing integration inspects a target's sources | Track ID and bounded query, optionally filtered by recorded source Asset or publisher | Contributing Observation views with association provenance |
-| `GetTrackMovementHistory` | Analysis tool or operator app reviews target movement | Track ID and bounded history query | Retained movement with original source evidence and times |
+| `GetTrackMovementHistory` | Analysis tool or operator app reviews target movement | Track ID and [bounded history query](../history-queries.md) | Frozen pages of retained movement with original source evidence and times |
 | `GetTrackObjects` | Operator app finds files explicitly associated with a target | Track ID and bounded query | Directly associated ready Object metadata |
 
 Current Track views keep source IDs and provenance when Observation caching is off.

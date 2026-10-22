@@ -24,6 +24,7 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Recovered outcomes | Original Operation reads expose recovered outcomes, effects, and result links; state remains interrupted; no new Operation or execution |
 | Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
 | Full synchronization | All four Observation/history coverage combinations; local versus explicit HTTP reads; independent base readiness; online backfill/cutover/disable; whole-message interruption, capture cleanup, fixed handoff, replay expiry, slow clients, restart rebuild, Reset and isolated optional capacity failure |
+| History query views | [Frozen-page examples](../Atlas%20Protocol/history-queries.md#independent-acceptance-example); exact-time/scoped-identity order; inserts and corrections during paging; HTTP/Full parity; lost first-page replies; explicit release, expiry, Restart/Reset and local coverage loss; original-owner continuation; view expiry before capacity refusal |
 
 For example, create O17 and record its assigned T42. Move O17 with R2 and verify
 both IDs remain. Replay creation and R2 through another gateway with no new Track,

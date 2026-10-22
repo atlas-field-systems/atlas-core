@@ -64,12 +64,23 @@ Reset additionally reports Dataset change. Do not pretend a rebuild was continuo
 incremental history.
 An optional backfill likewise emits status and readiness, not synthetic create events.
 
+For [history queries](../Atlas%20Protocol/history-queries.md), this owner freezes
+matching immutable reading references and their local cursor on the first page.
+It owns bounded views, retained revisions, expiry timers, and release. Ordinary
+commits preserve valid views. Required coverage loss, rebuild, Reset, or close
+invalidates them and frees their references; continuation requires an explicit restart.
+Continuation and release stay with the view's original HTTP or local owner, even
+after options change. Never reinterpret a token against another source or allocate
+a replacement to hide expiry. Recheck authorization and view validity after waits.
+
 ## Capacity and retry
 
 Check negotiated complete-message limits before allocating a snapshot. Account for
 base and optional records, old picture, new staging, indexes, decoded values, and
-journal together. Count history readings as well as Entity images. An optional load
-must fit without consuming memory reserved for the ready picture's bounded updates.
+journal, query references, and frozen revisions together. Count history readings as well
+as Entity images. Expire temporary history views and retry the whole capacity check
+before making otherwise viable coverage unavailable; never evict retained readings.
+An optional load must fit without consuming the ready picture's bounded-update reserve.
 Stop with an explicit capacity state rather than evicting resources or repeatedly rebuilding.
 Explicit retry or a relevant capacity change can restart one recovery owner.
 If an enabled option cannot continue within its bounds, mark that coverage unavailable

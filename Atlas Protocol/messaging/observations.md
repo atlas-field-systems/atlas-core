@@ -24,7 +24,7 @@ Use Observation evidence ordering, not Asset process and contact requirements.
 | `ListObservations` | Operator app or processing integration browses source detections | Bounded filters, including publisher, recorded source Asset, and associated Track | Matching Observation views |
 | `GetObservation` | Operator app or processing integration inspects a source record | Observation ID | Current Observation view and its Track association |
 | `GetObservationByAlias` | Integration resolves a configured alias | Observation alias | Matching Observation view |
-| `GetObservationMovementHistory` | Analysis tool reviews source measurements over time | Observation ID and bounded history query | Retained movement evidence with source times |
+| `GetObservationMovementHistory` | Analysis tool reviews source measurements over time | Observation ID and [bounded history query](../history-queries.md) | Frozen pages of retained movement evidence with source times |
 | `GetObservationObjects` | Operator app finds photographs or other evidence files | Observation ID and bounded query | Associated ready Object metadata |
 
 Source Asset filtering uses the recorded [publisher attribution](../observations.md#identity-and-attribution),
