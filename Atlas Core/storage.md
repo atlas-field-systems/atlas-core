@@ -11,8 +11,9 @@ Public resource images are built from these committed facts.
 
 Under one transaction, recheck authorization, Dataset, revisions, retry identity,
 and reference guards. Commit resource changes, original retry facts, required
-history/activity, and the complete public change batch together. A rollback publishes
-nothing. Return success after commit, not after a client receives the change feed.
+history/activity, and the complete public change batch together. Movement additions
+and corrections enter that batch even when current Entity state is unchanged.
+A rollback publishes nothing. Return success after commit, not after feed delivery.
 The [default fusion commit](fusion.md#the-default-commit-path) includes both the
 Observation and Track. Unique associations and retry records prevent a second pair.
 
@@ -27,12 +28,14 @@ capacity by dropping accepted declarations or splitting atomic effects.
 
 ## Snapshot captures
 
-Core's synchronization owner materializes immutable public resource images and
-their baseline cursor into temporary SQLite-backed captures from one consistent
-database view. Expose only complete captures. End the source read transaction
-before serving pages from the saved images.
+Core's synchronization owner materializes the requested current-resource and optional
+movement-history coverage, with its baseline cursor, into temporary SQLite-backed
+captures from one consistent database view. Expose only complete captures for their
+declared coverage. End the source read transaction before serving saved pages.
 The same owner handles allocation, release, expiry, and failed-build cleanup under
 the [synchronization contract](../Atlas%20Protocol/synchronization.md).
+The same owner projects committed batches to each client's coverage. A coverage
+change never creates another source of truth or extends replay retention indefinitely.
 
 ## Publishing files
 

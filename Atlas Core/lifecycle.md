@@ -71,7 +71,9 @@ Apply restart-required settings explicitly; do not hide failures with fallback.
 
 Use authenticated HTTPS/WSS with normal certificate verification and explicit
 trusted origins. Offline setup supplies local trust, preloaded images/reference data,
-and the first credential. No cloud login, TLS bypass, or credentials in URLs/logs.
+and the first credential. No cloud login or TLS bypass; credentials stay out of URLs
+and normal diagnostic records. Explicit [local troubleshooting](diagnostics.md#local-troubleshooting)
+defines the private boundary for potentially sensitive crash output.
 Plugin faults do not make unrelated Core services unready.
 
 [Next: plugins](plugins.md)

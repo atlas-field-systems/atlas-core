@@ -15,6 +15,12 @@ There is no automatic publisher transfer.
 A report must name the Observation's recorded publisher. A mismatch rejects the
 entire report without changing the Observation or its Track.
 
+When the publisher represents an Asset, creation records its source Asset ID as
+explicit publisher attribution. Validate that association and retain it with the
+Observation, including after Asset deletion. It is fixed for that Observation's
+lifetime. A publisher without a source Asset has no such association; never infer
+one from a credential, gateway, display name, or delivery path.
+
 Keep the Observation ID distinct from an optional publisher-local subject ID.
 An integration that uses local IDs must distinguish separate lifetimes when a
 device reuses a number. Reconnect or replay must not create another Observation

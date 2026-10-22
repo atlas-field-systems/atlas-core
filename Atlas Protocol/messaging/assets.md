@@ -19,6 +19,9 @@ advertise no Commands.
 | `GetAssetObjects` | Operator app finds images or other files associated with an Asset | Asset ID and bounded query | Associated Object metadata |
 
 `RegisterAsset` creates the Asset with enrollment effects. It does not establish contact.
+Movement queries follow the optional [history coverage](../movement-history.md).
+To inspect an Asset's detections, use [Observation reads](observations.md#reads-and-evidence)
+filtered by their recorded source Asset attribution.
 
 ## Updating sections
 
