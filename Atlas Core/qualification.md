@@ -11,10 +11,9 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | --- | --- |
 | Shared components | Independent valid/invalid examples; allowed Entity compositions; Go/TypeScript agreement; SDK input/response validation and direct-HTTP refusal of malformed input |
 | Wire and identity | Absent/null, exact counters and identifiers; authenticated discovery and exact-version refusal; equal API permissions across keys; wrong Dataset; lost enrollment reply; revoked-key rejection |
-| Asset updates and Tracks | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; deduplication across keys/gateways, ordering, and history; contact expiry without new packets; competing process replacement; obsolete-generation rejection; stable publisher; correction age |
-| Asset location admission | [Reading cases](../Atlas%20Protocol/location-history-examples.md#new-position-with-older-altitude); reused older altitude; fresh stationary evidence versus relay duplicate; backfill; correction/replay; null unknown and error |
-| Location synchronization | [Atomic reference cases](../Atlas%20Protocol/location-history-examples.md#unknown-errors-and-invalid-references); changed payloads only; current correction and history-only journal delivery; invalid owner/kind/revision or conflicting targets; all readings/tombstones at N and fixed H |
-| Location history queries | [Page/deletion cases](../Atlas%20Protocol/location-history-examples.md#deleted-known-empty-and-stable-pages); HTTP/Full parity without fallback; exact-time order and unknown group; frozen revisions; known-empty after rebuild; expiry/release/Reset restart; view expiry before capacity pause |
+| Asset updates | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; direct/relayed deduplication, section ordering, correction identity and age, and movement history; contact expiry without new packets; competing process replacement; obsolete-generation rejection |
+| Observations and default fusion | Stable publisher; continuing Observation versus report and constituent measurement identities; direct/relayed deduplication; whole-section ordering and correction age; atomic Observation/Track creation and updates; lost replies and racing retries; errors, withdrawals, and unknowns remain visible |
+| Retained Tracks and evidence | Independent publishers initially yield separate Tracks; inactivity and Restart preserve identities, history, source provenance, and Object associations; no individual Observation or Track deletion; Reset clears all retained records |
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
 | Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, Asset deletion without invented outcomes or transferred Tasks |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
@@ -24,69 +23,65 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Operation recovery | Plugin loss before possible delivery keeps pending work; loss after possible delivery interrupts it; Core restart interrupts both |
 | Recovered outcomes | Original Operation reads expose recovered outcomes, effects, and result links; state remains interrupted; no new Operation or execution |
 | Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
-| Full synchronization | Whole-message interruption, immutable capture under concurrent writes and paging, failed-build cleanup, fixed handoff, capture retry/release, replay expiry, slow clients, rebuild, Dataset change and capacity pause |
+| Full synchronization | All four Observation/history coverage combinations; local versus explicit HTTP reads; independent base readiness; online backfill/cutover/disable; whole-message interruption, capture cleanup, fixed handoff, replay expiry, slow clients, restart rebuild, Reset and isolated optional capacity failure |
+| History query views | [Frozen-page examples](../Atlas%20Protocol/history-queries.md#independent-acceptance-example); exact-time/scoped-identity order; inserts and corrections during paging; HTTP/Full parity; lost first-page replies; explicit release, expiry, Restart/Reset and local coverage loss; original-owner continuation; view expiry before capacity refusal |
+
+For example, create O17 and record its assigned T42. Move O17 with R2 and verify
+both IDs remain. Replay creation and R2 through another gateway with no new Track,
+movement sample, or public change. Force rollback and verify neither side publishes.
+Make O17 silent, resume it, and verify T42 remains the same retained Track.
+Include a churn case with new Observations alongside accumulated inactive records.
+Neither silence nor picture capacity permits eviction of the retained records.
+Use the independent [history-only evidence example](../Atlas%20Protocol/report-evidence.md#independent-acceptance-example)
+and [retained-Dataset qualification](workload-qualification.md) requirements.
 
 For generation, delete outputs and regenerate deterministically with pinned tools.
 Qualify the supported schema profile, independent cross-language examples, package
 consumption, and binary adapters. Do not buffer a large file in a JSON validator.
 A generated type check is not a request/response-validation test.
 
+Use the [Protocol boundary qualification cases](protocol-qualification.md) to retain
+demonstrated validator pitfalls without treating the experiment as a qualified runtime.
+
 A test must fail when its required assertion cannot run. Observe the promised
 path, not just an eventual value that a hidden fallback could produce. Test the
 actual failure boundary, including cleanup after owner interruption. Preserve both
 primary and cleanup failures. Extend existing workflows before creating another suite.
 
+## Diagnostic evidence in those workflows
+
+Use [Core diagnostics](diagnostics.md) and [SDK diagnostics](../Atlas%20SDK/diagnostics.md)
+while exercising the real paths above. Check records and summaries against
+independent request counts, known content lengths, and retained domain results.
+Diagnostic records alone cannot establish that work committed or executed.
+
+| Scenario | Required evidence |
+| --- | --- |
+| Lost non-report write reply | At default Core and SDK Summary detail, match the attempt; keep SDK outcome unknown; retry has new attempt context and the same prepared identity; one durable effect and complete picture application |
+| Read routing and transfers | Covered Full-mode reads send zero HTTP requests; default reads and repeated uploads report the observed source and byte category without buffering whole files |
+| Recovery and authorization | Explain requested/ready coverage, replay versus rebuild, capacity pause, and subscriber gaps; ordinary outages and revoked credentials cause no diagnostic or recovery hot loop |
+| Server delay and cleanup | Separate writer wait from commit time, file publication from cleanup, and Plugin channel loss from confirmed process death |
+| Correlation headers | Missing, malformed, and duplicate header fields preserve domain behavior; reused attempt values need no registry; trusted browser origins can send/read headers; validate IDs on success, error, binary, and empty responses |
+| Diagnostic pressure and privacy | Flood producers and block/fail sinks; memory and disk stay bounded, omissions remain visible, request outcomes are unchanged, and prohibited fields appear in no normal log or standard export |
+| Local troubleshooting | Off by default and enabled only for selected runs; recovered/fatal panics produce useful bounded context and frames or explicitly sensitive crash evidence; private raw capture never leaks into normal logs or standard exports |
+| SDK observer lifecycle | Debug frames and context obey field/count bounds; raw Error/stack/input objects never reach observers; throwing observers or failed exports do not change requests or recovery; close stops deliveries and timers |
+| Restart and Reset | Restart retains bounded files but disables troubleshooting; Reset verifies container, Plugin, manager, and launcher capture writers and old copies are cleared, including interrupted cleanup; management authority stays separate |
+
+Exercise recovered HTTP panics, fatal background panics, and dependency writes in
+both Go processes with troubleshooting off and on. Inject sentinel filenames and
+secrets into panic/error text: none may reach normal logs, structured debug fields,
+journals, or standard exports. Sensitive raw capture may contain them only within
+its declared private boundary; verify access, quotas, truncation, deliberate export,
+disable, and Reset cleanup. Verify useful fault locations survive without argument
+values, and that unavailable evidence is reported honestly. No capture blocks work.
+
 ## Workload targets, not measured capability
 
-Target one server, one or two operators, about 20 Assets and 200 Tracks. Initial
-rates are two Asset reports and one Track report per second per source. Qualify
-four-hour missions and eight-hour retained Datasets, including bursts and backlog.
-Use a four-CPU, 8 GB RAM, local-SSD Core host and an 8 GB client as the reference.
-
-The eight-hour fixture has 6,912,000 reports, 9,600 Tasks, and 28,800 Operations.
-Include accumulated identities/readings, deleted Asset tombstones, indexes, query
-references and retained revisions, terminal records, old and replacement pictures,
-staging, journal, and decoded memory. Test a 10× burst, ten-minute backlog, slow consumer,
-and four concurrent 1 GB uploads plus downloads. Typical files are 100 MB;
-plan for 10 GB of content per day.
-
-Initial admission settings are 1 MiB JSON, 2 GB files, four uploads, 1,000 outstanding
-Tasks per Asset, and 32 sync connections. Initial Object quota/headroom are
-16 GB/8 GB. Use typed `413 payload_too_large`, `429 resource_limit`, and
-`507 storage_limit` refusals. Lower limits govern new admission, not silent deletion
-or cancellation of accepted work.
-
-Initial sync budgets are 4 MiB/1,000 changes per complete message, 4 MiB pending per
-connection, and 64 MiB/15 minutes of replay. SDK picture and journal budgets start
-at 512 MiB/100,000 resources and 16 MiB/10,000 commits. Measure actual aggregate RAM;
-encoded-byte accounting is not a memory guarantee. Resource counts include all
-canonical readings and tombstones. Qualify bounded active history views and their
-reference counts, including a commit that fits only after view expiry and one
-that remains resource-limited. Limits never authorize a history window or eviction.
-At the target Asset rate, two new readings per report would produce 2,304,000 readings
-over eight hours. The 100,000-resource starting limit cannot cover that case.
-This projection establishes a count mismatch, not observed memory overload.
-Qualify a sufficient resource count and aggregate memory budget together. Raising
-the resource limit alone does not prove memory fit.
-
-Full-history memory capacity remains unverified. No representative measurement
-establishes whether the 512 MiB picture budget or 8 GB client is sufficient.
-Core and SDK reading storage, indexes, and query views are not implemented.
-The [disposable prototypes](../prototypes/flight-lab/report.md#limits) use small
-private fixtures and do not qualify aggregate RAM.
-
-Qualification must use concrete schemas and implemented SDK/Core with 2,304,000
-distinct, fully populated readings plus the remaining workload. Verify all retained
-readings remain locally queryable, including after Asset deletion and replacement.
-Measure steady-state and peak resident and heap memory during initial load, live
-commits, active views with retained corrections, and rebuild with old and staged
-pictures together. Record commands, runtime, limits, and repeated run results.
-Eight hours is a fixture duration; qualify longer Datasets under the
-[retention rules](storage.md#retention-and-capacity).
-
-Qualification targets include p95 ordinary requests below 250 ms, picture lag below
-one second, and initial load below ten seconds. All values require measurement and
-may need reviewed tuning; none justifies weakening retention or atomicity.
+The [workload qualification inputs](workload-qualification.md) own initial targets,
+resource and byte budgets, proposed cumulative-turnover fixtures, and Full recovery
+acceptance. The proposed rates and retained totals need confirmation and measurement.
+No workload qualification has run in this documentation-only baseline.
+Neither tuning nor capacity failure permits weaker retention or atomicity.
 
 ## Report honestly
 

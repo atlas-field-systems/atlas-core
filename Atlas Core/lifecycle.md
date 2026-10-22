@@ -50,7 +50,13 @@ Missing, damaged, or unavailable proof is not permission to wipe. Refuse unsafe 
 and expose repair. Record a Plugin's explicit startup fault rather than leaving
 Reset permanently pending because that Plugin cannot become ready.
 
-Ordinary retained startup preserves Task evidence and unresolved execution.
+[Diagnostics](diagnostics.md#collection-and-lifetime) defines collection ownership,
+retained copies, and optional export for this cleanup boundary. Diagnostic copies
+must not escape Reset through an unmanaged container log or host journal.
+
+Ordinary retained startup preserves Task evidence and unresolved execution, plus
+Observation and Track identities, associations, and report retry facts. Reset
+clears those records with the old Dataset, including inactive retained records.
 Apply [Operation recovery rules](../Atlas%20Protocol/operations.md#runtime-loss-and-recovery)
 before new Plugin execution.
 Partial uploads restart from zero. Mission continuity across whole-Core restart
@@ -65,7 +71,9 @@ Apply restart-required settings explicitly; do not hide failures with fallback.
 
 Use authenticated HTTPS/WSS with normal certificate verification and explicit
 trusted origins. Offline setup supplies local trust, preloaded images/reference data,
-and the first credential. No cloud login, TLS bypass, or credentials in URLs/logs.
+and the first credential. No cloud login or TLS bypass; credentials stay out of URLs
+and normal diagnostic records. Explicit [local troubleshooting](diagnostics.md#local-troubleshooting)
+defines the private boundary for potentially sensitive crash output.
 Plugin faults do not make unrelated Core services unready.
 
 [Next: plugins](plugins.md)

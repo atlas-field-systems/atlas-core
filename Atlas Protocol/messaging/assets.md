@@ -15,13 +15,13 @@ advertise no Commands.
 | `UpdateAsset` | Operator app, provisioning tool, or Asset runtime replaces complete writable Asset sections | Asset ID, complete writable sections, retry identity, and applicable [revision and source-evidence conditions](../entities.md#data-ownership) | Committed Asset view and evidence disposition, or an explicit refusal |
 | `DeleteAsset` | Operator app removes an Asset that is no longer needed | Asset ID and retry identity | Removed Asset under [deletion rules](../identity.md#deletion-and-revocation) |
 | `GetAssetStatus` | Operator app displays reported status alongside Core-derived contact information | Asset ID | Current status and derived contact information |
-| `GetAssetMovementHistory` | Operator app or analysis tool reviews Asset location evidence | Asset ID and bounded query or continuation token | Frozen pages with a release token under [location query rules](../location-history.md#bounded-history-queries), explicit restart, or resource-limit refusal |
-| `ReleaseAssetHistoryView` | Application ends an Asset location query | View release token and Dataset context | Idempotent release acknowledgment; later continuation returns restart |
+| `GetAssetMovementHistory` | Operator app or analysis tool reviews where an Asset has been | Asset ID and [bounded history query](../history-queries.md) | Frozen pages of retained movement evidence |
 | `GetAssetObjects` | Operator app finds images or other files associated with an Asset | Asset ID and bounded query | Associated Object metadata |
 
 `RegisterAsset` creates the Asset with enrollment effects. It does not establish contact.
-Current HTTP Asset views remain expanded. The history operation has the same query
-contract in both SDK modes under [location history](../location-history.md).
+Movement queries follow the optional [history coverage](../movement-history.md).
+To inspect an Asset's detections, use [Observation reads](observations.md#reads-and-evidence)
+filtered by their recorded source Asset attribution.
 
 ## Updating sections
 

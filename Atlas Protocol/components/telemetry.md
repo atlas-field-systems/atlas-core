@@ -1,10 +1,12 @@
 # Telemetry
 
-Telemetry is the proposed complete section for an Entity's location and motion.
+Telemetry is the complete section for an Entity's location and motion.
 A report supplies the whole section, including defined null values.
-Asset history and synchronization use [location reading rules](../location-history.md).
+The same whole-snapshot ordering applies to Asset and Observation Telemetry. The
+source assembles the snapshot; Core does not merge independently arriving quantities.
+The default Track retains that snapshot and its source evidence.
 
-## Proposed fields
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
@@ -13,12 +15,10 @@ Asset history and synchronization use [location reading rules](../location-histo
 | `ground_speed` | Number or null | Required | Horizontal metres per second, at least zero; null when unknown |
 | `airspeed` | Number or null | Optional | Metres per second relative to air, at least zero; omit when not applicable |
 
-All results include the [shared fields](README.md#shared-proposed-section-fields).
-Asset reports require [quantity sources](../reports.md#quantity-sources) in their
-shared report context. `observed_at` dates the other telemetry values, including
-speed. It never refreshes the position or altitude source times.
-Unknown values do not imply an error. Errors replace the success section with the
-shared error result. Body heading belongs in [Attitude](attitude.md).
+The enclosing result carries [shared section metadata](README.md#shared-section-results).
+Unknown readings do not imply an error. Actual failures use the shared error
+representation. Body heading belongs in [Attitude](attitude.md), separately from
+direction of travel.
 
 ## Position
 
@@ -26,13 +26,14 @@ Position is a reusable coordinate pair for Telemetry and Command inputs.
 [Spatial conventions](../entities.md#spatial-conventions) establish WGS84 degrees,
 complete pairs, valid zero coordinates, and double precision.
 
-| Field | Type | Presence | Proposed bounds |
+| Field | Type | Presence | Bounds |
 | --- | --- | --- | --- |
 | `latitude` | Number | Required, non-null | -90 through 90 inclusive |
 | `longitude` | Number | Required, non-null | -180 through 180 inclusive |
 
 Numbers must be finite under [Wire](../wire.md#parsing-and-edits).
-Preserve precision without rounding.
+Preserve binary64 precision without decimal truncation. Accept and retain both
+longitude endpoint spellings, `-180` and `180`, without canonicalizing either.
 
 - Valid: `{"latitude": 0, "longitude": 0}`.
 - Invalid latitude: `{"latitude": 91, "longitude": 0}`.
@@ -44,62 +45,88 @@ Altitude is a reusable height value for Telemetry and Command inputs.
 [Spatial conventions](../entities.md#spatial-conventions) require metres and an
 explicit `wgs84_ellipsoid` reference. AGL and MSL must not be silently substituted.
 
-| Field | Type | Presence | Proposed meaning |
+| Field | Type | Presence | Meaning |
 | --- | --- | --- | --- |
 | `metres` | Number | Required, non-null | Finite signed metres; negative and zero are allowed |
 | `reference` | String | Required, non-null | Exactly `wgs84_ellipsoid` |
 
-The object layout and absence of an operational height limit remain proposals.
+This object has no operational height limit beyond finite binary64 representation.
 The containing field defines how unknown altitude uses null or omission.
 
 - Valid: `{"metres": -12.5, "reference": "wgs84_ellipsoid"}`.
 - Invalid reference: `{"metres": 120, "reference": "agl"}`.
 
-## Complete section example
+## Value examples
 
-Successful Asset report fragment with enclosing quantity context. Other shared
-report fields are elided. The altitude is an older original observation.
+Valid complete Telemetry value:
 
 ```json
 {
-	"telemetry": {
-		"position": {"latitude": 51.5074, "longitude": -0.1278},
-		"altitude": {"metres": 142.6, "reference": "wgs84_ellipsoid"},
-		"ground_speed": 0, "observed_at": "2026-10-16T12:00:00Z"
-	},
-	"quantity_sources": {
-		"position": {
-			"original_evidence": {"process_generation": "00000000-0000-4000-8000-000000000001", "id": "00000000-0000-4000-8000-000000000042", "sequence": "42"},
-			"observed_at": "2026-10-16T12:00:00Z", "revision": "1"
-		},
-		"altitude": {
-			"original_evidence": {"process_generation": "00000000-0000-4000-8000-000000000001", "id": "00000000-0000-4000-8000-000000000040", "sequence": "40"},
-			"observed_at": "2026-10-16T11:59:00Z", "revision": "1"
-		}
-	}
+	"position": {"latitude": 51.5074, "longitude": -0.1278},
+	"altitude": {"metres": 142.6, "reference": "wgs84_ellipsoid"},
+	"ground_speed": 0
 }
 ```
 
-Omitted `airspeed` is allowed by this proposal. Neither omission nor null
+Omitted `airspeed` is allowed. Neither omission nor null
 substitutes an older subfield value.
 
-`{"ground_speed": 0, "observed_at": "2026-10-16T12:00:00Z"}` is an invalid
-success replacement because required position and altitude are missing.
+This fragment is an invalid replacement because required fields are missing:
 
-A mounted camera can retain Telemetry as state until changed. Aircraft and
-commandless trackers can report dated measurements. Telemetry is not universal.
+```json
+{"ground_speed": 0}
+```
 
-[`UpdateAsset`](../messaging/assets.md#updating-sections) carries this Asset section.
+## Use and source times
 
-HTTP Asset reads and public SDK values keep expanded `position` and `altitude`.
-Successful Asset reads also expose `telemetry.quantity_sources.position` and
-`.altitude`. Each contains the selected reading's `id`, `revision`,
-`original_evidence`, `observed_at`, and `time_usability`. Response schemas add this
-read-only metadata separately from the producer's enclosing report context.
-Writable telemetry excludes it. `UpdateAsset` rejects nested
-`telemetry.quantity_sources` with a validation error. Errors expose neither.
-Sync replaces expanded values and this metadata with [references](../synchronization.md#complete-changes).
-Longitude endpoint canonicalization and Altitude's object layout remain proposals.
-Uncertainty fields and exact Track field applicability remain undefined.
+A mounted camera can retain a complete Telemetry section as state until changed.
+Aircraft and a commandless vehicle tracker can report it as dated measurements.
+This does not require every Entity to have Telemetry.
+
+The [`UpdateAsset`](../messaging/assets.md#updating-sections) message
+carries this Asset section.
+
+The enclosing result's `observed_at` is the default source time. Its `source_times`
+may override `position`, `altitude`, `ground_speed`, and supplied `airspeed`.
+Position is one complete quantity, not separate latitude and longitude observations.
+Explicit null means an unknown time. A fresh snapshot cannot refresh older readings.
+Uncertainty fields remain deferred. Schemas must declare exact Observation and Track applicability.
+
+## Constituent observation identity
+
+Each supplied quantity carries a source-assigned observation ID and correction revision
+as source evidence, separate from the complete section's sequence and delivery identity.
+This constituent ID identifies a reading, not the persistent Observation Entity.
+Scope the ID by Dataset, Entity, originating source, and quantity. The originating
+source is the Asset process generation or the Observation's stable publisher.
+A carried-forward reading retains its original scope, including across Asset process
+replacement. Credentials and gateways do not affect constituent observation identity.
+Derived Tracks retain their contributors' original scopes, IDs, and revisions.
+
+Carrying a reading into a later snapshot preserves its ID, revision, value, and original
+source time, including unknown time. Supply `source_times` when that time differs from
+the new `observed_at`, including explicit null. Core never fills from the prior section.
+A genuinely new reading gets a new ID even when its value and source time are identical.
+Neither equal values nor equal or unknown timestamps establish duplicate observations.
+
+A correction keeps the observation identity and original source time and increases its
+revision. The same identity and revision must repeat identical facts. Conflicting reuse
+or a revision below the highest accepted revision rejects the update atomically.
+A newer section sequence cannot authorize a stale constituent revision. Observation IDs
+and correction revisions do not change whole-section ordering or permit subfield updates.
+
+These examples use one Entity and source. Every row supplies a complete snapshot with
+position, altitude, and ground speed. Other quantities carry forward unless stated.
+
+| Case | Constituent evidence in the later snapshot | Movement result |
+| --- | --- | --- |
+| Carried-forward reading | Sequence 11 adds a new speed reading but repeats position `P1`, revision 0, coordinates, and source time null from sequence 10 | Retain the new speed observation only; no extra position observation or fresh position age |
+| New equal reading | Sequence 12 supplies position `P2`, revision 0, with the same coordinates and null source time as `P1` | Retain a distinct position observation despite the identical value and unknown time |
+| Correction | Sequence 13 supplies corrected coordinates for `P2`, revision 1, keeping its null source time | Retain the correction against `P2`; no new reading or fresh age; repeating revision 1 adds no correction |
+
+For known equal times, `P1` and new reading `P2` can both have source time
+`2026-10-20T12:00:00Z`. The correction of `P2` keeps that time even in a snapshot
+whose `observed_at` is later. A conflicting revision 1 or later reuse of revision 0
+is rejected. Exact metadata fields remain for the concrete message schemas.
 
 [Component index](README.md)

@@ -2,7 +2,7 @@
 
 Geofeature messages create and edit authored points, lines, and polygons.
 Creation requires Geometry and accepts permitted Description and [Type](../components/type.md#geofeature-type) values.
-It has no Asset enrollment or Track publisher inputs.
+It has no Asset enrollment or Observation publisher inputs.
 
 ## Messages
 

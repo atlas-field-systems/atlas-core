@@ -11,14 +11,14 @@ state. The condition vocabulary and field layout below are proposals.
 | --- | --- | --- | --- |
 | `condition` | String | Required, non-null | One of `unknown`, `healthy`, `degraded`, or `faulted` |
 
-Include the [shared reported-section fields](README.md#shared-proposed-section-fields).
+The enclosing result carries [shared section metadata](README.md#shared-section-results).
 `unknown` is the initial lack of an assessment, not an error. Actual reported
-failures use error information when present. Healthy sections omit it.
-The exact relationship between a faulted condition and its error details remains open.
+failures use the [shared error alternative](README.md#shared-section-results).
+Condition values belong in the value alternative, separately from reporting failures.
 
 Status uses `UpdateAsset` and the [source evidence and ordering rules](../reports.md#shared-context).
 It may be state until changed or a dated assessment, as declared by the source.
-Fresh contact does not advance its observation time. A healthy condition alone
+Fresh contact does not advance its measurement time. A healthy condition alone
 does not promise that a Task can start or that physical work has completed.
 
 ## Examples
@@ -27,15 +27,14 @@ Valid healthy assessment under the proposal:
 
 ```json
 {
-	"condition": "healthy",
-	"observed_at": "2026-10-17T12:00:00Z"
+	"condition": "healthy"
 }
 ```
 
 Invalid because a Task execution state is not a condition value:
 
 ```json
-{"condition": "in_progress", "observed_at": "2026-10-17T12:00:00Z"}
+{"condition": "in_progress"}
 ```
 
 ## Decisions to settle

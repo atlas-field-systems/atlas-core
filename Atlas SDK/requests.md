@@ -8,9 +8,12 @@ the picture, its cursor, journal, or subscriptions.
 
 Retain the original Dataset, operation kind, retry identity, submitted facts, and
 required edit precondition. Preparation happens before network transmission. Changes
-to Entity descriptions use their descriptive revision. Observation-only Asset
+to Entity descriptions use their descriptive revision. Measurement-only Asset
 updates do not depend on it. Follow [UpdateAsset](../Atlas%20Protocol/messaging/assets.md#updating-sections)
 for section replacement and evidence requirements.
+Observation creation and reports retain the identities required by
+[Observation messages](../Atlas%20Protocol/messaging/observations.md). Reconcile
+through the Observation and its recorded Track association after a lost reply.
 
 | Outcome | Meaning |
 | --- | --- |
@@ -28,7 +31,7 @@ settle a call twice or contaminate a new Dataset's state.
 ## Retry deliberately
 
 Retry the same identity, original facts, Dataset, and precondition under current
-authorization. Do not silently create another Task, allocate another Object, rebase
+authorization. Do not silently create another Observation or Task, allocate another Object, rebase
 an edit, or rerun an Operation. Preserve conflict and ended-identity errors.
 
 Same-release Restart retains valid Dataset retries. Reset requires deliberate

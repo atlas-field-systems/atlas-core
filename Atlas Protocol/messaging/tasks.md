@@ -24,7 +24,7 @@ Result declarations follow [References and results](../tasks.md#references-and-r
 
 | Proposed message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
-| `GetAssignedTasks` | Asset runtime retrieves current instructions, including when reconciling after reconnect | Asset ID and bounded query context | Assigned Tasks with queue revision and paging context |
+| `GetAssignedTasks` | Asset runtime retrieves current instructions, including when reconciling after reconnect | Asset ID and bounded query context | Assigned Tasks, recoverable requested order and confirmed adoption, with queue revision and paging context |
 | `SetTaskOrder` | Operator app or planning automation requests a new order for eligible unstarted Tasks | Asset ID, complete eligible order, retry identity, and revision precondition | Recorded requested order and revision |
 | `ConfirmTaskOrder` | Asset runtime confirms the requested queue order it actually adopted | Asset and process context, plus original evidence of the adopted order | Recorded confirmation, distinct from the requested order |
 

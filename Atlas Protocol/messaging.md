@@ -26,14 +26,16 @@ A lost result leaves uncertainty. Another link must not silently create new work
 ## Resource message families
 
 - [Asset messages](messaging/assets.md): registration, section updates, reads, and deletion.
-- [Track messages](messaging/tracks.md): publisher-owned Tracks and observations.
+- [Observation messages](messaging/observations.md): publisher-owned detections and successive reports.
+- [Track messages](messaging/tracks.md): shared targets, source associations, and evidence reads.
 - [Geofeature messages](messaging/geofeatures.md): authored geometry and descriptions.
 - [Task messages](messaging/tasks.md): Commands, assigned work, execution, and results.
 - [Object messages](messaging/objects.md): complete file publication, metadata, and content.
 
-`RegisterAsset`, `CreateTrack`, and `CreateGeofeature` have distinct input schemas.
+`RegisterAsset`, `CreateObservation`, and `CreateGeofeature` have distinct input schemas.
 Each exposes only the fields and components permitted for its Entity type under
-[Entities](entities.md#component-composition).
+[Entities](entities.md#component-composition). Tracks are created by the active
+[fusion policy](tracks.md), not by an Asset creation message.
 
 Different public messages may share a Core API operation or internal mechanism.
 That mapping does not merge their public input contracts or require one HTTP
@@ -87,12 +89,21 @@ resumable-upload exchange, or remote Core-configuration message.
 
 | Proposed message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
-| `ReadSnapshot` | Application maintaining a synchronized picture stages its initial resource views | Snapshot capture and paging context | Captured resource views under [Synchronization](synchronization.md) |
-| `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Bounded replay context | Whole committed change batches |
-| `SubscribeChanges` | Synchronizing application catches up and follows live commits | Subscription and handoff context | Ordered committed changes and synchronization replies |
+| `ReadSnapshot` | Application stages base, Observation, or movement-history coverage | Declared coverage, snapshot capture, and paging context | Captured data under [Synchronization](synchronization.md) |
+| `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Declared coverage and bounded replay context | Complete committed effects within coverage and ordered progress |
+| `SubscribeChanges` | Synchronizing application catches up and follows live commits | Declared coverage, subscription, and handoff context | Ordered committed effects, progress, and synchronization replies |
 | `ReleaseSnapshot` | Loading application frees its capture after paging or cancellation | Capture identity | Release acknowledgment or explicit refusal |
 
-Core sends synchronization replies for release, handoff, replay, gaps, and recovery
-as defined by [Synchronization](synchronization.md). Exact reply message names remain open.
+Changing coverage follows the staged cutover in [Synchronization](synchronization.md#changing-coverage).
+Exact synchronization reply names and coverage-change envelopes remain open.
+
+## History query control
+
+| Proposed message | Expected user and purpose | Request | Result |
+| --- | --- | --- | --- |
+| `ReleaseHistoryView` | Query caller frees an Asset, Observation, or Track history view after paging or cancellation | The view's source-bound release token | Idempotent release acknowledgment or explicit refusal under [history query rules](history-queries.md#release-expiry-and-capacity) |
+
+Continuation and release keep the original HTTP or local owner across cache-option
+changes. Release of a local view is local and does not mutate Core's retained history.
 
 [Next: wire conventions](wire.md)

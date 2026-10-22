@@ -18,9 +18,11 @@ contract. The compaction method remains undecided.
 | Term | Meaning |
 | --- | --- |
 | Dataset | One operational data lifetime, ending at Reset |
-| Entity | An Asset, Track, or Geofeature with a stable identity |
+| Entity | An Asset, Observation, Track, or Geofeature with a stable identity |
 | Asset | A system that reports state and can execute supported Commands |
-| Track | Observations about something, owned by one publisher |
+| Observation | One publisher's ongoing record of a detected subject |
+| Track | Atlas's shared target identity and state, built from Observations |
+| Fusion policy | Decides Observation-to-Track associations and Track state |
 | Geofeature | An authored point, line, or polygon |
 | Command | A Protocol-defined instruction and its validity rules |
 | Task | One recorded request for an Asset to execute a Command |
@@ -48,6 +50,8 @@ Use standard generation for Go and TypeScript declarations and ordinary HTTP
 bindings. Runtime validation must be integrated explicitly. Keep algorithms,
 authorization, transitions, storage, and synchronization implementation out of
 schemas and generator templates.
+Schema validity alone does not establish authorization, identifier relationships,
+or valid state transitions. Consuming Core and SDK code must check the relevant context.
 
 Keep this folder self-contained so it can become its own repository. A separate
 repository does not itself change compatibility policy: initially Core, SDK, and
@@ -57,8 +61,9 @@ automatic downgrade, or translation between versions. Plugins release independen
 
 ## Reading order
 
-[Entities](entities.md) → [Identity](identity.md) → [Reports](reports.md) →
-[Asset location history](location-history.md) →
+[Entities](entities.md) → [Observations](observations.md) → [Tracks](tracks.md) →
+[Identity](identity.md) → [Reports](reports.md) →
+[Movement history](movement-history.md) →
 [Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
 [Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
 
