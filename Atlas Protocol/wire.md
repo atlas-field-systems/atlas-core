@@ -17,8 +17,9 @@ errors, binary, and empty replies. Releases require exact Core/SDK/Protocol vers
 agreement. A mismatch is `409 protocol_mismatch`, without downgrade or negotiation.
 
 Authenticated `GET /health` is the discovery exception and needs neither header.
-Its JSON `data` contains `protocol_version`, `core_run_id`, effective `limits`, and
-[temporary allocation context](temporary-reads.md). SDK validates that version,
+Its JSON `data` contains `protocol_version`, `core_run_id`, effective `limits`,
+`temporary_limits`, and the [temporary allocation context](temporary-reads.md).
+SDK validates that version,
 then supplies both context headers on ordinary requests.
 
 HTTP uses `Authorization: Bearer <api_key>`. Health/reference data require
@@ -33,7 +34,8 @@ fields, never an arbitrary exception dump. The actual Dataset is always present.
 
 Raw authenticated OpenAPI, documentation HTML, binary content, and explicitly empty
 replies are envelope exceptions. Validate status, media, headers, and body at both
-ends. A malformed mutation response can follow a commit and proves no rejection.
+ends. A malformed mutation response establishes neither commit nor rejection.
+Reconcile the outcome using the mutation's original retry facts.
 
 ## HTTP correlation
 
@@ -44,7 +46,9 @@ Trusted-origin browser access permits Protocol headers and exposes response cont
 ## Parsing and edits
 
 Accept one bounded UTF-8 JSON document. Reject duplicate decoded member names,
-malformed UTF-8, unpaired surrogates, nonfinite numbers, and unknown fields.
+malformed UTF-8, unpaired surrogates, and nonfinite numbers. Reject unknown fields
+in closed Protocol objects. Plugin-owned JSON follows its installed schema and
+the bounded [lossless payload contract](operations.md#payload-facts).
 Validate original text before normalization. A rounded conversion cannot satisfy
 an exact range or integer constraint. `100.0000000000000000001` is not an integer.
 Typed integer fields accept exact mathematical integers such as `100`, `100.0`,

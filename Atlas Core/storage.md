@@ -89,7 +89,8 @@ actions with credential attribution. It is not a log of every packet or read and
 must not contain secrets. Same-effect retries do not duplicate activity.
 
 Stopped-state local actions use the [manager activity journal](manager-recovery.md#local-activity-journal).
-Core imports it once before serving. Event identity and outcomes stay separate from
+Core imports before serving and through private maintenance calls while running.
+Event identity and outcomes stay separate from
 destructive authority. Reset clears pre-boundary activity; damage blocks import.
 
 [Next: lifecycle](lifecycle.md)

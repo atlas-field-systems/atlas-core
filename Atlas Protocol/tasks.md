@@ -53,8 +53,9 @@ terminal Tasks cannot be reordered. A cancellation-held unstarted slot stays fix
 while eligible IDs fill the other slots. Refusal restores that Task in its slot.
 Starting or terminating work removes its slot. A cancelled held Task also loses its slot.
 
-Order or membership changes advance queue revision and Asset version. Adoption
-alone advances Asset version. Related Task changes and the final Asset image
+Order, membership, or reorder-eligibility changes advance queue revision and Asset
+version. This includes cancellation requests and refusals for held unstarted slots.
+Adoption alone advances Asset version. Related Task changes and the final Asset image
 commit atomically. The initial limit is 1,000 nonterminal Tasks per Asset, including
 immediate controls. Admission reserves room for cancellation and terminal evidence.
 An admission limit never blocks an already accepted Task's terminal report.

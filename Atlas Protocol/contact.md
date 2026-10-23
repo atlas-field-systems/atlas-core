@@ -20,10 +20,13 @@ The random UUID challenge binds those facts, Dataset, and the allocation context
 Its monotonic lifetime is ten seconds or the remaining context lifetime, whichever
 is shorter. An exact allocation retry returns the same challenge and original expiry.
 
-Core permits one outstanding challenge per Asset and 1,024 across the installation.
+Core permits one outstanding challenge per Asset, within its advertised total cap.
 A different allocation while the Asset's challenge is live returns `429 contact_busy`.
-Challenge consumption and retained allocation receipts follow the same bounded
-context lifetime. Expired contexts cannot allocate again after receipt cleanup.
+Reserve an aggregate allocation-receipt slot before issuing a challenge. Consuming
+the challenge releases its live slot. The receipt stays charged until context expiry,
+including for an expired unconsumed challenge. Contact receipts share the snapshot/history receipt
+cap under [temporary limits](temporary-reads.md#advertised-limits). If no slot can
+be reserved, refuse `429 resource_limit`. Expired contexts cannot allocate again.
 
 ## Current check-in
 

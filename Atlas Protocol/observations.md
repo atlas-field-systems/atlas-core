@@ -8,8 +8,9 @@ Successive reports use the same Observation ID, distinct from its shared [Track]
 
 Each Observation records one stable `publisher_id`, separate from credentials,
 gateways, Plugin installations, and Asset process generations. A gateway does not
-become the publisher by forwarding a drone's report. Reinstallation explicitly
-names the existing publisher. Display names do not establish continuity.
+become the publisher by forwarding a drone's report. Continuing a publisher after
+reinstallation names its existing ID and satisfies sequence recovery below.
+Display names do not establish continuity.
 A report naming another publisher is refused atomically. No automatic transfer exists.
 
 Creation records `source_asset_id` when the publisher represents an Asset.
@@ -36,8 +37,18 @@ original identities. Making a new packet does not create new evidence.
 Publisher sequence scope persists across gateway changes, credential changes,
 restarts, and integration reinstallations. The publisher durably allocates sequence
 numbers before emission and resumes above its allocated high-water mark.
-It reconciles retained accepted reports and its outstanding submissions after
-recovery. It cannot reset the counter, change publisher to evade ordering, or reuse
+Current Entity reads cannot reveal allocated-but-unsent sequence numbers. Before
+handoff, stop the old allocator or share the same authoritative allocator. Recover
+a durable upper bound covering every prior allocation for each affected stream.
+Retry outstanding reports only with their original facts. A skipped allocation is
+harmless; reusing it for different facts is not. If the upper bound is unavailable,
+stop new publication for that Observation. The publisher exposes the failure in
+its own diagnostics; no new Core state or Observation flag is created. Retain its
+last-known Observation and Track. Restored allocator state or Reset permits recovery;
+an accepted-state read, a new key, or reinstall alone cannot supply the missing proof.
+Later detections may start a new Observation and source lifetime, even for the same
+physical subject. They do not resume or link the old record. The publisher
+cannot reset the counter, change publisher to evade ordering, or reuse
 an allocated number with changed facts. Counter exhaustion is an explicit publication
 failure, never wraparound. Sequences are scoped per Observation and section;
 the report's sequence applies to each section it supplies.

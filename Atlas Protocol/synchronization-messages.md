@@ -14,11 +14,13 @@ then replies `authenticated` with matching context, `core_run_id`, and effective
 limits. No data precedes authentication. Keys stay out of URLs and diagnostics.
 Failed authentication returns `unauthorized` when possible and closes the socket.
 
-After authentication, each frame is `{type, dataset_id, protocol_version, data}`.
-Request/reply controls also require the same echoed `request_id`. Stream events
-instead identify their subscription in `data`. Errors use `{type: "error",
+After authentication, non-error frames are `{type, dataset_id, protocol_version,
+request_id?, data}`. Controls require top-level `request_id`; replies echo it.
+Stream events omit that field and identify their subscription in `data`.
+Errors use `{type: "error",
 dataset_id, protocol_version, request_id?, error}` with Wire's error object.
-Its error `request_id` is Core-assigned correlation, not the echoed control ID.
+Their top-level ID echoes a control's valid parsed request ID when answering it;
+otherwise omit it. `error.request_id` is separate Core-assigned correlation.
 The whole frame counts against the negotiated byte/value bound.
 
 HTTP controls carry their named `data` fields in the ordinary request body and
@@ -84,7 +86,8 @@ replaces the same history identity. No event samples a current image into histor
 
 `progress` has `subscription_id`, `coverage_revision`, `previous_cursor`, and
 `through_cursor`, proving an ordered range with no selected effects. A batch's
-previous cursor must equal the last completely applied batch/progress cursor.
+previous cursor must equal the last completely applied batch/progress cursor in
+that projection's chain. [Staged chains](coverage-changes.md#stage-and-align) are separate.
 Duplicates with identical context/facts are harmless. A conflicting copy, gap,
 wrong coverage revision, or malformed item stops application before cursor advance.
 

@@ -24,7 +24,9 @@ sequences are one. Never wrap a counter. Refuse an effect requiring overflow wit
 `409 counter_exhausted` before commit. Opaque commit cursors are not these counters.
 
 Typed floating values round to nearest binary64, ties to even, after exact range
-checks. Reject a nonzero typed value that would underflow to zero. Plugin payloads
+checks. Recheck component bounds and cross-field rules after conversion. Reject
+invalid rounded results without clamping or wrapping. Reject a nonzero typed value
+that would underflow to zero. Plugin payloads
 instead retain the token, including `1e-400`. Numeric tokens are at most 128 UTF-8
 bytes, with any exponent in -10,000 through 10,000. No parser may first round a
 fraction into an integer or an out-of-range value into a valid endpoint.
@@ -63,8 +65,10 @@ Health `limits` has integer fields `max_request_bytes`, `max_request_json_values
 `max_message_bytes`, `max_json_values`, `max_changes`, `max_control_bytes`,
 `max_control_json_values`, `max_json_depth`, and `max_object_bytes`, with the
 corresponding defaults above. Snapshot/subscription `limits` contains the negotiated
-`max_message_bytes`, `max_json_values`, and `max_changes`. Limits are budget integers,
+`max_message_bytes`, `max_json_values`, and `max_changes`. These message-limit fields are budget integers,
 not Object content-length strings. Missing or unknown limit fields are invalid.
+The separate health [`temporary_limits`](temporary-reads.md#advertised-limits)
+object advertises allocation budgets and their numeric representations.
 
 ## Refusal and recovery
 

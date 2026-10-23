@@ -36,7 +36,8 @@ for a deleted profile returns `410 operator_deleted`. Reads return
 `404 operator_not_found` for unknown/deleted profiles. Past attribution stays retained.
 
 `CreateApiKey` requires `api_key_id`, `request_id`, caller-prepared `secret`, and
-optional non-null `operator_id`. Retry equality uses the original credential facts
+optional non-null `operator_id`. `secret` uses the exact [API-key encoding](../identity.md#api-key-encoding).
+Retry equality uses the original credential facts
 without exposing the retained secret. Responses/list entries contain `api_key_id`,
 nullable `operator_id`, `created_at`, and nullable `revoked_at`, never a verifier
 or retrievable secret. `RevokeApiKey` requires `api_key_id` and `request_id`.

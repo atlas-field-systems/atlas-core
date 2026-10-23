@@ -50,9 +50,18 @@ New Assets start with unknown status, offline communications, and no last-seen t
 Registration alone is not contact. Reset retains valid setup bindings, but the Asset
 must register into the new Dataset using fresh request identity, not relabeled reports.
 
-API-key creation uses caller-prepared secrets with at least 32 random bytes and stable creation IDs;
-Core stores verifiers, not retrievable secrets. Creation identity survives Reset.
-First-key provisioning and credential replacement are local administration.
+API-key creation uses stable creation IDs. Core stores verifiers, not retrievable
+secrets. Creation identity survives Reset. First-key provisioning and credential
+replacement are local administration.
+
+## API-key encoding
+
+An API key contains exactly 32 bytes from a cryptographically secure random source.
+Its `secret` wire value is canonical unpadded [base64url](https://datatracker.ietf.org/doc/html/rfc4648#section-5):
+43 ASCII characters from `A-Z`, `a-z`, `0-9`, `_`, and `-`. Reject other characters,
+padding, whitespace, or a value that does not decode to 32 bytes and reencode identically.
+The same value is used in registration, key creation, local provisioning, HTTP
+Bearer authentication, and WSS `api_key`. Validation cannot prove source randomness.
 
 ## Deletion and revocation
 

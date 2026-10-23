@@ -34,7 +34,13 @@ it is not a second public API or a Plugin-defined Command Catalog.
 
 Keep stable publisher identity separate from installation ID and credential.
 Updates preserve installation identity; reinstallations get a new installation and
-principal. Reinstallation names an existing publisher explicitly. Publisher identity
+principal. Continuing an existing publisher requires its explicit ID and
+[allocator-state recovery](../Atlas%20Protocol/observations.md#reports-and-movement).
+Uninstall can remove private allocator state; its ID and Core's accepted reads alone
+cannot recover it. When continuity is required, the Plugin prepares its handoff
+before uninstall. It stops allocating and exports a durable upper bound, or uses
+a shared allocator. Core's uninstall performs no allocator transfer step.
+Publisher identity
 does not depend on the submitting API key. Observation publishers follow
 [source attribution rules](../Atlas%20Protocol/observations.md#identity-and-attribution).
 

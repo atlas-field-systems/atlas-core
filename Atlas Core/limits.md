@@ -38,11 +38,15 @@ Public field ranges and reusable component counts belong only to Protocol schema
 | HTTP history views | 16 per Core run, four per credential, original allocation-context expiry |
 | History membership | 100,000 references/view, 1,000,000 across Core views |
 | History frozen data and indexes | 128 MiB aggregate, charged before allocation |
-| Allocation receipts | 4,096 per Core run across snapshots and history views |
+| Contact challenges | 1,024 outstanding per Core run, one per Asset |
+| Allocation receipts | 4,096 per Core run across snapshots, history views, and contact challenges |
 | Coverage join | One addition/client, sharing the existing 4 MiB connection buffer, 10-second cutover wait |
 
 Use Protocol's finite allocation contexts so a released/expired receipt cannot
 resurrect after pruning. Releases and status remain usable when allocation is full.
+Consumed contact receipts retain their slot until context expiry. Count every
+retained outcome. Receipt facts and result metadata obey Protocol message bounds;
+receipts reference captures rather than copying them. Decoded RAM still needs qualification.
 Expire temporary history views and recheck admission before refusing otherwise
 viable writes or coverage. Never truncate matching history or pin replay indefinitely.
 SDK's separate [picture budgets](../Atlas%20SDK/picture.md#capacity-and-retry) still apply.
