@@ -5,7 +5,7 @@ An Object becomes public only after verified publication.
 
 ## Messages
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `UploadObject` | Asset runtime, operator app, or integration publishes a complete image or other file | Stable Object and upload request IDs, descriptor, initial metadata and associations, and complete binary content | Ready Object after verified publication under [upload rules](../objects.md#upload-and-retry) |
 | `ListObjects` | Operator app browses or searches available file metadata | Bounded filters | Matching ready Object metadata |
@@ -19,6 +19,7 @@ Binary content remains binary. The message contract does not require JSON-encode
 files. There is no metadata-only create, partial public Object, or resumable upload.
 
 Task result declarations belong to [Task messages](tasks.md). A declaration can
-precede upload and does not establish that the Object is ready.
+precede upload and does not establish that the Object is ready. `GetTaskObjects`
+includes ready declared results even when upload metadata omitted the Task association.
 
 [Messaging index](../messaging.md)

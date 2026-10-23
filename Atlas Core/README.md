@@ -48,8 +48,9 @@ Use stock configuration; no custom schema language, endpoint-specific templates,
 patched generated files, or duplicate wrapper API. A narrow handwritten binding
 is preferable when generation makes an exceptional route harder to understand.
 
-Tool versions and the supported schema profile are not yet pinned or qualified.
-This repo contains no qualified locks or generated packages. Measure saved
+The selected [build and schema profile](build-profile.md) requires exact locks and
+deterministic generation before implementation qualification. This repo contains
+no such locks, generated packages, or qualified toolchain. Measure saved
 maintenance, not generated line count. Removing repeated declarations is the goal;
 generating most of Core is not.
 
@@ -63,5 +64,8 @@ Core restart are outside scope.
 
 [Storage](storage.md) → [Lifecycle](lifecycle.md) → [Plugins](plugins.md) → [Fusion](fusion.md) →
 [Diagnostics](diagnostics.md) → [Qualification](qualification.md).
+
+[Limits](limits.md), [private Plugin execution](plugin-runtime.md), and
+[manager recovery](manager-recovery.md) define their owners' implementation contracts.
 
 Shared behavior remains in [Protocol](../Atlas%20Protocol/README.md).

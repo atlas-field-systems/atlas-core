@@ -1,99 +1,99 @@
 # Tasks and execution
 
 **Core records intent. The Asset runtime schedules and executes it.**
-Protocol owns the Command Catalog; each Asset advertises its supported subset.
-The initial Catalog contains only Move To, Pause, and Resume. Plugins are not Task
-targets and cannot add Asset Commands.
+The [initial Command Catalog](command-catalog.md) contains queued Move To and
+immediate Pause and Resume. An Asset advertises its supported subset. Plugins
+cannot add Asset Commands or become Task targets.
 
 ## Creation and state
 
-One Task has immutable Asset, Command, inputs, scheduling choice, and validity
-terms. Core validates support, references, and the target Asset's existence. It then
-assigns a stable per-Asset submission sequence. Offline or busy does not itself prevent
-acceptance. Exact retries allocate neither another Task nor another sequence.
+A Task has immutable `task_id`, `asset_id`, `command`, `inputs`, `scheduling`, and
+validity facts. Core validates support, references, and the live target Asset, then
+assigns `submission_sequence`. Offline or busy does not prevent acceptance.
+Exact retries allocate neither another Task nor another sequence.
 
 States are `pending`, `acknowledged`, `in_progress`, `paused`,
 `cancellation_requested`, `completed`, `failed`, and `cancelled`.
-The last three are terminal and immutable. Reading an instruction is not an
-acknowledgment. Accepted execution reports establish progress, completion, or failure;
-valid reports may skip intermediate states. There is no generic Task edit/delete.
+The last three are terminal and immutable. Reading instructions is not acknowledgment.
+Accepted Asset evidence establishes execution state and may skip intermediate states.
+Core never infers physical effect, cancellation, or completion from silence or position.
+There is no generic Task edit or deletion.
 
-An operator's cancellation request changes a nonterminal Task to
-`cancellation_requested`. The external Asset runtime discovers the request, handles
-cancellation, and reports `cancelled` once cancellation has taken effect. Core records
-`cancelled` only after accepting that report. Receipt alone is not cancellation.
+Cancellation sets a nonterminal Task to `cancellation_requested` and retains its
+last evidenced execution state. Progress can update that evidence without clearing
+its request. An accepted `cancelled` report confirms that cancellation took effect.
+`completed` or `failed` may finish work before cancellation takes effect, even
+after Core recorded the request. A terminal Task cannot later become cancelled.
 
-While awaiting confirmation, the Task remains nonterminal, including when the Asset
-is offline. Progress reports cannot erase the request. If the Asset completes work
-before receiving cancellation, it reports `completed`; Core accepts that outcome
-even after recording `cancellation_requested`. Completion supersedes the outstanding
-request. Valid failure may also finish the Task before cancellation takes effect.
-Core never infers cancellation or completion from a timeout or disconnection.
-
-An explicit cancellation refusal clears the request and restores the last evidenced
-execution state. Ordinary progress does not count as refusal.
+An explicit refusal must name the outstanding cancellation request and evidence
+the actual execution state. Only that refusal clears the request and restores the
+evidenced state. Ordinary progress, expiry, or disconnection cannot clear it.
+The [Task message payloads](messaging/tasks.md#execution-and-cancellation-evidence)
+define matching and retry behavior.
 
 ## Scheduling and controls
 
-The Asset runs one queued Task at a time; supported immediate Commands may run
-concurrently. Delayed reports can temporarily make Core's view look different.
-Queue edits submit the complete eligible, unstarted order with retry identity and
-a revision precondition. Requested order and Asset-confirmed adoption are distinct.
+An Asset runs one queued Task at a time. Pause and Resume use the separate
+[control contract](task-controls.md). Two accepted Move To Tasks run sequentially.
+Core does not reject overlapping movement intent or choose a diversion policy.
 
-Started, paused-started, cancellation-requested, and terminal Tasks are not
-reorderable. An unstarted cancellation-requested Task retains its internal queue
-slot so refusal can restore it amid the latest eligible edits. Assigned-work
-pagination pins the queue revision and refuses a changed page sequence.
+`task_queue` in every Asset read and synchronized image contains
+`requested_task_ids`, `revision`, and `confirmed`. The ID list includes every
+unstarted queued Task in requested execution order, including a cancellation-held
+slot. `confirmed` is null or `{revision, process_generation}` from accepted
+adoption evidence. An old revision or process is not adoption of the current order.
+Initially the list is empty, `revision` is `"0"`, and `confirmed` is null.
+There is no second historical order list. Submission sequence and Task-list sort
+order do not define execution order.
 
-Asset reads and synchronized images embed a bounded `task_queue`, including empty
-queues. It contains the complete requested Task IDs in execution order, their
-revision, and the last confirmed revision with its confirming process generation.
-Confirmation is null before any adoption. An older revision or process is older
-evidence, not adoption of the current request. Do not retain a second historical
-order list. Submission sequence and Task-list sorting do not define execution order.
+New queued Tasks append after the current requested order, including while paused.
+`SetTaskOrder` supplies every eligible unstarted ID exactly once and
+`expected_queue_revision`. Started, paused-started, cancellation-requested, and
+terminal Tasks cannot be reordered. A cancellation-held unstarted slot stays fixed
+while eligible IDs fill the other slots. Refusal restores that Task in its slot.
+Starting or terminating work removes its slot. A cancelled held Task also loses its slot.
 
-Order or eligible-membership changes advance the queue revision and Asset version.
-Adoption alone advances the Asset version. Related Task changes and the final Asset
-image commit atomically. Qualify the queue bound against page and whole-commit limits
-before fixing its numeric limit in the schema.
+Order, membership, or reorder-eligibility changes advance queue revision and Asset
+version. This includes cancellation requests and refusals for held unstarted slots.
+Adoption alone advances Asset version. Related Task changes and the final Asset image
+commit atomically. The initial limit is 1,000 nonterminal Tasks per Asset, including
+immediate controls. Admission reserves room for cancellation and terminal evidence.
+An admission limit never blocks an already accepted Task's terminal report.
 
 Assigned-work pages repeat the first page's complete queue and captured adoption,
-including empty work. Task bodies page by ID. Changed order or eligibility refuses
-`409 queue_changed`; the caller starts a fresh read. Adoption alone leaves the page
-sequence valid. Fresh reads and synchronization expose later adoption.
-
-Pause and Resume are immediate Tasks, not an emergency-stop guarantee. Pause
-requires actual suspension and keeps queue order. Resume continues the same Task
-first; inability to resume fails that Task and leaves the queue paused until another
-explicit Resume. Pending cancellation must be resolved before resumption.
-
-Controls follow Core acceptance order, not packet arrival. Superseded controls
-cannot later take effect. Pause does not expire; expired Resume cannot unpause or
-fall back to an older control. Command-specific deadlines remain explicit.
-
-An Asset that confirms a control never applied reports `failed` with an `expired`
-or `superseded` reason. Without that evidence, its outcome remains unresolved.
-Accept valid delayed evidence of execution before the cutoff; terminal states remain immutable.
+including an empty list. Task bodies sort by ID. Tokens bind queue revision and
+the captured control revision. Changed order, eligibility, or control refuses
+`409 queue_changed`; start a fresh read. Adoption alone leaves the sequence valid.
+Fresh reads and synchronization expose later adoption. No paged response proves
+that a later unseen control does not exist.
 
 ## References and results
 
-Geofeature deletion guards follow [Entity rules](entities.md). Tracks remain retained records.
-Commands that target a detected subject reference its shared Track ID, not an
-Observation ID. Fusion changes cannot silently replace a Task's immutable inputs.
-Asset deletion and retained Tasks follow [Identity](identity.md#deletion-and-revocation).
-Removing advertised support does not delete existing Tasks; the Asset reports
-an honest unsupported outcome.
+Geofeature guards follow [Entity rules](entities.md#geometry-and-references).
+Track-targeting Commands use the shared Track ID. Fusion cannot rewrite immutable
+Task inputs. The initial Catalog has no Track-targeting Command.
+Asset deletion follows [Identity](identity.md#deletion-and-revocation).
+Removing advertised support preserves existing Tasks. The Asset reports `unsupported`
+when it cannot execute them.
 
-**Completion is independent of file availability.** A scan can complete while a
-result upload is missing. Append result declarations before or after termination,
-including before upload. Invalid declarations do not block a separately valid
-completion report. Declared required Objects remain protected until Reset.
+**Completion is independent of file availability.** Result declarations can arrive
+before upload or after termination. Their append-only set contains
+`{object_id, required}` entries, at most 128 per Task. Repeating an entry is harmless.
+Changing its `required` value conflicts. A declaration cannot resurrect a deleted Object.
+Invalid declarations do not block a separately valid completion report.
+Required declarations create [Object holds](objects.md#metadata-references-and-deletion)
+until Reset. Completion, cancellation, or Asset deletion does not release those holds.
+
+`GetTaskObjects` returns the deduplicated union of ready Objects declared by the
+Task and ready Objects whose metadata associates them with that Task. Upload
+metadata need not repeat a declaration's Task association. Removing an association
+cannot hide a declared ready result. Missing uploads remain declarations in
+`GetTask`, not public Object placeholders or successful empty downloads.
 
 ## Move To
 
-Queued coordinate **Move To** has no deadline.
-Its target is a complete position or a point Geofeature; optional altitude names
-its reference. The Asset decides arrival and reports completion. Core cannot infer
-success from a map position. Immediate Move To requires advertised support.
+Move To is queued only, with no deadline. Its target and altitude use the
+[Catalog inputs](command-catalog.md#move-to). The Asset decides arrival and reports
+completion. Core acceptance or a map position never proves arrival.
 
 [Next: Operations](operations.md)

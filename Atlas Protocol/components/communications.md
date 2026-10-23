@@ -1,48 +1,60 @@
 # Communications
 
-Communications presents contact health separately from link capacity.
-Core derives contact health under [Reports](../reports.md#time-and-contact).
-Capacity is a numeric nominal rate, not a capability class.
+Communications separates Core-derived contact health from reported nominal capacity.
+Core derives health under [Reports](../reports.md#time-and-contact).
+A high-capacity link can still be offline.
 
-## Read fields
+## Read composition
+
+The Asset's `communications` object requires read-only `health` and `capacity`.
+`health` is exactly `healthy`, `degraded`, or `offline`. `capacity` is a
+[section result](../report-evidence.md) for the payload below, with evidence.
+An update supplies `sections.communications` as that capacity result. It never
+supplies `health` or a nested read-view `capacity` wrapper.
+
+## Capacity fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
-| `health` | String | Required, read-only | Existing Core-derived `healthy`, `degraded`, or `offline` result |
-| `bandwidth_bps` | Number or null | Required | Declared nominal Asset link capacity in bits per second, greater than zero; null when unknown |
+| `bandwidth_bps` | Number or null | Required | Finite nominal bits per second, greater than zero; null when unknown |
 
-Reported capacity uses a [section result](README.md#shared-section-results).
-Its timestamp describes capacity evidence, not the age of Core's contact proof.
-Retain the declaring source and the Asset link that the capacity describes.
-The source or an attributable gateway may declare capacity through `UpdateAsset`. The writable
-schema omits `health`. Replacing reported information never sets derived health.
-Read views expose `health` beside the reported result, outside its alternatives.
+The only `source_times` key is `bandwidth_bps`. It dates capacity evidence, not
+Core's contact proof. The declaring source can be an attributable gateway using
+the Asset's validated report context. This describes the named Asset's link, not
+the gateway's upstream connection. Unattributable capacity stays null.
+Nominal capacity is not measured throughput or a current delivery guarantee.
 
-A high-capacity link can be offline. Gateway IP connectivity alone supplies neither
-downstream Asset contact nor a known capacity. Nominal capacity is not a promise
-of current throughput. Contact details are referenced through [Heartbeat](heartbeat.md).
+Initially health is `offline`. Capacity is a source-free initial value with
+`bandwidth_bps: null` under [Entity initial-state rules](../entities.md#initial-states).
+Contact details are in [Heartbeat](heartbeat.md).
 
 ## Examples
 
-Read fragment showing derived health and the reported capacity value:
+Valid reported capacity payload:
+
+```json
+{"bandwidth_bps": 1200}
+```
+
+Valid update fragment, with enclosing report fields omitted from this example:
 
 ```json
 {
-	"health": "offline",
-	"bandwidth_bps": 1200
+	"sections": {
+		"communications": {
+			"state": "value",
+			"classification": "state_until_changed",
+			"observed_at": null,
+			"value": {"bandwidth_bps": 1200}
+		}
+	}
 }
 ```
 
-Invalid update fragment because health is Core-owned:
+Invalid update because derived health is not a capacity field:
 
 ```json
 {"health": "healthy"}
 ```
-
-## Capacity attribution
-
-`bandwidth_bps` describes the named Asset link, not the gateway's own upstream IP
-connection. Unknown or unattributable capacity stays null. This declaration does not
-establish end-to-end throughput. Section failures follow [Reports](../reports.md#shared-context).
 
 [Component index](README.md)

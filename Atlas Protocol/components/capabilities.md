@@ -1,35 +1,36 @@
 # Capabilities
 
-Capabilities declares which Protocol Commands an Asset supports.
-An operator application uses this to offer suitable controls. A tracker can
-advertise no Commands. Support and execution follow [Task rules](../tasks.md).
-The manifest layout below is a proposal.
+Capabilities declares which Catalog Commands an Asset supports.
+It is required authored data. A commandless tracker uses `{"commands": []}`.
+Execution and scheduling semantics belong to [Tasks](../tasks.md).
 
-## Proposed fields
-
-| Field | Type | Presence | Meaning and bounds |
-| --- | --- | --- | --- |
-| `commands` | Array of Command support values | Required, non-null | One entry per supported Protocol Command; `[]` means none |
-
-Each Command support value has these fields:
+## Fields
 
 | Field | Type | Presence | Meaning and bounds |
 | --- | --- | --- | --- |
-| `command` | Protocol Command identifier | Required, non-null | Identifier from the local Command Catalog; unique within this manifest |
-| `scheduling` | Array of scheduling identifiers | Required, non-null | Nonempty unique subset of `queued` and `immediate`, restricted by that Command |
+| `commands` | Array of Command support values | Required, non-null | Unique entries by `command`; empty means no Commands |
 
-Reuse the Catalog's identifiers and allowed scheduling choices in the schemas.
-Examples use proposed wire names `move_to`, `pause`, and `resume`. The Catalog's
-machine-readable names remain incomplete. Plugins cannot add Asset Commands.
+Each support value has these fields.
 
-Capabilities is descriptive data, updated through `UpdateAsset` with the
-descriptive revision precondition. It does not require periodic reporting.
+| Field | Type | Presence | Meaning and bounds |
+| --- | --- | --- | --- |
+| `command` | String | Required, non-null | Exact identifier in the local Command Catalog |
+| `scheduling` | Array of strings | Required, non-null | Nonempty unique subset of that Command's Catalog scheduling choices |
+
+The initial identifiers are `move_to`, `pause`, and `resume`. Their supported
+scheduling choices come from the [Catalog contract](../command-catalog.md), which is the
+single authority for those choices. The manifest cannot invent a Command or a
+scheduling mode. Its length cannot exceed the number of Catalog Commands.
+Plugins cannot add Asset Commands or arbitrary capability parameters.
+
+Capabilities changes use `UpdateAsset` and `expected_edit_revision`.
 Removing support does not rewrite existing Tasks. Current faults belong in
-[Status](status.md). Support is not proof that a Command can succeed now.
+[Status](status.md). Support does not promise success on the next invocation.
+Capabilities has no report timestamp, result alternative, or `source_times`.
 
 ## Examples
 
-Valid proposed manifest:
+Valid manifest for the initial Catalog:
 
 ```json
 {
@@ -41,16 +42,10 @@ Valid proposed manifest:
 }
 ```
 
-A commandless tracker uses `{"commands": []}`.
-Invalid because a supported Command has no supported scheduling choice:
+Invalid because the scheduling set is empty:
 
 ```json
 {"commands": [{"command": "move_to", "scheduling": []}]}
 ```
-
-## Decisions to settle
-
-Confirm the manifest layout and Catalog identifiers. Exact per-Command input
-constraints belong to their Command schemas, not an arbitrary capability dictionary.
 
 [Component index](README.md)

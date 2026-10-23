@@ -1,87 +1,71 @@
 # Component field reference
 
-This reference proposes fields, types, units, bounds, null and omission rules,
-and JSON examples for Atlas resources. Exact field details remain proposals
-unless explicitly agreed.
+These pages define the selected component fields, units, bounds, and presence rules.
+They are the documentation contract. Machine schemas and runtime qualification
+remain implementation work. Unknown input properties are refused.
+String limits count Unicode scalar values. Nonblank strings contain at least one
+character outside Unicode White_Space. Accepted spelling is retained.
 
 ## Descriptions and type
 
 | Component | Purpose | Used by |
 | --- | --- | --- |
-| [Description](description.md) | Human-readable name and details | Entities |
-| [Type](type.md) | Asset family, observed subject kind, or authored purpose | Assets, Observations, Tracks, Geofeatures |
-| [Capabilities](capabilities.md) | Supported Protocol Commands and scheduling | Assets, including commandless trackers |
+| [Description](description.md) | Human-readable name and details | All Entity types |
+| [Type](type.md) | Descriptive family, subject kind, or purpose | All Entity types |
+| [Capabilities](capabilities.md) | Supported Catalog Commands | Assets, including commandless trackers |
 
 ## Reported sections
 
 | Section | Purpose | Used by |
 | --- | --- | --- |
-| [Status](status.md) | Reported overall condition | Assets |
-| [Telemetry](telemetry.md) | One complete location and motion section | Assets, applicable Observations, and derived Track state |
-| [Attitude](attitude.md) | True-north body heading, pitch, and roll | Applicable Assets, Observations, and derived Track state |
-| [Power](power.md) | Supply state and energy reserves | Applicable Assets |
-| [Gimbal](gimbal.md) | One complete pointing section | Assets with a gimbal |
-| [Camera](camera.md) | Live zoom and capture activity | Assets with a camera |
-| [Camera Optics](camera-optics.md) | Baseline field of view at 1x zoom | Assets with a camera |
+| [Status](status.md) | Source's overall condition assessment | Assets |
+| [Telemetry](telemetry.md) | Complete location and motion snapshot | Assets, Observations, and derived Tracks |
+| [Attitude](attitude.md) | True-north body heading, pitch, and roll | Assets, Observations, and derived Tracks |
+| [Power](power.md) | Supply state and energy reserves | Assets |
+| [Gimbal](gimbal.md) | Complete world-relative pointing snapshot | Assets |
+| [Camera](camera.md) | Calibrated zoom and independent capture activities | Assets |
+| [Camera Optics](camera-optics.md) | Baseline rectilinear field of view | Assets |
+| [Type](type.md#observed-subject-type) | Publisher's subject classification | Observations and derived Tracks |
+| [Geometry](geometry.md) | Reported subject extent | Observations and derived Tracks |
 
-## Contact and geometry
+## Contact and reusable values
 
 | Component | Purpose | Used by |
 | --- | --- | --- |
-| [Communications](communications.md) | Declared link information and Core-derived contact health | Assets |
-| [Heartbeat](heartbeat.md) | Contact evidence and its accepted read metadata | Assets |
-| [Geometry](geometry.md) | Reusable point, line, or polygon | Geofeatures, applicable Observations, and derived Track state |
+| [Communications](communications.md) | Reported capacity and Core-derived contact health | Assets |
+| [Heartbeat](heartbeat.md) | Contact proof and accepted contact timestamp | Assets |
+| [Geometry](geometry.md) | Authored point, line, or polygon | Geofeatures |
 
-Telemetry documents the reusable [Position](telemetry.md#position) and
-[Altitude](telemetry.md#altitude) values inline. Command inputs can reference those
-same definitions without adopting the complete Telemetry section. Position quality
-remains deferred. This reference adds no field contract for it.
-
-These are component proposals, not new Entity types or an arbitrary field registry.
-Exact permitted Entity compositions still need schemas. Reference Asset examples
-are a mounted gimbal camera, powered fixed-wing aircraft, a glider, a quadcopter,
-and a commandless tracker that reports its own telemetry.
-
-## Agreed behavior
-
-[Entities](../entities.md#reported-sections) owns the distinction between state
-until changed and dated measurements. [Reports](../reports.md#shared-context)
-owns complete-section replacement, errors, ordering, and sparse report behavior.
-Those rules apply to reported sections. Track state retains source evidence under
-the active [fusion policy](../tracks.md), including its original times.
-Each section carries its own classification. Do not divide the resource into
-separate `state` and `measurements` containers.
-The section's `state` field below names its result alternative, not a resource group.
+[Telemetry](telemetry.md) also defines reusable Position and Altitude values.
+Commands can use those values without adopting Telemetry. Position uncertainty,
+military-display metadata, sensor references, and collections of independently
+exposed cameras are unsupported initially. No untyped extension fields replace them.
 
 ## Shared section results
 
-These fields apply to complete reported sections. Reusable values and authored
-sections do not inherit them. Contact evidence has its own linked representation.
-Report identity and ordering use the [shared context](../reports.md#shared-context).
+[Report format](../report-format.md) is the sole authority for exact report,
+section-result, constituent, correction, and evidence-reference fields.
+The result alternative `state` is distinct from the section's `classification`.
+Do not split resources into separate state and measurement containers.
 
-| Field | Type | Presence | Meaning |
-| --- | --- | --- | --- |
-| `state` | String | Required | Exactly `value`, `error`, or `withdrawn` |
-| `classification` | String | Required | `state_until_changed` or `dated_measurement` under Entity rules |
-| `observed_at` | UTC timestamp string or null | Required | Default original source time; null when unknown |
-| `source_times` | Named timestamp overrides | Optional, only for `value` | Original times for defined quantities that differ from the default |
-| `value` | Complete component payload | Required only for `value` | The section's complete values, including required nulls |
-| `error` | Error object | Required only for `error` | Required string `code` and optional string `message` |
+Every supplied reported section is a complete result. Omission preserves a section;
+replacement never inherits values or timestamps. Unknown values use the component's
+specified nulls. Failures use an error result. Withdrawal ends an assertion.
+[Entities](../entities.md#reported-sections) defines classification behavior.
 
-A result carries exactly one alternative. An error has no `value`; a withdrawal has
-neither `value` nor `error`. All alternatives retain ordering evidence. Reads expose
-the current result without reconstructing partial success. Withdrawal ends a
-state-until-changed assertion under [Reports](../reports.md#shared-context).
+`observed_at` supplies the default original quantity time. A `source_times` entry
+replaces that default for its named quantity. Explicit null means unknown time.
+Each component page lists all allowed keys. Keys for absent optional quantities
+and undeclared nested reserves are refused. No wildcard or arbitrary path is allowed.
+Descriptions, Capabilities, authored Type and Geometry, Heartbeat, and derived
+contact health do not accept `source_times`.
 
-An omitted quantity timestamp inherits `observed_at`; explicit null means unknown.
-Schemas permit only their named quantities in `source_times`, including defined
-nested reserve timing. Replacing a result never inherits earlier timestamps.
-Component examples show `value` payloads, without this result metadata or authenticated
-report context. Unknown values are not zero or an actual section error.
+Examples on component pages show payloads without their enclosing report evidence.
+Track copies retain original Observation scopes, IDs, revisions, and quantity times
+under the [default policy](../tracks.md#default-policy).
 
 ## Contract source
 
-These pages are the human-readable place to refine field proposals. Accepted
-machine-readable definitions belong in the [OpenAPI artifact](../README.md#contract-ownership).
-Once authored, its schemas own exact structure and validation. These pages explain
-them. There is no executable schema or generated package here yet.
+The [OpenAPI artifact](../README.md#contract-ownership) will mechanically encode
+these selected rules. It must not silently choose different fields or defaults.
+There is no executable schema or generated package in this baseline.

@@ -8,6 +8,9 @@ all retained data of that kind in the Dataset; it has no implicit time window or
 per-Entity selection. Object bytes, activity, Plugin Operations, and administration
 remain direct requests.
 
+Concrete [envelopes](synchronization-messages.md), [coverage controls](coverage-changes.md),
+and [temporary allocation rules](temporary-reads.md) define the wire fields and bounds.
+
 ## Complete changes
 
 A Core cursor is opaque and bound to Dataset and durable commit order. Snapshots,
@@ -44,8 +47,9 @@ snapshot needs the same valid capture or a fresh rebuild.
 ## Changing coverage
 
 Load an optional addition with the same snapshot and replay rules while the existing
-ready picture remains usable and continues updating. At a negotiated common complete
-commit boundary, finish its catch-up and atomically join it to the active projection.
+ready picture remains usable and continues updating. At the
+[coverage-change barrier](coverage-changes.md), finish catch-up and atomically join
+it to the active projection.
 Bound buffering and any cutover wait. If alignment cannot finish within those bounds,
 leave existing coverage running and report the addition's failure. Do not publish
 an addition at a different cursor or silently miss changes during the switch.
@@ -64,25 +68,20 @@ to the SDK contract, not the Core cursor.
 
 ## Lost replies and release
 
-Snapshot allocation binds coverage and a stable load ID in a Dataset/Core-run context with
-finite monotonic expiry. Exact retries recover the same capture and original expiry,
-not another allocation. Changed facts conflict. Expired, released, or old-run
-contexts cannot resurrect a capture, even after their retry records are pruned.
+Snapshot allocation binds coverage and a stable load ID under the exact
+[allocation context](temporary-reads.md). Exact retries recover the same capture
+and original expiry. Ended contexts cannot resurrect it.
 
-Explicit `release_snapshot` and `snapshot_released` controls are authenticated and
-work before a data subscription. Release after all pages arrive or loading is
-cancelled. Await acknowledgment or expiry before allocating a replacement; an
-otherwise complete picture need not wait for release acknowledgment to become usable.
-
-Captures do not pin replay forever. Bound captures, allocation receipts, and buffers.
-Reject excess allocation without blocking ordinary operational writes.
+`ReleaseSnapshot` and `snapshot_released` are authenticated and work before data
+subscription. Release after paging or cancellation. Await acknowledgment or expiry
+before allocating a replacement. A complete picture can become usable before release
+acknowledgment. Captures do not pin replay or block ordinary writes indefinitely.
 
 ## Capacity and recovery
 
-Negotiate coverage, batch byte and change-count limits before loading. Core must account for
-future allowed commits and the largest retained replay message within that coverage.
-Reserve room for a whole batch. Increased requirements force explicit recovery,
-not partial application. Control messages remain usable when data cannot fit.
+Negotiate coverage and [effective message limits](limits.md) before loading.
+Core accounts for future allowed commits and the largest retained projected batch.
+Reserve complete batches. Increased requirements force recovery without partial application.
 
 A slow client gets an explicit gap or connection closure and resumes from its last
 complete cursor. Expired replay requires rebuilding; do not silently skip changes.

@@ -88,9 +88,9 @@ Activity records selected Task, Asset deletion, Plugin, credential, and configur
 actions with credential attribution. It is not a log of every packet or read and
 must not contain secrets. Same-effect retries do not duplicate activity.
 
-Stopped-state local actions need a durable journal imported once by Core before
-serving. Keep its event identity and outcomes separate from destructive management
-authority. Reset clears pre-boundary activity; a damaged journal is not an empty
-successful import. Its exact durability format remains unspecified.
+Stopped-state local actions use the [manager activity journal](manager-recovery.md#local-activity-journal).
+Core imports before serving and through private maintenance calls while running.
+Event identity and outcomes stay separate from
+destructive authority. Reset clears pre-boundary activity; damage blocks import.
 
 [Next: lifecycle](lifecycle.md)

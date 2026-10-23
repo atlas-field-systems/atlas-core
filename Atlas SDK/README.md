@@ -68,9 +68,10 @@ Validate response context rather than silently accepting a different Dataset or
 version. No compatibility-range negotiation or automatic downgrade is needed.
 
 WebSocket authentication precedes data, with a bounded authentication window.
-Transport failures can reconnect with bounded backoff; authorization failures pause
-until credentials change. Do not calculate clock offsets or automatically replay
-mutations after reconnect.
+Transport failures can reconnect with bounded backoff. [Authorization recovery](authorization.md)
+requires authenticated discovery with changed credentials. Complete downloaded data
+remains locally readable as stale and authorization-required; network work pauses.
+Do not calculate clock offsets or automatically replay mutations after reconnect.
 
 [Requests](requests.md) explains write outcomes. [Picture](picture.md) explains
 local state and recovery. [Diagnostics](diagnostics.md) explains observation of

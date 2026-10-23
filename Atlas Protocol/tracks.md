@@ -1,73 +1,71 @@
 # Tracks and fusion
 
-**A Track is Atlas's shared identity and current state for a target.**
-The active fusion policy builds Tracks from [Observations](observations.md).
-Assets publish Observation reports. They do not choose a shared Track identity or
-overwrite its derived state directly.
+A Track is Atlas's shared identity and current state for a target.
+The active policy builds Tracks from [Observations](observations.md). Publishers
+cannot select a shared Track ID or directly overwrite its derived state.
 
 ## Ownership
 
-Fusion decides which Observations belong to which Tracks and what derived state
-each Track exposes. Core records Track IDs, associations, derived state, and source
-provenance. Track descriptions remain authored metadata with their own edit revision.
-Evidence updates do not overwrite those descriptions.
-
-An association is distinct from an Observation's reported facts. Reassociating
-evidence must not rewrite the publisher, original measurements, or source times.
-Use the same Track contract for every policy. Clients do not run their own fusion.
-The baseline has one active fusion authority for the Dataset.
+Fusion owns Observation associations and derived Track sections. Core owns Track
+IDs, persistence, provenance, and publication. Authored Description and alias have
+a separate edit revision. Evidence updates do not overwrite them.
+Reassociation cannot rewrite a publisher, measurement, or original source time.
+The Dataset initially has one built-in active fusion authority.
 
 ## Default policy
 
-Core includes a policy that creates one Track for each new Observation immediately.
-It requires no separately installed fusion service. The Observation and Track have
-separate IDs, with a retained association between them.
+Create exactly one Track for each new Observation immediately, with distinct IDs
+and a retained association. [Entity composition](entities.md#component-composition)
+defines all allowed fields. The Track's `sources` contains exactly the recorded
+Observation ID, publisher ID, and source Asset attribution if supplied. It has no
+independent Asset status, contact, power, camera, capabilities, or sensor metadata.
 
-Creating the Observation, its Track, the association, retry result, and public
-change batch is atomic. If the complete change cannot commit, reject creation.
-A lost reply is an unknown outcome. An exact retry recovers the existing pair.
-Concurrent retries cannot allocate another Track for that Observation.
+Mirror the Observation's `type` and every present `telemetry`, `attitude`, and
+`geometry` result, including classifications, errors, withdrawals, unknown values,
+and original quantity times. Initially absent optional sections stay absent.
+A source-free unknown Type remains source-free. Description and alias are not copied.
+Each sourced result's `evidence` references the original Observation report and section.
+Telemetry constituent identities retain the original Dataset, Observation, publisher,
+and quantity scope. Never substitute the Track ID or a fusion-processing identity.
 
-Commit admitted evidence and any current Observation/Track changes together.
-The Track mirrors its Observation's applicable section results, including errors,
-withdrawals, unknown values, classification, and original quantity times. It retains
-[Telemetry constituent identities and revisions](components/telemetry.md#constituent-observation-identity)
-under their original source scope. Follow [evidence admission](report-evidence.md)
-for history-only reports, historical corrections, and replays. Their retained history
-does not replace current Observation or Track sections.
+Creating the Observation, Track, association, retry result, and public change batch
+is one atomic commit. Failure rejects creation without allocating a visible pair.
+An exact retry recovers the existing pair. Racing retries cannot create another Track.
 
-Two publishers reporting the same vehicle initially produce two Observations and
-two Tracks. This policy does not match targets across publishers, average positions,
-or infer motion between reports. It leaves that work to a later policy.
+[Evidence admission](report-evidence.md) precedes mirroring. Commit newly admitted
+history, corrections, and any eligible current replacements with both Entity effects
+atomically. A history-only report or correction changes neither current image,
+section evidence reference, nor association. It still appears in Track history
+through the original scope. Exact replay adds no reading or repeated public effect.
+If a current replacement carries corrected evidence, mirror that complete result.
+
+Two publishers reporting the same vehicle produce two Observations and two Tracks.
+The initial policy performs no cross-publisher matching, averaging, extrapolation,
+merging, splitting, or interpolation.
 
 ## Evidence and lifetime
 
-Track state identifies its contributing Observations and original evidence. Fusion
-processing time and Core receipt time cannot stand in for source measurement time.
-Keep derived results distinguishable from source facts. A derived update alone must
-not fabricate a new movement sample from an unchanged reported measurement.
+Track reads expose source IDs and evidence even without expanded Observation
+records. Movement queries retain original reading identities, correction facts,
+and association provenance. They do not manufacture a second measurement identity.
+Fusion time, receipt time, and correction time never replace source measurement time.
+Unchanged derived state cannot create a fresh movement sample.
 
-Tracks are retained data records with no individual deletion or automatic expiry.
-A Track with no active Observations keeps its ID, last-known state, history, and
-historical associations. Unknown or time-uncertain evidence stays so. Command-specific
-age rules still apply when using a Track. Silence does not prove the target disappeared.
+Tracks have no individual deletion or automatic expiry. Silence preserves ID,
+last-known state, history, and associations until Reset. There is no activity flag
+or timeout. Unknown source age remains unknown. Silence does not prove disappearance.
+Source Asset deletion preserves attribution, the Observation, and its Track.
+Continued valid publisher reports update that same Track under [Observation rules](observations.md).
 
-Tasks reference the shared Track ID. Policy changes must not silently retarget
-accepted Tasks. Object associations and original source evidence remain attributable
-even when Track state is derived from them. Retain these records until a deliberate
-Reset ends the Dataset.
+Tasks reference the shared Track ID. A later policy must not silently retarget
+accepted Tasks. Source Objects remain associated with their Observations. Fusion
+neither duplicates content nor rewrites Object metadata.
 
 ## Replacement policies
 
-More capable fusion can be developed as a separate project. It can associate
-multiple Observations with one Track while using the same public resource model.
-It can match a new Observation to a retained Track that has no active Observations.
-The default policy does not perform that match for a newly created Observation.
-The built-in policy and a replacement must not compete over the same associations.
-Changing authority is explicit. Failure does not authorize automatic fallback.
-
-External policy messages, activation and handover, association revisions, conflict
-resolution, merge and split behavior, and recovery require a later contract.
-Those capabilities are not promised by the initial one-to-one implementation.
+More capable fusion is a later project using the same public resource meanings.
+External publication, activation, handover, association revisions, conflict resolution,
+merge, split, and recovery contracts are unsupported initially. The built-in policy
+remains the sole authority. Failure does not authorize a competing fallback.
 
 [Next: identity](identity.md)

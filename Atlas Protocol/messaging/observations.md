@@ -7,7 +7,7 @@ Core applies the [Observation rules](../observations.md) and active
 
 ## Creation, reports, and descriptions
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `CreateObservation` | Asset runtime or publishing integration starts a record for a detected subject | Stable Observation and request IDs, publisher identity and source Asset attribution when applicable, optional publisher-local subject identity, permitted initial data, and original report evidence and source times for supplied reported sections | Created Observation and its Track in one commit under the default policy |
 | `ReportObservation` | Asset runtime or publishing integration reports movement, another measurement, or a correction | Observation and publisher identities, complete applicable sections, and original report or correction evidence | Accepted, duplicate, or rejected evidence, with any default Track changes in the same commit |
@@ -19,7 +19,7 @@ Use Observation evidence ordering, not Asset process and contact requirements.
 
 ## Reads and evidence
 
-| Proposed message | Expected user and purpose | Input | Observable result |
+| Message | Expected user and purpose | Input | Observable result |
 | --- | --- | --- | --- |
 | `ListObservations` | Operator app or processing integration browses source detections | Bounded filters, including publisher, recorded source Asset, and associated Track | Matching Observation views |
 | `GetObservation` | Operator app or processing integration inspects a source record | Observation ID | Current Observation view and its Track association |
@@ -39,7 +39,9 @@ Reported [Type](../components/type.md#observed-subject-type) describes the detec
 Initial descriptions and reported facts remain distinguishable. Creation is not
 Asset enrollment or proof of contact.
 
-There is no individual deletion message for retained Observations. Exact creation
-fields and report envelopes remain unspecified.
+There is no individual deletion message for retained Observations. Creation and
+reports use the exact [shared evidence metadata](../report-evidence.md) and permitted
+[Entity composition](../entities.md#component-composition). Existing source attribution
+survives Asset deletion; new creation cannot name a deleted source Asset.
 
 [Messaging index](../messaging.md)

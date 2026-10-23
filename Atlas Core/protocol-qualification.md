@@ -38,6 +38,7 @@ Protocol now selects the [embedded queue](../Atlas%20Protocol/tasks.md#schedulin
 [lossless Plugin payloads](../Atlas%20Protocol/operations.md#payload-facts), and
 [geometry boundary examples](../Atlas%20Protocol/components/geometry.md#boundary-examples).
 Qualify these contracts before expanding implementation. Include queue and adoption
-images in page and whole-commit budgets. The queue bound, proposed 1,024-pair geometry
-cap, 16-reserve Power limit, and browser codec still need qualification.
+images in page and whole-commit budgets. Core's selected [limits](limits.md),
+Protocol's geometry/Power bounds, and the [lossless browser codec](build-profile.md#lossless-boundary)
+still require implementation qualification.
 Archive regressions do not establish durable behavior or deployment capacity.

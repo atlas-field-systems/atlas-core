@@ -18,11 +18,11 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 | Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, Asset deletion without invented outcomes or transferred Tasks |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
 | Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry without overwriting prior attempt files, cleanup preserves live precommit writers and ambiguous files, holds versus deletion, disk-full and integrity faults |
-| Plugins | Disconnect versus runtime loss, same-runtime redelivery, receipt exhaustion, protected drain/force, recovered evidence, removal and retained results |
+| Plugins | Independent bundle validation/readiness; disconnect versus runtime loss; same-runtime receipt protection; exact acknowledgments; exhaustion, protected drain/force, recovered evidence, removal and retained results |
 | Operation cancellation | Request alone does not cancel; Plugin-confirmed cancellation; completion or failure before effective cancellation wins; late reports preserve terminal state |
 | Operation recovery | Plugin loss before possible delivery keeps pending work; loss after possible delivery interrupts it; Core restart interrupts both |
 | Recovered outcomes | Original Operation reads expose recovered outcomes, effects, and result links; state remains interrupted; no new Operation or execution |
-| Lifecycle | Retained Restart, interrupted Reset before/after establishment, verified writer exit, manager loss/takeover, Hard Reset and settings failure |
+| Lifecycle | Retained Restart, interrupted Reset before/after establishment and proof, verified writer exit, manager lock/epoch takeover, journal corruption and lost import acknowledgment, Hard Reset and settings failure |
 | Full synchronization | All four Observation/history coverage combinations; local versus explicit HTTP reads; independent base readiness; online backfill/cutover/disable; whole-message interruption, capture cleanup, fixed handoff, replay expiry, slow clients, restart rebuild, Reset and isolated optional capacity failure |
 | History query views | [Frozen-page examples](../Atlas%20Protocol/history-queries.md#independent-acceptance-example); exact-time/scoped-identity order; inserts and corrections during paging; HTTP/Full parity; lost first-page replies; explicit release, expiry, Restart/Reset and local coverage loss; original-owner continuation; view expiry before capacity refusal |
 
@@ -35,9 +35,13 @@ Neither silence nor picture capacity permits eviction of the retained records.
 Use the independent [history-only evidence example](../Atlas%20Protocol/report-evidence.md#independent-acceptance-example)
 and [retained-Dataset qualification](workload-qualification.md) requirements.
 
-For generation, delete outputs and regenerate deterministically with pinned tools.
-Qualify the supported schema profile, independent cross-language examples, package
-consumption, and binary adapters. Do not buffer a large file in a JSON validator.
+For Plugin recovery, expose P7, lose its runtime, then recover terminal revision 3
+after accepted revisions 1 and 2. P7 stays interrupted. Repeating revision 3 returns
+the same acknowledgment and one recovered outcome; changed revision-3 facts fail.
+
+For generation, follow the selected [build/schema gates](build-profile.md), delete
+outputs, and regenerate with exact locked tools. Qualify cross-language examples,
+package consumption, and binary adapters. Do not buffer large files in a JSON validator.
 A generated type check is not a request/response-validation test.
 
 Use the [Protocol boundary qualification cases](protocol-qualification.md) to retain
@@ -59,7 +63,7 @@ Diagnostic records alone cannot establish that work committed or executed.
 | --- | --- |
 | Lost non-report write reply | At default Core and SDK Summary detail, match the attempt; keep SDK outcome unknown; retry has new attempt context and the same prepared identity; one durable effect and complete picture application |
 | Read routing and transfers | Covered Full-mode reads send zero HTTP requests; default reads and repeated uploads report the observed source and byte category without buffering whole files |
-| Recovery and authorization | Explain requested/ready coverage, replay versus rebuild, capacity pause, and subscriber gaps; ordinary outages and revoked credentials cause no diagnostic or recovery hot loop |
+| Recovery and authorization | Revoked credentials stop all network work; complete local queries/subscriptions/history remain explicitly stale and authorization-required; changed credentials need authenticated discovery, with no write replay or recovery hot loop |
 | Server delay and cleanup | Separate writer wait from commit time, file publication from cleanup, and Plugin channel loss from confirmed process death |
 | Correlation headers | Missing, malformed, and duplicate header fields preserve domain behavior; reused attempt values need no registry; trusted browser origins can send/read headers; validate IDs on success, error, binary, and empty responses |
 | Diagnostic pressure and privacy | Flood producers and block/fail sinks; memory and disk stay bounded, omissions remain visible, request outcomes are unchanged, and prohibited fields appear in no normal log or standard export |
@@ -77,9 +81,9 @@ values, and that unavailable evidence is reported honestly. No capture blocks wo
 
 ## Workload targets, not measured capability
 
-The [workload qualification inputs](workload-qualification.md) own initial targets,
-resource and byte budgets, proposed cumulative-turnover fixtures, and Full recovery
-acceptance. The proposed rates and retained totals need confirmation and measurement.
+The [workload qualification inputs](workload-qualification.md) reference budgets and
+own initial targets, selected cumulative-turnover pressure fixtures, and Full
+recovery acceptance. Pressure results do not establish supported retained workloads.
 No workload qualification has run in this documentation-only baseline.
 Neither tuning nor capacity failure permits weaker retention or atomicity.
 

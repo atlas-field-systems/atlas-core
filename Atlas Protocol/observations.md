@@ -1,77 +1,84 @@
 # Observations
 
-**An Observation is one publisher's ongoing record of one detected subject.**
-Assets generate Observations. A publishing integration or gateway can deliver them.
-The same Observation ID receives successive reports as the subject moves or changes.
-It is distinct from the shared [Track](tracks.md) built from that evidence.
+An Observation is one publisher's ongoing record of one detected subject.
+Assets generate Observations. An integration or gateway can deliver them.
+Successive reports use the same Observation ID, distinct from its shared [Track](tracks.md).
 
 ## Identity and attribution
 
-Each Observation has one stable publisher identity, separate from an API credential,
-gateway, or Plugin installation. A drone remains the publisher when a gateway
-delivers its reports. Changing gateways or keys does not change the publisher.
-Reinstallation names an existing publisher explicitly. A display name is not proof.
-There is no automatic publisher transfer.
-A report must name the Observation's recorded publisher. A mismatch rejects the
-entire report without changing the Observation or its Track.
+Each Observation records one stable `publisher_id`, separate from credentials,
+gateways, Plugin installations, and Asset process generations. A gateway does not
+become the publisher by forwarding a drone's report. Continuing a publisher after
+reinstallation names its existing ID and satisfies sequence recovery below.
+Display names do not establish continuity.
+A report naming another publisher is refused atomically. No automatic transfer exists.
 
-When the publisher represents an Asset, creation records its source Asset ID as
-explicit publisher attribution. Validate that association and retain it with the
-Observation, including after Asset deletion. It is fixed for that Observation's
-lifetime. A publisher without a source Asset has no such association; never infer
-one from a credential, gateway, display name, or delivery path.
+Creation records `source_asset_id` when the publisher represents an Asset.
+Core validates that the named source Asset exists in the current Dataset at commit.
+Creation cannot name a deleted Asset, including during a racing deletion.
+Retain that fixed attribution after deletion. Existing Observations remain reportable
+under their recorded publisher and current valid [API authority](identity.md#principals).
+The source Asset need not remain live. A revoked key cannot report, but another
+currently valid key can deliver the same publisher's evidence.
 
-Keep the Observation ID distinct from an optional publisher-local subject ID.
-An integration that uses local IDs must distinguish separate lifetimes when a
-device reuses a number. Reconnect or replay must not create another Observation
-for the same continuing source record.
+Deletion never transfers an Observation to a replacement Asset. Publishers without
+source Asset attribution omit `source_asset_id`. Never infer it from delivery paths.
+The optional [publisher-local subject pair](entities.md#component-composition)
+distinguishes reused local IDs. Reconnect or replay does not create another record
+for the same continuing source subject.
 
 ## Reports and movement
 
-A later measurement has new report evidence identity under the same Observation ID.
-Retransmission retains that evidence identity. A correction identifies its original
-evidence and correction revision. Creating a new packet does not create new evidence.
-Exact envelope fields remain undecided.
-Reported sections supplied at creation carry the same original report evidence,
-source times, and ordering facts required for later reports.
+[Report evidence](report-evidence.md) defines every exact envelope, result, reading,
+and correction field. Creation uses the same evidence rules for supplied sections
+as later reports. New measurements have new reading identities. Replays retain
+original identities. Making a new packet does not create new evidence.
 
-Order complete reported sections by source sequence, not arrival time. Telemetry's
-[constituent identity rules](components/telemetry.md#constituent-observation-identity)
-keep measurement identity and correction revision independent of section ordering.
-Apply [evidence admission and current-section rules](report-evidence.md) separately.
-Older sections can contribute history without replacing current state. Conflicting
-identity reuse and stale constituent revisions still reject new submissions atomically.
-Corrections preserve original measurement age. Unknown source time stays null.
+Publisher sequence scope persists across gateway changes, credential changes,
+restarts, and integration reinstallations. The publisher durably allocates sequence
+numbers before emission and resumes above its allocated high-water mark.
+Current Entity reads cannot reveal allocated-but-unsent sequence numbers. Before
+handoff, stop the old allocator or share the same authoritative allocator. Recover
+a durable upper bound covering every prior allocation for each affected stream.
+Retry outstanding reports only with their original facts. A skipped allocation is
+harmless; reusing it for different facts is not. If the upper bound is unavailable,
+stop new publication for that Observation. The publisher exposes the failure in
+its own diagnostics; no new Core state or Observation flag is created. Retain its
+last-known Observation and Track. Restored allocator state or Reset permits recovery;
+an accepted-state read, a new key, or reinstall alone cannot supply the missing proof.
+Later detections may start a new Observation and source lifetime, even for the same
+physical subject. They do not resume or link the old record. The publisher
+cannot reset the counter, change publisher to evade ordering, or reuse
+an allocated number with changed facts. Counter exhaustion is an explicit publication
+failure, never wraparound. Sequences are scoped per Observation and section;
+the report's sequence applies to each section it supplies.
 
-Apply complete-section validation, classification, and value/error/withdrawn results
-from [Reports](reports.md). Withdrawal ends a section assertion, not the Observation record.
-Observation reports do not require Asset process generations or contact challenges.
-Publishing a detection does not establish contact with its source Asset.
-Observation creation does not enroll an Asset or create credentials.
+Older unseen evidence can enter history without changing current state.
+Equal-sequence conflicts and stale constituent revisions reject the whole submission.
+Historical corrections name original evidence, preserve measurement age, and never
+replace current state merely because their delivery is newer.
+The default policy commits Observation evidence, movement, corresponding Track
+changes, and public effects together. Unknown original time remains null.
 
-For example, Drone A creates Observation O17 for a vehicle. Report R1 places it at
-position A. Report R2 moves it to B under O17. Replaying R2 changes nothing.
-The [default fusion policy](tracks.md#default-policy) updates the same Track T42.
+Observation reports have no Asset process generation or contact proof. Publishing
+a detection establishes neither source Asset contact nor Asset enrollment.
+Withdrawal ends a section assertion, not the Observation record.
 
 ## State, files, and lifetime
 
-Observation schemas select applicable [components](components/README.md), including
-Telemetry, observed subject Type, geometry, and sensor references. Separate authored
-descriptions from reported facts. A photograph remains an [Object](objects.md)
-associated with the Observation. Publication of the file is a separate outcome.
+[Entity composition](entities.md#component-composition) gives the exact permitted
+fields and initial state. Telemetry, Attitude, Type, and Geometry are source facts.
+Descriptions are authored separately. Source photographs are [Objects](objects.md)
+associated with the Observation. A successful report does not publish their bytes.
+Sensor references and military-display metadata are unsupported initially.
 
-Observations are retained data records with no individual deletion or automatic
-expiry. Silence does not refresh measurement age. A newly accepted report retains
-its own original source times. Inactivity preserves the Observation ID, last-known
-state, accepted report identities, corrections, and movement. Under the default
-policy, resumed reports keep the existing Track association. Retain these records
-until a deliberate Reset ends the Dataset.
+Observations have no individual deletion or automatic expiry. Silence preserves
+ID, last-known results, report identities, corrections, movement, and the default
+Track association until Reset. Resumed reports update that same pair.
+Inactive means only that a source is not reporting. There is no activity wire flag,
+inferred timeout, or close message. Silence does not refresh measurement age.
 
-Here, inactive means a source is no longer reporting that detection. It is not a
-defined wire state. Activity flags and transition rules remain unspecified; this
-wording does not define a timeout or a close message.
-
-Observation message shapes belong in [Observation messages](messaging/observations.md). Exact schemas and
-independent valid and invalid examples still need authoring.
+[Observation messages](messaging/observations.md) define the operations.
+Machine schemas and runtime acceptance coverage remain unimplemented.
 
 [Next: Tracks](tracks.md)
