@@ -14,8 +14,9 @@ pages own the detailed behavior.
   adequate power, and good Wi-Fi or equivalent IP connectivity. External gateways
   handle constrained radio, and Asset runtimes execute physical work.
 - Most Asset integrations use on-demand HTTP and reporting. Full synchronization
-  is an opt-in for clients that need a maintained local picture; optional coverage
-  still needs measured memory and initial-load budgets on the selected computer.
+  is an opt-in for clients that need the fixed maintained picture. It still needs
+  measured memory and initial-load budgets on the selected computer. Observation
+  records and position history use explicit HTTP in both modes.
 - Each participant has a separate API key with identical public-API permissions.
   A valid key is sufficient to report for any Asset. See [identity](Atlas%20Protocol/identity.md).
 
@@ -35,7 +36,9 @@ pages own the detailed behavior.
   and [workload targets](Atlas%20Core/qualification.md#workload-targets-not-measured-capability).
 - Deployment supplies correct UTC clocks and certificate trust. See
   [time](Atlas%20Protocol/reports.md#time-and-contact) and [setup](Atlas%20Core/lifecycle.md#configuration-and-access).
-- Plugins are trusted extension code. See [Plugin trust](Atlas%20Core/plugins.md#installation-and-trust).
+- Independent integrations use public HTTP and credentials and own their processes.
+  Core-managed Plugin discovery, installation, and execution are outside the initial release.
+  See [Core scope](Atlas%20Core/README.md#scope).
 - Durability assumes healthy local Linux storage with supported flush semantics.
   Power-loss durability still needs qualification. See [storage](Atlas%20Core/storage.md#publishing-files).
 

@@ -76,13 +76,13 @@ connectivity proves neither an Asset's health nor its bandwidth. Unknown stays u
 
 ## Movement and recovery
 
-Append movement only from newly accepted position, speed, or altitude readings,
-including historical evidence, under [Telemetry identity rules](components/telemetry.md#constituent-reading-identity).
-Carried readings and retries add no measurement. Corrections retain the same
-constituent identity and original time, without a new reading or fresh age.
+Append only newly accepted position readings, including late historical evidence,
+under [Telemetry identity rules](components/telemetry.md#constituent-reading-identity).
+Carried readings and retries add nothing. Existing scoped reading facts are immutable.
+Latest Telemetry retains speed and altitude without historical queries.
 Never sample a merged Entity image into history. History survives Entity deletion
 until Reset. Bounded queries distinguish unknown IDs from known-empty history.
-HTTP and synchronized reads share [movement history](movement-history.md).
+Both SDK modes read [position history](movement-history.md) explicitly through HTTP.
 
 On reconnect, reconcile retained reports and current instructions. A new connection
 or process cannot authorize automatically repeating uncertain physical work.

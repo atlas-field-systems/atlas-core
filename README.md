@@ -23,8 +23,10 @@ Assets publish Observations about detected subjects. Core maintains shared Track
 through replaceable fusion. The [initial policy](Atlas%20Protocol/tracks.md#default-policy)
 creates one Track per Observation. These records remain until a deliberate Reset.
 
-**Contract-first, not generator-first.** Generate repetitive declarations where
-stock tools help. Write Core behavior and SDK workflows as ordinary code.
+Core, SDK, and the shared runtime boundary use TypeScript. Core uses Node.js and
+SQLite behind ordinary modules. One browser-safe Protocol package owns runtime
+schemas and inferred types and exports portable OpenAPI through qualified stock
+tooling. Core mechanisms and SDK workflows remain ordinary handwritten code.
 
 ## Read in this order
 
@@ -41,7 +43,7 @@ Each folder's README gives its short reading order. Contributors also read
 folder to reconcile. Earlier explanations remain in Git history, not as a second
 active specification.
 
-Build Protocol's machine-readable schemas from these definitions before implementing
-Core or SDK behavior. Schemas, generated packages, and executable acceptance workflows
-are implementation outputs; none is supplied by this documentation baseline.
+Build Protocol's runtime schemas from these definitions before implementing Core or
+SDK behavior. Schemas, packages, exported references, and executable acceptance
+workflows are implementation outputs; none is supplied by this baseline.
 Qualify them against the documented outcomes before claiming runtime support.

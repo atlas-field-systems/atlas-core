@@ -3,7 +3,7 @@
 **Core ships with the one-to-one policy defined by [Protocol](../Atlas%20Protocol/tracks.md).**
 Keep that policy behind a small internal interface. Core owns persistence and
 publication. The policy owns association decisions and derived Track state.
-The initial implementation needs no Plugin, separate process, or generic pipeline.
+The initial implementation needs no separate process or generic pipeline.
 
 ## The default commit path
 
@@ -24,25 +24,25 @@ storage constraints and the transaction prevent racing creates from allocating
 two Tracks for one Observation. Rollback publishes neither side.
 
 Reconstruct current views from committed state after Restart. Retain associations,
-original report identities, source times, and corrections with their Dataset.
+original report identities, immutable reading facts, and source times with their Dataset.
 Startup and retries reuse existing identities rather than regenerating Tracks.
 The same owner retains inactive records until Reset. No deletion timer is needed.
 
 ## The replacement boundary
 
 Fusion is replaceable without changing the public Observation and Track meanings.
-A specialized implementation can live in its own project, potentially as a
-[Plugin](plugins.md). It uses supported contracts rather than Core's SQL or files.
-Core remains the only database writer and public change publisher.
+A specialized implementation can live in its own project once a replacement
+contract exists. Independent integrations already use public HTTP with credentials,
+without Core's SQL or files. Core remains the sole database writer and publisher.
 
 A replacement determines associations and derived values. Core owns Track IDs,
 validates provenance and current authority, and commits accepted decisions.
 Check the active authority again at commit after any external wait. A credential
-or Plugin installation alone does not select the active fusion authority.
+alone does not select the active fusion authority.
 
 The external input/output messages, processing lifetime, admission when unavailable,
 activation and handover, and recovery require a separate design before replacement
-is supported. Do not stretch finite Plugin Operations into an implicit stream owner.
+is supported. No initial private execution or generic dispatch contract is provided.
 Keep the built-in policy active initially. A replacement fault must not silently
 start a competing policy or manufacture new one-to-one associations.
 
@@ -52,7 +52,7 @@ Keep Observation reports separate from derived Track results. Record which sourc
 evidence produced Track state. Historical associations remain queryable when no
 source is active. Recomputing state must not append the same movement evidence again.
 
-Account for both Entity images, association data, retained report/correction identity,
+Account for both Entity images, association data, retained report and reading identities,
 history, indexes, and replay. Check the entire default commit, not just the incoming
 Observation size. Storage exhaustion refuses new effects; it does not evict records.
 

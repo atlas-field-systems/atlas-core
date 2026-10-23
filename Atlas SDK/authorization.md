@@ -1,7 +1,7 @@
 # Authorization loss and retained local reads
 
 A validated key rejection sets `authorization-required`. Complete downloaded
-coverage remains locally readable, explicitly stale and authorization-required.
+picture data remains locally readable, explicitly stale and authorization-required.
 Revocation cannot erase data already downloaded by SDK or copied by an application.
 This page applies to HTTP mode and Full synchronization alike.
 
@@ -28,14 +28,14 @@ Concurrent recovery has one owner; later candidates fence older discovery replie
 Accepted new credentials permit read/feed recovery, not replay of mutations, uploads,
 cancellations, or control requests. The caller deliberately retries prepared work
 with its original facts after reconciling the accepted Dataset. A changed Dataset
-invalidates old coverage and submissions under Protocol. Version mismatch blocks work.
+invalidates the old picture and submissions under Protocol. Version mismatch blocks work.
 
 ## Local reads and subscriptions
 
 The picture exposes one frozen complete boundary, last synchronized time, and
 authorization-required status. Queries and changed-since reads over its complete
-coverage return data with that status. They send no HTTP. Loading coverage remains
-unavailable; disabled coverage's explicit HTTP reads are blocked by authorization.
+picture return data with that status. They send no HTTP. Loading remains unavailable.
+Explicit Observation and history HTTP reads are blocked by authorization.
 An HTTP-mode instance has no local replica to read. Never manufacture empty results.
 
 Local subscriptions emit authorization-required status. Existing and new subscribers
@@ -47,15 +47,14 @@ gaps appear. Do not silently close subscriptions as if they had caught up with C
 On accepted same-Dataset recovery, replay from the last complete Core cursor when
 permitted. Apply whole commits before notifying subscribers. A required rebuild
 invalidates generations, cursors, and affected subscriptions under [picture rules](picture.md).
-Authorization loss alone does not invalidate downloaded coverage or its local tokens.
-Known Reset, disable, capacity loss, required rebuild, expiry, and close still do.
+Authorization loss alone does not invalidate the complete picture or its local tokens.
+Known Reset, capacity loss, required rebuild, token expiry, and close still do.
 
 ## History and allocations
 
-Local frozen history views continue and release locally with the same stale status
-and original expiry. Rechecking local validity after a wait does not require network
-authority. HTTP-owned history tokens remain HTTP-owned and report authorization-required
-without sending. Options never redirect their continuation to local data.
+All frozen history views are HTTP-owned. Their tokens report authorization-required
+without sending continuation or release. No local view substitutes for them. Already
+downloaded application copies can remain readable, without extending remote expiry.
 
 Cancelling an HTTP view or snapshot load while unauthorized records local abandonment.
 It does not claim a remote release acknowledgment or queue a hidden release request.

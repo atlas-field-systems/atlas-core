@@ -33,7 +33,7 @@ acknowledgment or expiry is not automatic recovery.
 Continuation tokens bind source owner, Dataset, view, exact selection, and position.
 Release tokens bind the same owner and view without a position. They are opaque,
 not authorization. HTTP operations still require a currently valid key. Tokens
-cannot move between HTTP and local SDK views or between Core runs.
+cannot move between Core runs or switch to a local SDK owner.
 
 Release returns `{released: true}` once that exact allocation is released, already
 released, or expired under a still-recognized owner. It never allocates or releases
@@ -41,14 +41,11 @@ another view. Wrong Dataset, malformed token, and failed authentication remain
 explicit refusals. If owner context is gone, return `410 allocation_expired`;
 the old allocation is already unusable. Recheck authority after waits.
 
-Local SDK views use an instance/picture-generation context and the same 60-second
-maximum lifetime, with local monotonic enforcement. Local release needs no network.
-Complete downloaded data stays locally readable after key rejection as stale and
-authorization-required. Local queries, subscriptions, and valid frozen history
-views can continue over that complete copy without refreshing it. They emit no
-invented network progress. Known Reset, rebuild, required coverage loss, or close
-still invalidates the affected view. No network work resumes until changed
-credentials are accepted. [SDK](../Atlas%20SDK/picture.md) owns the client workflow.
+Complete downloaded picture data stays locally readable after key rejection as
+stale and authorization-required. Local picture queries and subscriptions emit no
+invented network progress. History continuation and release remain HTTP operations
+and pause on known rejection. No network work resumes until changed credentials
+are accepted. [SDK](../Atlas%20SDK/picture.md) owns that client workflow.
 
 ## Finite bounds and ownership
 
@@ -86,8 +83,7 @@ retained outcomes, including consumed contact proofs, until their contexts expir
 The separate message `limits` object does not acquire these fields. Deployment
 owns the values; current authority still applies regardless of quota attribution.
 
-SDK owns local-view counts, references, and memory accounting within its existing
-picture and journal budgets. These guards are selected implementation requirements,
-not measured capacity or a promise of larger retained-history support.
+SDK owns picture and journal memory accounting. Core owns all history-view
+allocations. These guards are selected requirements, not measured capacity.
 
 [Synchronization](synchronization.md) · [History queries](history-queries.md)

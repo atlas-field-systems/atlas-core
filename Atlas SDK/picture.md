@@ -2,48 +2,31 @@
 
 **One owner maintains the picture, applied Core cursor, local journal, and recovery.**
 Only validated snapshots and complete feed commits enter it. HTTP write responses
-and unrelated reads never become an alternate update path.
-The base includes inactive Tracks and provenance. Observation and movement-history
-coverage are independent [Protocol options](../Atlas%20Protocol/synchronization.md).
+and unrelated reads never become an alternate update path. The fixed picture
+contains all Assets, Tracks, Geofeatures, Tasks, and ready Object metadata, including
+inactive Tracks and provenance. Observations and position history use explicit HTTP.
 
 ## Readiness is explicit
 
-Expose Dataset, generation, requested and ready coverage, last applied Core cursor,
-last synchronized time, and a safe error. States distinguish initializing, synchronized,
-recovering, disconnected, resource-limited, authorization-required, and stopped.
-Each optional coverage also distinguishes disabled. Not ready is not an empty Dataset.
+Expose Dataset, generation, last applied Core cursor, last synchronized time, and
+a safe error. States distinguish initializing, synchronized, recovering, disconnected,
+resource-limited, authorization-required, and stopped. Not ready is not an empty Dataset.
 
 A complete picture remains readable as explicitly stale during same-Dataset outages
-and [known authorization failure](authorization.md). Known Reset or rebuild invalidates coverage
-immediately. Stage replacement state privately; never display a half-loaded replacement.
-Follow [Protocol handoff and recovery](../Atlas%20Protocol/synchronization.md).
-
-## Optional coverage
-
-Enabling an option backfills all its retained records, then catches up and joins
-the ready picture at a common complete commit boundary. The synchronization owner
-stages this privately while existing ready coverage continues serving reads and
-updates. Expose the option's progress and failure independently of base readiness.
-Never roll back ready state or expose a partially loaded option. A failed addition
-leaves previously ready coverage usable; explicit retry can try the addition again.
-
-Disabling an option cancels its pending load, stops maintenance, invalidates its
-coverage and query tokens, and releases its local data. Core retains the records.
-Late pages or callbacks from the old load cannot repopulate disabled coverage.
-Disabling Observations does not disable history, and neither changes Track results.
-
-SDK/application restart discards cache data and rebuilds configured coverage from Core.
-Base readiness does not wait for optional loads. No disk cache is created.
+and [known authorization failure](authorization.md). Known Reset or required rebuild
+invalidates the picture immediately. Stage replacement privately; never display a
+half-loaded replacement. Follow [Protocol handoff and recovery](../Atlas%20Protocol/synchronization.md).
+SDK/application restart discards picture data and rebuilds from Core. No disk cache exists.
 
 ## Queries and subscriptions
 
 Apply each entire commit before notifying anyone. One local journal position covers
 one whole commit. Queries, changes, and subscriptions share that journal; local
-cursors are not Core cursors. Prune whole batches, never partial commits.
-Apply every ready coverage's effects together: an enabled Observation, its default
-Track, and enabled movement changes share the same committed boundary. Track reads
-remain usable without locally expanded Observation records when that option is off.
-Clients must not synthesize missing Tracks, rematch sources, or expire inactive records.
+cursors are not Core cursors. Prune whole batches, never partial commits. Track
+reads retain source IDs and evidence without expanded Observation records. Clients
+must not synthesize missing Tracks, rematch sources, or expire inactive records.
+Observation reports can change Track images; their source records and positions
+do not become cached feed items.
 
 A subscription without a cursor starts atomically at the current local boundary;
 it does not enumerate existing resources. A supplied cursor replays then joins live
@@ -51,42 +34,39 @@ updates without a gap. A slow subscriber whose history was pruned gets an explic
 gap and stops receiving data until recovery.
 
 A full local query returns a coherent picture and its paired local cursor together.
-Local page tokens bind instance, Dataset, generation, query, and required coverage.
-Rebuild or a change to required coverage invalidates them and affected local cursors.
-Ordinary Core paging tokens follow their own lifetime, not the replica's.
+Local page tokens bind instance, Dataset, generation, and query. Rebuild invalidates
+them and affected local cursors. Ordinary Core tokens retain their own lifetime,
+not the picture's.
 
 During initial loading, emit status, not thousands of synthetic create events.
 Successful replacement establishes a new picture generation and journal baseline.
-Old cursors become invalid; affected subscriptions observe recovery and new readiness.
-Reset additionally reports Dataset change. Do not pretend a rebuild was continuous
+Old cursors become invalid; subscriptions observe recovery and new readiness.
+Reset additionally reports Dataset change. Do not present a rebuild as continuous
 incremental history.
-An optional backfill likewise emits status and readiness, not synthetic create events.
 
-For [history queries](../Atlas%20Protocol/history-queries.md), this owner freezes
-matching immutable reading references and their local cursor on the first page.
-It owns bounded views, retained revisions, expiry timers, and release. Ordinary
-commits preserve valid views. Required coverage loss, rebuild, Reset, or close
-invalidates them and frees their references; continuation requires an explicit restart.
-Continuation and release stay with the view's original HTTP or local owner, even
-after options change. Never reinterpret a token against another source or allocate
-a replacement to hide expiry. Recheck authorization and view validity after waits.
+## Explicit history reads
+
+[History queries](../Atlas%20Protocol/history-queries.md) always allocate frozen
+HTTP views in Core, in either SDK mode. Continuation and release retain that Core-run
+owner, original query facts, and finite expiry. SDK does not freeze local history
+references or reconstruct positions from current images. A token never switches
+source or silently allocates a replacement to hide expiry. Recheck authority and
+view validity after waits. Downloaded application copies do not refresh a remote view.
 
 ## Capacity and retry
 
-Initial configurable defaults are 512 MiB and 100,000 images/history readings for
-all coverage, a 16 MiB/10,000-commit journal, and four 60-second local views sharing
-100,000 references. All allocations share the 512 MiB budget, including reserved updates.
-Check negotiated complete-message limits before allocating. Account for
-base and optional records, old picture, new staging, indexes, decoded values, and
-journal, query references, and frozen revisions together. Expire temporary views and
-recheck capacity before making viable coverage unavailable; never evict retained readings.
-An optional load must fit without consuming the ready picture's bounded-update reserve.
-Stop with an explicit capacity state rather than evicting resources or repeatedly rebuilding.
-Explicit retry or a relevant capacity change restarts one recovery owner.
-If an enabled option cannot continue within its bounds, mark that coverage unavailable
-and stop serving it as current; release its allocations and let base coverage continue
-when its own limits permit. Report affected subscription gaps. Never silently change
-the requested options, truncate retained history, or switch those reads to HTTP.
+Initial configurable defaults are 512 MiB and 100,000 picture images, plus a
+16 MiB/10,000-commit journal. All picture allocations share the 512 MiB budget,
+including reserved updates. Check negotiated complete-message limits before allocation.
+Account for the old picture, new staging, indexes, decoded values, journal, and local
+query data together. Bound explicit HTTP history pages under ordinary response limits;
+Core owns their separate finite view/reference budgets. No retained history cache
+or local history-view budget exists.
+
+Stop with explicit capacity state rather than evicting resources or repeatedly
+rebuilding. A capacity failure cannot expose partially applied changes as current.
+Report affected subscription gaps. Explicit retry or a relevant capacity change
+restarts one recovery owner. No silent HTTP fallback substitutes for picture reads.
 
 An ordinary network outage resumes from the last complete applied cursor when
 Protocol permits it. Expired replay requires replacement. Incomplete captures,
@@ -95,7 +75,9 @@ restart every case from zero or reuse an expired allocation context.
 Fetch a fresh Core allocation context immediately before each new remote allocation.
 Exact allocation retries retain their original context and identity.
 
-Closing SDK stops its connections, local views, and recovery. Core, physical work,
-and accepted Plugin Operations continue under their own owners.
+Closing SDK stops its connections and recovery and invalidates its local tokens.
+Release remote captures/views while authority permits; absent acknowledgment, retain
+only bounded facts needed to respect original expiry. Close cannot prove remote
+release. Core and physical work continue under their own owners.
 
 [Next: diagnostics](diagnostics.md)

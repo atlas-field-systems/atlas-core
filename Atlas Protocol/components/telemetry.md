@@ -80,17 +80,17 @@ Explicit null means unknown time. A new snapshot cannot refresh older readings.
 Every supplied Telemetry quantity, including a null value, carries the exact
 `constituents` evidence defined in [report format](../report-format.md).
 A constituent identifies a reading, not the Observation Entity. Position has one
-identity for the complete pair. Corrections preserve identity and source time.
+identity for the complete pair. Its value and source time are immutable.
 Tracks retain original Observation scopes. Whole-section ordering stays separate.
 
 | Later complete snapshot | Required history outcome |
 | --- | --- |
-| Sequence 11 repeats position P1 revision 0, value, and source time null while adding new speed | No extra position reading or fresh position age |
-| Sequence 12 uses new P2 revision 0 with the same coordinates and null time as P1 | A distinct position reading |
-| Sequence 13 corrects P2 at revision 1, preserving its original time | A correction to P2, with no new reading or fresh age |
+| Sequence 11 repeats position P1, value, and source time null while adding new speed | No extra position reading or fresh position age |
+| Sequence 12 uses new P2 with the same coordinates and null time as P1 | A distinct position reading |
+| Sequence 13 reuses P2 with changed coordinates or source time | Atomic `constituent_conflict` refusal |
 
-Equal known timestamps also never merge readings. Changed equal-revision facts
-and new submissions carrying stale revisions reject atomically. Accepted replay
-remains harmless. See the [history-only admission example](../report-evidence.md#independent-acceptance-example).
+Equal known timestamps never merge readings. New readings require new IDs.
+Only positions enter append-only history; speed and altitude remain latest-state
+fields. Accepted replay remains harmless. See the [history-only admission example](../report-evidence.md#independent-acceptance-example).
 
 [Component index](README.md)

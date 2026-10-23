@@ -2,8 +2,8 @@
 
 **Core records intent. The Asset runtime schedules and executes it.**
 The [initial Command Catalog](command-catalog.md) contains queued Move To and
-immediate Pause and Resume. An Asset advertises its supported subset. Plugins
-cannot add Asset Commands or become Task targets.
+immediate Pause and Resume. An Asset advertises its supported subset. Commands
+remain Protocol-defined. Task targets must be registered Assets.
 
 ## Creation and state
 
@@ -96,4 +96,4 @@ Move To is queued only, with no deadline. Its target and altitude use the
 [Catalog inputs](command-catalog.md#move-to). The Asset decides arrival and reports
 completion. Core acceptance or a map position never proves arrival.
 
-[Next: Operations](operations.md)
+[Next: Objects](objects.md)

@@ -28,51 +28,45 @@ external radio traffic while preserving original public evidence and retry facts
 | Command | A Protocol-defined instruction and its validity rules |
 | Task | One recorded request for an Asset to execute a Command |
 | Object | Complete file content plus metadata |
-| Plugin | An independently installed processing or integration capability |
-| Operation | One invocation of a Plugin capability, distinct from an Asset Task |
 
 An installation also has setup that outlives a Dataset: credentials, configuration,
-installed selections, and software. Dataset identity prevents old work from being
-mistaken for a submission to a fresh system.
+and software. Dataset identity prevents old work from being mistaken for a
+submission to a fresh system.
 
 ## Contract ownership
 
-The [schema profile](schema-profile.md) selects OpenAPI 3.1.0. Its implementation
-artifact will encode these human-readable contracts and the local
-[Command Catalog](command-catalog.md) once, without another independent definition.
-Define reusable JSON components and their permitted compositions in
-[Entities](entities.md#component-composition). HTTP and non-HTTP messages reuse
-those definitions. [Messaging](messaging.md) describes the supported exchanges;
-[Wire](wire.md) defines Core's IP binding. The Command Catalog is available locally;
-it is not a network discovery service. Plugins may define specialized Operation
-payloads, but cannot invent Entity components or Asset Commands.
+The [schema profile](schema-profile.md) selects one browser-safe TypeScript package
+of runtime schemas and inferred public types, with a portable OpenAPI 3.1.0 export.
+It encodes these contracts and the local [Command Catalog](command-catalog.md) once.
+[Entities](entities.md#component-composition) defines reusable components and their
+permitted compositions. HTTP and WSS reuse those definitions. [Messaging](messaging.md)
+defines exchanges; [Wire](wire.md) defines Core's IP binding. The Catalog is a local
+artifact, not network discovery. Concrete fields live in the
+[component reference](components/README.md).
 
-Read concrete field contracts in the [component field reference](components/README.md).
-
-Use standard generation for Go and TypeScript declarations and ordinary HTTP
-bindings. Runtime validation must be integrated explicitly. Keep algorithms,
-authorization, transitions, storage, and synchronization implementation out of
-schemas and generator templates.
-Schema validity alone does not establish authorization, identifier relationships,
-or valid state transitions. Consuming Core and SDK code must check the relevant context.
+Core and SDK reuse shared runtime validation at consuming boundaries. Schema validity
+alone does not establish authority, identifier relationships, or valid transitions.
+Keep those checks, storage, algorithms, and workflow code in their owning modules.
+Stock tooling exports the reference after qualification; there is no custom compiler
+or blanket requirement to generate clients, servers, or database accessors.
 
 Keep this folder self-contained so it can become its own repository. A separate
 repository does not itself change compatibility policy: initially Core, SDK, and
 Protocol share one exact version string. Each Core and SDK release supports that
 one Protocol version; a mismatch is refused. There is no version-range negotiation,
-automatic downgrade, or translation between versions. Plugins release independently.
+automatic downgrade, or translation between versions.
 
 ## Reading order
 
 [Entities](entities.md) → [Observations](observations.md) → [Tracks](tracks.md) →
 [Identity](identity.md) → [Reports](reports.md) →
 [Movement history](movement-history.md) →
-[Tasks](tasks.md) → [Operations](operations.md) → [Objects](objects.md) →
+[Tasks](tasks.md) → [Objects](objects.md) →
 [Messaging](messaging.md) → [Wire](wire.md) → [Synchronization](synchronization.md).
 
 [Operators](operators.md) defines profile lifecycle. [Report format](report-format.md)
 and [execution evidence](execution-evidence.md) define the separate source envelopes.
 
 These pages select behavior, message fields, and bounds. Machine schemas, dependency
-locks, and executable cross-language fixtures are implementation outputs that do not
+locks, and executable boundary fixtures are implementation outputs that do not
 yet exist here. No runtime, codec, durability, or capacity qualification is claimed.

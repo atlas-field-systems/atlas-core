@@ -7,7 +7,7 @@ Successive reports use the same Observation ID, distinct from its shared [Track]
 ## Identity and attribution
 
 Each Observation records one stable `publisher_id`, separate from credentials,
-gateways, Plugin installations, and Asset process generations. A gateway does not
+gateways, integration installations, and Asset process generations. A gateway does not
 become the publisher by forwarding a drone's report. Continuing a publisher after
 reinstallation names its existing ID and satisfies sequence recovery below.
 Display names do not establish continuity.
@@ -29,9 +29,9 @@ for the same continuing source subject.
 
 ## Reports and movement
 
-[Report evidence](report-evidence.md) defines every exact envelope, result, reading,
-and correction field. Creation uses the same evidence rules for supplied sections
-as later reports. New measurements have new reading identities. Replays retain
+[Report format](report-format.md) defines the exact envelope, results, and reading
+fields. [Evidence admission](report-evidence.md) applies equally to creation and
+later reports. New measurements have new reading identities. Replays retain
 original identities. Making a new packet does not create new evidence.
 
 Publisher sequence scope persists across gateway changes, credential changes,
@@ -54,9 +54,9 @@ failure, never wraparound. Sequences are scoped per Observation and section;
 the report's sequence applies to each section it supplies.
 
 Older unseen evidence can enter history without changing current state.
-Equal-sequence conflicts and stale constituent revisions reject the whole submission.
-Historical corrections name original evidence, preserve measurement age, and never
-replace current state merely because their delivery is newer.
+Equal-sequence conflicts and changed facts under an existing scoped reading ID
+reject the whole submission. History-only reports preserve original measurement
+age and never replace current state merely because delivery is newer.
 The default policy commits Observation evidence, movement, corresponding Track
 changes, and public effects together. Unknown original time remains null.
 
@@ -73,7 +73,7 @@ associated with the Observation. A successful report does not publish their byte
 Sensor references and military-display metadata are unsupported initially.
 
 Observations have no individual deletion or automatic expiry. Silence preserves
-ID, last-known results, report identities, corrections, movement, and the default
+ID, last-known results, report identities, position history, and the default
 Track association until Reset. Resumed reports update that same pair.
 Inactive means only that a source is not reporting. There is no activity wire flag,
 inferred timeout, or close message. Silence does not refresh measurement age.

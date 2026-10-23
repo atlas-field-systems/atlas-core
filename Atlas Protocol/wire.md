@@ -47,13 +47,11 @@ Trusted-origin browser access permits Protocol headers and exposes response cont
 
 Accept one bounded UTF-8 JSON document. Reject duplicate decoded member names,
 malformed UTF-8, unpaired surrogates, and nonfinite numbers. Reject unknown fields
-in closed Protocol objects. Plugin-owned JSON follows its installed schema and
-the bounded [lossless payload contract](operations.md#payload-facts).
+in closed Protocol objects.
 Validate original text before normalization. A rounded conversion cannot satisfy
 an exact range or integer constraint. `100.0000000000000000001` is not an integer.
 Typed integer fields accept exact mathematical integers such as `100`, `100.0`,
 and `1e2`, then emit canonical integers. Counter strings use their separate spelling.
-[Plugin JSON](operations.md#payload-facts) retains spelling-sensitive number tokens.
 Apply independent [byte, value, depth, and work budgets](limits.md) to full envelopes.
 
 Patches preserve omitted fields, replace scalars/arrays, merge defined objects,
@@ -95,6 +93,6 @@ reference HTML/schema uses `GET /reference` with declared media. Upload uses
 `POST /objects` with multipart parts `descriptor` as JSON and `file` as binary.
 Content reads use `GET /objects/{object_id}/content`. Other metadata uses the JSON
 mapping. WSS uses `/changes` and [synchronization envelopes](synchronization-messages.md).
-The [schema profile](schema-profile.md) fixes generation and lossless boundaries.
+The [schema profile](schema-profile.md) fixes shared runtime schemas and portable export.
 
 [Next: synchronization](synchronization.md)

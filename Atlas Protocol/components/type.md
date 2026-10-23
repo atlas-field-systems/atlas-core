@@ -12,7 +12,7 @@ Entity category and Geometry's `type` are separate fields.
 | `variant` | String or null | Required for `kind: "drone"`, otherwise omitted | Drone form; null means unknown |
 
 `other` means a known kind outside the named categories. It is distinct from an
-unknown kind. The sets below are closed. Plugins cannot register new values.
+unknown kind. The sets below are closed. Integrations cannot register new values.
 
 ## Asset type
 

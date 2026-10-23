@@ -1,88 +1,65 @@
-# Movement history
+# Append-only position history
 
-**Movement history retains accepted measurements and their corrections.**
-It is separate from the latest Entity section and from general activity records.
-[Reports](reports.md#movement-and-recovery) owns measurement admission and retention;
-[Telemetry](components/telemetry.md#constituent-reading-identity) owns reading
-identity, original source times, and correction revisions.
+**Movement history retains accepted position readings with immutable facts.**
+It is separate from latest Telemetry and general activity. Speed and altitude
+remain in [latest Telemetry](components/telemetry.md), without historical queries.
+[Reports](reports.md#movement-and-recovery) owns admission and retention;
+[Telemetry](components/telemetry.md#constituent-reading-identity) owns reading identity.
 
-## Query coverage
+## HTTP reads in both modes
 
-Asset, Observation, and Track movement queries include their retained position,
-speed, and altitude evidence. A Track query preserves its source evidence and
-association provenance. The default policy does not create a second measurement
-identity for the same reading. Source evidence remains attributable when an Entity
-is inactive or its current section changes, and Asset deletion does not erase history.
+Asset, Observation, and Track history queries return retained positions. A Track
+query preserves original source evidence and association provenance. The default
+policy does not create a second measurement identity for the same position.
+Inactive records, current-section changes, and Asset deletion do not erase history.
 
-HTTP mode requests history on demand. Full synchronization can independently enable
-all retained movement history under the [coverage contract](synchronization.md).
-This includes history attributable to retained or deleted Assets and retained
-Observations and Tracks, including inactive records. It does not require enabling
-the Observation-record cache. History carries the source and association facts
-needed to answer its queries without dereferencing uncached Observation records.
-Include the known-Entity and deletion facts needed to distinguish an unknown ID
-from a known Entity with no matching readings, even when its current record is absent.
+Both SDK modes use explicit HTTP reads. History is absent from snapshots and the
+change feed. Core keeps the known-Entity and deletion facts needed to distinguish
+unknown IDs from known Entities with no matching positions, including deleted Assets.
+The [history query contract](history-queries.md) defines exact ordering, frozen
+pages, source-bound continuation, and finite release/expiry. Queries have no implicit
+history window. Capacity failure is explicit, never a truncated successful result.
 
-Disabled history coverage uses explicit on-demand requests by Asset, Observation,
-or Track. Enabled, ready coverage answers the same bounded queries locally;
-loading or incomplete coverage is not a successful empty result.
-The synchronized history includes the correction facts exposed by those queries;
-it must not silently narrow their meaning to only newly received readings.
-The shared [history query contract](history-queries.md) defines exact ordering,
-frozen pages, source-bound continuation, and bounded release/expiry for both modes.
+## Admission and immutable facts
 
-## Snapshot and incremental changes
+Append only newly accepted positions, including late history-only admission that
+leaves current Entity images unchanged. Commit history and eligible current effects
+together. Preserve original source context and measurement time.
 
-An initial history capture contains the retained readings and correction facts at
-its baseline. Subsequent commits carry newly accepted readings and corrections,
-including history-only admission that leaves current Entity images unchanged.
-Commit their history and eligible current-state effects together and apply all
-selected effects atomically. Preserve source context and original measurement time.
+Carrying a position forward in complete Telemetry does not append it again.
+An exact retry has no repeated effect. Changed facts under an existing scoped
+reading ID reject the submission atomically. New readings use new IDs, even when
+coordinates and source times equal an earlier reading. No historical correction,
+reading tombstone, or automatic history expiry exists in the initial Dataset.
+Never reconstruct history by sampling current-state images.
 
-Carrying a reading forward in a complete Telemetry section does not append it again.
-An exact retry has no repeated effect. A higher accepted correction revision updates
-the same reading and retains its correction provenance; it does not become a new
-sample or a fresh current measurement. Never reconstruct history by sampling the
-current-state feed or copying each complete Entity image.
+For example, accepting P2 and then a previously unseen earlier P1 retains both
+positions while P2 stays current. Replaying either report adds nothing. A report
+reusing P1's ID with changed coordinates fails without modifying either reading.
+The full [admission example](report-evidence.md#independent-acceptance-example)
+applies to both SDK modes' HTTP reads.
 
-For example, accepting position P2 and then a previously unseen earlier P1 adds both
-readings to history while P2 stays current. Correcting P1 changes its retained
-history without replacing P2. Replaying either submission adds nothing. The full
-[admission example](report-evidence.md#independent-acceptance-example) applies to
-both HTTP history reads and synchronized history.
-
-If the history snapshot contains P2 and P1 arrives during loading, catch-up must
-include P1 before the cache becomes ready. A correction to P1 before the cutover
-must also be present: two readings, P1 at its accepted correction revision, P2 still
-current. Activating history must not add duplicate P2 or omit the late P1.
-
-Past readings usually remain unchanged, but each new accepted reading increases
-retained volume. Bound snapshots, whole change batches, decoded data, and total
-client storage before allocation. No implicit eviction or history window may make
-an enabled cache claim complete coverage. Unsupported capacity is explicit.
+Each new position increases retained volume. Bound query references, pages, decoded
+data, and aggregate storage before allocation. Do not evict retained history to
+make a query appear complete. Runtime capacity remains unqualified.
 
 ## Reading representation
 
 A history `reading` requires `source_entity_kind`, `source_entity_id`, `quantity`,
-`value`, `observed_at`, `source_evidence`, `time_status`, and `track_ids`. Source kind is `asset`
-or `observation`; quantity is `position`, `altitude`, `ground_speed`, or `airspeed`.
-Value uses that quantity's shared component type and permitted nulls. `source_evidence`
-is exactly the constituent metadata from [report format](report-format.md), retaining
-its original origin, identity, and correction revision. It is not another report envelope.
-`observed_at` is the effective original quantity time after the section's timestamp
+`value`, `observed_at`, `source_evidence`, `time_status`, and `track_ids`.
+Source kind is `asset` or `observation`; quantity is exactly `position`.
+Value uses the shared Position type or null. `source_evidence` is exactly the
+constituent metadata from [report format](report-format.md), retaining original
+origin and reading ID. It is not another report envelope.
+`observed_at` is the effective original position time after the section's timestamp
 override, retaining its spelling or null. `time_status` is `known`, `unknown`, or
 `uncertain`; unknown requires null, while known and uncertain require a timestamp.
 `track_ids` is a unique UUID array of associated Tracks at the captured boundary,
 empty for Asset readings. The default policy shares the original Observation reading
-with its Track, without a second measurement identity. Corrections replace that
-reading's retained revision and keep the original time.
+with its Track, without a second measurement identity.
 
 The full identity tuple in [history queries](history-queries.md#selection-and-exact-order)
-identifies a reading. Pages and synchronization carry its complete retained revision.
-A `history_entity` marker supplies kind, ID, version, and deletion status for known
-Entities, including those with no readings. It is coverage metadata, not a measurement.
-Snapshots include these markers; commits maintain them atomically with Entity changes.
-No reading tombstone or automatic history expiry exists in the initial Dataset.
-HTTP/Full equivalence and recovery fixtures remain unexecuted implementation work.
+identifies a reading. Frozen pages retain its facts and captured provenance.
+Independent acceptance and recovery fixtures remain unexecuted implementation work.
 
 [Next: tasks](tasks.md)

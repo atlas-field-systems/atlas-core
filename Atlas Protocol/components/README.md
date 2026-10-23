@@ -44,7 +44,7 @@ exposed cameras are unsupported initially. No untyped extension fields replace t
 ## Shared section results
 
 [Report format](../report-format.md) is the sole authority for exact report,
-section-result, constituent, correction, and evidence-reference fields.
+section-result, constituent, and evidence-reference fields.
 The result alternative `state` is distinct from the section's `classification`.
 Do not split resources into separate state and measurement containers.
 
@@ -61,11 +61,11 @@ Descriptions, Capabilities, authored Type and Geometry, Heartbeat, and derived
 contact health do not accept `source_times`.
 
 Examples on component pages show payloads without their enclosing report evidence.
-Track copies retain original Observation scopes, IDs, revisions, and quantity times
+Track copies retain original Observation scopes, IDs, and quantity times
 under the [default policy](../tracks.md#default-policy).
 
 ## Contract source
 
-The [OpenAPI artifact](../README.md#contract-ownership) will mechanically encode
-these selected rules. It must not silently choose different fields or defaults.
+The shared [runtime schemas](../schema-profile.md) will encode these selected rules
+and export the OpenAPI reference. Neither may choose different fields or defaults.
 There is no executable schema or generated package in this baseline.

@@ -1,7 +1,7 @@
 # Qualification and acceptance
 
 **A design is not evidence. Test observable behavior through real boundaries.**
-Use real SDK/Core HTTP, SQLite, files, and relevant containers/manager processes.
+Use real SDK/Core HTTP, SQLite, files, containers, and local administration commands.
 Use independent expected values, not a client and server agreeing on the same
 mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 
@@ -9,22 +9,18 @@ mistake. Run direct Protocol and SDK cases from equivalent isolated states.
 
 | Workflow | Essential failure evidence |
 | --- | --- |
-| Shared components | Independent valid/invalid examples; allowed Entity compositions; Go/TypeScript agreement; SDK input/response validation and direct-HTTP refusal of malformed input |
+| Shared components | Independent valid/invalid examples; allowed Entity compositions; runtime-schema/OpenAPI export equivalence; SDK input/response validation and direct-HTTP refusal of malformed input |
 | Wire and identity | Absent/null, exact counters and identifiers; authenticated discovery and exact-version refusal; equal API permissions across keys; wrong Dataset; lost enrollment reply; revoked-key rejection |
-| Asset updates | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; direct/relayed deduplication, section ordering, correction identity and age, and movement history; contact expiry without new packets; competing process replacement; obsolete-generation rejection |
-| Observations and default fusion | Stable publisher; continuing Observation versus report and constituent measurement identities; direct/relayed deduplication; whole-section ordering and correction age; atomic Observation/Track creation and updates; lost replies and racing retries; errors, withdrawals, and unknowns remain visible |
+| Asset updates | Unified description/status/section updates; whole-section replacement and mixed-update atomicity; API-key-only direct/relayed evidence; direct/relayed deduplication, section ordering, immutable reading facts and age, and append-only positions; contact expiry without new packets; competing process replacement; obsolete-generation rejection |
+| Observations and default fusion | Stable publisher; continuing Observation versus report and constituent measurement identities; direct/relayed deduplication; whole-section ordering, late positions, and preserved source age; atomic Observation/Track creation and updates; lost replies and racing retries; errors, withdrawals, and unknowns remain visible |
 | Retained Tracks and evidence | Independent publishers initially yield separate Tracks; inactivity and Restart preserve identities, history, source provenance, and Object associations; no individual Observation or Track deletion; Reset clears all retained records |
 | Field reconnection | Drops lasting seconds or about 30 seconds; an Asset returning after five minutes; retained evidence without repeating uncertain work |
 | Tasks | Lost reply, terminal immutability, queue revisions, Pause/Resume ordering, edited Geofeature references, late results, Asset deletion without invented outcomes or transferred Tasks |
 | Task cancellation | Offline request, Asset-confirmed cancellation, refusal restores execution state and queue slot, delayed completion supersedes the request |
 | Objects | Streaming bounds, exact digest/bytes, crash around file/SQL publication, same-ID retry without overwriting prior attempt files, cleanup preserves live precommit writers and ambiguous files, holds versus deletion, disk-full and integrity faults |
-| Plugins | Independent bundle validation/readiness; disconnect versus runtime loss; same-runtime receipt protection; exact acknowledgments; exhaustion, protected drain/force, recovered evidence, removal and retained results |
-| Operation cancellation | Request alone does not cancel; Plugin-confirmed cancellation; completion or failure before effective cancellation wins; late reports preserve terminal state |
-| Operation recovery | Plugin loss before possible delivery keeps pending work; loss after possible delivery interrupts it; Core restart interrupts both |
-| Recovered outcomes | Original Operation reads expose recovered outcomes, effects, and result links; state remains interrupted; no new Operation or execution |
-| Lifecycle | Retained Restart, interrupted Reset before/after establishment and proof, verified writer exit, manager lock/epoch takeover, journal corruption and lost import acknowledgment, Hard Reset and settings failure |
-| Full synchronization | All four Observation/history coverage combinations; local versus explicit HTTP reads; independent base readiness; online backfill/cutover/disable; whole-message interruption, capture cleanup, fixed handoff, replay expiry, slow clients, restart rebuild, Reset and isolated optional capacity failure |
-| History query views | [Frozen-page examples](../Atlas%20Protocol/history-queries.md#independent-acceptance-example); exact-time/scoped-identity order; inserts and corrections during paging; HTTP/Full parity; lost first-page replies; explicit release, expiry, Restart/Reset and local coverage loss; original-owner continuation; view expiry before capacity refusal |
+| Lifecycle | Retained Restart; command interruption before/after Dataset establishment and proof; explicit recovery under the installation lock; verified writer exit; reused process identities; missing/corrupt recovery state; Hard Reset and settings failure |
+| Full synchronization | Fixed Assets, Tracks, Geofeatures, Tasks, ready Object metadata; explicit HTTP Observations/history in both modes; whole-message interruption, capture cleanup, fixed handoff, replay expiry, slow clients, restart rebuild, Reset, and explicit capacity failure |
+| History query views | [Frozen-page examples](../Atlas%20Protocol/history-queries.md#independent-acceptance-example); exact-time/scoped-identity order; late positions during paging; changed reading facts refused; HTTP in both modes; lost allocation replies; release, expiry, Restart/Reset; original Core-run continuation; view expiry before capacity refusal |
 
 For example, create O17 and record its assigned T42. Move O17 with R2 and verify
 both IDs remain. Replay creation and R2 through another gateway with no new Track,
@@ -35,14 +31,11 @@ Neither silence nor picture capacity permits eviction of the retained records.
 Use the independent [history-only evidence example](../Atlas%20Protocol/report-evidence.md#independent-acceptance-example)
 and [retained-Dataset qualification](workload-qualification.md) requirements.
 
-For Plugin recovery, expose P7, lose its runtime, then recover terminal revision 3
-after accepted revisions 1 and 2. P7 stays interrupted. Repeating revision 3 returns
-the same acknowledgment and one recovered outcome; changed revision-3 facts fail.
-
-For generation, follow the selected [build/schema gates](build-profile.md), delete
-outputs, and regenerate with exact locked tools. Qualify cross-language examples,
-package consumption, and binary adapters. Do not buffer large files in a JSON validator.
-A generated type check is not a request/response-validation test.
+For schema export, follow the [build gates](build-profile.md), delete outputs,
+and export again with exact locked tools. Qualify independent boundary examples,
+runtime/OpenAPI equivalence, browser-safe package consumption, and binary adapters.
+Do not buffer large files in a JSON validator. An inferred type check is not a
+request/response-validation test.
 
 Use the [Protocol boundary qualification cases](protocol-qualification.md) to retain
 demonstrated validator pitfalls without treating the experiment as a qualified runtime.
@@ -62,22 +55,26 @@ Diagnostic records alone cannot establish that work committed or executed.
 | Scenario | Required evidence |
 | --- | --- |
 | Lost non-report write reply | At default Core and SDK Summary detail, match the attempt; keep SDK outcome unknown; retry has new attempt context and the same prepared identity; one durable effect and complete picture application |
-| Read routing and transfers | Covered Full-mode reads send zero HTTP requests; default reads and repeated uploads report the observed source and byte category without buffering whole files |
-| Recovery and authorization | Revoked credentials stop all network work; complete local queries/subscriptions/history remain explicitly stale and authorization-required; changed credentials need authenticated discovery, with no write replay or recovery hot loop |
-| Server delay and cleanup | Separate writer wait from commit time, file publication from cleanup, and Plugin channel loss from confirmed process death |
+| Read routing and transfers | Ready picture reads send zero HTTP requests; explicit Observation/history reads use HTTP in both modes; default reads and repeated uploads report the observed source and byte category without buffering whole files |
+| Recovery and authorization | Revoked credentials stop all network work; complete local picture queries/subscriptions remain explicitly stale and authorization-required; changed credentials need authenticated discovery, with no write replay or recovery hot loop |
+| Server delay and cleanup | Separate writer wait from commit time, file publication from cleanup, and lost maintenance replies from verified process exit |
 | Correlation headers | Missing, malformed, and duplicate header fields preserve domain behavior; reused attempt values need no registry; trusted browser origins can send/read headers; validate IDs on success, error, binary, and empty responses |
 | Diagnostic pressure and privacy | Flood producers and block/fail sinks; memory and disk stay bounded, omissions remain visible, request outcomes are unchanged, and prohibited fields appear in no normal log or standard export |
-| Local troubleshooting | Off by default and enabled only for selected runs; recovered/fatal panics produce useful bounded context and frames or explicitly sensitive crash evidence; private raw capture never leaks into normal logs or standard exports |
+| Safe fault context | Handled HTTP exceptions and fatal runtime errors produce safe bounded context and frames or explicitly unavailable evidence; unstructured output is never retained |
 | SDK observer lifecycle | Debug frames and context obey field/count bounds; raw Error/stack/input objects never reach observers; throwing observers or failed exports do not change requests or recovery; close stops deliveries and timers |
-| Restart and Reset | Restart retains bounded files but disables troubleshooting; Reset verifies container, Plugin, manager, and launcher capture writers and old copies are cleared, including interrupted cleanup; management authority stays separate |
+| Restart and Reset | Restart retains bounded logs; Reset verifies Core and export writers stopped and old logs/staging cleared; interrupted cleanup needs explicit recovery; establishment proof prevents a second wipe |
 
-Exercise recovered HTTP panics, fatal background panics, and dependency writes in
-both Go processes with troubleshooting off and on. Inject sentinel filenames and
-secrets into panic/error text: none may reach normal logs, structured debug fields,
-journals, or standard exports. Sensitive raw capture may contain them only within
-its declared private boundary; verify access, quotas, truncation, deliberate export,
-disable, and Reset cleanup. Verify useful fault locations survive without argument
-values, and that unavailable evidence is reported honestly. No capture blocks work.
+Exercise handled HTTP exceptions, fatal background errors, and dependency writes
+in Core and local commands. Inject sentinel filenames and secrets into exception
+text and unstructured output. None may reach retained logs, debug fields, recovery
+records, or exports. Verify useful fault locations without argument values, honest
+unavailable evidence, bounded direct file rotation, and no unmanaged raw copies.
+Interrupt a command and verify no detached cleanup or automatic recovery runs.
+Explicit recovery must recheck ownership and preserve an already established Dataset.
+Crash after the establishment marker commits but before proof or action progress
+flushes. Recovery must preserve that Dataset and regenerate proof without another
+wipe. Separately interrupt before establishment, then verify one establishment on
+recovery. Conflicting or unreadable facts must stop cleanup without deleting data.
 
 ## Workload targets, not measured capability
 
@@ -92,6 +89,7 @@ Neither tuning nor capacity failure permits weaker retention or atomicity.
 Record revision, actual commands, inputs, environment, and passed/failed/unrun checks.
 Do not borrow historical successes from another repository. Process-kill tests do
 not establish power-loss durability. Simulated Assets do not establish flight or
-radio readiness. An independently built Plugin must actually run and be removable.
+radio readiness. An external integration test must use public HTTP and credentials,
+without relying on Core-owned process supervision.
 
 This completes the Core reading path. Continue with [SDK](../Atlas%20SDK/README.md).

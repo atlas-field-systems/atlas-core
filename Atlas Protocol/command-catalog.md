@@ -3,7 +3,7 @@
 The local Protocol artifact defines exactly `move_to`, `pause`, and `resume`.
 An Asset's capabilities advertise a subset with the scheduling choices below.
 Unsupported Commands or scheduling choices return `422 unsupported_command`.
-There is no immediate Move To, area-search Command, or Plugin-defined Asset Command.
+There is no immediate Move To, area-search Command, or integration-defined Asset Command.
 
 ## Task creation fields
 

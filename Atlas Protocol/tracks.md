@@ -33,11 +33,11 @@ is one atomic commit. Failure rejects creation without allocating a visible pair
 An exact retry recovers the existing pair. Racing retries cannot create another Track.
 
 [Evidence admission](report-evidence.md) precedes mirroring. Commit newly admitted
-history, corrections, and any eligible current replacements with both Entity effects
-atomically. A history-only report or correction changes neither current image,
-section evidence reference, nor association. It still appears in Track history
+positions and eligible current replacements with both Entity effects atomically.
+A history-only report changes neither current image, section evidence reference,
+nor association. It still appears in Track history
 through the original scope. Exact replay adds no reading or repeated public effect.
-If a current replacement carries corrected evidence, mirror that complete result.
+Mirror each eligible current replacement as a complete result.
 
 Two publishers reporting the same vehicle produce two Observations and two Tracks.
 The initial policy performs no cross-publisher matching, averaging, extrapolation,
@@ -46,9 +46,8 @@ merging, splitting, or interpolation.
 ## Evidence and lifetime
 
 Track reads expose source IDs and evidence even without expanded Observation
-records. Movement queries retain original reading identities, correction facts,
-and association provenance. They do not manufacture a second measurement identity.
-Fusion time, receipt time, and correction time never replace source measurement time.
+records. Position queries retain immutable reading facts and association provenance. They do not manufacture a second measurement identity.
+Fusion time and receipt time never replace source measurement time.
 Unchanged derived state cannot create a fresh movement sample.
 
 Tracks have no individual deletion or automatic expiry. Silence preserves ID,

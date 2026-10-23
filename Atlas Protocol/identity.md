@@ -5,7 +5,7 @@ permissions.**
 
 ## Principals
 
-Operators, Assets, gateways, and Plugins use the same API permission model. Any
+Operators, Assets, gateways, and independent integrations use the same API permission model. Any
 valid key may read, write, use public administration, or submit reports for any
 Asset or publisher. There are no role tiers or per-Asset API-key scopes. Local
 host administration still requires local access.

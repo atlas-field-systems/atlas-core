@@ -32,7 +32,7 @@ settle a call twice or contaminate a new Dataset's state.
 
 Retry the same identity, original facts, Dataset, and precondition under current
 authorization. Do not silently create another Observation or Task, allocate another Object, rebase
-an edit, or rerun an Operation. Preserve conflict and ended-identity errors.
+an edit, or repeat physical work. Preserve conflict and ended-identity errors.
 
 Same-release Restart retains valid Dataset retries. Reset requires deliberate
 reconciliation, not attaching an old request to the new Dataset. Installation-lived
@@ -43,15 +43,14 @@ Known key rejection blocks network attempts under [authorization recovery](autho
 Only authenticated discovery with a changed credential can reopen them. Recovery
 never resubmits prepared writes; the caller must deliberately retry or reconcile.
 
-## Files and processing
+## Files and execution
 
 A replayable upload source provides stable descriptor fields plus an `open` function
 that returns a fresh stream for each attempt. Retries begin at byte zero. A consumed
 one-shot source fails explicitly as non-replayable; do not buffer an arbitrary file
 or promise resume to hide that limitation.
 
-Keep progress, upload publication, Asset completion, and Plugin outcome distinct.
-Expose [Protocol's Operation states and recovery rules](../Atlas%20Protocol/operations.md)
-without treating an aborted SDK wait as an Operation outcome.
+Keep transfer progress, Object publication, and Asset completion distinct. An
+aborted SDK wait does not change accepted work or prove that physical execution stopped.
 
 [Next: the local picture](picture.md)

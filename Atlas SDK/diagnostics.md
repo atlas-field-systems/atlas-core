@@ -88,7 +88,7 @@ preempt a callback that blocks its JavaScript thread.
 
 Close stops diagnostic delivery and timers and releases observer references.
 Queued records and unflushed counters are discarded; close does not flush or export.
-No diagnostic failure authorizes a retry, snapshot rebuild, or new Operation.
+No diagnostic failure authorizes a retry, snapshot rebuild, or new domain request.
 
 For example, a mutation can commit while its reply disappears. The SDK records
 `unknown_outcome`; a deliberate retry has another attempt ID and the same prepared

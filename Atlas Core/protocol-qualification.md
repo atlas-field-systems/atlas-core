@@ -1,7 +1,8 @@
 # Protocol boundary qualification
 
-The preserved Protocol experiment demonstrated failures at stateless boundaries.
-These cases guide future qualification. They do not prescribe its experimental
+The archived Protocol experiment demonstrated failures at stateless boundaries.
+Its Go tooling and Plugin payloads are historical evidence, not active implementation
+choices or APIs. Retain applicable failure cases without importing experimental
 helpers, generator versions, or wire layouts.
 
 ## Demonstrated pitfalls
@@ -32,13 +33,13 @@ The archived fixes and tests cover particular Go and TypeScript paths. They do n
 establish arbitrary schema support, browser compatibility, or deployment capacity.
 Real reconnection, durable queues, concurrent Core consumers, and SDK picture
 application still require the [integration workflows](qualification.md).
-Test agreement against independent expected results, not only the other language.
+Test against independent expected results, not only runtime/exporter agreement.
 
-Protocol now selects the [embedded queue](../Atlas%20Protocol/tasks.md#scheduling-and-controls),
-[lossless Plugin payloads](../Atlas%20Protocol/operations.md#payload-facts), and
-[geometry boundary examples](../Atlas%20Protocol/components/geometry.md#boundary-examples).
+Protocol retains the [embedded queue](../Atlas%20Protocol/tasks.md#scheduling-and-controls)
+and [geometry boundary examples](../Atlas%20Protocol/components/geometry.md#boundary-examples).
 Qualify these contracts before expanding implementation. Include queue and adoption
 images in page and whole-commit budgets. Core's selected [limits](limits.md),
-Protocol's geometry/Power bounds, and the [lossless browser codec](build-profile.md#lossless-boundary)
-still require implementation qualification.
+Protocol's geometry/Power bounds, and the [shared schema and export gates](build-profile.md#required-implementation-qualification)
+still require implementation qualification. Historical Plugin payloads create no
+current payload or codec requirement.
 Archive regressions do not establish durable behavior or deployment capacity.

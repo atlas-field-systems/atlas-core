@@ -2,7 +2,7 @@
 
 **An accepted change must survive, and its related facts must agree.**
 One SQLite database holds operational and installation-lifetime tables. Core is
-its exclusive writer; the host manager does not edit live SQL behind its back.
+its exclusive writer; local administration commands never edit live SQL.
 Core stores accepted Asset and Observation sections with their source and ordering
 facts. Track results and associations remain distinct from that source evidence.
 Public resource images are built from these committed facts.
@@ -11,8 +11,9 @@ Public resource images are built from these committed facts.
 
 Under one transaction, recheck authorization, Dataset, revisions, retry identity,
 and reference guards. Commit resource changes, original retry facts, required
-history/activity, and the complete public change batch together. Movement additions
-and corrections enter that batch even when current Entity state is unchanged.
+history/activity, and the complete public picture effects together. Newly admitted
+positions commit even when current Entity state is unchanged; those commits carry
+ordered log progress when they have no synchronized picture effects.
 A rollback publishes nothing. Return success after commit, not after feed delivery.
 The [default fusion commit](fusion.md#the-default-commit-path) includes both the
 Observation and Track. Unique associations and retry records prevent a second pair.
@@ -28,17 +29,17 @@ capacity by dropping accepted declarations or splitting atomic effects.
 
 ## Snapshot captures
 
-Core's synchronization owner materializes the requested current-resource and optional
-movement-history coverage, with its baseline cursor, into temporary SQLite-backed
-captures from one consistent database view. Expose only complete captures for their
-declared coverage. End the source read transaction before serving saved pages.
+Core's synchronization owner materializes the fixed picture with its baseline
+cursor into temporary SQLite-backed captures from one consistent database view.
+Expose only complete captures. Observations and position history are absent from
+picture captures. End the source read transaction before serving saved pages.
 The same owner handles allocation, release, expiry, and failed-build cleanup under
 the [synchronization contract](../Atlas%20Protocol/synchronization.md).
-The same owner projects committed batches to each client's coverage. A coverage
-change never creates another source of truth or extends replay retention indefinitely.
+The same owner publishes complete picture effects from the durable commit log.
+Captures never extend replay retention indefinitely.
 
 HTTP [history queries](../Atlas%20Protocol/history-queries.md) reuse this capture owner
-and its allocation/retry/cleanup discipline. Freeze matching reading revisions and
+and its allocation/retry/cleanup discipline. Freeze immutable position references and
 provenance from one consistent view; end the read transaction before serving pages.
 The owner bounds active views and membership references before allocation, owns
 finite expiry and explicit release, and invalidates Core-run views on Restart.
@@ -66,31 +67,30 @@ erase evidence.
 
 ## Retention and capacity
 
-Object holds, accepted report identities, correction bindings, movement, and terminal
+Object holds, accepted report identities, immutable positions, and terminal
 work accumulate until Reset. Bounded replay is not a bound on the entire Dataset.
 Observations, Tracks, and their historical associations are retained records with
 no individual delete or automatic eviction. Inactivity does not release their storage.
-Charge uploads, active downloads awaiting reclamation, Plugin work, logs, database
-and indexes, snapshot staging, history-query references, and frozen revisions against
+Charge uploads, active downloads awaiting reclamation, logs, database and indexes,
+snapshot staging, history-query references, and frozen data against
 real aggregate storage budgets. Under pressure, expire temporary history views and
 recheck ordinary write admission before refusing it. Release only view allocations,
-never retained source evidence or corrections.
+never retained source evidence.
 
 Reserve headroom for required commits and failure reporting. Object quota alone
-cannot isolate a Plugin that fills the disk. Refuse admission honestly; never
-silently evict protected facts. Disk isolation is a qualification gate, not an
-already implemented guarantee.
+does not bound aggregate disk use. Refuse admission honestly; never silently evict
+protected facts. Storage accounting remains a qualification gate.
 
 ## History and activity
 
-Movement is sparse accepted evidence, not a sampled copy of the current picture.
-Activity records selected Task, Asset deletion, Plugin, credential, and configuration
-actions with credential attribution. It is not a log of every packet or read and
-must not contain secrets. Same-effect retries do not duplicate activity.
+Position history is accepted source evidence, not a sampled current picture.
+Activity records selected Task, Asset deletion, and credential actions with credential
+attribution. Core records configuration it applies with explicit local-administrator
+attribution. Activity is not a log of every packet or read and contains no secrets.
+Same-effect retries do not duplicate activity. Reset clears pre-boundary activity.
 
-Stopped-state local actions use the [manager activity journal](manager-recovery.md#local-activity-journal).
-Core imports before serving and through private maintenance calls while running.
-Event identity and outcomes stay separate from
-destructive authority. Reset clears pre-boundary activity; damage blocks import.
+Stopped-state local commands are outside public activity history. Their safe output
+goes to the local caller. The [destructive recovery record](lifecycle.md#reset-recovery)
+authorizes only the recorded maintenance work; it is not an activity journal.
 
 [Next: lifecycle](lifecycle.md)

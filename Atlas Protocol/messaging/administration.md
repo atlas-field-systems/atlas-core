@@ -1,7 +1,7 @@
 # Administration and discovery messages
 
 Any valid API key has the same public permissions. Profiles provide attribution,
-not roles. Core/Plugin local lifecycle and runtime settings remain outside this API.
+not roles. Core local lifecycle and runtime settings remain outside this API.
 
 ## Administration
 

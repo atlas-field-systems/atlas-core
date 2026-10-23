@@ -41,10 +41,13 @@ current instructions before unpausing. [Task rules](Atlas%20Protocol/tasks.md) o
 
 Drone 1 detects a vehicle and creates Observation 1 through the gateway. Drone 1
 remains its publisher. Core's built-in policy creates Track 1 in the same commit.
-Mission shows that Track with its source Observation and original measurement time.
+Mission shows that Track with source IDs and original measurement time. Expanded
+Observation records use explicit HTTP reads, even in Full mode.
 
 As the vehicle moves, Drone 1 reports new evidence under Observation 1. Core updates
-Track 1 without changing either ID. Replaying a report creates no new movement.
+Track 1 without changing either ID. Replaying a report appends no position.
+Mission reads position history through frozen HTTP pages. Late positions can enter
+history without replacing current state; existing scoped reading facts stay immutable.
 An independent detection by Drone 2 creates a separate Observation and Track.
 The initial policy does not match targets across publishers.
 

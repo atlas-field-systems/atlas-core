@@ -4,14 +4,14 @@ Protocol defines what a message means. Its link defines how it is carried.
 Requests, results, reports, and notifications reuse Protocol's component schemas.
 Core validates the contract independently of the link that delivers the message.
 The linked contracts select message names, control fields, and reply envelopes.
-Machine OpenAPI output remains implementation work.
+Runtime schemas and their OpenAPI export remain implementation work.
 
 ## Message contracts
 
 Each message defines its participants, target, inputs, result, errors, and effects.
 Required values, behavior for null and omitted values, bounds, and component
-references belong in shared OpenAPI schemas. Bindings define how the link represents
-and exchanges messages.
+references belong in shared runtime schemas and their OpenAPI export. Bindings
+define how the link represents and exchanges messages.
 
 Expected users describe callers and purposes, not permissions.
 Any valid key has the same public permissions under [Identity](identity.md).
@@ -40,11 +40,6 @@ Each exposes only the fields and components permitted for its Entity type under
 Shared internal mechanisms do not merge public message contracts. The initial
 [static IP mapping](wire.md#deterministic-ip-mapping) assigns each message its binding.
 
-## Plugin and Operation messages
-
-[Plugin and Operation messages](messaging/plugins.md) cover capability lookup,
-invocation, progress, and cancellation under [Operation rules](operations.md).
-
 ## Link bindings and scope
 
 Core's IP binding uses HTTP/JSON and a WebSocket change feed as defined in
@@ -56,9 +51,9 @@ Authentication and reference-data disclosure follow Wire. Wire selects a determi
 route mapping; the implementation records it in OpenAPI.
 The Command Catalog remains a local Protocol artifact, not a network discovery service.
 
-Core configuration, lifecycle control, Plugin installation, updates, and runtime
-configuration remain local administration. There is no generic Task deletion,
-resumable-upload exchange, or remote Core-configuration message.
+Core configuration, lifecycle control, and updates remain local administration.
+There is no generic Task deletion, resumable-upload exchange, or remote
+Core-configuration message.
 
 ## Administration messages
 
@@ -75,14 +70,13 @@ limits, and a temporary allocation context under [Wire](wire.md#common-represent
 
 | Message | Expected user and purpose | Request | Result |
 | --- | --- | --- | --- |
-| `ReadSnapshot` | Application stages base, Observation, or movement-history coverage | Declared coverage, snapshot capture, and paging context | Captured data under [Synchronization](synchronization.md) |
-| `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Declared coverage and bounded replay context | Complete committed effects within coverage and ordered progress |
-| `SubscribeChanges` | Synchronizing application catches up and follows live commits | Declared coverage, subscription, and handoff context | Ordered committed effects, progress, and synchronization replies |
+| `ReadSnapshot` | Application stages the fixed operational picture | Snapshot capture and paging context | Captured data under [Synchronization](synchronization.md) |
+| `ReadChanges` | Synchronizing application replays retained changes from its last complete cursor | Bounded replay context | Complete picture effects and ordered progress |
+| `SubscribeChanges` | Synchronizing application catches up and follows live commits | Subscription and handoff context | Ordered committed effects, progress, and synchronization replies |
 | `ReleaseSnapshot` | Loading application frees its capture after paging or cancellation | Capture identity | Release acknowledgment or explicit refusal |
 
-Changing coverage follows the staged cutover in [Synchronization](synchronization.md#changing-coverage).
-[Synchronization envelopes](synchronization-messages.md) and
-[coverage-change controls](coverage-changes.md) fix the concrete requests and replies.
+[Synchronization envelopes](synchronization-messages.md) fix concrete requests and
+replies for the single fixed picture.
 
 ## History query control
 
@@ -91,7 +85,7 @@ Changing coverage follows the staged cutover in [Synchronization](synchronizatio
 | `ReleaseHistoryView` | Query caller frees an Asset, Observation, or Track history view after paging or cancellation | The view's source-bound release token | Idempotent release acknowledgment or explicit refusal under [history query rules](history-queries.md#release-expiry-and-capacity) |
 
 [History messages](messaging/history.md) define exact allocation, query, page, and
-release fields. Continuation and release keep the original HTTP or local owner across cache-option
-changes. Release of a local view is local and does not mutate Core's retained history.
+release fields. Continuation and release keep the original Core-run owner.
+Release frees a temporary view without deleting retained history.
 
 [Next: wire conventions](wire.md)

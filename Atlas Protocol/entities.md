@@ -68,7 +68,7 @@ Omission preserves the section. Optional sections stay present after a reported
 withdrawal, with that withdrawal's evidence. Required containers always remain.
 
 [Report format](report-format.md) owns exact fields. [Evidence admission](report-evidence.md)
-owns identity, corrections, and independent whole-section ordering. Telemetry replaces its
+owns immutable reading identity and independent whole-section ordering. Telemetry replaces its
 quantities together, with no subfield merge. Derived Tracks retain original scopes.
 Contact health remains separate under [Reports](reports.md#time-and-contact).
 

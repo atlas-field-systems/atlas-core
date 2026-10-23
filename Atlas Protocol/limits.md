@@ -15,7 +15,6 @@ Authenticated health and synchronization negotiation expose effective message li
 | Ordinary integer/count/duration | JSON mathematical integer, zero through 2,147,483,647 unless a smaller bound or positive minimum is declared |
 | Page size | JSON integer, 1 through 1,000, default 100 |
 | Typed floating point | Finite binary64, absolute source value at most `2^1024 - 2^971` |
-| Plugin numeric token | Exact source spelling within the same maximum magnitude, with nonzero underflow preserved |
 
 Canonical counter spelling is `0` or a nonzero digit followed by digits. No plus
 sign, leading zero, decimal point, exponent, whitespace, or negative zero is allowed.
@@ -26,10 +25,9 @@ sequences are one. Never wrap a counter. Refuse an effect requiring overflow wit
 Typed floating values round to nearest binary64, ties to even, after exact range
 checks. Recheck component bounds and cross-field rules after conversion. Reject
 invalid rounded results without clamping or wrapping. Reject a nonzero typed value
-that would underflow to zero. Plugin payloads
-instead retain the token, including `1e-400`. Numeric tokens are at most 128 UTF-8
-bytes, with any exponent in -10,000 through 10,000. No parser may first round a
-fraction into an integer or an out-of-range value into a valid endpoint.
+that would underflow to zero. Numeric tokens are at most 128 UTF-8 bytes, with any
+exponent in -10,000 through 10,000. No parser may first round a fraction into an
+integer or an out-of-range value into a valid endpoint.
 Quantity-specific ranges, including coordinates, remain in their component definitions.
 
 Timestamps use Gregorian years `0001` through `9999`, UTC `Z`, seconds `00` through
@@ -58,7 +56,7 @@ Input compression is unsupported initially; it cannot bypass an encoded byte lim
 
 Every accepted individual synchronized item must fit a page and a future whole
 commit at the effective limits, including mandatory terminal/control effects.
-Ready base/optional coverage never evicts items to make an unfit commit look complete.
+The picture never evicts items to make an unfit commit look complete.
 Limits that clients negotiate below future permitted batches are refused up front.
 
 Health `limits` has integer fields `max_request_bytes`, `max_request_json_values`,
@@ -85,9 +83,9 @@ complete applied cursor. Neither path authorizes skipping a commit.
 Local SDK capacity failure uses the same meaning, without pretending an HTTP call occurred.
 
 Temporary counts and deadlines follow [read contexts](temporary-reads.md).
-The [SDK picture owner](../Atlas%20SDK/picture.md#capacity-and-retry) defines unchanged
-client budgets and complete accounting. Optional coverage can be unavailable under
-them. No larger-history support or automatic retention cut is implied.
+The [SDK picture owner](../Atlas%20SDK/picture.md#capacity-and-retry) defines
+client budgets and complete accounting. A picture can be resource-limited under
+them. HTTP history has separate finite view bounds, without automatic retention cuts.
 Core's workload qualification owns deployment measurements.
 
 [Wire](wire.md)

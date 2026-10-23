@@ -18,9 +18,7 @@ the addressed resource and Dataset.
 | `generated_at` | Required original report creation timestamp or null when unknown; not a substitute for measurement times |
 | `mode` | Required, exactly `current` or `history_only`; a history-only report never replaces current results |
 | `sections` | Required object of complete results keyed only by that Entity's reportable fields in [composition](entities.md#component-composition); Asset `communications` means capacity |
-| `contact_proof` | Optional [Heartbeat proof](components/heartbeat.md), only for current Asset reports without `correction_of` |
-| `correction_of` | Required only for a historical correction, exactly `{origin, report_id}` identifying a retained original, non-correction report in this Dataset and Entity |
-| `correction_revision` | Required only with `correction_of`, a positive unsigned 64-bit decimal string; ordinary reports have implicit revision zero |
+| `contact_proof` | Optional [Heartbeat proof](components/heartbeat.md), only for current Asset reports |
 
 At least one section is required, except a current Asset contact-proof report may
 have `sections: {}`. Observation envelopes forbid contact proof and Asset origin.
@@ -46,12 +44,12 @@ accepted source report. `section` is the section's wire name. Source-free initia
 values alone use `evidence: null`. Track copies retain the original Observation
 reference. Input results forbid this read-only field.
 
-Each constituent is exactly `{origin, reading_id, correction_revision}`.
-The ID is a source-assigned UUID. Revision is an unsigned 64-bit decimal string, initially `"0"`.
+Each constituent is exactly `{origin, reading_id}`.
+The ID is a source-assigned UUID with immutable reading facts.
 Scope is Dataset, original Entity, origin, and quantity. Null values also need identities.
 New readings use the envelope origin and get new IDs, even with equal values and times.
-Carrying forward retains origin, ID, revision, value, and time.
+Carrying forward retains origin, ID, value, and original effective source time.
 An older Asset origin is allowed only for a retained reading of that same Asset.
 Tracks never replace the original Entity or origin with their own.
 
-[Evidence admission and corrections](report-evidence.md) own the effects of these fields.
+[Evidence admission](report-evidence.md) owns the effects of these fields.

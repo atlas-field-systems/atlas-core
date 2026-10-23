@@ -21,7 +21,7 @@ The initial identifiers are `move_to`, `pause`, and `resume`. Their supported
 scheduling choices come from the [Catalog contract](../command-catalog.md), which is the
 single authority for those choices. The manifest cannot invent a Command or a
 scheduling mode. Its length cannot exceed the number of Catalog Commands.
-Plugins cannot add Asset Commands or arbitrary capability parameters.
+Integrations cannot add Asset Commands or arbitrary capability parameters.
 
 Capabilities changes use `UpdateAsset` and `expected_edit_revision`.
 Removing support does not rewrite existing Tasks. Current faults belong in
