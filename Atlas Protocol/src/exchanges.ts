@@ -28,6 +28,7 @@ import {
   Geofeature,
   Observation,
   PublisherSubject,
+  reportSequencesMatch,
   Track,
 } from './entities.js';
 import { Geometry } from './geometry.js';
@@ -63,19 +64,19 @@ const retry = { request_id: NewId };
 const edit = { ...retry, expected_edit_revision: Counter };
 const descriptiveEdits = z
   .strictObject({
-    alias: Alias.nullable().optional(),
-    description: Description.nullable().optional(),
+    alias: Alias.nullable().exactOptional(),
+    description: Description.nullable().exactOptional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'Empty edit');
 const assetResult = z.strictObject({
   asset: Asset,
-  evidence_disposition: EvidenceDisposition.optional(),
+  evidence_disposition: EvidenceDisposition.exactOptional(),
 });
 const observationResult = z
   .strictObject({
     observation: Observation,
     track: Track,
-    evidence_disposition: EvidenceDisposition.optional(),
+    evidence_disposition: EvidenceDisposition.exactOptional(),
   })
   .refine(
     (value) =>
@@ -109,21 +110,21 @@ const RegisterAsset = z.strictObject({
   process_generation: NewId,
   api_key_id: NewId,
   secret: Secret,
-  alias: Alias.optional(),
-  description: AssetDescription.optional(),
-  type: AssetType.optional(),
-  capabilities: Capabilities.optional(),
+  alias: Alias.exactOptional(),
+  description: AssetDescription.exactOptional(),
+  type: AssetType.exactOptional(),
+  capabilities: Capabilities.exactOptional(),
 });
 const UpdateAsset = z
   .strictObject({
     asset_id: Uuid,
     ...retry,
-    expected_edit_revision: Counter.optional(),
-    alias: Alias.nullable().optional(),
-    description: AssetDescription.nullable().optional(),
-    type: AssetType.optional(),
-    capabilities: Capabilities.optional(),
-    report: AssetReport.optional(),
+    expected_edit_revision: Counter.exactOptional(),
+    alias: Alias.nullable().exactOptional(),
+    description: AssetDescription.nullable().exactOptional(),
+    type: AssetType.exactOptional(),
+    capabilities: Capabilities.exactOptional(),
+    report: AssetReport.exactOptional(),
   })
   .refine((value) => {
     const authored = ['alias', 'description', 'type', 'capabilities'].some((key) =>
@@ -140,11 +141,11 @@ const CreateObservation = z
     observation_id: NewId,
     ...retry,
     publisher_id: Uuid,
-    source_asset_id: Uuid.optional(),
-    publisher_subject: PublisherSubject.optional(),
-    alias: Alias.optional(),
-    description: Description.optional(),
-    report: ObservationReport.optional(),
+    source_asset_id: Uuid.exactOptional(),
+    publisher_subject: PublisherSubject.exactOptional(),
+    alias: Alias.exactOptional(),
+    description: Description.exactOptional(),
+    report: ObservationReport.exactOptional(),
   })
   .refine(
     (value) =>
@@ -165,7 +166,7 @@ const assignedFirst = z.strictObject({
   asset_id: Uuid,
   process_generation: Uuid,
   read_id: NewId,
-  page_size: PageSize.optional(),
+  page_size: PageSize.exactOptional(),
 });
 function durationMatches(from: string, until: string, minimum: bigint, maximum = minimum): boolean {
   try {
@@ -265,7 +266,7 @@ export const ReplaceAssetProcess = z
   .meta({ id: 'ReplaceAssetProcess' });
 
 function envelope<D extends z.ZodType>(data: D) {
-  return z.strictObject({ dataset_id: Uuid, data, commit_cursor: Opaque.optional() });
+  return z.strictObject({ dataset_id: Uuid, data, commit_cursor: Opaque.exactOptional() });
 }
 function committedEnvelope<D extends z.ZodType>(data: D) {
   return envelope(data).extend({ commit_cursor: Opaque });
@@ -393,7 +394,12 @@ const ListApiKeysExchange = post(
 const CreateApiKeyExchange = committedPost(
   'CreateApiKey',
   '/messages/create_api_key',
-  z.strictObject({ ...retry, api_key_id: NewId, secret: Secret, operator_id: Uuid.optional() }),
+  z.strictObject({
+    ...retry,
+    api_key_id: NewId,
+    secret: Secret,
+    operator_id: Uuid.exactOptional(),
+  }),
   ApiKey,
 );
 const RevokeApiKeyExchange = committedPost(
@@ -421,7 +427,7 @@ const CreateOperatorExchange = committedPost(
     ...retry,
     operator_id: NewId,
     name: text(256, true),
-    description: text(4096).optional(),
+    description: text(4096).exactOptional(),
   }),
   Operator,
 );
@@ -433,8 +439,8 @@ const EditOperatorExchange = committedPost(
     operator_id: Uuid,
     edits: z
       .strictObject({
-        name: text(256, true).optional(),
-        description: text(4096).nullable().optional(),
+        name: text(256, true).exactOptional(),
+        description: text(4096).nullable().exactOptional(),
       })
       .refine((value) => Object.keys(value).length > 0, 'Empty edit'),
   }),
@@ -508,7 +514,7 @@ const GetAssetStatusExchange = post(
       (value) =>
         [value.status, value.communications.capacity].every((section) =>
           assetEvidenceMatches(section.evidence, value.asset_id),
-        ),
+        ) && reportSequencesMatch([value.status.evidence, value.communications.capacity.evidence]),
       'Asset status evidence scope differs',
     ),
 );
@@ -608,9 +614,9 @@ const GetTrackObservationsExchange = post(
   z.union([
     z.strictObject({
       track_id: Uuid,
-      page_size: PageSize.optional(),
-      publisher_ids: uniqueArray(Uuid).optional(),
-      source_asset_ids: uniqueArray(Uuid).optional(),
+      page_size: PageSize.exactOptional(),
+      publisher_ids: uniqueArray(Uuid).exactOptional(),
+      source_asset_ids: uniqueArray(Uuid).exactOptional(),
     }),
     Continuation,
   ]),
@@ -638,9 +644,9 @@ const CreateGeofeatureExchange = committedPost(
     ...retry,
     geofeature_id: NewId,
     geometry: Geometry,
-    alias: Alias.optional(),
-    description: Description.optional(),
-    type: GeofeatureType.optional(),
+    alias: Alias.exactOptional(),
+    description: Description.exactOptional(),
+    type: GeofeatureType.exactOptional(),
   }),
   Geofeature,
 );
@@ -670,10 +676,10 @@ const EditGeofeatureExchange = committedPost(
     geofeature_id: Uuid,
     edits: z
       .strictObject({
-        alias: Alias.nullable().optional(),
-        description: Description.nullable().optional(),
-        type: GeofeatureType.optional(),
-        geometry: Geometry.optional(),
+        alias: Alias.nullable().exactOptional(),
+        description: Description.nullable().exactOptional(),
+        type: GeofeatureType.exactOptional(),
+        geometry: Geometry.exactOptional(),
       })
       .refine((value) => Object.keys(value).length > 0, 'Empty edit'),
   }),

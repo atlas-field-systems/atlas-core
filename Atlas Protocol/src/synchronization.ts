@@ -212,7 +212,7 @@ export const ServerFrame = z
     z.strictObject({
       type: z.literal('error'),
       ...context,
-      request_id: NewId.optional(),
+      request_id: NewId.exactOptional(),
       error: ErrorObject,
     }),
   ])

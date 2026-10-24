@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import * as protocol from '../dist/index.js';
 import { runFixtures } from '../test/fixture-adapter.mjs';
-import { task, createTask, id } from '../test/samples.mjs';
+import { asset, task, createTask, id } from '../test/samples.mjs';
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -144,6 +144,42 @@ try {
 }
 assert.equal(rejectedTypes, true);
 await writeFile(
+  join(consumer, 'undefined-optionals.ts'),
+  `
+import { Asset, NewId } from '@atlas/protocol';
+import type { RequestOf } from '@atlas/protocol';
+const identity = NewId.parse(${JSON.stringify(id)});
+const undefinedAlias: Asset = {...Asset.parse(${JSON.stringify(asset)}), alias:undefined};
+const undefinedAltitude: RequestOf<'CreateTask'> = {request_id:identity, task_id:identity, asset_id:identity, command:'move_to', scheduling:'queued', inputs:{target:{kind:'position',position:{latitude:0,longitude:0}},altitude:undefined}};
+void undefinedAlias; void undefinedAltitude;
+`,
+);
+let rejectedUndefinedOptionals = false;
+try {
+  await run(
+    process.execPath,
+    [
+      compiler,
+      '--ignoreConfig',
+      '--noEmit',
+      '--strict',
+      '--exactOptionalPropertyTypes',
+      '--module',
+      'NodeNext',
+      '--target',
+      'ES2022',
+      join(consumer, 'undefined-optionals.ts'),
+    ],
+    consumer,
+  );
+} catch (error) {
+  const output = error.stdout + error.stderr;
+  assert.equal((output.match(/error TS2375/g) ?? []).length, 2, output);
+  await writeFile(join(artifacts, 'undefined-optionals.txt'), output);
+  rejectedUndefinedOptionals = true;
+}
+assert.equal(rejectedUndefinedOptionals, true, 'Installed types accepted explicit undefined');
+await writeFile(
   join(consumer, 'private-import.mjs'),
   `import assert from 'node:assert/strict'; await assert.rejects(import('@atlas/protocol/src/scalars.js'), {code:'ERR_PACKAGE_PATH_NOT_EXPORTED'});`,
 );
@@ -193,6 +229,7 @@ const report = {
     typecheck: true,
     runtime: true,
     invalidTypesRejected: true,
+    undefinedOptionalsRejected: true,
     privateImportsBlocked: true,
     browserBundle: true,
     browserEntry: entry,

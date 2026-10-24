@@ -2,13 +2,13 @@ import { z } from 'zod';
 import { Altitude, Float, numeric, Position, text, Time, Uuid, unique } from './scalars.js';
 
 export const Description = z
-  .strictObject({ name: text(128, true), description: text(4096).optional() })
+  .strictObject({ name: text(128, true), description: text(4096).exactOptional() })
   .meta({ id: 'Description' });
 export const AssetDescription = z
   .strictObject({
     ...Description.shape,
-    manufacturer: text(128, true).optional(),
-    model: text(128, true).optional(),
+    manufacturer: text(128, true).exactOptional(),
+    model: text(128, true).exactOptional(),
   })
   .meta({ id: 'AssetDescription' });
 export const AssetType = z
@@ -37,7 +37,7 @@ export const GeofeatureType = z
 export const Status = z
   .strictObject({
     condition: z.enum(['unknown', 'healthy', 'degraded', 'faulted']),
-    explanation: text(512, true).optional(),
+    explanation: text(512, true).exactOptional(),
   })
   .meta({ id: 'Status' });
 export const Telemetry = z
@@ -45,7 +45,7 @@ export const Telemetry = z
     position: Position.nullable(),
     altitude: Altitude.nullable(),
     ground_speed: numeric({ min: 0 }).nullable(),
-    airspeed: numeric({ min: 0 }).nullable().optional(),
+    airspeed: numeric({ min: 0 }).nullable().exactOptional(),
   })
   .meta({ id: 'Telemetry' });
 export const Attitude = z
@@ -72,8 +72,8 @@ export const Gimbal = z
 export const Camera = z
   .strictObject({
     zoom_ratio: numeric({ min: 1 }).nullable(),
-    recording: z.boolean().nullable().optional(),
-    capturing: z.boolean().nullable().optional(),
+    recording: z.boolean().nullable().exactOptional(),
+    capturing: z.boolean().nullable().exactOptional(),
   })
   .meta({ id: 'Camera' });
 export const CameraOptics = z
@@ -110,19 +110,19 @@ export const Power = z
   .meta({ id: 'Power' });
 export const PowerTimes = z
   .strictObject({
-    external_power: Time.optional(),
+    external_power: Time.exactOptional(),
     reserves: z
       .record(
         Uuid,
         z.strictObject({
-          remaining_percent: Time.optional(),
-          voltage_volts: Time.optional(),
-          current_amperes: Time.optional(),
+          remaining_percent: Time.exactOptional(),
+          voltage_volts: Time.exactOptional(),
+          current_amperes: Time.exactOptional(),
         }),
       )
       .refine((value) => Object.keys(value).length <= 16, 'Reserve time limit')
       .meta({ maxProperties: 16 })
-      .optional(),
+      .exactOptional(),
   })
   .meta({ id: 'PowerTimes' });
 

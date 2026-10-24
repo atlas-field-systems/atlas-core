@@ -2,6 +2,7 @@ import * as s from './samples.mjs';
 import { runAdmissionRegressions } from './admission-regressions.mjs';
 import { runResponseRegressions } from './response-regressions.mjs';
 import { runReviewFixes } from './review-fixes.mjs';
+import { runIdentityRegressions } from './identity-regressions.mjs';
 
 export function runPortable(p) {
   let checks = 0;
@@ -258,5 +259,8 @@ export function runPortable(p) {
   const admission = runAdmissionRegressions(p);
   failures.push(...admission.failures);
   checks += admission.checks;
+  const identity = runIdentityRegressions(p);
+  failures.push(...identity.failures);
+  checks += identity.checks;
   return { checks, passed: checks - failures.length, failures };
 }

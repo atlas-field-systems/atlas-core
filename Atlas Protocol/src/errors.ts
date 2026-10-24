@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { NewId, Opaque, text, Uuid } from './scalars.js';
 
 const base = { message: text(1024), request_id: NewId };
-const empty = z.strictObject({}).optional();
+const empty = z.strictObject({}).exactOptional();
 const error400 = z.strictObject({
   ...base,
   code: z.enum(['invalid_request', 'dataset_required']),
@@ -41,12 +41,12 @@ const error409 = z.union([
   z.strictObject({
     ...base,
     code: z.literal('protocol_mismatch'),
-    details: z.strictObject({ protocol_version: Opaque }).optional(),
+    details: z.strictObject({ protocol_version: Opaque }).exactOptional(),
   }),
   z.strictObject({
     ...base,
     code: z.literal('dataset_mismatch'),
-    details: z.strictObject({ dataset_id: Uuid }).optional(),
+    details: z.strictObject({ dataset_id: Uuid }).exactOptional(),
   }),
 ]);
 const error410 = z.union([

@@ -23,8 +23,8 @@ export const Associations = z
   );
 export const ObjectMetadata = z
   .strictObject({
-    name: text(128, true).optional(),
-    description: text(4096).optional(),
+    name: text(128, true).exactOptional(),
+    description: text(4096).exactOptional(),
     associations: Associations,
   })
   .meta({ id: 'ObjectMetadata' });
@@ -45,9 +45,9 @@ const ObjectImageDefinition = z
   .meta({ id: 'ObjectImage' });
 export const ObjectEdits = z
   .strictObject({
-    name: text(128, true).nullable().optional(),
-    description: text(4096).nullable().optional(),
-    associations: Associations.optional(),
+    name: text(128, true).nullable().exactOptional(),
+    description: text(4096).nullable().exactOptional(),
+    associations: Associations.exactOptional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'Empty edit')
   .meta({ id: 'ObjectEdits' });

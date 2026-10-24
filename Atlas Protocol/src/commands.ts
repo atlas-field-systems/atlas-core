@@ -9,7 +9,7 @@ const move = z.strictObject({
       z.strictObject({ kind: z.literal('position'), position: Position }),
       z.strictObject({ kind: z.literal('geofeature'), geofeature_id: Uuid }),
     ]),
-    altitude: Altitude.optional(),
+    altitude: Altitude.exactOptional(),
   }),
 });
 const pause = z.strictObject({

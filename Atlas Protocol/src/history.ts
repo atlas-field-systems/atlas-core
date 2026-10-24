@@ -53,10 +53,10 @@ export const HistoryFirst = z
     entity_id: Uuid,
     query_id: NewId,
     allocation_context: Opaque,
-    time_groups: uniqueArray(TimeStatus, 3).optional(),
-    source_time_from: Timestamp.optional(),
-    source_time_before: Timestamp.optional(),
-    page_size: PageSize.optional(),
+    time_groups: uniqueArray(TimeStatus, 3).exactOptional(),
+    source_time_from: Timestamp.exactOptional(),
+    source_time_before: Timestamp.exactOptional(),
+    page_size: PageSize.exactOptional(),
   })
   .refine(
     (value) =>

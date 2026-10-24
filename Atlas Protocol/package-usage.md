@@ -61,6 +61,9 @@ use `header.<name>`, such as `header.Authorization`; no header value is included
 
 The `commandCatalog`, `exchanges`, component and resource schemas are public.
 Named component types and RequestOf/ResponseOf exchange types are inferred
-from those schemas. Omission, null, zero, accepted
+from those schemas. With TypeScript `exactOptionalPropertyTypes`, optional wire
+fields permit omission and reject explicit `undefined`, including nested fields.
+Runtime schemas and writers also reject own `undefined` fields without removing them.
+Omission, null, zero, accepted
 timestamp spelling and polygon winding survive validation and serialization.
 Private file imports are blocked by package exports.

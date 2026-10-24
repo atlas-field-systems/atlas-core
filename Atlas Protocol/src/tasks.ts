@@ -110,8 +110,8 @@ export const TaskControl = z
   )
   .meta({ id: 'TaskControl' });
 
-const executionFields = { task_id: Uuid, message: text(1024).optional() };
-const geometryRevision = { geometry_revision: Counter.optional() };
+const executionFields = { task_id: Uuid, message: text(1024).exactOptional() };
+const geometryRevision = { geometry_revision: Counter.exactOptional() };
 const controlEffect = { control_revision: Counter, applied_at: Timestamp };
 const resumeEffect = z
   .strictObject({

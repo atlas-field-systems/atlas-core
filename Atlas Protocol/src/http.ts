@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { caseFoldEquals } from 'unicode-case-folding';
 import {
   contract,
   readJson,
@@ -126,6 +127,18 @@ function matchRequest(
       : object(data.task)
         ? data.task
         : data;
+  if (
+    [
+      'GetAssetByAlias',
+      'GetObservationByAlias',
+      'GetTrackByAlias',
+      'GetGeofeatureByAlias',
+    ].includes(operation) &&
+    (typeof request.alias !== 'string' ||
+      typeof resource.alias !== 'string' ||
+      !caseFoldEquals(request.alias, resource.alias))
+  )
+    return false;
   const pairs: readonly (readonly [string, string])[] = [
     [
       'asset_id',
@@ -411,9 +424,8 @@ export function readHttp<R extends z.ZodType, S extends z.ZodType>(
   if (
     (definition.operationId === 'UpdateAsset' || definition.operationId === 'CreateObservation') &&
     object(request) &&
-    request.report !== undefined &&
     object(body.data) &&
-    body.data.evidence_disposition === undefined
+    (request.report !== undefined) !== (body.data.evidence_disposition !== undefined)
   )
     throw new ProtocolError('invalid_http');
   if (

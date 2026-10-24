@@ -18,7 +18,7 @@ const fields = {
   id: Uuid,
   version: Counter,
   edit_revision: Counter,
-  alias: Alias.optional(),
+  alias: Alias.exactOptional(),
 };
 export const PublisherSubject = z
   .strictObject({ id: text(128, true), lifetime_id: Uuid })
@@ -27,11 +27,30 @@ export const Communications = z
   .strictObject({ health: Health, capacity: readSections.communications })
   .meta({ id: 'Communications' });
 const commonReported = {
-  telemetry: readSections.telemetry.optional(),
-  attitude: readSections.attitude.optional(),
+  telemetry: readSections.telemetry.exactOptional(),
+  attitude: readSections.attitude.exactOptional(),
 };
 type Evidence = z.output<typeof SectionEvidence>;
 type ReadingOrigin = z.output<typeof Origin>;
+export function reportSequencesMatch(evidence: readonly (Evidence | null | undefined)[]): boolean {
+  const sequences = new Map<string, Evidence['sequence']>();
+  for (const item of evidence) {
+    if (!item) continue;
+    const scope = [
+      item.dataset_id,
+      item.entity_id,
+      item.origin.kind,
+      item.origin.kind === 'asset_process'
+        ? item.origin.process_generation
+        : item.origin.publisher_id,
+      item.report_id,
+    ].join(':');
+    const prior = sequences.get(scope);
+    if (prior !== undefined && prior !== item.sequence) return false;
+    sequences.set(scope, item.sequence);
+  }
+  return true;
+}
 export function assetEvidenceMatches(
   evidence: Evidence | null | undefined,
   entityId: string,
@@ -57,7 +76,7 @@ const AssetDefinition = z
   .strictObject({
     ...fields,
     entity_type: z.literal('asset'),
-    description: AssetDescription.optional(),
+    description: AssetDescription.exactOptional(),
     type: AssetType,
     capabilities: Capabilities,
     process_generation: Uuid,
@@ -67,10 +86,10 @@ const AssetDefinition = z
     task_queue: TaskQueue,
     task_control: TaskControl,
     ...commonReported,
-    power: readSections.power.optional(),
-    camera: readSections.camera.optional(),
-    camera_optics: readSections.camera_optics.optional(),
-    gimbal: readSections.gimbal.optional(),
+    power: readSections.power.exactOptional(),
+    camera: readSections.camera.exactOptional(),
+    camera_optics: readSections.camera_optics.exactOptional(),
+    gimbal: readSections.gimbal.exactOptional(),
   })
   .refine((value) => {
     const sections = [
@@ -84,9 +103,11 @@ const AssetDefinition = z
       value.gimbal,
     ];
     return (
+      reportSequencesMatch(sections.map((section) => section?.evidence)) &&
       sections.every((section) =>
         assetEvidenceMatches(section?.evidence, value.id, value.dataset_id),
-      ) && readingOrigins(value.telemetry).every((origin) => origin.kind === 'asset_process')
+      ) &&
+      readingOrigins(value.telemetry).every((origin) => origin.kind === 'asset_process')
     );
   }, 'Asset evidence scope differs')
   .meta({ id: 'Asset' });
@@ -94,18 +115,26 @@ const ObservationDefinition = z
   .strictObject({
     ...fields,
     entity_type: z.literal('observation'),
-    description: Description.optional(),
+    description: Description.exactOptional(),
     publisher_id: Uuid,
     track_id: Uuid,
-    source_asset_id: Uuid.optional(),
-    publisher_subject: PublisherSubject.optional(),
+    source_asset_id: Uuid.exactOptional(),
+    publisher_subject: PublisherSubject.exactOptional(),
     type: readSections.type,
     ...commonReported,
-    geometry: readSections.geometry.optional(),
+    geometry: readSections.geometry.exactOptional(),
   })
+  .refine(
+    (value) =>
+      value.id !== value.track_id &&
+      value.source_asset_id !== value.id &&
+      value.source_asset_id !== value.track_id,
+    'Observation Entity identities overlap',
+  )
   .refine((value) => {
     const sections = [value.type, value.telemetry, value.attitude, value.geometry];
     return (
+      reportSequencesMatch(sections.map((section) => section?.evidence)) &&
       sections.every(
         (section) =>
           !section?.evidence ||
@@ -121,21 +150,31 @@ const ObservationDefinition = z
   }, 'Observation evidence scope differs')
   .meta({ id: 'Observation' });
 export const TrackSource = z
-  .strictObject({ observation_id: Uuid, publisher_id: Uuid, source_asset_id: Uuid.optional() })
+  .strictObject({ observation_id: Uuid, publisher_id: Uuid, source_asset_id: Uuid.exactOptional() })
   .meta({ id: 'TrackSource' });
 const TrackDefinition = z
   .strictObject({
     ...fields,
     entity_type: z.literal('track'),
-    description: Description.optional(),
+    description: Description.exactOptional(),
     sources: z
       .array(TrackSource)
       .length(1)
       .refine((values) => unique(values, (value) => value.observation_id), 'Duplicate source'),
     type: readSections.type,
     ...commonReported,
-    geometry: readSections.geometry.optional(),
+    geometry: readSections.geometry.exactOptional(),
   })
+  .refine(
+    (value) =>
+      value.sources.every(
+        (source) =>
+          source.observation_id !== value.id &&
+          source.source_asset_id !== value.id &&
+          source.source_asset_id !== source.observation_id,
+      ),
+    'Track Entity identities overlap',
+  )
   .refine((value) => {
     const matches = (evidence: Evidence) =>
       evidence.dataset_id === value.dataset_id &&
@@ -146,10 +185,10 @@ const TrackDefinition = z
           evidence.origin.kind === 'publisher' &&
           source.publisher_id === evidence.origin.publisher_id,
       );
+    const sections = [value.type, value.telemetry, value.attitude, value.geometry];
     return (
-      [value.type, value.telemetry, value.attitude, value.geometry].every(
-        (section) => !section?.evidence || matches(section.evidence),
-      ) &&
+      reportSequencesMatch(sections.map((section) => section?.evidence)) &&
+      sections.every((section) => !section?.evidence || matches(section.evidence)) &&
       readingOrigins(value.telemetry).every(
         (origin) =>
           origin.kind === 'publisher' &&
@@ -164,7 +203,7 @@ const GeofeatureDefinition = z
   .strictObject({
     ...fields,
     entity_type: z.literal('geofeature'),
-    description: Description.optional(),
+    description: Description.exactOptional(),
     type: GeofeatureType,
     geometry: Geometry,
     geometry_revision: Counter,

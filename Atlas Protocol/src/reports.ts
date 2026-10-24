@@ -31,7 +31,7 @@ export const Constituents = z
     position: Constituent,
     altitude: Constituent,
     ground_speed: Constituent,
-    airspeed: Constituent.optional(),
+    airspeed: Constituent.exactOptional(),
   })
   .meta({ id: 'Constituents' });
 export const SectionName = z.enum([
@@ -61,7 +61,7 @@ const metadata = {
   observed_at: Time,
 };
 export const SectionError = z
-  .strictObject({ code: text(128, true), message: text(512).optional() })
+  .strictObject({ code: text(128, true), message: text(512).exactOptional() })
   .meta({ id: 'SectionError' });
 
 function applicable(value: unknown, times: unknown): boolean {
@@ -72,7 +72,12 @@ const errorFields = { state: z.literal('error'), ...metadata, error: SectionErro
 const withdrawnFields = { state: z.literal('withdrawn'), ...metadata };
 function valueResult<V extends z.ZodType, T extends z.ZodType>(value: V, times: T) {
   return z
-    .strictObject({ state: z.literal('value'), ...metadata, value, source_times: times.optional() })
+    .strictObject({
+      state: z.literal('value'),
+      ...metadata,
+      value,
+      source_times: times.exactOptional(),
+    })
     .refine(
       (result) => 'value' in result && applicable(result.value, result.source_times),
       'Inapplicable source time',
@@ -109,31 +114,34 @@ function readResult<
     z.strictObject({ ...withdrawnFields, evidence }),
   ]);
 }
-const statusTimes = z.strictObject({ condition: Time.optional() });
-const capacityTimes = z.strictObject({ bandwidth_bps: Time.optional() });
+const statusTimes = z.strictObject({ condition: Time.exactOptional() });
+const capacityTimes = z.strictObject({ bandwidth_bps: Time.exactOptional() });
 const telemetryTimes = z.strictObject({
-  position: Time.optional(),
-  altitude: Time.optional(),
-  ground_speed: Time.optional(),
-  airspeed: Time.optional(),
+  position: Time.exactOptional(),
+  altitude: Time.exactOptional(),
+  ground_speed: Time.exactOptional(),
+  airspeed: Time.exactOptional(),
 });
 const attitudeTimes = z.strictObject({
-  heading: Time.optional(),
-  pitch: Time.optional(),
-  roll: Time.optional(),
+  heading: Time.exactOptional(),
+  pitch: Time.exactOptional(),
+  roll: Time.exactOptional(),
 });
-const gimbalTimes = z.strictObject({ bearing: Time.optional(), elevation: Time.optional() });
+const gimbalTimes = z.strictObject({
+  bearing: Time.exactOptional(),
+  elevation: Time.exactOptional(),
+});
 const cameraTimes = z.strictObject({
-  zoom_ratio: Time.optional(),
-  recording: Time.optional(),
-  capturing: Time.optional(),
+  zoom_ratio: Time.exactOptional(),
+  recording: Time.exactOptional(),
+  capturing: Time.exactOptional(),
 });
 const opticsTimes = z.strictObject({
-  horizontal_fov: Time.optional(),
-  vertical_fov: Time.optional(),
+  horizontal_fov: Time.exactOptional(),
+  vertical_fov: Time.exactOptional(),
 });
-const typeTimes = z.strictObject({ kind: Time.optional() });
-const geometryTimes = z.strictObject({ geometry: Time.optional() });
+const typeTimes = z.strictObject({ kind: Time.exactOptional() });
+const geometryTimes = z.strictObject({ geometry: Time.exactOptional() });
 
 function powerTimesValid(result: {
   state: string;
@@ -231,20 +239,20 @@ export const readSections = {
   geometry: readResult('geometry', Geometry, geometryTimes).meta({ id: 'GeometryRead' }),
 };
 const assetSections = z.strictObject({
-  status: inputSections.status.optional(),
-  communications: inputSections.communications.optional(),
-  telemetry: inputSections.telemetry.optional(),
-  attitude: inputSections.attitude.optional(),
-  power: inputSections.power.optional(),
-  camera: inputSections.camera.optional(),
-  camera_optics: inputSections.camera_optics.optional(),
-  gimbal: inputSections.gimbal.optional(),
+  status: inputSections.status.exactOptional(),
+  communications: inputSections.communications.exactOptional(),
+  telemetry: inputSections.telemetry.exactOptional(),
+  attitude: inputSections.attitude.exactOptional(),
+  power: inputSections.power.exactOptional(),
+  camera: inputSections.camera.exactOptional(),
+  camera_optics: inputSections.camera_optics.exactOptional(),
+  gimbal: inputSections.gimbal.exactOptional(),
 });
 const observationSections = z.strictObject({
-  type: inputSections.type.optional(),
-  telemetry: inputSections.telemetry.optional(),
-  attitude: inputSections.attitude.optional(),
-  geometry: inputSections.geometry.optional(),
+  type: inputSections.type.exactOptional(),
+  telemetry: inputSections.telemetry.exactOptional(),
+  attitude: inputSections.attitude.exactOptional(),
+  geometry: inputSections.geometry.exactOptional(),
 });
 const reportFields = {
   dataset_id: Uuid,
@@ -262,7 +270,7 @@ const AssetReportDefinition = z
         origin: AssetOrigin,
         mode: z.literal('current'),
         sections: assetSections,
-        contact_proof: proof.optional(),
+        contact_proof: proof.exactOptional(),
       })
       .refine(
         (value) => Object.keys(value.sections).length > 0 || value.contact_proof !== undefined,

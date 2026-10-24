@@ -5,7 +5,7 @@ export const Operator = z
   .strictObject({
     operator_id: Uuid,
     name: text(256, true),
-    description: text(4096).optional(),
+    description: text(4096).exactOptional(),
     edit_revision: Counter,
   })
   .meta({ id: 'Operator' });
