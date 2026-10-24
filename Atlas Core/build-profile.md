@@ -1,8 +1,9 @@
 # Build and schema profile
 
-This is the selected implementation profile, not a qualified toolchain. The current
-repository has no executable schemas, locks, packages, or runtime evidence.
-Implementation supplies those artifacts and passes these gates before release.
+Protocol supplies executable schemas, exact boundary adapters, dependency locks,
+and stock reference export. Its [qualification commands](../Atlas%20Protocol/qualification.md)
+exercise built packages. Core and SDK remain unimplemented and must pass the
+remaining integration and deployment gates before release.
 
 ## Reproducible build inputs
 
@@ -67,5 +68,6 @@ adapters without passing file bytes through JSON validators. Preserve the
 Unsupported export behavior blocks selection of that tooling. Use an equivalent
 allowed schema or a narrow boundary adapter with independent examples. Do not
 weaken Protocol or fork the exporter. Reproducibility does not establish durability,
-capacity, physical execution, or runtime conformance. These gates supply no build
-or test command in this documentation-only baseline.
+capacity, physical execution, or runtime conformance. Protocol commands live in
+its qualification guide. Core and SDK provide their own build and integration
+commands when those implementations exist.

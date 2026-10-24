@@ -67,6 +67,7 @@ automatic downgrade, or translation between versions.
 [Operators](operators.md) defines profile lifecycle. [Report format](report-format.md)
 and [execution evidence](execution-evidence.md) define the separate source envelopes.
 
-These pages select behavior, message fields, and bounds. Machine schemas, dependency
-locks, and executable boundary fixtures are implementation outputs that do not
-yet exist here. No runtime, codec, durability, or capacity qualification is claimed.
+These pages own behavior, message fields, and bounds. The [package guide](package-usage.md)
+covers @atlas/protocol 0.1.0, inferred types, exact boundaries, and stock reference
+export. [Qualification](qualification.md) runs built-package checks and the independent
+fixture corpus. Core/SDK integration, durability, and capacity remain unqualified.

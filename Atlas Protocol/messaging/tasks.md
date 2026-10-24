@@ -66,3 +66,16 @@ instructions, but cannot use them to Resume. Obsolete processes return
 current process can provide new adoption evidence.
 
 [Messaging index](../messaging.md)
+
+## Concrete results and continuation
+
+Create, get, and cancellation return the complete Task. Execution and results
+reports return `{task, evidence_disposition}` with accepted or duplicate disposition.
+SetTaskOrder returns the complete Asset; ConfirmTaskOrder returns
+`{asset, evidence_disposition}`. Task object reads use task_id on the first page.
+Assigned first pages require asset_id, process_generation, read_id and optional
+page_size. A continuation supplies only page_token. Every assigned reply repeats
+asset_id, process_generation, read_id, core_run_id, captured_at,
+instructions_valid_until, task_queue and task_control, plus tasks and
+next_page_token. Instructions expiry must be after capture; tasks belong to the
+named Asset and are nonterminal.

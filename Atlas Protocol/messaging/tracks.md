@@ -40,3 +40,13 @@ and the [default policy](../tracks.md#default-policy). External fusion publicati
 merge/split, and handover are unsupported initially.
 
 [Messaging index](../messaging.md)
+
+## Concrete request fields
+
+Single reads use track_id; alias lookup uses alias. EditTrack requires track_id,
+request_id, expected_edit_revision and nonempty `edits` of alias or description,
+with null clearing. Its data is the Track image. GetTrackObservations uses
+track_id with optional publisher_ids and source_asset_ids on its first page;
+it returns a moving page of Observation images whose track_id matches.
+GetTrackObjects uses track_id on its first page. Continuations supply only
+page_token under [queries](../queries.md).

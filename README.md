@@ -3,14 +3,15 @@
 **Atlas coordinates field systems: observe what exists, ask Assets to do work,
 and retain what they report.**
 
-This repository is the documentation baseline for building Atlas. Nothing here claims
-an implemented API, generated package, passing runtime, or qualified deployment.
+Atlas Protocol includes an executable browser-safe TypeScript package. Core and
+SDK remain design contracts; this repository supplies no running Atlas server,
+SDK workflows, or qualified deployment.
 
 ## Three layers, one contract
 
 | Layer | Owns | Does not own |
 | --- | --- | --- |
-| **Atlas Protocol** | Shared vocabulary, schemas, message contracts, observable rules | Databases, processes, implementation |
+| **Atlas Protocol** | Shared vocabulary, schemas, message contracts, observable rules | Databases, server processes, physical execution |
 | **Atlas Core** | A running server that enforces Protocol and retains state | Physical execution on a drone |
 | **Atlas SDK** | An IP-specific TypeScript client for Protocol | Server policy or private Core internals |
 
@@ -43,7 +44,7 @@ Each folder's README gives its short reading order. Contributors also read
 folder to reconcile. Earlier explanations remain in Git history, not as a second
 active specification.
 
-Build Protocol's runtime schemas from these definitions before implementing Core or
-SDK behavior. Schemas, packages, exported references, and executable acceptance
-workflows are implementation outputs; none is supplied by this baseline.
-Qualify them against the documented outcomes before claiming runtime support.
+Use the [Protocol package](Atlas%20Protocol/package-usage.md) for runtime schemas,
+inferred types, exact boundary validation, and stock OpenAPI export. Its
+[qualification commands](Atlas%20Protocol/qualification.md) check the built artifact.
+Core and SDK must still qualify their own consuming workflows and durable behavior.

@@ -4,7 +4,9 @@ Protocol defines what a message means. Its link defines how it is carried.
 Requests, results, reports, and notifications reuse Protocol's component schemas.
 Core validates the contract independently of the link that delivers the message.
 The linked contracts select message names, control fields, and reply envelopes.
-Runtime schemas and their OpenAPI export remain implementation work.
+The static HTTP binding map in `src/exchanges.ts` encodes 66 HTTP operations.
+`src/synchronization.ts` owns the complete WSS control and event schemas.
+The separate reference entry exports their OpenAPI document with stock tooling.
 
 ## Message contracts
 

@@ -1,0 +1,52 @@
+{
+  "name": "@atlas/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "packageManager": "npm@11.19.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./reference": {
+      "types": "./dist/reference.d.ts",
+      "import": "./dist/reference.js"
+    }
+  },
+  "files": [
+    "dist",
+    "*.md",
+    "components/*.md",
+    "messaging/*.md",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "export": "npm run build && node scripts/export.mjs",
+    "qualify": "npm test && node scripts/qualify.mjs",
+    "fixtures": "node scripts/fixtures.mjs",
+    "browser": "node scripts/browser.mjs",
+    "format": "prettier --write \"src/**/*.ts\" \"scripts/*.mjs\" \"test/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"scripts/*.mjs\" \"test/*.mjs\""
+  },
+  "dependencies": {
+    "jsonc-parser": "3.3.1",
+    "lossless-json": "4.3.3",
+    "zod": "4.6.7",
+    "zod-openapi": "6.0.2"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.71.0",
+    "@types/node": "24.10.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "esbuild": "0.28.2",
+    "prettier": "3.8.1",
+    "typescript": "6.0.2"
+  }
+}

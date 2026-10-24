@@ -34,7 +34,7 @@ return `409 evidence_conflict` atomically. No stream has an Asset-wide watermark
 `cancellation_refused`. Ordinary state is `acknowledged`, `in_progress`, `paused`,
 `completed`, `failed`, or `cancelled`. Refusal also permits `pending` for unstarted work.
 Failures and refusals require nonblank `reason` of at most 64 Unicode scalar values.
-Optional `message` is at most 1,024. Other fields are only those defined below.
+Optional `message` is at most 1,024. Fields are closed.
 
 A refusal names the outstanding `cancellation_request_id` and actual nonterminal
 state. A `cancelled` report names that same outstanding request. Mismatch returns
@@ -86,3 +86,15 @@ not reexecute or complete a control, and cannot replace fresh Resume evidence.
 | Replay through another gateway | No repeated state, activity, declaration, or public effect |
 | P1 reports progress 50 for A and B; P2 replaces it and reports paused 1 for each | P2's evidence becomes current for both Tasks without repeating work |
 | P2 reaffirms a completed Pause through queue confirmation | Show the inherited pause under P2; keep the Pause Task terminal |
+
+## Field presence
+Message is optional non-null text on any execution payload. Geometry revision
+is optional only for move_to evidence; it is a counter string. Declaration
+batches contain 1 through 128 entries. Repeating the same Object ID and required
+flag is harmless; conflicting flags are refused. Completed control fields
+distinguish pause by queue_state paused and resume by queue_state running with
+the required fresh-read fields. Completed Move To forbids control-effect fields.
+Cancellation-refused states are only pending, acknowledged, in_progress, paused.
+Failed state and refusal require reason; other states forbid reason. Cancelled
+requires cancellation_request_id; ordinary progress and completion omit it.
+Retention of original accepted evidence belongs to Core, outside Task read fields.

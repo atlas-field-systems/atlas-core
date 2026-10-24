@@ -18,7 +18,7 @@ Each object has required, non-null `type` and `coordinates` fields. Its geometry
 
 Use WGS84 degrees and the bounds from [Position](telemetry.md#position), preserving
 double precision. Coordinate tuples reference the same longitude and latitude scalar
-definitions in the eventual schemas. The single polygon ring is the exterior.
+definitions in the runtime schemas. The single polygon ring is the exterior.
 Authors emit counterclockwise rings. Readers accept either winding and retain it
 unchanged, following [GeoJSON's parsing guidance](https://www.rfc-editor.org/rfc/rfc7946.html#section-3.1.6).
 A polygon must have nonzero area. Reject crossings, nonadjacent touching, and overlap.

@@ -10,7 +10,7 @@ All data uses the fixed [picture contract](synchronization.md).
 WSS begins with `{type: "authenticate", request_id, dataset_id, protocol_version,
 api_key}` within ten seconds. Core accepts one bounded authentication message,
 then replies `authenticated` with matching context, `core_run_id`, and effective
-limits. No data precedes authentication. Keys stay out of URLs and diagnostics.
+limits. Its `data` is exactly `{core_run_id, limits}`. No data precedes authentication. Keys stay out of URLs and diagnostics.
 Failed authentication returns `unauthorized` when possible and closes the socket.
 
 After authentication, non-error frames are `{type, dataset_id, protocol_version,
@@ -26,6 +26,8 @@ HTTP controls carry their named `data` fields in the ordinary request body and
 return the Wire success/error envelope. WSS control type names are the snake_case
 forms of the named messages. Other replies use the request type plus `_result`.
 Snapshot/replay result frames are data, not 16 KiB controls.
+ReadSnapshot, ReadChanges, and ReleaseSnapshot have HTTP and WSS bindings.
+SubscribeChanges and UnsubscribeChanges are WSS-only controls on `/changes`.
 
 ## Snapshot allocation and pages
 
@@ -37,7 +39,7 @@ Snapshot/replay result frames are data, not 16 KiB controls.
 `next_page_token` is null only when complete, including an empty capture.
 Every page repeats identical capture context, baseline, limits, expiry, and release
 token. Each item is a complete versioned resource image. Item order is resource
-kind, then stable identity. All pages form one frozen capture, not moving lists.
+kind, then stable identity, both bytewise. Pages form one frozen capture, not moving lists.
 Allocation/release use [temporary contexts](temporary-reads.md). The capture is
 complete before publication. A build that cannot fit returns an error, not partial data.
 
@@ -51,7 +53,9 @@ complete before publication. A build that cannot fit returns an error, not parti
 
 ReadChanges fixes the log boundary on its first page. `messages` contains ordered
 `change_batch` or `progress` envelopes without connection IDs. Tokens bind the
-original range and source. Expired replay is `410 cursor_expired`.
+original range and source. Replay uses `{type, data}`; HTTP owns Dataset/version context.
+Expired replay is `410 cursor_expired`. The first message starts at `from_cursor`.
+An empty first page stays there; null `next_page_token` finishes at `replay_boundary`.
 One connection owns one subscription. Exact retries recover its existing handoff;
 conflicting reuse is refused. Unsubscribe is idempotent and ends that subscription
 lifetime. Starting another requires a new WSS connection.
@@ -76,6 +80,7 @@ commit, with these change alternatives:
 Resource kinds are `asset`, `track`, `geofeature`, `task`, and `object`.
 Snapshot `items` use the same put alternative without commit metadata.
 Observations and history readings never appear as synchronized items.
+Put identity, version, and Dataset match its image. Pages/batches forbid duplicate resources.
 
 `progress` has `subscription_id`, `previous_cursor`, and `through_cursor`, proving
 an ordered range with no picture effects. A batch's previous cursor must equal the
@@ -83,7 +88,8 @@ last completely applied batch/progress cursor. Duplicates with identical context
 and facts are harmless. A conflicting copy, gap, or malformed item stops application
 before cursor advance.
 
-`gap` has `subscription_id`, `reason`, and `earliest_recoverable_cursor`. It ends
+`gap` has `subscription_id`, `reason`, and `earliest_recoverable_cursor`.
+Reason is `cursor_expired`, `resource_limit`, or `limits_changed`. It ends
 data delivery until explicit resubscription/rebuild. Closure without a gap has
 the same last-applied cursor rule.
 
