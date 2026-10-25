@@ -67,3 +67,7 @@ Runtime schemas and writers also reject own `undefined` fields without removing 
 Omission, null, zero, accepted
 timestamp spelling and polygon winding survive validation and serialization.
 Private file imports are blocked by package exports.
+
+The runtime entry explicitly exports supported wire schemas, their inferred types,
+the Catalog, errors, and JSON/HTTP/WSS boundary functions. Schema builders,
+numeric conversion, ordering, and uniqueness helpers are package internals.

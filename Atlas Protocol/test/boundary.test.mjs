@@ -3,15 +3,34 @@ import { test } from 'node:test';
 import { z } from 'zod';
 import { createSchema, createDocument } from 'zod-openapi';
 import * as p from '../dist/index.js';
+import { text, timestampNanoseconds } from '../dist/scalars.js';
 
 const bytes = (value) => new TextEncoder().encode(value);
 const read = (schema, raw, budget) => p.readJson(p.contract(schema), bytes(raw), budget);
 const refuses = (fn, code) =>
   assert.throws(fn, (error) => error instanceof p.ProtocolError && (!code || error.code === code));
 
+test('package entry keeps implementation builders private', () => {
+  for (const name of [
+    'binary64',
+    'decimalCounter',
+    'numeric',
+    'uniqueArray',
+    'page',
+    'listQuery',
+    'associatedQuery',
+    'executionEvidence',
+    'errorEnvelope',
+    'text',
+    'ordered',
+    'unique',
+  ])
+    assert.equal(Object.hasOwn(p, name), false, name);
+});
+
 test('stock output tooling preserves the supported structural vocabulary', () => {
   const Sample = z
-    .strictObject({ count: p.Integer, label: p.text(3), times: p.PowerTimes, when: p.Time })
+    .strictObject({ count: p.Integer, label: text(3), times: p.PowerTimes, when: p.Time })
     .meta({ id: 'Qualification' });
   const result = createSchema(Sample, { io: 'output', openapiVersion: '3.1.0' });
   const root = result.components.Qualification;
@@ -83,12 +102,12 @@ test('UTF-8, one document, decoded duplicate names and malformed scalars', () =>
     '\ufeff{"a":1}',
   ])
     refuses(() => read(schema, raw), 'invalid_json');
-  refuses(() => read(p.text(20), '"\\ud800"'), 'invalid_json');
+  refuses(() => read(text(20), '"\\ud800"'), 'invalid_json');
   refuses(() => read(z.strictObject({}), '{"\\udfff":0}'), 'invalid_json');
   refuses(() => p.readJson(p.contract(schema), new Uint8Array([0xc0, 0xaf])), 'invalid_utf8');
-  assert.equal(read(p.text(3), '"😀😀😀"'), '😀😀😀');
-  refuses(() => read(p.text(3), '"😀😀😀😀"'));
-  refuses(() => read(p.text(3, true), '"\u2003\u2003"'));
+  assert.equal(read(text(3), '"😀😀😀"'), '😀😀😀');
+  refuses(() => read(text(3), '"😀😀😀😀"'));
+  refuses(() => read(text(3, true), '"\u2003\u2003"'));
 });
 
 test('whole-envelope independent bytes, values, depth and construction budgets', () => {
@@ -125,12 +144,12 @@ test('Gregorian spelling, exact nanoseconds, counters and keys', () => {
   ])
     assert.equal(p.Timestamp.safeParse(raw).success, false);
   assert.equal(
-    p.timestampNanoseconds('2026-01-01T00:00:00.1Z'),
-    p.timestampNanoseconds('2026-01-01T00:00:00.100Z'),
+    timestampNanoseconds('2026-01-01T00:00:00.1Z'),
+    timestampNanoseconds('2026-01-01T00:00:00.100Z'),
   );
   assert.equal(
-    p.timestampNanoseconds('2026-01-01T00:00:00.000000002Z') -
-      p.timestampNanoseconds('2026-01-01T00:00:00.000000001Z'),
+    timestampNanoseconds('2026-01-01T00:00:00.000000002Z') -
+      timestampNanoseconds('2026-01-01T00:00:00.000000001Z'),
     1n,
   );
   for (const raw of ['0', '18446744073709551615']) assert.equal(p.Counter.parse(raw), raw);
