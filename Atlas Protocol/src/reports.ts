@@ -14,19 +14,31 @@ import {
 } from './components.js';
 import { Geometry } from './geometry.js';
 
-export const AssetOrigin = z
+const AssetOriginDefinition = z
   .strictObject({ kind: z.literal('asset_process'), process_generation: Uuid })
   .meta({ id: 'AssetOrigin' });
-export const PublisherOrigin = z
+type AssetOriginDefinitionSchema = typeof AssetOriginDefinition;
+export interface AssetOriginSchema extends AssetOriginDefinitionSchema {}
+export const AssetOrigin: AssetOriginSchema = AssetOriginDefinition;
+const PublisherOriginDefinition = z
   .strictObject({ kind: z.literal('publisher'), publisher_id: Uuid })
   .meta({ id: 'PublisherOrigin' });
-export const Origin = z
+type PublisherOriginDefinitionSchema = typeof PublisherOriginDefinition;
+export interface PublisherOriginSchema extends PublisherOriginDefinitionSchema {}
+export const PublisherOrigin: PublisherOriginSchema = PublisherOriginDefinition;
+const OriginDefinition = z
   .discriminatedUnion('kind', [AssetOrigin, PublisherOrigin])
   .meta({ id: 'Origin' });
-export const Constituent = z
+type OriginDefinitionSchema = typeof OriginDefinition;
+export interface OriginSchema extends OriginDefinitionSchema {}
+export const Origin: OriginSchema = OriginDefinition;
+const ConstituentDefinition = z
   .strictObject({ origin: Origin, reading_id: NewId })
   .meta({ id: 'Constituent' });
-export const Constituents = z
+type ConstituentDefinitionSchema = typeof ConstituentDefinition;
+export interface ConstituentSchema extends ConstituentDefinitionSchema {}
+export const Constituent: ConstituentSchema = ConstituentDefinition;
+const ConstituentsDefinition = z
   .strictObject({
     position: Constituent,
     altitude: Constituent,
@@ -34,6 +46,9 @@ export const Constituents = z
     airspeed: Constituent.exactOptional(),
   })
   .meta({ id: 'Constituents' });
+type ConstituentsDefinitionSchema = typeof ConstituentsDefinition;
+export interface ConstituentsSchema extends ConstituentsDefinitionSchema {}
+export const Constituents: ConstituentsSchema = ConstituentsDefinition;
 export const SectionName = z.enum([
   'status',
   'communications',
@@ -60,9 +75,12 @@ const metadata = {
   classification: z.enum(['state_until_changed', 'dated_measurement']),
   observed_at: Time,
 };
-export const SectionError = z
+const SectionErrorDefinition = z
   .strictObject({ code: text(128, true), message: text(512).exactOptional() })
   .meta({ id: 'SectionError' });
+type SectionErrorDefinitionSchema = typeof SectionErrorDefinition;
+export interface SectionErrorSchema extends SectionErrorDefinitionSchema {}
+export const SectionError: SectionErrorSchema = SectionErrorDefinition;
 
 function applicable(value: unknown, times: unknown): boolean {
   if (!value || typeof value !== 'object' || !times || typeof times !== 'object') return true;
@@ -170,7 +188,7 @@ function telemetryKeys(result: {
       Object.hasOwn(result.value, 'airspeed') === Object.hasOwn(result.constituents, 'airspeed'))
   );
 }
-export const inputSections = {
+const inputSectionsDefinition = {
   status: result(Status, statusTimes).meta({ id: 'StatusInput' }),
   communications: result(Capacity, capacityTimes).meta({ id: 'CapacityInput' }),
   telemetry: z
@@ -191,7 +209,39 @@ export const inputSections = {
   type: result(SubjectType, typeTimes).meta({ id: 'SubjectTypeInput' }),
   geometry: result(Geometry, geometryTimes).meta({ id: 'GeometryInput' }),
 };
-export const readSections = {
+type StatusInputDefinitionSchema = typeof inputSectionsDefinition.status;
+export interface StatusInputSchema extends StatusInputDefinitionSchema {}
+type CapacityInputDefinitionSchema = typeof inputSectionsDefinition.communications;
+export interface CapacityInputSchema extends CapacityInputDefinitionSchema {}
+type TelemetryInputDefinitionSchema = typeof inputSectionsDefinition.telemetry;
+export interface TelemetryInputSchema extends TelemetryInputDefinitionSchema {}
+type AttitudeInputDefinitionSchema = typeof inputSectionsDefinition.attitude;
+export interface AttitudeInputSchema extends AttitudeInputDefinitionSchema {}
+type PowerInputDefinitionSchema = typeof inputSectionsDefinition.power;
+export interface PowerInputSchema extends PowerInputDefinitionSchema {}
+type CameraInputDefinitionSchema = typeof inputSectionsDefinition.camera;
+export interface CameraInputSchema extends CameraInputDefinitionSchema {}
+type CameraOpticsInputDefinitionSchema = typeof inputSectionsDefinition.camera_optics;
+export interface CameraOpticsInputSchema extends CameraOpticsInputDefinitionSchema {}
+type GimbalInputDefinitionSchema = typeof inputSectionsDefinition.gimbal;
+export interface GimbalInputSchema extends GimbalInputDefinitionSchema {}
+type SubjectTypeInputDefinitionSchema = typeof inputSectionsDefinition.type;
+export interface SubjectTypeInputSchema extends SubjectTypeInputDefinitionSchema {}
+type GeometryInputDefinitionSchema = typeof inputSectionsDefinition.geometry;
+export interface GeometryInputSchema extends GeometryInputDefinitionSchema {}
+export const inputSections: {
+  status: StatusInputSchema;
+  communications: CapacityInputSchema;
+  telemetry: TelemetryInputSchema;
+  attitude: AttitudeInputSchema;
+  power: PowerInputSchema;
+  camera: CameraInputSchema;
+  camera_optics: CameraOpticsInputSchema;
+  gimbal: GimbalInputSchema;
+  type: SubjectTypeInputSchema;
+  geometry: GeometryInputSchema;
+} = inputSectionsDefinition;
+const readSectionsDefinition = {
   status: readResult(
     'status',
     Status,
@@ -238,6 +288,38 @@ export const readSections = {
   ).meta({ id: 'SubjectTypeRead' }),
   geometry: readResult('geometry', Geometry, geometryTimes).meta({ id: 'GeometryRead' }),
 };
+type StatusReadDefinitionSchema = typeof readSectionsDefinition.status;
+export interface StatusReadSchema extends StatusReadDefinitionSchema {}
+type CapacityReadDefinitionSchema = typeof readSectionsDefinition.communications;
+export interface CapacityReadSchema extends CapacityReadDefinitionSchema {}
+type TelemetryReadDefinitionSchema = typeof readSectionsDefinition.telemetry;
+export interface TelemetryReadSchema extends TelemetryReadDefinitionSchema {}
+type AttitudeReadDefinitionSchema = typeof readSectionsDefinition.attitude;
+export interface AttitudeReadSchema extends AttitudeReadDefinitionSchema {}
+type PowerReadDefinitionSchema = typeof readSectionsDefinition.power;
+export interface PowerReadSchema extends PowerReadDefinitionSchema {}
+type CameraReadDefinitionSchema = typeof readSectionsDefinition.camera;
+export interface CameraReadSchema extends CameraReadDefinitionSchema {}
+type CameraOpticsReadDefinitionSchema = typeof readSectionsDefinition.camera_optics;
+export interface CameraOpticsReadSchema extends CameraOpticsReadDefinitionSchema {}
+type GimbalReadDefinitionSchema = typeof readSectionsDefinition.gimbal;
+export interface GimbalReadSchema extends GimbalReadDefinitionSchema {}
+type SubjectTypeReadDefinitionSchema = typeof readSectionsDefinition.type;
+export interface SubjectTypeReadSchema extends SubjectTypeReadDefinitionSchema {}
+type GeometryReadDefinitionSchema = typeof readSectionsDefinition.geometry;
+export interface GeometryReadSchema extends GeometryReadDefinitionSchema {}
+export const readSections: {
+  status: StatusReadSchema;
+  communications: CapacityReadSchema;
+  telemetry: TelemetryReadSchema;
+  attitude: AttitudeReadSchema;
+  power: PowerReadSchema;
+  camera: CameraReadSchema;
+  camera_optics: CameraOpticsReadSchema;
+  gimbal: GimbalReadSchema;
+  type: SubjectTypeReadSchema;
+  geometry: GeometryReadSchema;
+} = readSectionsDefinition;
 const assetSections = z.strictObject({
   status: inputSections.status.exactOptional(),
   communications: inputSections.communications.exactOptional(),
@@ -318,9 +400,13 @@ const ObservationReportDefinition = z
   .meta({ id: 'ObservationReport' });
 export const EvidenceDisposition = z.enum(['accepted', 'duplicate']);
 export type AssetReport = z.output<typeof AssetReportDefinition>;
-export const AssetReport: z.ZodType<AssetReport> = AssetReportDefinition;
+type AssetReportDefinitionSchema = typeof AssetReportDefinition;
+export interface AssetReportSchema extends AssetReportDefinitionSchema {}
+export const AssetReport: AssetReportSchema = AssetReportDefinition;
 export type ObservationReport = z.output<typeof ObservationReportDefinition>;
-export const ObservationReport: z.ZodType<ObservationReport> = ObservationReportDefinition;
+type ObservationReportDefinitionSchema = typeof ObservationReportDefinition;
+export interface ObservationReportSchema extends ObservationReportDefinitionSchema {}
+export const ObservationReport: ObservationReportSchema = ObservationReportDefinition;
 export type AssetOrigin = z.output<typeof AssetOrigin>;
 export type PublisherOrigin = z.output<typeof PublisherOrigin>;
 export type Origin = z.output<typeof Origin>;

@@ -210,13 +210,21 @@ const GeofeatureDefinition = z
   })
   .meta({ id: 'Geofeature' });
 export type Asset = z.output<typeof AssetDefinition>;
-export const Asset: z.ZodType<Asset> = AssetDefinition;
+type AssetDefinitionSchema = typeof AssetDefinition;
+export interface AssetSchema extends AssetDefinitionSchema {}
+export const Asset: AssetSchema = AssetDefinition;
 export type Observation = z.output<typeof ObservationDefinition>;
-export const Observation: z.ZodType<Observation> = ObservationDefinition;
+type ObservationDefinitionSchema = typeof ObservationDefinition;
+export interface ObservationSchema extends ObservationDefinitionSchema {}
+export const Observation: ObservationSchema = ObservationDefinition;
 export type Track = z.output<typeof TrackDefinition>;
-export const Track: z.ZodType<Track> = TrackDefinition;
+type TrackDefinitionSchema = typeof TrackDefinition;
+export interface TrackSchema extends TrackDefinitionSchema {}
+export const Track: TrackSchema = TrackDefinition;
 export type Geofeature = z.output<typeof GeofeatureDefinition>;
-export const Geofeature: z.ZodType<Geofeature> = GeofeatureDefinition;
+type GeofeatureDefinitionSchema = typeof GeofeatureDefinition;
+export interface GeofeatureSchema extends GeofeatureDefinitionSchema {}
+export const Geofeature: GeofeatureSchema = GeofeatureDefinition;
 export type PublisherSubject = z.output<typeof PublisherSubject>;
 export type Communications = z.output<typeof Communications>;
 export type TrackSource = z.output<typeof TrackSource>;

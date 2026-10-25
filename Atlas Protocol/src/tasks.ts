@@ -80,7 +80,7 @@ const TaskDefinition = z
     }
   }, 'Resume expiry outside admission interval')
   .meta({ id: 'Task' });
-export const TaskQueue = z
+const TaskQueueDefinition = z
   .strictObject({
     requested_task_ids: uniqueArray(Uuid),
     revision: Counter,
@@ -91,7 +91,10 @@ export const TaskQueue = z
     'Future queue confirmation',
   )
   .meta({ id: 'TaskQueue' });
-export const TaskControl = z
+type TaskQueueDefinitionSchema = typeof TaskQueueDefinition;
+export interface TaskQueueSchema extends TaskQueueDefinitionSchema {}
+export const TaskQueue: TaskQueueSchema = TaskQueueDefinition;
+const TaskControlDefinition = z
   .strictObject({
     revision: Counter,
     requested: z
@@ -129,6 +132,9 @@ export const TaskControl = z
     'Control confirmation differs',
   )
   .meta({ id: 'TaskControl' });
+type TaskControlDefinitionSchema = typeof TaskControlDefinition;
+export interface TaskControlSchema extends TaskControlDefinitionSchema {}
+export const TaskControl: TaskControlSchema = TaskControlDefinition;
 
 const executionFields = { task_id: Uuid, message: text(1024).exactOptional() };
 const geometryRevision = { geometry_revision: Counter.exactOptional() };
@@ -152,7 +158,7 @@ const resumeEffect = z
       orderedTimes(value.applied_at, value.instructions_valid_until),
     'Resume outside observed instruction interval',
   );
-export const ExecutionPayload = z
+const ExecutionPayloadDefinition = z
   .union([
     z.strictObject({
       ...executionFields,
@@ -198,6 +204,9 @@ export const ExecutionPayload = z
     }),
   ])
   .meta({ id: 'ExecutionPayload' });
+type ExecutionPayloadDefinitionSchema = typeof ExecutionPayloadDefinition;
+export interface ExecutionPayloadSchema extends ExecutionPayloadDefinitionSchema {}
+export const ExecutionPayload: ExecutionPayloadSchema = ExecutionPayloadDefinition;
 export function executionEvidence<P extends z.ZodType>(payload: P) {
   return z.strictObject({
     dataset_id: Uuid,
@@ -209,9 +218,12 @@ export function executionEvidence<P extends z.ZodType>(payload: P) {
     payload,
   });
 }
-export const ExecutionEvidence = executionEvidence(ExecutionPayload).meta({
+const ExecutionEvidenceDefinition = executionEvidence(ExecutionPayload).meta({
   id: 'ExecutionEvidence',
 });
+type ExecutionEvidenceDefinitionSchema = typeof ExecutionEvidenceDefinition;
+export interface ExecutionEvidenceSchema extends ExecutionEvidenceDefinitionSchema {}
+export const ExecutionEvidence: ExecutionEvidenceSchema = ExecutionEvidenceDefinition;
 export const ReportTaskExecution = z
   .strictObject({ evidence: ExecutionEvidence })
   .meta({ id: 'ReportTaskExecution' });
@@ -246,7 +258,9 @@ export const ConfirmTaskOrder = z
   .strictObject({ evidence: executionEvidence(QueueConfirmation) })
   .meta({ id: 'ConfirmTaskOrder' });
 export type Task = z.output<typeof TaskDefinition>;
-export const Task: z.ZodType<Task> = TaskDefinition;
+type TaskDefinitionSchema = typeof TaskDefinition;
+export interface TaskSchema extends TaskDefinitionSchema {}
+export const Task: TaskSchema = TaskDefinition;
 export type TaskQueue = z.output<typeof TaskQueue>;
 export type TaskControl = z.output<typeof TaskControl>;
 export type ExecutionState = z.output<typeof ExecutionState>;

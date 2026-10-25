@@ -20,7 +20,7 @@ import { contract } from './json.js';
 
 export const ResourceKind = z.enum(['asset', 'track', 'geofeature', 'task', 'object']);
 const putFields = { kind: z.literal('put'), resource_id: Uuid, version: Counter };
-export const Put = z
+const PutDefinition = z
   .discriminatedUnion('resource_kind', [
     z.strictObject({ ...putFields, resource_kind: z.literal('asset'), image: Asset }),
     z.strictObject({ ...putFields, resource_kind: z.literal('track'), image: Track }),
@@ -40,6 +40,9 @@ export const Put = z
     'Put identity differs',
   )
   .meta({ id: 'Put' });
+type PutDefinitionSchema = typeof PutDefinition;
+export interface PutSchema extends PutDefinitionSchema {}
+export const Put: PutSchema = PutDefinition;
 export const Delete = z
   .strictObject({
     kind: z.literal('delete'),
@@ -50,11 +53,14 @@ export const Delete = z
   .meta({ id: 'Delete' });
 export const Change = z.union([Put, Delete]).meta({ id: 'Change' });
 const changeKey = (value: z.output<typeof Change>) => `${value.resource_kind}:${value.resource_id}`;
-export const Changes = z
+const ChangesDefinition = z
   .array(Change)
   .min(1)
   .max(1000)
   .refine((values) => unique(values, changeKey), 'Duplicate change');
+type ChangesDefinitionSchema = typeof ChangesDefinition;
+export interface ChangesSchema extends ChangesDefinitionSchema {}
+export const Changes: ChangesSchema = ChangesDefinition;
 const negotiation = NegotiatedLimits.shape;
 export const ReadSnapshot = z
   .union([
@@ -67,7 +73,7 @@ export const ReadSnapshot = z
     Continuation,
   ])
   .meta({ id: 'ReadSnapshot' });
-export const SnapshotPage = z
+const SnapshotPageDefinition = z
   .strictObject({
     load_id: Uuid,
     capture_id: Uuid,
@@ -86,29 +92,38 @@ export const SnapshotPage = z
     'Snapshot order or negotiated changes differ',
   )
   .meta({ id: 'SnapshotPage' });
+type SnapshotPageDefinitionSchema = typeof SnapshotPageDefinition;
+export interface SnapshotPageSchema extends SnapshotPageDefinitionSchema {}
+export const SnapshotPage: SnapshotPageSchema = SnapshotPageDefinition;
 const ChangeBatchData = z
   .strictObject({ previous_cursor: Opaque, commit_cursor: Opaque, changes: Changes })
   .refine((value) => value.previous_cursor !== value.commit_cursor, 'Batch cursor did not advance');
-export const ReplayBatch = z
+const ReplayBatchDefinition = z
   .strictObject({
     type: z.literal('change_batch'),
     data: ChangeBatchData,
   })
   .meta({ id: 'ReplayBatch' });
+type ReplayBatchDefinitionSchema = typeof ReplayBatchDefinition;
+export interface ReplayBatchSchema extends ReplayBatchDefinitionSchema {}
+export const ReplayBatch: ReplayBatchSchema = ReplayBatchDefinition;
 export const ReplayProgress = z
   .strictObject({
     type: z.literal('progress'),
     data: z.strictObject({ previous_cursor: Opaque, through_cursor: Opaque }),
   })
   .meta({ id: 'ReplayProgress' });
-export const ReplayMessage = z
+const ReplayMessageDefinition = z
   .discriminatedUnion('type', [ReplayBatch, ReplayProgress])
   .meta({ id: 'ReplayMessage' });
+type ReplayMessageDefinitionSchema = typeof ReplayMessageDefinition;
+export interface ReplayMessageSchema extends ReplayMessageDefinitionSchema {}
+export const ReplayMessage: ReplayMessageSchema = ReplayMessageDefinition;
 export const ReadChanges = z
   .union([z.strictObject({ from_cursor: Opaque, ...negotiation }), Continuation])
   .meta({ id: 'ReadChanges' });
 const maxReplayMessages = 1000;
-export const ReplayPage = z
+const ReplayPageDefinition = z
   .strictObject({
     replay_boundary: Opaque,
     messages: z.array(ReplayMessage).max(maxReplayMessages),
@@ -144,6 +159,9 @@ export const ReplayPage = z
     'Replay incomplete at boundary',
   )
   .meta({ id: 'ReplayPage' });
+type ReplayPageDefinitionSchema = typeof ReplayPageDefinition;
+export interface ReplayPageSchema extends ReplayPageDefinitionSchema {}
+export const ReplayPage: ReplayPageSchema = ReplayPageDefinition;
 export const SubscribeChanges = z
   .strictObject({ subscription_id: NewId, from_cursor: Opaque, ...negotiation })
   .meta({ id: 'SubscribeChanges' });
@@ -164,7 +182,7 @@ function event<const T extends string, S extends z.ZodType>(type: T, data: S) {
 export const Authenticate = z
   .strictObject({ type: z.literal('authenticate'), request_id: NewId, ...context, api_key: Secret })
   .meta({ id: 'Authenticate' });
-export const ClientFrame = z
+const ClientFrameDefinition = z
   .discriminatedUnion('type', [
     Authenticate,
     control('read_snapshot', ReadSnapshot),
@@ -174,12 +192,15 @@ export const ClientFrame = z
     control('unsubscribe_changes', UnsubscribeChanges),
   ])
   .meta({ id: 'ClientFrame' });
+type ClientFrameDefinitionSchema = typeof ClientFrameDefinition;
+export interface ClientFrameSchema extends ClientFrameDefinitionSchema {}
+export const ClientFrame: ClientFrameSchema = ClientFrameDefinition;
 const liveBatch = event('change_batch', ChangeBatchData.safeExtend({ subscription_id: Uuid }));
 const liveProgress = event(
   'progress',
   z.strictObject({ ...ReplayProgress.shape.data.shape, subscription_id: Uuid }),
 );
-export const ServerFrame = z
+const ServerFrameDefinition = z
   .discriminatedUnion('type', [
     control('authenticated', z.strictObject({ core_run_id: Uuid, limits: NegotiatedLimits })),
     control('read_snapshot_result', SnapshotPage),
@@ -219,6 +240,9 @@ export const ServerFrame = z
     return true;
   }, 'Frame Dataset differs')
   .meta({ id: 'ServerFrame' });
+type ServerFrameDefinitionSchema = typeof ServerFrameDefinition;
+export interface ServerFrameSchema extends ServerFrameDefinitionSchema {}
+export const ServerFrame: ServerFrameSchema = ServerFrameDefinition;
 export const wss = Object.freeze({
   clientFrame: contract(ClientFrame, 'wss_control'),
   serverFrame: {
