@@ -143,6 +143,21 @@ export function runExchangeContext(p) {
   check('WSS refuses mismatch details that contradict the frame version', () => {
     refuses(() => p.readWssServer(encode(error(p.PROTOCOL_VERSION, foreign))), 'invalid_value');
   });
+  check('WSS refuses Dataset mismatch details that contradict the frame context', () => {
+    const frame = {
+      type: 'error',
+      dataset_id: s.id,
+      protocol_version: p.PROTOCOL_VERSION,
+      error: {
+        code: 'dataset_mismatch',
+        message: 'Dataset differs',
+        request_id: s.requestId,
+        details: { dataset_id: s.assetId },
+      },
+    };
+    refuses(() => p.readWssServer(encode(frame)), 'invalid_value');
+    refuses(() => p.writeWssServer(frame), 'invalid_value');
+  });
   check('WSS writer cannot claim a foreign version in a mismatch refusal', () => {
     refuses(() => p.writeWssServer(error(foreign, foreign)), 'invalid_value');
   });
