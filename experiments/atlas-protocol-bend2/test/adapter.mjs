@@ -90,7 +90,17 @@ function unwrap(result) {
   );
 }
 
-const context = (input) => json(input ?? {});
+function context(input) {
+  const members = [];
+  for (const key of Object.getOwnPropertyNames(input ?? {})) {
+    const descriptor = Object.getOwnPropertyDescriptor(input, key);
+    if (!descriptor?.enumerable || !('value' in descriptor))
+      throw new ProtocolError('invalid_value');
+    if (descriptor.value !== undefined)
+      members.push({ $: 'Member', key, value: json(descriptor.value) });
+  }
+  return { $: 'JObj', members: list(members) };
+}
 const descriptor = (input) => ({
   ...input,
   headers: [...input.headers.entries()].map(([name, content]) => ({
@@ -103,7 +113,7 @@ const descriptor = (input) => ({
     : { uploadDescriptor: Array.from(input.uploadDescriptor) }),
 });
 
-export const PROTOCOL_VERSION = '0.1.0';
+export const PROTOCOL_VERSION = bend.protocol_version();
 export function contract(schema, boundary = 'http_request') {
   return { schema, boundary };
 }
@@ -125,6 +135,9 @@ export function writeJson(definition, input, lower) {
 }
 export function checkJsonBytes(bytes, boundary = 'http_request', lower) {
   unwrap(bend.check_json(list(bytes), boundary, context(lower)));
+}
+export function effectiveBudget(boundary, lower) {
+  return value(unwrap(bend.effective_budget_json(boundary, context(lower))));
 }
 export function readHttpRequest(exchange, incoming, lower) {
   return value(
@@ -224,6 +237,7 @@ export const protocol = {
   inputSections,
   readSections,
   budgets,
+  effectiveBudget,
   commandCatalog,
   wss,
 };

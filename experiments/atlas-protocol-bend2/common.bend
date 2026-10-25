@@ -1,5 +1,8 @@
 import Base
 
+def protocol_version() -> String:
+  "0.1.0"
+
 type Json is Data:
   JMissing{}
   JNull{}

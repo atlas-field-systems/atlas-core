@@ -22,7 +22,7 @@ def check(~budget: String -> C.Json -> Result<&2, &2, C.Failure, C.Budget>,
     C.require(Bool.not(is_error && C.has(error, "details")) ||
       ((Bool.not(String.eq(code, "dataset_mismatch")) || E.same_field(details, "dataset_id", frame, "dataset_id")) &&
        (Bool.not(String.eq(code, "protocol_mismatch")) || E.same_field(details, "protocol_version", frame, "protocol_version"))), C.InvalidValue{})
-    C.require((C.equal(C.get(frame, "protocol_version"), C.JStr{"0.1.0"}) ||
+    C.require((C.equal(C.get(frame, "protocol_version"), C.JStr{C.protocol_version()}) ||
       (reading_server && is_error && String.eq(code, "protocol_mismatch"))) &&
       expected(context, "datasetId", C.get(frame, "dataset_id")) &&
       expected(context, "requestId", C.get(frame, "request_id")), C.InvalidValue{})

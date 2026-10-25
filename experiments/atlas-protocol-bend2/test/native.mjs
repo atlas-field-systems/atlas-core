@@ -69,7 +69,8 @@ function cliChecks() {
   assert.equal(value('check', input), null);
   const unicode = file('"Crème 東京 😀"');
   for (const command of ['read', 'write'])
-    assert.equal(decoder.decode(accepted(command, 'Description', unicode)), '"Crème 東京 😀"');
+    assert.equal(decoder.decode(accepted(command, 'Opaque', unicode)), '"Crème 東京 😀"');
+  rejection(invoke('read', 'Description', unicode), 'invalid_value');
   rejection(invoke('check', join(temporary, 'missing')), 'invalid_value');
   rejection(invoke('check', temporary), 'invalid_value');
   rejection(invoke('check', file(Buffer.from([0xff]))), 'invalid_utf8');
@@ -173,9 +174,10 @@ function protocolChecks() {
   const request = '22222222-2222-4222-8222-222222222222';
   const other = '33333333-3333-4333-8333-333333333333';
   const client = { type: 'authenticate', dataset_id: dataset, protocol_version: '0.1.0',
-    request_id: request, api_key: 'native-test-secret' };
+    request_id: request, api_key: 'A'.repeat(43) };
   const clientFile = jsonFile(client);
   assert.deepEqual(value('wss-client', clientFile, jsonFile({ datasetId: dataset, requestId: request })), client);
+  rejection(invoke('wss-client', jsonFile({ ...client, api_key: 'native-test-secret' })), 'invalid_value');
   rejection(invoke('wss-client', clientFile, jsonFile({ datasetId: other })), 'invalid_value');
   const server = { type: 'error', dataset_id: dataset, protocol_version: '0.1.0',
     error: { code: 'invalid_request', message: 'Invalid request', request_id: request }, request_id: request };
@@ -184,8 +186,10 @@ function protocolChecks() {
   rejection(invoke('wss-server', serverFile, jsonFile({ requestId: other })), 'invalid_value');
 
   const requestDescriptor = { method: 'GET', path: '/health',
-    headers: [{ name: 'Authorization', value: 'Bearer native-test-secret' }] };
+    headers: [{ name: 'Authorization', value: `Bearer ${'A'.repeat(43)}` }] };
   assert.deepEqual(value('http-request', 'GetHealth', jsonFile(requestDescriptor)), {});
+  rejection(invoke('http-request', 'GetHealth', jsonFile({ ...requestDescriptor,
+    headers: [{ name: 'Authorization', value: 'Bearer native-test-secret' }] })), 'invalid_http');
   rejection(invoke('http-request', 'GetHealth', jsonFile({ ...requestDescriptor, method: 'POST' })), 'invalid_http');
   const response = { status: 200,
     headers: [{ name: 'Atlas-Dataset-ID', value: dataset },

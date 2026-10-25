@@ -149,22 +149,21 @@ def correlation_members(+headers: C.Json) -> List<&2, C.Member>:
 def correlation(headers: C.Json) -> C.Json:
   C.JObj{correlation_members(headers)}
 
-def byte_values(xs: List<&2, C.Json>, +remaining: U32) -> Result<&2, &2, C.Failure, List<&2, U32>>:
+def byte_values(xs: List<&2, C.Json>, +remaining: U32, acc: List<&2, U32>) -> Result<&2, &2, C.Failure, List<&2, U32>>:
   match xs:
     case Nil{}:
-      Done{Nil{}}
+      Done{List.reverse(&2, U32, acc)}
     case Con{+h, t}:
       do Result<&2, &2, C.Failure, List<&2, U32>>:
         C.require(U32.is_gt(remaining, 0), C.PayloadTooLarge{})
         +value : U32 = E.uint(h, 256)
         C.require(U32.is_le(value, 255), C.InvalidHttp{})
-        rest : List<&2, U32> <- byte_values(t, (remaining - 1 : U32))
-        return Con{value, rest}
+        byte_values(t, (remaining - 1 : U32), Con{value, acc})
 
 def bytes(value: C.Json, max: U32) -> Result<&2, &2, C.Failure, List<&2, U32>>:
   match value:
     case C.JArr{xs}:
-      byte_values(xs, max)
+      byte_values(xs, max, Nil{})
     case _:
       Fail{C.failure(C.InvalidHttp{})}
 
@@ -173,8 +172,15 @@ def max_bytes(budget: C.Budget) -> U32:
     case C.Budget{bytes, values, depth, changes, work}:
       bytes
 
+def body_count(xs: List<&2, C.Json>, count: U32) -> U32:
+  match xs:
+    case Nil{}:
+      count
+    case Con{h, t}:
+      body_count(t, (count + 1 : U32))
+
 def body_length(value: C.Json) -> U32:
-  U32.from_nat(List.length(&2, C.Json, C.items(value)))
+  body_count(C.items(value), 0)
 
 def path_characters(text: String) -> Bool:
   match text:
@@ -258,7 +264,7 @@ def read_request(
       _ => do Result<&2, &2, C.Failure, C.Json>:
         value : String <- context_header(headers, "Atlas-Dataset-ID", True{})
         version : String <- context_header(headers, "Atlas-Protocol-Version", False{})
-        require(String.eq(version, "0.1.0"), "header.Atlas-Protocol-Version", "mismatch")
+        require(String.eq(version, C.protocol_version()), "header.Atlas-Protocol-Version", "mismatch")
         return C.JStr{value})
     C.choose(Result<&2, &2, C.Failure, C.Json>, C.equal(C.get(definition, "method"), C.JStr{"GET"}),
       _ => get_request(~validate, operation, incoming, definition),
@@ -372,7 +378,7 @@ def error_context(+envelope: C.Json, +version: String) -> Bool:
   +mismatch = C.equal(C.get(error, "code"), C.JStr{"protocol_mismatch"})
   (Bool.not(mismatch && C.has(error, "details")) ||
     C.equal(C.get(C.get(error, "details"), "protocol_version"), C.JStr{version})) &&
-    (String.eq(version, "0.1.0") || mismatch)
+    (String.eq(version, C.protocol_version()) || mismatch)
 
 def json_response(
     ~read: String -> String -> List<&2, U32> -> C.Json -> Result<&2, &2, C.Failure, C.Json>,
@@ -414,7 +420,7 @@ def read_response(
     uncompressed(headers)
     +dataset : String <- context_header(headers, "Atlas-Dataset-ID", True{})
     +version : String <- context_header(headers, "Atlas-Protocol-Version", False{})
-    C.require(Bool.not(success) || (String.eq(version, "0.1.0") &&
+    C.require(Bool.not(success) || (String.eq(version, C.protocol_version()) &&
       (Bool.not(C.has(context, "datasetId")) || C.equal(C.get(context, "datasetId"), C.JStr{dataset}))), C.InvalidHttp{})
     +request : C.Json <- C.choose(Result<&2, &2, C.Failure, C.Json>, success && C.has(context, "request"),
       _ => validate("Request." ++ operation, "http_request", C.get(context, "request"), lower_budget),

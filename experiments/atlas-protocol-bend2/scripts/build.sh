@@ -20,4 +20,5 @@ export BEND_NO_TELEMETRY=1
 mkdir -p dist
 "$bend_bin" api.bend --check-only
 "$bend_bin" api.bend -o dist/protocol.mjs
+"$bend_bin" reference.bend -o dist/reference.mjs
 "$bend_bin" main.bend -o dist/atlas-protocol

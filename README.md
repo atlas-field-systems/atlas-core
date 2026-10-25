@@ -7,6 +7,9 @@ Atlas Protocol includes an executable browser-safe TypeScript package. Core and
 SDK remain design contracts; this repository supplies no running Atlas server,
 SDK workflows, or qualified deployment.
 
+The [Bend2 Protocol experiment](experiments/atlas-protocol-bend2/README.md) is an
+independent implementation for comparing language implementations.
+
 ## Three layers, one contract
 
 | Layer | Owns | Does not own |
