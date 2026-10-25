@@ -218,6 +218,12 @@ test('shortest ECMAScript spelling for ties, subnormals and exponent thresholds'
     ['9.9999999999999999', '10'], ['0e10000', '0'], ['-0e-10000', '0'],
     ['0.29999999999999999', '0.3'], ['1.2345678901234567', '1.2345678901234567'],
   ]) assert.equal(N.format(raw), expected, raw);
+  for (const raw of ['655359', '655360', '655361', '42949672959', '42949672960',
+    '42949672961', '2814749767106561']) {
+    assert.equal(integer(read(raw)), BigInt(raw) << 1074n, raw);
+    assert.equal(accept(raw), true, raw);
+    assert.equal(N.format(raw), raw, raw);
+  }
   for (const raw of ['', 'NaN', '01', '1e-10000']) assert.equal(N.format(raw), '', raw);
 });
 

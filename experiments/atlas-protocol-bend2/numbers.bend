@@ -200,13 +200,21 @@ def div_cell(h: U32, d: Magnitude, pair: Magnitude & Magnitude) -> Magnitude & M
   (q, r) = pair
   div_cell_result(q, div_bits(16n, h, d, (r, 0)))
 
-# Binary long division, sixteen input bits per limb. d is nonzero.
-def mag_divmod(a: Magnitude, +d: Magnitude) -> Magnitude & Magnitude:
-  match a:
-    case MagZero{}:
+# A prefix below d is already its remainder, so its input bits need no division.
+def div_prefix(a: Magnitude, +d: Magnitude, order: Cmp) -> Magnitude & Magnitude:
+  match a order:
+    case MagZero{} _:
       (MagZero{}, MagZero{})
-    case Limb{h, t}:
-      div_cell(h, d, mag_divmod(t, d))
+    case Limb{h, t} LT{}:
+      (MagZero{}, Limb{h, t})
+    case Limb{h, t} EQ{}:
+      (mag_single(1), MagZero{})
+    case Limb{h, +t} GT{}:
+      div_cell(h, d, div_prefix(t, d, mag_cmp(t, d)))
+
+# Binary long division, sixteen input bits per limb. d is nonzero.
+def mag_divmod(+a: Magnitude, +d: Magnitude) -> Magnitude & Magnitude:
+  div_prefix(a, d, mag_cmp(a, d))
 
 def mag_pow10(n: Nat, a: Magnitude) -> Magnitude:
   match n:
