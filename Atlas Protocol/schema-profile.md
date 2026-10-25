@@ -2,7 +2,8 @@
 
 One browser-safe TypeScript Protocol package owns runtime schemas and inferred
 public types. It exports the portable OpenAPI 3.1.0 reference with stock tooling.
-This baseline supplies no executable schema, package, or qualified exporter.
+The [package](package-usage.md) implements this profile with locked stock tooling.
+[Qualification](qualification.md) distinguishes local checks from integration coverage.
 
 ## Supported schema vocabulary
 
@@ -48,3 +49,10 @@ it does not authorize weakening the contract. Library versions and passing fixtu
 are implementation deliverables, not runtime claims made by these pages.
 
 [Contract ownership](README.md#contract-ownership)
+
+## Constrained Power dictionary
+
+Power source_times.reserves is the one declared UUID-keyed dictionary. Export it
+with canonical UUID propertyNames, maxProperties 16 and typed additionalProperties
+whose value is the closed per-quantity time object. This permits no extension
+fields. Runtime checks membership and fuel restrictions against the actual reserves.

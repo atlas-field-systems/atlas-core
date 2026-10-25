@@ -46,3 +46,25 @@ successful download. Preserve metadata and unrelated operations; do not fabricat
 results or rewrite a completed Task. Late file availability never reopens a Task.
 
 [Next: messaging](messaging.md)
+
+## Descriptor and read image
+
+Upload descriptor requires `request_id`, `object_id`, `byte_length`, `sha256`,
+`content_type`, and `metadata`. New IDs are UUIDv4. Byte length is a canonical
+counter string no greater than 2,000,000,000. SHA-256 is exactly 64 lowercase hex
+characters. Content type is a nonblank ASCII media type without parameters,
+with one slash and token characters on both sides, at most 255 characters.
+
+Metadata requires `associations`, a unique array of at most 128 closed
+`{kind, id}` references. Kind is asset, observation, track, geofeature, or task;
+id is a UUID. Optional non-null `name` is nonblank, at most 128 scalars; optional
+non-null `description` is at most 4,096. There is no public hold list.
+
+A read image requires `dataset_id`, `object_id`, `version`, `edit_revision`,
+`created_at`, and the descriptor's byte_length, sha256, content_type, metadata.
+It omits request_id. Revisions are counters; created_at is a timestamp.
+EditObject requires object_id, request_id, expected_edit_revision and `edits`.
+Edits permits name and description with null clearing, and associations replacing
+the complete array. Omission preserves metadata. At least one edit is required.
+ReadObjectContent requires object_id and `disposition`, exactly inline or attachment.
+The transport streams bytes; Protocol validates only the response descriptor.

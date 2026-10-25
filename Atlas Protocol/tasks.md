@@ -7,7 +7,7 @@ remain Protocol-defined. Task targets must be registered Assets.
 
 ## Creation and state
 
-A Task has immutable `task_id`, `asset_id`, `command`, `inputs`, `scheduling`, and
+A [Task read image](task-format.md) has immutable `task_id`, `asset_id`, `command`, `inputs`, `scheduling`, and
 validity facts. Core validates support, references, and the live target Asset, then
 assigns `submission_sequence`. Offline or busy does not prevent acceptance.
 Exact retries allocate neither another Task nor another sequence.

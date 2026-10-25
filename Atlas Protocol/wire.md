@@ -85,14 +85,17 @@ change their original source.
 
 ## Deterministic IP mapping
 
-Message names are exact OpenAPI `operationId` values. JSON messages use
+HTTP message names are exact OpenAPI `operationId` values. JSON messages use
 `POST /messages/<snake_case_name>`, with acronym words together, such as
 `CreateApiKey` to `create_api_key`. This is a static route table.
 `GetHealth` uses `GET /health`; `GetReadiness` uses `GET /readiness`;
 reference HTML/schema uses `GET /reference` with declared media. Upload uses
 `POST /objects` with multipart parts `descriptor` as JSON and `file` as binary.
 Content reads use `GET /objects/{object_id}/content`. Other metadata uses the JSON
-mapping. WSS uses `/changes` and [synchronization envelopes](synchronization-messages.md).
+mapping. SubscribeChanges and UnsubscribeChanges are WSS-only. WSS uses `/changes`
+and [synchronization envelopes](synchronization-messages.md).
 The [schema profile](schema-profile.md) fixes shared runtime schemas and portable export.
+
+[Concrete HTTP outcomes, media, headers, and scalar presence](http-binding.md).
 
 [Next: synchronization](synchronization.md)

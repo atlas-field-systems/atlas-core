@@ -21,3 +21,13 @@ Geometry edits and Task references follow [Geometry and references](../entities.
 Saving a changed Geofeature does not prove that an Asset applied it.
 
 [Messaging index](../messaging.md)
+
+## Concrete request fields
+
+Creation requires geofeature_id, request_id, geometry; optional alias, description,
+and type use authored Entity values. Edit requires geofeature_id, request_id,
+expected_edit_revision and nonempty `edits` of alias, description, type, geometry.
+Only alias and description permit null clearing. Create/edit data is the complete
+Geofeature. Single reads and deletes use geofeature_id; deletes add request_id.
+Alias lookup uses alias. Object queries use geofeature_id on the first page
+under [queries](../queries.md).

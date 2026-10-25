@@ -1,8 +1,9 @@
 # Component field reference
 
 These pages define the selected component fields, units, bounds, and presence rules.
-They are the documentation contract. Machine schemas and runtime qualification
-remain implementation work. Unknown input properties are refused.
+They are the documentation contract, implemented by the shared runtime schemas.
+Unknown input properties are refused. Qualification commands live in the
+[package guide](../qualification.md).
 String limits count Unicode scalar values. Nonblank strings contain at least one
 character outside Unicode White_Space. Accepted spelling is retained.
 
@@ -66,6 +67,6 @@ under the [default policy](../tracks.md#default-policy).
 
 ## Contract source
 
-The shared [runtime schemas](../schema-profile.md) will encode these selected rules
-and export the OpenAPI reference. Neither may choose different fields or defaults.
-There is no executable schema or generated package in this baseline.
+The shared [runtime schemas](../schema-profile.md) encode these rules and export
+the OpenAPI reference. Neither chooses different fields or defaults.
+Core and SDK still need qualification of their consuming workflows.

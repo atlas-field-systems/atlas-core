@@ -79,6 +79,7 @@ Inactive means only that a source is not reporting. There is no activity wire fl
 inferred timeout, or close message. Silence does not refresh measurement age.
 
 [Observation messages](messaging/observations.md) define the operations.
-Machine schemas and runtime acceptance coverage remain unimplemented.
+The package validates message shapes and stateless evidence relationships.
+Core evidence admission, transactions, and durable history remain integration work.
 
 [Next: Tracks](tracks.md)

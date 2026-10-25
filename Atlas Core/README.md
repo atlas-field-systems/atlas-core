@@ -47,7 +47,8 @@ remain ordinary handwritten code. No custom schema compiler, blanket generated
 client/server layer, or generated database accessor is required. Use supported
 libraries and qualify schema/export equivalence before selecting exact versions.
 The [build profile](build-profile.md) requires exact locks and reproducible exports.
-No packages, locks, generated output, or qualified runtime are supplied here.
+Protocol supplies its package, dependency lock, and qualification commands.
+Core and SDK have no implementation or qualified runtime yet.
 
 ## Scope
 

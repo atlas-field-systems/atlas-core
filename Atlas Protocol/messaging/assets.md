@@ -40,3 +40,18 @@ check-in proof through the shared report envelope.
 adoption confirmations.
 
 [Messaging index](../messaging.md)
+
+## Concrete request and result fields
+
+Registration requires asset_id, registration_id, request_id, process_generation,
+api_key_id, secret; optional alias, description, type, capabilities use Entity
+authored values. Its data is `{asset, api_key}` with secret-free key metadata.
+Update requires asset_id and request_id, optional alias, description, type,
+capabilities, report, and expected_edit_revision. An authored field requires the
+revision precondition. Alias and description allow null clearing. At least one
+authored field or report is required. Report identity must match the Asset.
+Update and process replacement data is `{asset, evidence_disposition?}`; a report
+requires accepted or duplicate disposition. GetAssetStatus data is exactly
+`{asset_id, status, communications, heartbeat}` using the Asset read components.
+Single reads and deletes use asset_id; alias lookup uses alias. Object queries
+add asset_id to the [list selection](../queries.md), or use only page_token.

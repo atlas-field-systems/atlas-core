@@ -48,3 +48,23 @@ List/query bounds and continuation follow [Wire](../wire.md#lists). Core owns th
 activity categories and resource accounting; neither is synchronization coverage.
 
 [Messaging index](../messaging.md)
+
+## Closed records and queries
+
+Operator reads contain operator_id and the profile fields, including edit_revision.
+Edits use `edits: {name?, description?}`; description alone permits null clearing.
+At least one edit is required. Key and operator lists use the moving-list shape
+in [queries](../queries.md). Resource and activity reads use that same paging.
+
+Resource records are `{kind, used, capacity}`. Kind is a nonblank Core-owned name
+of at most 128 scalars; used and capacity are counter strings. Activity records
+require `activity_id`, `at`, `category`, `message`, `api_key_id`, `operator_id`,
+and `operator_deleted`. IDs are UUIDs, at is a timestamp, category is nonblank
+and at most 128 scalars, message is at most 4,096. Attribution IDs may be null;
+a null operator requires operator_deleted false. No activity payload dictionary
+or Protocol activity-category enum exists.
+
+Health adds `healthy` boolean to the discovery fields defined in Wire, Limits,
+and Temporary contexts. Readiness data is exactly `{ready: boolean}`. A false
+readiness uses status 503 with the same success envelope, never an empty reply.
+Reference media negotiation follows [Wire](../http-binding.md).

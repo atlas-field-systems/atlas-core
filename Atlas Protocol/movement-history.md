@@ -60,6 +60,7 @@ with its Track, without a second measurement identity.
 
 The full identity tuple in [history queries](history-queries.md#selection-and-exact-order)
 identifies a reading. Frozen pages retain its facts and captured provenance.
-Independent acceptance and recovery fixtures remain unexecuted implementation work.
+The package validates reading shapes and page order. Frozen-view allocation,
+recovery, and retained history still require executable Core/SDK workflows.
 
 [Next: tasks](tasks.md)

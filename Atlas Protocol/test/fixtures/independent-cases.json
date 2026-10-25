@@ -1,0 +1,376 @@
+{
+  "cases": [
+    {
+      "id": "independent-01",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "accept",
+      "rationale": "zero is a position",
+      "raw_json": "{\"latitude\":0,\"longitude\":0}",
+      "retained_json": "{\"latitude\":0,\"longitude\":0}"
+    },
+    {
+      "id": "independent-02",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "reject",
+      "rationale": "missing latitude stays missing",
+      "raw_json": "{\"longitude\":0}"
+    },
+    {
+      "id": "independent-03",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "reject",
+      "rationale": "null latitude is not zero",
+      "raw_json": "{\"latitude\":null,\"longitude\":0}"
+    },
+    {
+      "id": "independent-04",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "accept",
+      "rationale": "positive longitude endpoint retained",
+      "raw_json": "{\"latitude\":90,\"longitude\":180}",
+      "retained_json": "{\"latitude\":90,\"longitude\":180}"
+    },
+    {
+      "id": "independent-05",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "accept",
+      "rationale": "negative longitude endpoint retained",
+      "raw_json": "{\"latitude\":-90,\"longitude\":-180}",
+      "retained_json": "{\"latitude\":-90,\"longitude\":-180}"
+    },
+    {
+      "id": "independent-06",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "reject",
+      "rationale": "original latitude beyond endpoint",
+      "raw_json": "{\"latitude\":90.00000000000000000001,\"longitude\":0}"
+    },
+    {
+      "id": "independent-07",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "reject",
+      "rationale": "original longitude beyond endpoint",
+      "raw_json": "{\"latitude\":0,\"longitude\":180.00000000000000000001}"
+    },
+    {
+      "id": "independent-08",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "reject",
+      "rationale": "rounded zero cannot hide underflow",
+      "raw_json": "{\"latitude\":1e-9999,\"longitude\":0}"
+    },
+    {
+      "id": "independent-09",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "reject",
+      "rationale": "unknown position field refused",
+      "raw_json": "{\"latitude\":0,\"longitude\":0,\"altitude\":0}"
+    },
+    {
+      "id": "independent-10",
+      "schema_name": "Position",
+      "contract": "Atlas Protocol/components/telemetry.md",
+      "expected": "reject",
+      "rationale": "duplicate decoded member refused",
+      "raw_json": "{\"latitude\":1,\"latit\\u0075de\":2,\"longitude\":0}"
+    },
+    {
+      "id": "independent-11",
+      "schema_name": "Integer",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "accept",
+      "rationale": "exact ordinary integer exponent accepted",
+      "raw_json": "1e2",
+      "retained_json": "1e2",
+      "canonical_json": "100"
+    },
+    {
+      "id": "independent-12",
+      "schema_name": "Integer",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "accept",
+      "rationale": "exact ordinary integer fraction accepted",
+      "raw_json": "100.0",
+      "retained_json": "100.0",
+      "canonical_json": "100"
+    },
+    {
+      "id": "independent-13",
+      "schema_name": "Integer",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "rounded fraction is not an integer",
+      "raw_json": "100.0000000000000000001"
+    },
+    {
+      "id": "independent-14",
+      "schema_name": "Integer",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "accept",
+      "rationale": "maximum ordinary integer accepted",
+      "raw_json": "2147483647",
+      "retained_json": "2147483647",
+      "canonical_json": "2147483647"
+    },
+    {
+      "id": "independent-15",
+      "schema_name": "Integer",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "above ordinary integer refused",
+      "raw_json": "2147483648"
+    },
+    {
+      "id": "independent-16",
+      "schema_name": "Counter",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "accept",
+      "rationale": "uint64 endpoint accepted",
+      "raw_json": "\"18446744073709551615\"",
+      "retained_json": "\"18446744073709551615\""
+    },
+    {
+      "id": "independent-17",
+      "schema_name": "Counter",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "uint64 overflow refused",
+      "raw_json": "\"18446744073709551616\""
+    },
+    {
+      "id": "independent-18",
+      "schema_name": "Counter",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "counter leading zero refused",
+      "raw_json": "\"01\""
+    },
+    {
+      "id": "independent-19",
+      "schema_name": "Counter",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "counter number refused",
+      "raw_json": "1"
+    },
+    {
+      "id": "independent-20",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "accept",
+      "rationale": "timestamp minimum retained",
+      "raw_json": "\"0001-01-01T00:00:00Z\"",
+      "retained_json": "\"0001-01-01T00:00:00Z\""
+    },
+    {
+      "id": "independent-21",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "accept",
+      "rationale": "timestamp maximum retained",
+      "raw_json": "\"9999-12-31T23:59:59.999999999Z\"",
+      "retained_json": "\"9999-12-31T23:59:59.999999999Z\""
+    },
+    {
+      "id": "independent-22",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "Gregorian century is not leap year",
+      "raw_json": "\"1900-02-29T00:00:00Z\""
+    },
+    {
+      "id": "independent-23",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "accept",
+      "rationale": "Gregorian four-century leap year",
+      "raw_json": "\"2000-02-29T00:00:00Z\"",
+      "retained_json": "\"2000-02-29T00:00:00Z\""
+    },
+    {
+      "id": "independent-24",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "zero year refused",
+      "raw_json": "\"0000-01-01T00:00:00Z\""
+    },
+    {
+      "id": "independent-25",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "leap second refused",
+      "raw_json": "\"2026-10-24T00:00:60Z\""
+    },
+    {
+      "id": "independent-26",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "offset timestamp refused",
+      "raw_json": "\"2026-10-24T00:00:00+00:00\""
+    },
+    {
+      "id": "independent-27",
+      "schema_name": "Timestamp",
+      "contract": "Atlas Protocol/limits.md",
+      "expected": "reject",
+      "rationale": "too precise timestamp refused",
+      "raw_json": "\"2026-10-24T00:00:00.1234567890Z\""
+    },
+    {
+      "id": "independent-28",
+      "schema_name": "AssetType",
+      "contract": "Atlas Protocol/components/type.md",
+      "expected": "reject",
+      "rationale": "drone variant required",
+      "raw_json": "{\"kind\":\"drone\"}"
+    },
+    {
+      "id": "independent-29",
+      "schema_name": "AssetType",
+      "contract": "Atlas Protocol/components/type.md",
+      "expected": "accept",
+      "rationale": "drone unknown variant accepted",
+      "raw_json": "{\"kind\":\"drone\",\"variant\":null}",
+      "retained_json": "{\"kind\":\"drone\",\"variant\":null}"
+    },
+    {
+      "id": "independent-30",
+      "schema_name": "AssetType",
+      "contract": "Atlas Protocol/components/type.md",
+      "expected": "reject",
+      "rationale": "camera cannot carry drone variant",
+      "raw_json": "{\"kind\":\"security_camera\",\"variant\":null}"
+    },
+    {
+      "id": "independent-31",
+      "schema_name": "Attitude",
+      "contract": "Atlas Protocol/components/attitude.md",
+      "expected": "accept",
+      "rationale": "vertical attitude has undefined angles",
+      "raw_json": "{\"heading\":null,\"pitch\":90,\"roll\":null}",
+      "retained_json": "{\"heading\":null,\"pitch\":90,\"roll\":null}"
+    },
+    {
+      "id": "independent-32",
+      "schema_name": "Attitude",
+      "contract": "Atlas Protocol/components/attitude.md",
+      "expected": "reject",
+      "rationale": "vertical attitude refuses fabricated heading",
+      "raw_json": "{\"heading\":0,\"pitch\":90,\"roll\":null}"
+    },
+    {
+      "id": "independent-33",
+      "schema_name": "Attitude",
+      "contract": "Atlas Protocol/components/attitude.md",
+      "expected": "reject",
+      "rationale": "heading excludes 360",
+      "raw_json": "{\"heading\":360,\"pitch\":0,\"roll\":0}"
+    },
+    {
+      "id": "independent-34",
+      "schema_name": "Attitude",
+      "contract": "Atlas Protocol/components/attitude.md",
+      "expected": "reject",
+      "rationale": "original heading below 360 that rounds to 360 refused",
+      "raw_json": "{\"heading\":359.999999999999999999999,\"pitch\":0,\"roll\":0}"
+    },
+    {
+      "id": "independent-35",
+      "schema_name": "Gimbal",
+      "contract": "Atlas Protocol/components/gimbal.md",
+      "expected": "accept",
+      "rationale": "vertical gimbal bearing undefined",
+      "raw_json": "{\"bearing\":null,\"elevation\":-90}",
+      "retained_json": "{\"bearing\":null,\"elevation\":-90}"
+    },
+    {
+      "id": "independent-36",
+      "schema_name": "Gimbal",
+      "contract": "Atlas Protocol/components/gimbal.md",
+      "expected": "reject",
+      "rationale": "vertical gimbal bearing refused",
+      "raw_json": "{\"bearing\":0,\"elevation\":-90}"
+    },
+    {
+      "id": "independent-37",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "accept",
+      "rationale": "exact 180-degree line accepted",
+      "raw_json": "{\"type\":\"LineString\",\"coordinates\":[[0,0],[180,0]]}",
+      "retained_json": "{\"type\":\"LineString\",\"coordinates\":[[0,0],[180,0]]}"
+    },
+    {
+      "id": "independent-38",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "reject",
+      "rationale": "dateline crossing representation refused",
+      "raw_json": "{\"type\":\"LineString\",\"coordinates\":[[170,0],[-170,0]]}"
+    },
+    {
+      "id": "independent-39",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "reject",
+      "rationale": "nested Point coordinates refused",
+      "raw_json": "{\"type\":\"Point\",\"coordinates\":[[0,90]]}"
+    },
+    {
+      "id": "independent-40",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "accept",
+      "rationale": "canonical pole point accepted",
+      "raw_json": "{\"type\":\"Point\",\"coordinates\":[0,90]}",
+      "retained_json": "{\"type\":\"Point\",\"coordinates\":[0,90]}"
+    },
+    {
+      "id": "independent-41",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "accept",
+      "rationale": "isolated pole vertex accepted",
+      "raw_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,89],[1,89],[0,90],[0,89]]]}",
+      "retained_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,89],[1,89],[0,90],[0,89]]]}"
+    },
+    {
+      "id": "independent-42",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "reject",
+      "rationale": "zero area polygon refused",
+      "raw_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[1,0],[2,0],[0,0]]]}"
+    },
+    {
+      "id": "independent-43",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "reject",
+      "rationale": "crossing polygon refused",
+      "raw_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[1,1],[0,1],[1,0],[0,0]]]}"
+    },
+    {
+      "id": "independent-44",
+      "schema_name": "Geometry",
+      "contract": "Atlas Protocol/components/geometry.md",
+      "expected": "accept",
+      "rationale": "subnormal triangle keeps nonzero area",
+      "raw_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[5e-324,0],[0,5e-324],[0,0]]]}",
+      "retained_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[5e-324,0],[0,5e-324],[0,0]]]}"
+    }
+  ]
+}

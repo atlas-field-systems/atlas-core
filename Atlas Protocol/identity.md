@@ -27,8 +27,19 @@ original report evidence identity. It does not create a new reporting source.
 Entity IDs are immutable and unique across Entity types within the Dataset.
 Deleted Asset and Geofeature IDs remain reserved until Reset. Observations and
 Tracks retain their IDs until Reset. Optional Entity aliases are unique across
-all Entity types, ignoring Unicode case. Preserve the submitted spelling.
+all Entity types under the alias comparison below. Preserve the submitted spelling.
 Deleting an Entity releases its alias, without permitting reuse of its ID.
+
+Alias equality uses Unicode default full case folding, then exact string equality.
+The package pins `unicode-case-folding` 1.1.2, whose C and F mappings match
+`CaseFolding-18.0.0.txt` dated 2026-02-03 from the
+[Unicode Character Database](https://www.unicode.org/Public/UCD/latest/ucd/CaseFolding.txt).
+The table's SHA-256 is `a004797658a457bec4dc11683e39f69249ea3b595b752dbea6721c4c9f587b0d`.
+No normalization, locale-specific Turkic mappings, or fuzzy matching applies.
+For example, `Straße` equals `STRASSE`, and `Σ` equals both `σ` and `ς`.
+Precomposed `é` differs from `e` followed by U+0301.
+Each `Get*ByAlias` success requires a present, equal alias and retains its spelling.
+Comparison is stateless. Core owns Dataset-wide uniqueness and retained identity history.
 
 ## Enrollment and credentials
 

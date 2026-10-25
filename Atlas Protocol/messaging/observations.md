@@ -44,3 +44,16 @@ reports use the exact [shared evidence metadata](../report-evidence.md) and perm
 survives Asset deletion; new creation cannot name a deleted source Asset.
 
 [Messaging index](../messaging.md)
+
+## Concrete request and result fields
+
+Create requires observation_id, request_id, publisher_id. Optional source_asset_id,
+publisher_subject, alias, description and report follow Entity composition.
+ReportObservation requires observation_id, publisher_id and report. Report Dataset,
+Entity, and publisher must match the addressed facts. Create and report data is
+`{observation, track, evidence_disposition?}`. Report requires accepted or duplicate
+disposition; creation without a report omits it. Edit requires observation_id,
+request_id, expected_edit_revision and nonempty `edits` containing only alias or
+description. Null clears either; omission preserves. Single reads use
+observation_id, alias lookup uses alias. Object queries follow
+[queries](../queries.md) with observation_id on the first page.
