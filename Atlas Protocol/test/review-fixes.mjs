@@ -1,20 +1,8 @@
+import { harness } from './harness.mjs';
 import * as s from './samples.mjs';
 
 export function runReviewFixes(p) {
-  let checks = 0;
-  const failures = [];
-  const check = (name, run) => {
-    checks++;
-    try {
-      run();
-    } catch (error) {
-      failures.push({ name, code: error.code ?? error.message });
-    }
-  };
-  const assert = (value, message) => {
-    if (!value) throw new Error(message);
-  };
-  const encode = (value) => new TextEncoder().encode(JSON.stringify(value));
+  const { check, assert, refuses, encode, result } = harness(p);
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
@@ -27,23 +15,6 @@ export function runReviewFixes(p) {
     headers: headers(),
     body: encode({ dataset_id: s.id, data, ...(committed ? { commit_cursor: 'cursor' } : {}) }),
   });
-  const refuses = (run, code, issue) => {
-    try {
-      run();
-    } catch (error) {
-      assert(
-        error instanceof p.ProtocolError && error.code === code,
-        `Expected ${code}, received ${error.code ?? error.message}`,
-      );
-      if (issue)
-        assert(
-          JSON.stringify(error.issues) === JSON.stringify([issue]),
-          `Wrong diagnostic ${JSON.stringify(error.issues)}`,
-        );
-      return;
-    }
-    throw new Error(`Accepted instead of ${code}`);
-  };
   const cancellation = { request_id: s.requestId, task_id: s.taskId };
   const cancel = (task, committed = true) =>
     p.readHttp(p.exchanges.RequestTaskCancellation, received(task, committed), {
@@ -307,5 +278,5 @@ export function runReviewFixes(p) {
     );
     assert(Object.keys(p.correlation(input.headers)).length === 0, 'Malformed correlation escaped');
   });
-  return { checks, passed: checks - failures.length, failures };
+  return result();
 }

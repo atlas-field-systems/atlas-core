@@ -1,3 +1,4 @@
+import { harness } from './harness.mjs';
 import * as s from './samples.mjs';
 import { runAdmissionRegressions } from './admission-regressions.mjs';
 import { runResponseRegressions } from './response-regressions.mjs';
@@ -5,20 +6,7 @@ import { runReviewFixes } from './review-fixes.mjs';
 import { runIdentityRegressions } from './identity-regressions.mjs';
 
 export function runPortable(p) {
-  let checks = 0;
-  const failures = [];
-  const check = (name, fn) => {
-    checks++;
-    try {
-      fn();
-    } catch (error) {
-      failures.push({ name, code: error.code ?? error.message });
-    }
-  };
-  const assert = (condition, message) => {
-    if (!condition) throw new Error(message);
-  };
-  const encode = (value) => new TextEncoder().encode(JSON.stringify(value));
+  const { check, assert, refuses, encode, result } = harness(p);
   const responseHeaders = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
@@ -62,13 +50,8 @@ export function runPortable(p) {
         request.path = `/objects/${s.requestId}/content?disposition=inline`;
       const parsed = p.readHttpRequest(binding, request);
       assert(same(parsed, input), 'Request facts differ');
-      let rejected = false;
-      try {
-        p.readJson(binding.request, encode({ ...input, unknown: true }));
-      } catch (error) {
-        rejected = error instanceof p.ProtocolError;
-      }
-      assert(rejected, 'Unknown request member accepted');
+      assert(same(p.readJson(binding.request, encode(input)), input), 'Raw request facts differ');
+      refuses(() => p.readJson(binding.request, encode({ ...input, unknown: true })));
       const headers = responseHeaders();
       const received = { status: 200, headers };
       if (binding.transport === 'content') {
@@ -278,17 +261,10 @@ export function runPortable(p) {
     }
     throw new Error('A server control exceeded 16 KiB');
   });
-  const regressions = runResponseRegressions(p);
-  failures.push(...regressions.failures);
-  checks += regressions.checks;
-  const reviewFixes = runReviewFixes(p);
-  failures.push(...reviewFixes.failures);
-  checks += reviewFixes.checks;
-  const admission = runAdmissionRegressions(p);
-  failures.push(...admission.failures);
-  checks += admission.checks;
-  const identity = runIdentityRegressions(p);
-  failures.push(...identity.failures);
-  checks += identity.checks;
-  return { checks, passed: checks - failures.length, failures };
+  return result(
+    runResponseRegressions(p),
+    runReviewFixes(p),
+    runAdmissionRegressions(p),
+    runIdentityRegressions(p),
+  );
 }

@@ -1,37 +1,8 @@
+import { harness } from './harness.mjs';
 import * as s from './samples.mjs';
 
 export function runResponseRegressions(p) {
-  let checks = 0;
-  const failures = [];
-  const check = (name, run) => {
-    checks++;
-    try {
-      run();
-    } catch (error) {
-      failures.push({ name, code: error.code ?? error.message });
-    }
-  };
-  const assert = (condition, message) => {
-    if (!condition) throw new Error(message);
-  };
-  const refuses = (run, code) => {
-    try {
-      run();
-    } catch (error) {
-      assert(
-        error instanceof p.ProtocolError && error.code === code,
-        `Expected ${code}, received ${error.code ?? error.message}`,
-      );
-      assert(
-        error.issues.length <= 16 &&
-          error.issues.every((issue) => issue.path.length <= 256 && issue.message.length <= 160),
-        'Unbounded diagnostics',
-      );
-      return;
-    }
-    throw new Error(`Accepted instead of ${code}`);
-  };
-  const encode = (value) => new TextEncoder().encode(JSON.stringify(value));
+  const { check, assert, refuses, encode, result } = harness(p);
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
@@ -693,5 +664,5 @@ export function runResponseRegressions(p) {
         'invalid_value',
       );
   });
-  return { checks, passed: checks - failures.length, failures };
+  return result();
 }

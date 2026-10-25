@@ -1,32 +1,8 @@
+import { harness } from './harness.mjs';
 import * as s from './samples.mjs';
 
 export function runAdmissionRegressions(p) {
-  let checks = 0;
-  const failures = [];
-  const assert = (condition, message) => {
-    if (!condition) throw new Error(message);
-  };
-  const check = (name, run) => {
-    checks++;
-    try {
-      run();
-    } catch (error) {
-      failures.push({ name, code: error.code ?? error.message });
-    }
-  };
-  const refuses = (run, code) => {
-    try {
-      run();
-    } catch (error) {
-      assert(
-        error instanceof p.ProtocolError && error.code === code,
-        `Expected ${code}, received ${error.code ?? error.message}`,
-      );
-      return;
-    }
-    throw new Error(`Accepted instead of ${code}`);
-  };
-  const encode = (value) => new TextEncoder().encode(JSON.stringify(value));
+  const { check, assert, refuses, encode, result } = harness(p);
   check('WSS subscription controls have no HTTP operations', () => {
     assert(
       !Object.hasOwn(p.exchanges, 'SubscribeChanges') &&
@@ -176,5 +152,5 @@ export function runAdmissionRegressions(p) {
       'invalid_geometry',
     );
   });
-  return { checks, passed: checks - failures.length, failures };
+  return result();
 }

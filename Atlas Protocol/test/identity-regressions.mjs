@@ -1,29 +1,8 @@
+import { harness } from './harness.mjs';
 import * as s from './samples.mjs';
 
 export function runIdentityRegressions(p) {
-  let checks = 0;
-  const failures = [];
-  const check = (name, run) => {
-    checks++;
-    try {
-      run();
-    } catch (error) {
-      failures.push({ name, code: error.code ?? error.message });
-    }
-  };
-  const assert = (value, message) => {
-    if (!value) throw new Error(message);
-  };
-  const refuses = (run, code) => {
-    try {
-      run();
-    } catch (error) {
-      assert(error instanceof p.ProtocolError && error.code === code, 'Wrong refusal');
-      return;
-    }
-    throw new Error(`Accepted instead of ${code}`);
-  };
-  const encode = (value) => new TextEncoder().encode(JSON.stringify(value));
+  const { check, assert, refuses, encode, result: report } = harness(p);
   const http = (operation, data, request) =>
     p.readHttp(
       p.exchanges[operation],
@@ -327,5 +306,5 @@ export function runIdentityRegressions(p) {
       refuses(() => http(operation, data, { ...request, report }), 'invalid_http');
     });
   }
-  return { checks, passed: checks - failures.length, failures };
+  return report();
 }
