@@ -49,6 +49,7 @@ if [ "${actual%% *}" != "$checksum" ]; then
   exit 1
 fi
 mkdir "$download_dir/install"
-tar -xzf "$download_dir/$archive" -C "$download_dir/install"
+tar -xzf "$download_dir/$archive" -C "$download_dir/install" --strip-components=1
+BEND_NO_TELEMETRY=1 "$download_dir/install/bin/bend" version
 mv "$download_dir/install" "$install_dir"
 BEND_NO_TELEMETRY=1 "$install_dir/bin/bend" version

@@ -22,16 +22,44 @@ export class ProtocolError extends Error {
   }
 }
 
-function json(value, active = new Set()) {
-  if (value === null) return { $: 'JNull' };
-  if (typeof value === 'string') return { $: 'JStr', value };
-  if (typeof value === 'boolean') return { $: 'JBool', value };
-  if (typeof value === 'number' && Number.isFinite(value)) return { $: 'JNum', raw: String(value) };
+function addBytes(state, count) {
+  if (state && (state.bytes += count) > state.maxBytes)
+    throw new ProtocolError('payload_too_large');
+}
+
+function marshalBudget(boundary, lower) {
+  return { ...effectiveBudget(boundary, lower), bytes: 0, values: 0 };
+}
+
+function json(value, active = new Set(), state, depth = 1) {
+  if (state && (++state.values > state.maxValues || depth > state.maxDepth))
+    throw new ProtocolError('resource_limit');
+  if (value === null) {
+    addBytes(state, 4);
+    return { $: 'JNull' };
+  }
+  if (typeof value === 'string') {
+    addBytes(state, value.length + 2);
+    return { $: 'JStr', value };
+  }
+  if (typeof value === 'boolean') {
+    addBytes(state, value ? 4 : 5);
+    return { $: 'JBool', value };
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    addBytes(state, String(value).length);
+    return { $: 'JNum', raw: String(value) };
+  }
   if (typeof value !== 'object' || active.has(value)) throw new ProtocolError('invalid_value');
-  if (Object.getOwnPropertySymbols(value).length) throw new ProtocolError('invalid_value');
   active.add(value);
   let result;
   if (Array.isArray(value)) {
+    if (state && value.length > state.maxValues - state.values)
+      throw new ProtocolError('resource_limit');
+    if (state && value.length > 0 && 2 * value.length + 1 > state.maxBytes - state.bytes)
+      throw new ProtocolError('payload_too_large');
+    if (Object.getOwnPropertySymbols(value).length) throw new ProtocolError('invalid_value');
+    addBytes(state, 2 + Math.max(0, value.length - 1));
     if (Object.getOwnPropertyNames(value).length !== value.length + 1)
       throw new ProtocolError('invalid_value');
     const items = [];
@@ -39,18 +67,21 @@ function json(value, active = new Set()) {
       const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
       if (!descriptor?.enumerable || !('value' in descriptor))
         throw new ProtocolError('invalid_value');
-      items.push(json(descriptor.value, active));
+      items.push(json(descriptor.value, active, state, depth + 1));
     }
     result = { $: 'JArr', items: list(items) };
   } else {
     const prototype = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null)
       throw new ProtocolError('invalid_value');
-    const members = Object.getOwnPropertyNames(value).map((key) => {
+    if (Object.getOwnPropertySymbols(value).length) throw new ProtocolError('invalid_value');
+    addBytes(state, 2);
+    const members = Object.getOwnPropertyNames(value).map((key, index) => {
+      addBytes(state, key.length + 3 + (index ? 1 : 0));
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (!descriptor?.enumerable || !('value' in descriptor))
         throw new ProtocolError('invalid_value');
-      return { $: 'Member', key, value: json(descriptor.value, active) };
+      return { $: 'Member', key, value: json(descriptor.value, active, state, depth + 1) };
     });
     result = { $: 'JObj', members: list(members) };
   }
@@ -90,37 +121,71 @@ function unwrap(result) {
   );
 }
 
-function context(input) {
+function lowerContext(input) {
+  const members = [];
+  for (const key of Object.keys(budgets.http_request)) {
+    const descriptor =
+      input == null ? undefined : Object.getOwnPropertyDescriptor(Object(input), key);
+    if (!descriptor) continue;
+    if (!('value' in descriptor)) throw new ProtocolError('invalid_budget');
+    if (descriptor.value === undefined) continue;
+    members.push({
+      $: 'Member',
+      key,
+      value:
+        typeof descriptor.value === 'number'
+          ? { $: 'JNum', raw: String(descriptor.value) }
+          : { $: 'JNull' },
+    });
+  }
+  return { $: 'JObj', members: list(members) };
+}
+
+function context(input, requestBudget) {
   const members = [];
   for (const key of Object.getOwnPropertyNames(input ?? {})) {
     const descriptor = Object.getOwnPropertyDescriptor(input, key);
     if (!descriptor?.enumerable || !('value' in descriptor))
       throw new ProtocolError('invalid_value');
     if (descriptor.value !== undefined)
-      members.push({ $: 'Member', key, value: json(descriptor.value) });
+      members.push({
+        $: 'Member',
+        key,
+        value:
+          key === 'budget'
+            ? lowerContext(descriptor.value)
+            : json(descriptor.value, new Set(), key === 'request' ? requestBudget : undefined),
+      });
   }
   return { $: 'JObj', members: list(members) };
 }
-const descriptor = (input) => ({
-  ...input,
-  headers: [...input.headers.entries()].map(([name, content]) => ({
-    name,
-    value: content,
-  })),
-  ...(input.body === undefined ? {} : { body: Array.from(input.body) }),
-  ...(input.uploadDescriptor === undefined
-    ? {}
-    : { uploadDescriptor: Array.from(input.uploadDescriptor) }),
-});
+function descriptor(input, budget) {
+  for (const bytes of [input.body, input.uploadDescriptor])
+    if (bytes !== undefined && bytes.byteLength > budget.maxBytes)
+      throw new ProtocolError('payload_too_large');
+  return {
+    ...input,
+    headers: [...input.headers.entries()].map(([name, content]) => ({
+      name,
+      value: content,
+    })),
+    ...(input.body === undefined ? {} : { body: Array.from(input.body) }),
+    ...(input.uploadDescriptor === undefined
+      ? {}
+      : { uploadDescriptor: Array.from(input.uploadDescriptor) }),
+  };
+}
 
 export const PROTOCOL_VERSION = bend.protocol_version();
 export function contract(schema, boundary = 'http_request') {
   return { schema, boundary };
 }
 export function readJson(definition, bytes, lower) {
+  if (bytes.byteLength > effectiveBudget(definition.boundary, lower).maxBytes)
+    throw new ProtocolError('payload_too_large');
   return value(
     unwrap(
-      bend.read_json(definition.schema.name, definition.boundary, list(bytes), context(lower)),
+      bend.read_json(definition.schema.name, definition.boundary, list(bytes), lowerContext(lower)),
     ),
   );
 }
@@ -128,27 +193,44 @@ export function writeJson(definition, input, lower) {
   return Uint8Array.from(
     array(
       unwrap(
-        bend.write_json(definition.schema.name, definition.boundary, json(input), context(lower)),
+        bend.write_json(
+          definition.schema.name,
+          definition.boundary,
+          json(input, new Set(), marshalBudget(definition.boundary, lower)),
+          lowerContext(lower),
+        ),
       ),
     ),
   );
 }
 export function checkJsonBytes(bytes, boundary = 'http_request', lower) {
-  unwrap(bend.check_json(list(bytes), boundary, context(lower)));
+  if (bytes.byteLength > effectiveBudget(boundary, lower).maxBytes)
+    throw new ProtocolError('payload_too_large');
+  unwrap(bend.check_json(list(bytes), boundary, lowerContext(lower)));
 }
 export function effectiveBudget(boundary, lower) {
-  return value(unwrap(bend.effective_budget_json(boundary, context(lower))));
+  return value(unwrap(bend.effective_budget_json(boundary, lowerContext(lower))));
 }
 export function readHttpRequest(exchange, incoming, lower) {
   return value(
     unwrap(
-      bend.read_http_request(exchange.operationId, json(descriptor(incoming)), context(lower)),
+      bend.read_http_request(
+        exchange.operationId,
+        json(descriptor(incoming, effectiveBudget('http_request', lower))),
+        lowerContext(lower),
+      ),
     ),
   );
 }
 export function readHttp(exchange, received, options) {
   return value(
-    unwrap(bend.read_http(exchange.operationId, json(descriptor(received)), context(options))),
+    unwrap(
+      bend.read_http(
+        exchange.operationId,
+        json(descriptor(received, effectiveBudget('http_response', options?.budget))),
+        context(options, marshalBudget('http_request', options?.budget)),
+      ),
+    ),
   );
 }
 export function readWssClient(bytes, options) {
@@ -158,10 +240,28 @@ export function readWssServer(bytes, options) {
   return value(unwrap(bend.read_wss_server(list(bytes), context(options))));
 }
 export function writeWssClient(frame, options) {
-  return Uint8Array.from(array(unwrap(bend.write_wss_client(json(frame), context(options)))));
+  return Uint8Array.from(
+    array(
+      unwrap(
+        bend.write_wss_client(
+          json(frame, new Set(), marshalBudget('wss_control', options?.budget)),
+          context(options),
+        ),
+      ),
+    ),
+  );
 }
 export function writeWssServer(frame, options) {
-  return Uint8Array.from(array(unwrap(bend.write_wss_server(json(frame), context(options)))));
+  return Uint8Array.from(
+    array(
+      unwrap(
+        bend.write_wss_server(
+          json(frame, new Set(), marshalBudget('wss_data', options?.budget)),
+          context(options),
+        ),
+      ),
+    ),
+  );
 }
 export function correlation(headers) {
   return value(
@@ -215,8 +315,8 @@ export const commandCatalog = Object.fromEntries(
   ['move_to', 'pause', 'resume'].map((name) => [name, schema(`Command.${name}`)]),
 );
 export const wss = {
-  clientFrame: contract(schemas.ClientFrame, 'wss_control'),
-  serverFrame: contract(schemas.ServerFrame, 'wss_data'),
+  clientFrame: contract(schema('Wss.ClientFrame'), 'wss_control'),
+  serverFrame: contract(schema('Wss.ServerFrame'), 'wss_data'),
 };
 export const protocol = {
   ...schemas,

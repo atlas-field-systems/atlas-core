@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { runFixtures } from '../../../Atlas Protocol/test/fixture-adapter.mjs';
+import { runFixture } from '../../../Atlas Protocol/test/fixture-adapter.mjs';
 import { runPortable } from '../../../Atlas Protocol/test/portable.mjs';
 import { protocol } from './adapter.mjs';
 
@@ -12,13 +12,28 @@ for (const name of ['acceptance', 'independent-cases']) {
       'utf8',
     ),
   );
-  const results = runFixtures(corpus, protocol);
+  const results = corpus.cases.map((fixture) => {
+    let unexpected;
+    const guarded = { ...protocol };
+    for (const method of ['readJson', 'writeJson', 'checkJsonBytes'])
+      guarded[method] = (...args) => {
+        try {
+          return protocol[method](...args);
+        } catch (error) {
+          if (!(error instanceof protocol.ProtocolError)) unexpected = error;
+          throw error;
+        }
+      };
+    const result = runFixture(fixture, guarded);
+    return unexpected ? { ...result, pass: false, code: `unexpected ${unexpected.name}` } : result;
+  });
   reports.push({
     name,
     checks: results.length,
     passed: results.filter((result) => result.pass).length,
     failures: results.filter((result) => !result.pass),
   });
+  console.log(`${name}: ${results.filter((result) => result.pass).length}/${results.length}`);
 }
 
 const routes = JSON.parse(

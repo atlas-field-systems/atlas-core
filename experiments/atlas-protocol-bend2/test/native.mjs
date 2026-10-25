@@ -50,17 +50,30 @@ function rejection(result, code) {
 const value = (...args) => JSON.parse(decoder.decode(accepted(...args)));
 
 function pointer(object, path) {
-  return path.split('/').slice(1)
+  return path
+    .split('/')
+    .slice(1)
     .map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'))
     .reduce((current, key) => current?.[key], object);
 }
 
 function cliChecks() {
   assert.match(decoder.decode(accepted('help')), /http-response OPERATION DESCRIPTOR_FILE/);
-  for (const args of [[], ['unknown'], ['read'], ['write', 'Integer'], ['check'],
-    ['catalog', 'extra'], ['schemas', 'extra'], ['reference', 'extra'], ['help', 'extra'],
-    ['wss-client'], ['wss-server', 'a', 'b', 'c'], ['http-request', 'GetHealth'],
-    ['http-response', 'GetHealth', 'a', 'b', 'c']]) {
+  for (const args of [
+    [],
+    ['unknown'],
+    ['read'],
+    ['write', 'Integer'],
+    ['check'],
+    ['catalog', 'extra'],
+    ['schemas', 'extra'],
+    ['reference', 'extra'],
+    ['help', 'extra'],
+    ['wss-client'],
+    ['wss-server', 'a', 'b', 'c'],
+    ['http-request', 'GetHealth'],
+    ['http-response', 'GetHealth', 'a', 'b', 'c'],
+  ]) {
     const result = invoke(...args);
     assert.equal(result.status, 2, `usage ${args.join(' ')}`);
     assert.equal(result.stdout.length, 0);
@@ -117,10 +130,15 @@ const schemaNames = {
 };
 
 function fixtureCheck(fixture) {
-  const input = file(fixture.raw_bytes === undefined
-    ? Buffer.from(fixture.raw_json, 'utf8') : Buffer.from(fixture.raw_bytes));
-  const boundary = fixture.boundary === 'synchronization_message'
-    ? 'wss_data' : (fixture.boundary ?? 'http_request');
+  const input = file(
+    fixture.raw_bytes === undefined
+      ? Buffer.from(fixture.raw_json, 'utf8')
+      : Buffer.from(fixture.raw_bytes),
+  );
+  const boundary =
+    fixture.boundary === 'synchronization_message'
+      ? 'wss_data'
+      : (fixture.boundary ?? 'http_request');
   const parsing = fixture.scope === 'parsing_budget_only';
   const schema = schemaNames[fixture.schema_name];
   assert.ok(parsing || schema, `unmapped fixture schema ${fixture.schema_name}`);
@@ -162,7 +180,10 @@ function protocolChecks() {
   assert.equal(catalog.length, 66, 'exchange inventory');
   assert.equal(new Set(catalog.map((entry) => entry.operationId)).size, 66);
   for (const name of ['GetHealth', 'GetTask', 'ReadObjectContent'])
-    assert.ok(catalog.some((entry) => entry.operationId === name), `missing operation ${name}`);
+    assert.ok(
+      catalog.some((entry) => entry.operationId === name),
+      `missing operation ${name}`,
+    );
   const schemas = value('schemas');
   for (const name of ['Integer', 'Geometry', 'AssetReport', 'ClientFrame', 'ServerFrame'])
     assert.ok(schemas.includes(name), `missing schema ${name}`);
@@ -173,33 +194,76 @@ function protocolChecks() {
   const dataset = '11111111-1111-4111-8111-111111111111';
   const request = '22222222-2222-4222-8222-222222222222';
   const other = '33333333-3333-4333-8333-333333333333';
-  const client = { type: 'authenticate', dataset_id: dataset, protocol_version: '0.1.0',
-    request_id: request, api_key: 'A'.repeat(43) };
+  const client = {
+    type: 'authenticate',
+    dataset_id: dataset,
+    protocol_version: '0.1.0',
+    request_id: request,
+    api_key: 'A'.repeat(43),
+  };
   const clientFile = jsonFile(client);
-  assert.deepEqual(value('wss-client', clientFile, jsonFile({ datasetId: dataset, requestId: request })), client);
-  rejection(invoke('wss-client', jsonFile({ ...client, api_key: 'native-test-secret' })), 'invalid_value');
+  assert.deepEqual(
+    value('wss-client', clientFile, jsonFile({ datasetId: dataset, requestId: request })),
+    client,
+  );
+  rejection(
+    invoke('wss-client', jsonFile({ ...client, api_key: 'native-test-secret' })),
+    'invalid_value',
+  );
   rejection(invoke('wss-client', clientFile, jsonFile({ datasetId: other })), 'invalid_value');
-  const server = { type: 'error', dataset_id: dataset, protocol_version: '0.1.0',
-    error: { code: 'invalid_request', message: 'Invalid request', request_id: request }, request_id: request };
+  const server = {
+    type: 'error',
+    dataset_id: dataset,
+    protocol_version: '0.1.0',
+    error: { code: 'invalid_request', message: 'Invalid request', request_id: request },
+    request_id: request,
+  };
   const serverFile = jsonFile(server);
   assert.deepEqual(value('wss-server', serverFile, jsonFile({ requestId: request })), server);
   rejection(invoke('wss-server', serverFile, jsonFile({ requestId: other })), 'invalid_value');
 
-  const requestDescriptor = { method: 'GET', path: '/health',
-    headers: [{ name: 'Authorization', value: `Bearer ${'A'.repeat(43)}` }] };
+  const requestDescriptor = {
+    method: 'GET',
+    path: '/health',
+    headers: [{ name: 'Authorization', value: `Bearer ${'A'.repeat(43)}` }],
+  };
   assert.deepEqual(value('http-request', 'GetHealth', jsonFile(requestDescriptor)), {});
-  rejection(invoke('http-request', 'GetHealth', jsonFile({ ...requestDescriptor,
-    headers: [{ name: 'Authorization', value: 'Bearer native-test-secret' }] })), 'invalid_http');
-  rejection(invoke('http-request', 'GetHealth', jsonFile({ ...requestDescriptor, method: 'POST' })), 'invalid_http');
-  const response = { status: 200,
-    headers: [{ name: 'Atlas-Dataset-ID', value: dataset },
+  rejection(
+    invoke(
+      'http-request',
+      'GetHealth',
+      jsonFile({
+        ...requestDescriptor,
+        headers: [{ name: 'Authorization', value: 'Bearer native-test-secret' }],
+      }),
+    ),
+    'invalid_http',
+  );
+  rejection(
+    invoke('http-request', 'GetHealth', jsonFile({ ...requestDescriptor, method: 'POST' })),
+    'invalid_http',
+  );
+  const response = {
+    status: 200,
+    headers: [
+      { name: 'Atlas-Dataset-ID', value: dataset },
       { name: 'Atlas-Protocol-Version', value: '0.1.0' },
-      { name: 'Content-Type', value: 'application/json' }],
-    body: Array.from(Buffer.from(JSON.stringify({ dataset_id: dataset, data: { ready: true } }))) };
-  const received = value('http-response', 'GetReadiness', jsonFile(response), jsonFile({ datasetId: dataset }));
+      { name: 'Content-Type', value: 'application/json' },
+    ],
+    body: Array.from(Buffer.from(JSON.stringify({ dataset_id: dataset, data: { ready: true } }))),
+  };
+  const received = value(
+    'http-response',
+    'GetReadiness',
+    jsonFile(response),
+    jsonFile({ datasetId: dataset }),
+  );
   assert.equal(received.kind, 'success');
   assert.equal(received.body.data.ready, true);
-  rejection(invoke('http-response', 'GetReadiness', jsonFile(response), jsonFile({ datasetId: other })), 'invalid_http');
+  rejection(
+    invoke('http-response', 'GetReadiness', jsonFile(response), jsonFile({ datasetId: other })),
+    'invalid_http',
+  );
 }
 
 try {
@@ -208,8 +272,9 @@ try {
   if (process.argv.includes('--cli-only')) {
     console.log('Protocol integration was not run.');
   } else {
-    const cases = ['acceptance.json', 'independent-cases.json']
-      .flatMap((name) => JSON.parse(readFileSync(new URL(name, corpusDirectory), 'utf8')).cases);
+    const cases = ['acceptance.json', 'independent-cases.json'].flatMap(
+      (name) => JSON.parse(readFileSync(new URL(name, corpusDirectory), 'utf8')).cases,
+    );
     assert.equal(cases.length, 166, 'unchanged independent corpus inventory');
     let failures = 0;
     for (const fixture of cases) {

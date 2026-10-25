@@ -5,6 +5,7 @@ import ../numbers.bend as N
 import ../scalar-rules.bend as Scalars
 import ../schema-core.bend as Schema
 import ../schemas.bend as Schemas
+import ../catalog.bend as Catalog
 import ../rules.bend as R
 import ../geometry.bend as G
 
@@ -14,17 +15,6 @@ def bytes(s: String) -> List<&2, U32>:
       Nil{}
     case SCon{Chr{x}, t}:
       Con{x, bytes(t)}
-
-def resolve(reference: String) -> C.Json:
-  Schemas.schema(String.drop(reference, 21n))
-
-def bound(+raw: String) -> String:
-  C.choose(String, Nat.is_gt(String.length(raw), 128n),
-    _ => C.choose(String, String.starts_with(raw, "-"),
-      _ => "-1.7976931348623157e+308", _ => "1.7976931348623157e+308"), _ => raw)
-
-def number(raw: String, minimum: String, maximum: String, integer: Bool, exclusive_minimum: Bool, exclusive_maximum: Bool) -> Bool:
-  N.accept(raw, bound(minimum), bound(maximum), integer, exclusive_minimum, exclusive_maximum)
 
 def scalar(schema: C.Json, value: String) -> Bool:
   Scalars.scalar(schema, value)
@@ -36,8 +26,8 @@ def run(+mode: String, +name: String, raw: String) -> Result<&2, &2, C.Failure, 
     C.choose(Result<&2, &2, C.Failure, Unit>, String.eq(mode, "refine"),
       _ => R.refine(name, value),
       _ => do Result<&2, &2, C.Failure, Unit>:
-        validated : C.Json <- Schema.validate(~resolve, ~number, ~N.format, ~scalar,
-          ~R.scope, ~R.refine, Schemas.schema(name), value, 1000000)
+        validated : C.Json <- Schema.validate(~Catalog.resolve, ~Catalog.numeric, ~N.format, ~scalar,
+          ~R.scope, ~R.refine, Schemas.schema(name), value, 1000000, Schemas.definitions())
         return Unit{})
 
 def status(result: Result<&2, &2, C.Failure, Unit>) -> String:

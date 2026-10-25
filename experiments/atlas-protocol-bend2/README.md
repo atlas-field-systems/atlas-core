@@ -57,6 +57,7 @@ The focused suites cover exact numbers, strict JSON, schema data, semantic rules
 geometry, transport correlation, and command input/output.
 Stock Redocly bundles and validates `artifacts/openapi.json` from the Bend schema data.
 The reference retains public schemas that have no HTTP route, including WSS frames.
+Error wording and code priority for several simultaneous failures can differ from TypeScript.
 
 ## Code entry points
 

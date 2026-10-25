@@ -15,6 +15,7 @@ node test/runtime.mjs
 sh test/schema-data.sh
 sh test/exchange.sh
 node --test test/geometry.test.mjs test/rules.test.mjs
+node --test test/adapter.test.mjs
 node test/verify.mjs
 node test/native.mjs
 node scripts/export-reference.mjs
