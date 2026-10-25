@@ -279,7 +279,10 @@ export function runResponseRegressions(p) {
     reply('CreateObservation', result(s.assetId), request);
     refuses(() => reply('CreateObservation', result(s.id), request), 'invalid_http');
     refuses(() => reply('CreateObservation', result(), request), 'invalid_http');
-    reply('CreateObservation', result(s.assetId), s.examples.CreateObservation[0]);
+    refuses(
+      () => reply('CreateObservation', result(s.assetId), s.examples.CreateObservation[0]),
+      'invalid_http',
+    );
   });
   for (const name of ['ReportTaskExecution', 'ReportTaskResults'])
     check(`${name} matches evidence Asset and Task`, () => {

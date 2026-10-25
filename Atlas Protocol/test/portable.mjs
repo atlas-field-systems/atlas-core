@@ -4,6 +4,7 @@ import { runAdmissionRegressions } from './admission-regressions.mjs';
 import { runResponseRegressions } from './response-regressions.mjs';
 import { runReviewFixes } from './review-fixes.mjs';
 import { runIdentityRegressions } from './identity-regressions.mjs';
+import { runExchangeContext } from './exchange-context.mjs';
 
 export function runPortable(p) {
   const { check, assert, refuses, encode, result } = harness(p);
@@ -266,5 +267,6 @@ export function runPortable(p) {
     runReviewFixes(p),
     runAdmissionRegressions(p),
     runIdentityRegressions(p),
+    runExchangeContext(p),
   );
 }
