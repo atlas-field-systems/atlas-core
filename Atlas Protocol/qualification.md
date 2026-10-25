@@ -9,6 +9,10 @@ npm test
 npm run qualify
 ```
 
+The `Protocol qualification` GitHub Actions job runs qualification and formatting
+on pull requests and pushes to main, with Node 24.22.1 and npm 11.19.0.
+That job bundles browser code. Actual browser execution is the separate procedure below.
+
 `npm test` builds the package and executes boundary, resource, HTTP/WSS, geometry,
 route inventory, stock JSON Schema 2020-12 and host-policy checks. Test inputs
 and expected facts are separate from production schema definitions.
