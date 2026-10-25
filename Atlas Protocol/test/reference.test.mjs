@@ -54,6 +54,45 @@ test('all 66 routes match the independent inventory and stock exported schemas',
   }
   const clientFrame = ajv.compile({ $ref: 'atlas#/components/schemas/ClientFrame' });
   const serverFrame = ajv.compile({ $ref: 'atlas#/components/schemas/ServerFrame' });
+  const deletion = ajv.compile({ $ref: 'atlas#/components/schemas/Delete' });
+  const replay = ajv.compile({ $ref: 'atlas#/components/schemas/ReadChangesResponse' });
+  for (const [kind, permitted] of [
+    ['asset', true],
+    ['geofeature', true],
+    ['object', true],
+    ['task', false],
+    ['track', false],
+  ]) {
+    const change = { kind: 'delete', resource_kind: kind, resource_id: requestId, version: '1' };
+    const batch = {
+      type: 'change_batch',
+      data: { previous_cursor: 'start', commit_cursor: 'end', changes: [change] },
+    };
+    assert.equal(deletion(change), permitted, `Delete ${kind}`);
+    assert.equal(
+      replay({
+        dataset_id: id,
+        data: {
+          replay_boundary: 'end',
+          messages: [batch],
+          through_cursor: 'end',
+          next_page_token: null,
+        },
+      }),
+      permitted,
+      `Replay delete ${kind}`,
+    );
+    assert.equal(
+      serverFrame({
+        ...batch,
+        dataset_id: id,
+        protocol_version: protocol.PROTOCOL_VERSION,
+        data: { ...batch.data, subscription_id: requestId },
+      }),
+      permitted,
+      `WSS delete ${kind}`,
+    );
+  }
   for (const [name, type, replyType] of [
     ['SubscribeChanges', 'subscribe_changes', 'subscribed'],
     ['UnsubscribeChanges', 'unsubscribe_changes', 'unsubscribed'],
