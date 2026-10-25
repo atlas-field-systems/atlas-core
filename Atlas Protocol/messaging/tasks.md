@@ -52,11 +52,13 @@ set. Progress and declaration streams never clear cancellation intent.
 ## Assigned-work fields
 
 `GetAssignedTasks` requires `asset_id`, `process_generation`, fresh `read_id`,
-and bounded paging context. A continuation retains its original read ID.
-Result `data` contains `asset_id`, the echoed process/read IDs, `tasks`, nullable
-`next_page_token`, and the complete queue/control/capture fields defined below.
-`tasks` includes all nonterminal assigned work; terminal controls remain described
-by `task_control` and can be inspected through `GetTask`, never executed again.
+and optional `page_size`. A continuation supplies only `page_token` and retains
+its original read ID. Every result `data` contains `asset_id`, echoed
+`process_generation` and `read_id`, `core_run_id`, `captured_at`, `instructions_valid_until`, `task_queue`,
+`task_control`, `tasks`, and nullable `next_page_token`. Instructions expiry must
+be after capture. Tasks belong to the named Asset and include all nonterminal
+assigned work; terminal controls remain described by `task_control` and can be
+inspected through `GetTask`, never executed again.
 Its complete queue/control context and instruction expiry follow
 [fresh Resume](../task-controls.md#fresh-resume). Ordinary reads can inspect expired
 instructions, but cannot use them to Resume. Obsolete processes return
@@ -73,9 +75,3 @@ Create, get, and cancellation return the complete Task. Execution and results
 reports return `{task, evidence_disposition}` with accepted or duplicate disposition.
 SetTaskOrder returns the complete Asset; ConfirmTaskOrder returns
 `{asset, evidence_disposition}`. Task object reads use task_id on the first page.
-Assigned first pages require asset_id, process_generation, read_id and optional
-page_size. A continuation supplies only page_token. Every assigned reply repeats
-asset_id, process_generation, read_id, core_run_id, captured_at,
-instructions_valid_until, task_queue and task_control, plus tasks and
-next_page_token. Instructions expiry must be after capture; tasks belong to the
-named Asset and are nonterminal.

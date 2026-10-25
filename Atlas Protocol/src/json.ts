@@ -24,24 +24,25 @@ export type Budget = Readonly<{
   maxGeometryWork: number;
 }>;
 export type Boundary = 'http_request' | 'http_response' | 'wss_control' | 'wss_data';
+const maxDepth = 32;
 const requestBudget: Budget = Object.freeze({
   maxBytes: 1048576,
   maxValues: 65536,
-  maxDepth: 32,
+  maxDepth,
   maxChanges: 1000,
   maxGeometryWork: 4194304,
 });
 const responseBudget: Budget = Object.freeze({
   maxBytes: 4194304,
   maxValues: 262144,
-  maxDepth: 32,
+  maxDepth,
   maxChanges: 1000,
   maxGeometryWork: 4194304,
 });
 const controlBudget: Budget = Object.freeze({
   maxBytes: 16384,
   maxValues: 4096,
-  maxDepth: 32,
+  maxDepth,
   maxChanges: 1000,
   maxGeometryWork: 4194304,
 });
