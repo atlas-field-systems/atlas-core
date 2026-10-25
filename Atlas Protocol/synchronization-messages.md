@@ -1,9 +1,8 @@
 # Synchronization envelopes
 
-These fields define the initial HTTP/JSON and WSS exchanges. Every field listed
-is required unless marked optional. Objects are closed. IDs, counters, limits,
-and errors follow [Wire](wire.md) and [Limits](limits.md).
-All data uses the fixed [picture contract](synchronization.md).
+Initial HTTP/JSON and WSS fields are required unless marked optional.
+Objects are closed. IDs, counters, limits, and errors follow [Wire](wire.md) and
+[Limits](limits.md). All data uses the fixed [picture contract](synchronization.md).
 
 ## Authentication and framing
 
@@ -77,9 +76,8 @@ commit, with these change alternatives:
 | `put` | `resource_kind`, `resource_id`, `version`, complete `image` |
 | `delete` | `resource_kind`, `resource_id`, `version` |
 
-Resource kinds are `asset`, `track`, `geofeature`, `task`, and `object`.
-Delete permits only `asset`, `geofeature`, and `object`; Tasks and Tracks remain
-retained until Reset.
+Put permits `asset`, `track`, `geofeature`, `task`, and `object`. Delete permits
+only `asset`, `geofeature`, and `object`. Tasks and Tracks remain until Reset.
 Snapshot `items` use the same put alternative without commit metadata.
 Observations and history readings never appear as synchronized items.
 Put identity, version, and Dataset match its image. Pages/batches forbid duplicate resources.

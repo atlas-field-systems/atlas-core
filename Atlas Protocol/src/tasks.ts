@@ -1,5 +1,15 @@
 import { z } from 'zod';
-import { Counter, NewId, Sequence, text, Time, Timestamp, Uuid, uniqueArray } from './scalars.js';
+import {
+  Counter,
+  NewId,
+  Sequence,
+  text,
+  Time,
+  Timestamp,
+  timestampNanoseconds,
+  Uuid,
+  uniqueArray,
+} from './scalars.js';
 import { commandCatalog } from './commands.js';
 import { AssetOrigin } from './reports.js';
 import { orderedTimes } from './history.js';
@@ -59,6 +69,16 @@ const TaskDefinition = z
     taskVariants(commandCatalog.pause.shape),
     taskVariants(commandCatalog.resume.shape),
   ])
+  .refine((value) => {
+    if (value.command !== 'resume') return true;
+    try {
+      const duration =
+        timestampNanoseconds(value.expires_at) - timestampNanoseconds(value.accepted_at);
+      return duration > 0n && duration <= 60000000000n;
+    } catch {
+      return false;
+    }
+  }, 'Resume expiry outside admission interval')
   .meta({ id: 'Task' });
 export const TaskQueue = z
   .strictObject({

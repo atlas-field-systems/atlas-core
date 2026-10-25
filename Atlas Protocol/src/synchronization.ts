@@ -43,7 +43,7 @@ export const Put = z
 export const Delete = z
   .strictObject({
     kind: z.literal('delete'),
-    resource_kind: ResourceKind,
+    resource_kind: z.enum(['asset', 'geofeature', 'object']),
     resource_id: Uuid,
     version: Counter,
   })
@@ -86,10 +86,13 @@ export const SnapshotPage = z
     'Snapshot order or negotiated changes differ',
   )
   .meta({ id: 'SnapshotPage' });
+const ChangeBatchData = z
+  .strictObject({ previous_cursor: Opaque, commit_cursor: Opaque, changes: Changes })
+  .refine((value) => value.previous_cursor !== value.commit_cursor, 'Batch cursor did not advance');
 export const ReplayBatch = z
   .strictObject({
     type: z.literal('change_batch'),
-    data: z.strictObject({ previous_cursor: Opaque, commit_cursor: Opaque, changes: Changes }),
+    data: ChangeBatchData,
   })
   .meta({ id: 'ReplayBatch' });
 export const ReplayProgress = z
@@ -104,25 +107,30 @@ export const ReplayMessage = z
 export const ReadChanges = z
   .union([z.strictObject({ from_cursor: Opaque, ...negotiation }), Continuation])
   .meta({ id: 'ReadChanges' });
+const maxReplayMessages = 1000;
 export const ReplayPage = z
   .strictObject({
     replay_boundary: Opaque,
-    messages: z.array(ReplayMessage).max(1000),
+    messages: z.array(ReplayMessage).max(maxReplayMessages),
     through_cursor: Opaque,
     next_page_token: Opaque.nullable(),
   })
-  .refine(
-    (value) =>
-      value.messages.every((message, index) => {
-        const prior = value.messages[index - 1];
-        return (
-          !prior ||
-          message.data.previous_cursor ===
-            (prior.type === 'change_batch' ? prior.data.commit_cursor : prior.data.through_cursor)
-        );
-      }),
-    'Replay gap',
-  )
+  .refine((value) => {
+    if (value.messages.length > maxReplayMessages) return false;
+    const first = value.messages[0];
+    if (!first) return true;
+    let cursor = first.data.previous_cursor;
+    const visited = new Set([cursor]);
+    for (const message of value.messages) {
+      const next =
+        message.type === 'change_batch' ? message.data.commit_cursor : message.data.through_cursor;
+      if (message.data.previous_cursor !== cursor || (next !== cursor && visited.has(next)))
+        return false;
+      visited.add(next);
+      cursor = next;
+    }
+    return true;
+  }, 'Replay gap or cursor cycle')
   .refine((value) => {
     const last = value.messages[value.messages.length - 1];
     return (
@@ -166,10 +174,7 @@ export const ClientFrame = z
     control('unsubscribe_changes', UnsubscribeChanges),
   ])
   .meta({ id: 'ClientFrame' });
-const liveBatch = event(
-  'change_batch',
-  z.strictObject({ ...ReplayBatch.shape.data.shape, subscription_id: Uuid }),
-);
+const liveBatch = event('change_batch', ChangeBatchData.safeExtend({ subscription_id: Uuid }));
 const liveProgress = event(
   'progress',
   z.strictObject({ ...ReplayProgress.shape.data.shape, subscription_id: Uuid }),
