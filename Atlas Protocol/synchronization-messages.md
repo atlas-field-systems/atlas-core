@@ -78,15 +78,20 @@ commit, with these change alternatives:
 | `delete` | `resource_kind`, `resource_id`, `version` |
 
 Resource kinds are `asset`, `track`, `geofeature`, `task`, and `object`.
+Delete permits only `asset`, `geofeature`, and `object`; Tasks and Tracks remain
+retained until Reset.
 Snapshot `items` use the same put alternative without commit metadata.
 Observations and history readings never appear as synchronized items.
 Put identity, version, and Dataset match its image. Pages/batches forbid duplicate resources.
 
 `progress` has `subscription_id`, `previous_cursor`, and `through_cursor`, proving
 an ordered range with no picture effects. A batch's previous cursor must equal the
-last completely applied batch/progress cursor. Duplicates with identical context
-and facts are harmless. A conflicting copy, gap, or malformed item stops application
-before cursor advance.
+last completely applied batch/progress cursor and differ from its commit cursor.
+Each advance within a replay page reaches a cursor not already visited in that
+page. Progress may repeat the current cursor without picture effects.
+Duplicates received again with identical context and facts are harmless.
+A conflicting copy, cursor cycle, gap, or malformed item stops application before
+cursor advance.
 
 `gap` has `subscription_id`, `reason`, and `earliest_recoverable_cursor`.
 Reason is `cursor_expired`, `resource_limit`, or `limits_changed`. It ends
