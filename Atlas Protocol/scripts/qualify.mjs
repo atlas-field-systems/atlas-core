@@ -180,6 +180,50 @@ try {
 }
 assert.equal(rejectedUndefinedOptionals, true, 'Installed types accepted explicit undefined');
 await writeFile(
+  join(consumer, 'version-overrides.ts'),
+  `
+import { exchanges, readHttp, readWssClient, readWssServer, writeWssClient, writeWssServer } from '@atlas/protocol';
+import type { HttpContext, WssContext, ReceivedHttp, ClientFrame, ServerFrame } from '@atlas/protocol';
+declare const received: ReceivedHttp;
+declare const bytes: Uint8Array;
+declare const client: ClientFrame;
+declare const server: ServerFrame;
+const http: HttpContext = {protocolVersion:'999.0.0'};
+const wss: WssContext = {protocolVersion:'999.0.0'};
+readHttp(exchanges.GetTask, received, {protocolVersion:'999.0.0'});
+readWssClient(bytes, {protocolVersion:'999.0.0'});
+readWssServer(bytes, {protocolVersion:'999.0.0'});
+writeWssClient(client, {protocolVersion:'999.0.0'});
+writeWssServer(server, {protocolVersion:'999.0.0'});
+void http; void wss;
+`,
+);
+let rejectedVersionOverrides = false;
+try {
+  await run(
+    process.execPath,
+    [
+      compiler,
+      '--ignoreConfig',
+      '--noEmit',
+      '--strict',
+      '--exactOptionalPropertyTypes',
+      '--module',
+      'NodeNext',
+      '--target',
+      'ES2022',
+      join(consumer, 'version-overrides.ts'),
+    ],
+    consumer,
+  );
+} catch (error) {
+  const output = error.stdout + error.stderr;
+  assert.equal((output.match(/error TS2353/g) ?? []).length, 7, output);
+  await writeFile(join(artifacts, 'version-overrides.txt'), output);
+  rejectedVersionOverrides = true;
+}
+assert.equal(rejectedVersionOverrides, true, 'Installed types accepted a version override');
+await writeFile(
   join(consumer, 'private-import.mjs'),
   `import assert from 'node:assert/strict'; await assert.rejects(import('@atlas/protocol/src/scalars.js'), {code:'ERR_PACKAGE_PATH_NOT_EXPORTED'});`,
 );
@@ -230,6 +274,7 @@ const report = {
     runtime: true,
     invalidTypesRejected: true,
     undefinedOptionalsRejected: true,
+    versionOverridesRejected: true,
     privateImportsBlocked: true,
     browserBundle: true,
     browserEntry: entry,

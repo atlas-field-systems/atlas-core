@@ -43,9 +43,13 @@ before schema validation or geometry work. Array length budgets precede
 property-name allocation. Getters are never called by these
 descriptor checks. They do not sandbox caller-realm Proxy traps.
 
-`readWssClient` and `readWssServer` enforce exact version and optional expected
-Dataset, control request, and subscription context. `writeWssClient` and
-`writeWssServer` validate constructed frames. Supplied budgets also cap returned negotiation limits.
+HTTP and WSS boundaries enforce the installed `PROTOCOL_VERSION`; context cannot
+override it. Readers retain foreign-version `protocol_mismatch` errors only when
+their optional details agree with the response header or frame version. WSS writers
+always require the installed version, including mismatch refusals.
+`readWssClient` and `readWssServer` also enforce optional expected Dataset, control
+request, and subscription context. WSS writers validate constructed frames.
+Supplied budgets also cap returned negotiation limits.
 Bare schemas and `readJson` validate
 shape and stateless semantics; they do not establish authority or transitions.
 

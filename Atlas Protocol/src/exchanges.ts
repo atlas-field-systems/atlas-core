@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { caseFoldEquals } from 'unicode-case-folding';
 import {
   Alias,
   Counter,
@@ -9,7 +10,6 @@ import {
   Secret,
   text,
   Timestamp,
-  timestampNanoseconds,
   Uuid,
   uniqueArray,
 } from './scalars.js';
@@ -41,24 +41,30 @@ import {
   TaskControl,
   TaskQueue,
 } from './tasks.js';
-import { ContentDescriptor, ObjectEdits, ObjectImage, UploadDescriptor } from './objects.js';
-import {
-  Activity,
-  ApiKey,
-  HealthData,
-  Operator,
-  Readiness,
-  ResourceUsage,
-} from './administration.js';
+import { ObjectEdits, ObjectImage, UploadDescriptor } from './objects.js';
+import { Activity, ApiKey, Operator, ResourceUsage } from './administration.js';
 import { Continuation, HistoryPage, HistoryQuery, Release, Released } from './history.js';
 import { associatedQuery, filters, listQuery, page } from './queries.js';
 import { ReadChanges, ReadSnapshot, ReplayPage, SnapshotPage } from './synchronization.js';
-import { HttpError } from './errors.js';
-import { contract } from './json.js';
-import type { JsonContract } from './json.js';
-import { headers } from './bindings.js';
+import { messageBudget } from './json.js';
+import type { Budget } from './json.js';
+import {
+  committedPost,
+  post,
+  pageSize,
+  historyMatches,
+  durationMatches,
+  assetResult,
+  observationResult,
+  taskResult,
+  assetEvidenceResult,
+  GetHealthExchange,
+  GetReadinessExchange,
+  GetReferenceExchange,
+  ReadObjectContentExchange,
+} from './exchange.js';
+export type { JsonExchange } from './exchange.js';
 
-const empty = z.strictObject({});
 const deleted = z.strictObject({ deleted: z.literal(true) });
 const retry = { request_id: NewId };
 const edit = { ...retry, expected_edit_revision: Counter };
@@ -68,38 +74,6 @@ const descriptiveEdits = z
     description: Description.nullable().exactOptional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'Empty edit');
-const assetResult = z.strictObject({
-  asset: Asset,
-  evidence_disposition: EvidenceDisposition.exactOptional(),
-});
-const observationResult = z
-  .strictObject({
-    observation: Observation,
-    track: Track,
-    evidence_disposition: EvidenceDisposition.exactOptional(),
-  })
-  .refine(
-    (value) =>
-      value.observation.dataset_id === value.track.dataset_id &&
-      value.observation.track_id === value.track.id &&
-      value.track.sources.some(
-        (source) =>
-          source.observation_id === value.observation.id &&
-          source.publisher_id === value.observation.publisher_id &&
-          source.source_asset_id === value.observation.source_asset_id,
-      ),
-    'Observation Track pair differs',
-  )
-  .refine(
-    (value) =>
-      (['type', 'telemetry', 'attitude', 'geometry'] as const).every(
-        (section) =>
-          JSON.stringify(value.observation[section]) === JSON.stringify(value.track[section]),
-      ),
-    'Observation Track sections differ',
-  );
-const taskResult = z.strictObject({ task: Task, evidence_disposition: EvidenceDisposition });
-const assetEvidenceResult = assetResult.extend({ evidence_disposition: EvidenceDisposition });
 const RegisterAsset = z.strictObject({
   asset_id: NewId,
   registration_id: NewId,
@@ -165,14 +139,6 @@ const assignedFirst = z.strictObject({
   read_id: NewId,
   page_size: PageSize.exactOptional(),
 });
-function durationMatches(from: string, until: string, minimum: bigint, maximum = minimum): boolean {
-  try {
-    const duration = timestampNanoseconds(until) - timestampNanoseconds(from);
-    return duration >= minimum && duration <= maximum;
-  } catch {
-    return false;
-  }
-}
 export const AssignedTasks = z
   .strictObject({
     asset_id: Uuid,
@@ -262,131 +228,26 @@ export const ReplaceAssetProcess = z
   )
   .meta({ id: 'ReplaceAssetProcess' });
 
-function envelope<D extends z.ZodType>(data: D) {
-  return z.strictObject({ dataset_id: Uuid, data, commit_cursor: Opaque.exactOptional() });
-}
-function committedEnvelope<D extends z.ZodType>(data: D) {
-  return envelope(data).extend({ commit_cursor: Opaque });
-}
-function responseSchema<S extends z.ZodType, N extends readonly number[]>(success: S, statuses: N) {
-  return z.union([
-    z.strictObject({ kind: z.literal('success'), status: z.literal(statuses), body: success }),
-    HttpError,
-  ]);
-}
-export type JsonExchange<
-  M extends 'GET' | 'POST',
-  O extends string,
-  P extends string,
-  R extends z.ZodType,
-  S extends z.ZodType,
-  N extends readonly number[],
-> = Readonly<{
-  method: M;
-  operationId: O;
-  path: P;
-  request: JsonContract<R>;
-  response: JsonContract<ReturnType<typeof responseSchema<S, N>>>;
-  success: S;
-  successStatuses: N;
-  headers: typeof headers;
-  requestMedia: string;
-  responseMedia: string;
-  transport: string;
-  discovery: boolean;
-  committed: boolean;
-}>;
-function exchange<
-  const M extends 'GET' | 'POST',
-  const O extends string,
-  const P extends string,
-  R extends z.ZodType,
-  S extends z.ZodType,
-  const N extends readonly number[],
->(
-  method: M,
-  operationId: O,
-  path: P,
-  request: R,
-  success: S,
-  committed: boolean,
-  statuses: N,
-): JsonExchange<M, O, P, R, S, N> {
-  return Object.freeze({
-    operationId,
-    method,
-    path,
-    request: contract(request),
-    response: contract(responseSchema(success, statuses), 'http_response'),
-    success,
-    successStatuses: statuses,
-    headers,
-    requestMedia: 'application/json',
-    responseMedia: 'application/json',
-    transport: 'json',
-    discovery: operationId === 'GetHealth',
-    committed,
-  });
-}
-function post<
-  const O extends string,
-  const P extends string,
-  R extends z.ZodType,
-  D extends z.ZodType,
->(operationId: O, path: P, request: R, data: D) {
-  return exchange('POST', operationId, path, request, envelope(data), false, [200]);
-}
-function committedPost<
-  const O extends string,
-  const P extends string,
-  R extends z.ZodType,
-  D extends z.ZodType,
->(operationId: O, path: P, request: R, data: D) {
-  return exchange('POST', operationId, path, request, committedEnvelope(data), true, [200]);
-}
-function get<
-  const O extends string,
-  const P extends string,
-  R extends z.ZodType,
-  D extends z.ZodType,
->(operationId: O, path: P, request: R, data: D) {
-  return exchange('GET', operationId, path, request, envelope(data), false, [200]);
-}
-const reference = get('GetReference', '/reference', empty, empty);
-const referenceResult = z.strictObject({
-  kind: z.literal('reference'),
-  status: z.literal(200),
-  media: z.enum(['application/vnd.oai.openapi+json', 'text/html']),
-  document: text(4194304),
-});
-const content = get(
-  'ReadObjectContent',
-  '/objects/{object_id}/content',
-  z.strictObject({ object_id: Uuid, disposition: z.enum(['inline', 'attachment']) }),
-  ContentDescriptor,
-);
-const contentResult = z.strictObject({
-  kind: z.literal('content'),
-  status: z.literal(200),
-  descriptor: ContentDescriptor,
-});
 const ListResourcesExchange = post(
   'ListResources',
   '/messages/list_resources',
   listQuery(filters.resources),
   page(ResourceUsage, (value) => value.kind),
+  (request, { data }) => pageSize(request, data.items),
 );
 const ReadActivityExchange = post(
   'ReadActivity',
   '/messages/read_activity',
   listQuery(filters.activity),
   page(Activity, (value) => value.activity_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const ListApiKeysExchange = post(
   'ListApiKeys',
   '/messages/list_api_keys',
   listQuery(filters.api_keys),
   page(ApiKey, (value) => value.api_key_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const CreateApiKeyExchange = committedPost(
   'CreateApiKey',
@@ -398,24 +259,31 @@ const CreateApiKeyExchange = committedPost(
     operator_id: Uuid.exactOptional(),
   }),
   ApiKey,
+  (request, { data }) =>
+    request === undefined ||
+    (request.api_key_id === data.api_key_id && (request.operator_id ?? null) === data.operator_id),
 );
 const RevokeApiKeyExchange = committedPost(
   'RevokeApiKey',
   '/messages/revoke_api_key',
   z.strictObject({ ...retry, api_key_id: Uuid }),
   ApiKey,
+  (request, { data }) =>
+    data.revoked_at !== null && (request === undefined || request.api_key_id === data.api_key_id),
 );
 const ListOperatorsExchange = post(
   'ListOperators',
   '/messages/list_operators',
   listQuery(filters.operators),
   page(Operator, (value) => value.operator_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetOperatorExchange = post(
   'GetOperator',
   '/messages/get_operator',
   z.strictObject({ operator_id: Uuid }),
   Operator,
+  (request, { data }) => request === undefined || request.operator_id === data.operator_id,
 );
 const CreateOperatorExchange = committedPost(
   'CreateOperator',
@@ -427,6 +295,7 @@ const CreateOperatorExchange = committedPost(
     description: text(4096).exactOptional(),
   }),
   Operator,
+  (request, { data }) => request === undefined || request.operator_id === data.operator_id,
 );
 const EditOperatorExchange = committedPost(
   'EditOperator',
@@ -442,59 +311,68 @@ const EditOperatorExchange = committedPost(
       .refine((value) => Object.keys(value).length > 0, 'Empty edit'),
   }),
   Operator,
+  (request, { data }) => request === undefined || request.operator_id === data.operator_id,
 );
 const DeleteOperatorExchange = committedPost(
   'DeleteOperator',
   '/messages/delete_operator',
   z.strictObject({ ...retry, operator_id: Uuid }),
   deleted,
+  () => true,
 );
-const GetHealthExchange = get('GetHealth', '/health', empty, HealthData);
-const GetReadinessExchange = exchange(
-  'GET',
-  'GetReadiness',
-  '/readiness',
-  empty,
-  envelope(Readiness),
-  false,
-  [200, 503],
-);
-const GetReferenceExchange = Object.freeze({
-  ...reference,
-  transport: 'reference',
-  responseMedia: 'application/vnd.oai.openapi+json',
-  response: contract(z.union([referenceResult, HttpError]), 'http_response'),
-});
 const RegisterAssetExchange = committedPost(
   'RegisterAsset',
   '/messages/register_asset',
   RegisterAsset,
   z.strictObject({ asset: Asset, api_key: ApiKey }),
+  (request, { data }) =>
+    request === undefined ||
+    (request.asset_id === data.asset.id && request.api_key_id === data.api_key.api_key_id),
 );
 const ListAssetsExchange = post(
   'ListAssets',
   '/messages/list_assets',
   listQuery(filters.assets),
   page(Asset, (value) => value.id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetAssetExchange = post(
   'GetAsset',
   '/messages/get_asset',
   z.strictObject({ asset_id: Uuid }),
   Asset,
+  (request, { data }) => request === undefined || request.asset_id === data.id,
 );
 const GetAssetByAliasExchange = post(
   'GetAssetByAlias',
   '/messages/get_asset_by_alias',
   z.strictObject({ alias: Alias }),
   Asset,
+  (request, { data }) =>
+    request === undefined ||
+    (data.alias !== undefined && caseFoldEquals(request.alias, data.alias)),
 );
-const UpdateAssetExchange = post('UpdateAsset', '/messages/update_asset', UpdateAsset, assetResult);
+const UpdateAssetExchange = post(
+  'UpdateAsset',
+  '/messages/update_asset',
+  UpdateAsset,
+  assetResult,
+  (request, { data, commit_cursor }) =>
+    request === undefined ||
+    (request.asset_id === data.asset.id &&
+      (request.report !== undefined) === (data.evidence_disposition !== undefined) &&
+      ((request.alias === undefined &&
+        request.description === undefined &&
+        request.type === undefined &&
+        request.capabilities === undefined) ||
+        commit_cursor !== undefined)),
+);
 const DeleteAssetExchange = committedPost(
   'DeleteAsset',
   '/messages/delete_asset',
   z.strictObject({ ...retry, asset_id: Uuid }),
   deleted,
+  () => true,
 );
 const GetAssetStatusExchange = post(
   'GetAssetStatus',
@@ -514,96 +392,119 @@ const GetAssetStatusExchange = post(
         ) && reportSequencesMatch([value.status.evidence, value.communications.capacity.evidence]),
       'Asset status evidence scope differs',
     ),
+  (request, { data }) => request === undefined || request.asset_id === data.asset_id,
 );
-const GetAssetMovementHistoryExchange = Object.freeze({
-  ...post(
-    'GetAssetMovementHistory',
-    '/messages/get_asset_movement_history',
-    HistoryQuery,
-    HistoryPage,
-  ),
-  historyKind: 'asset',
-});
+const GetAssetMovementHistoryExchange = post(
+  'GetAssetMovementHistory',
+  '/messages/get_asset_movement_history',
+  HistoryQuery,
+  HistoryPage,
+  (request, { data }) => historyMatches('asset', request, data),
+);
 const GetAssetObjectsExchange = post(
   'GetAssetObjects',
   '/messages/get_asset_objects',
   associatedQuery({ asset_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const CreateObservationExchange = committedPost(
   'CreateObservation',
   '/messages/create_observation',
   CreateObservation,
   observationResult,
+  (request, { data }) =>
+    request === undefined ||
+    (request.observation_id === data.observation.id &&
+      request.publisher_id === data.observation.publisher_id &&
+      request.source_asset_id === data.observation.source_asset_id &&
+      request.publisher_subject?.id === data.observation.publisher_subject?.id &&
+      request.publisher_subject?.lifetime_id === data.observation.publisher_subject?.lifetime_id &&
+      (request.report !== undefined) === (data.evidence_disposition !== undefined)),
 );
 const ReportObservationExchange = post(
   'ReportObservation',
   '/messages/report_observation',
   ReportObservation,
   observationResult.safeExtend({ evidence_disposition: EvidenceDisposition }),
+  (request, { data }) =>
+    request === undefined ||
+    (request.observation_id === data.observation.id &&
+      request.publisher_id === data.observation.publisher_id),
 );
 const EditObservationExchange = committedPost(
   'EditObservation',
   '/messages/edit_observation',
   z.strictObject({ ...edit, observation_id: Uuid, edits: descriptiveEdits }),
   Observation,
+  (request, { data }) => request === undefined || request.observation_id === data.id,
 );
 const ListObservationsExchange = post(
   'ListObservations',
   '/messages/list_observations',
   listQuery(filters.observations),
   page(Observation, (value) => value.id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetObservationExchange = post(
   'GetObservation',
   '/messages/get_observation',
   z.strictObject({ observation_id: Uuid }),
   Observation,
+  (request, { data }) => request === undefined || request.observation_id === data.id,
 );
 const GetObservationByAliasExchange = post(
   'GetObservationByAlias',
   '/messages/get_observation_by_alias',
   z.strictObject({ alias: Alias }),
   Observation,
+  (request, { data }) =>
+    request === undefined ||
+    (data.alias !== undefined && caseFoldEquals(request.alias, data.alias)),
 );
-const GetObservationMovementHistoryExchange = Object.freeze({
-  ...post(
-    'GetObservationMovementHistory',
-    '/messages/get_observation_movement_history',
-    HistoryQuery,
-    HistoryPage,
-  ),
-  historyKind: 'observation',
-});
+const GetObservationMovementHistoryExchange = post(
+  'GetObservationMovementHistory',
+  '/messages/get_observation_movement_history',
+  HistoryQuery,
+  HistoryPage,
+  (request, { data }) => historyMatches('observation', request, data),
+);
 const GetObservationObjectsExchange = post(
   'GetObservationObjects',
   '/messages/get_observation_objects',
   associatedQuery({ observation_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const ListTracksExchange = post(
   'ListTracks',
   '/messages/list_tracks',
   listQuery(filters.tracks),
   page(Track, (value) => value.id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetTrackExchange = post(
   'GetTrack',
   '/messages/get_track',
   z.strictObject({ track_id: Uuid }),
   Track,
+  (request, { data }) => request === undefined || request.track_id === data.id,
 );
 const GetTrackByAliasExchange = post(
   'GetTrackByAlias',
   '/messages/get_track_by_alias',
   z.strictObject({ alias: Alias }),
   Track,
+  (request, { data }) =>
+    request === undefined ||
+    (data.alias !== undefined && caseFoldEquals(request.alias, data.alias)),
 );
 const EditTrackExchange = committedPost(
   'EditTrack',
   '/messages/edit_track',
   z.strictObject({ ...edit, track_id: Uuid, edits: descriptiveEdits }),
   Track,
+  (request, { data }) => request === undefined || request.track_id === data.id,
 );
 const GetTrackObservationsExchange = post(
   'GetTrackObservations',
@@ -618,21 +519,25 @@ const GetTrackObservationsExchange = post(
     Continuation,
   ]),
   page(Observation, (value) => value.id),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    (request === undefined ||
+      'page_token' in request ||
+      data.items.every((item) => item.track_id === request.track_id)),
 );
-const GetTrackMovementHistoryExchange = Object.freeze({
-  ...post(
-    'GetTrackMovementHistory',
-    '/messages/get_track_movement_history',
-    HistoryQuery,
-    HistoryPage,
-  ),
-  historyKind: 'track',
-});
+const GetTrackMovementHistoryExchange = post(
+  'GetTrackMovementHistory',
+  '/messages/get_track_movement_history',
+  HistoryQuery,
+  HistoryPage,
+  (request, { data }) => historyMatches('track', request, data),
+);
 const GetTrackObjectsExchange = post(
   'GetTrackObjects',
   '/messages/get_track_objects',
   associatedQuery({ track_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const CreateGeofeatureExchange = committedPost(
   'CreateGeofeature',
@@ -646,24 +551,30 @@ const CreateGeofeatureExchange = committedPost(
     type: GeofeatureType.exactOptional(),
   }),
   Geofeature,
+  (request, { data }) => request === undefined || request.geofeature_id === data.id,
 );
 const ListGeofeaturesExchange = post(
   'ListGeofeatures',
   '/messages/list_geofeatures',
   listQuery(filters.geofeatures),
   page(Geofeature, (value) => value.id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetGeofeatureExchange = post(
   'GetGeofeature',
   '/messages/get_geofeature',
   z.strictObject({ geofeature_id: Uuid }),
   Geofeature,
+  (request, { data }) => request === undefined || request.geofeature_id === data.id,
 );
 const GetGeofeatureByAliasExchange = post(
   'GetGeofeatureByAlias',
   '/messages/get_geofeature_by_alias',
   z.strictObject({ alias: Alias }),
   Geofeature,
+  (request, { data }) =>
+    request === undefined ||
+    (data.alias !== undefined && caseFoldEquals(request.alias, data.alias)),
 );
 const EditGeofeatureExchange = committedPost(
   'EditGeofeature',
@@ -681,61 +592,105 @@ const EditGeofeatureExchange = committedPost(
       .refine((value) => Object.keys(value).length > 0, 'Empty edit'),
   }),
   Geofeature,
+  (request, { data }) => request === undefined || request.geofeature_id === data.id,
 );
 const DeleteGeofeatureExchange = committedPost(
   'DeleteGeofeature',
   '/messages/delete_geofeature',
   z.strictObject({ ...retry, geofeature_id: Uuid }),
   deleted,
+  () => true,
 );
 const GetGeofeatureObjectsExchange = post(
   'GetGeofeatureObjects',
   '/messages/get_geofeature_objects',
   associatedQuery({ geofeature_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
+  (request, { data }) => pageSize(request, data.items),
 );
-const CreateTaskExchange = committedPost('CreateTask', '/messages/create_task', CreateTask, Task);
+const CreateTaskExchange = committedPost(
+  'CreateTask',
+  '/messages/create_task',
+  CreateTask,
+  Task,
+  (request, { data }) =>
+    request === undefined ||
+    (request.request_id === data.request_id &&
+      request.task_id === data.task_id &&
+      request.asset_id === data.asset_id &&
+      request.command === data.command &&
+      request.scheduling === data.scheduling &&
+      JSON.stringify(request.inputs) === JSON.stringify(data.inputs) &&
+      (request.command !== 'resume' ||
+        (data.command === 'resume' && request.expires_at === data.expires_at))),
+);
 const ListTasksExchange = post(
   'ListTasks',
   '/messages/list_tasks',
   listQuery(filters.tasks),
   page(Task, (value) => value.task_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetTaskExchange = post(
   'GetTask',
   '/messages/get_task',
   z.strictObject({ task_id: Uuid }),
   Task,
+  (request, { data }) => request === undefined || request.task_id === data.task_id,
 );
 const ReportTaskExecutionExchange = post(
   'ReportTaskExecution',
   '/messages/report_task_execution',
   ReportTaskExecution,
   taskResult,
+  (request, { data }) =>
+    request === undefined ||
+    (request.evidence.asset_id === data.task.asset_id &&
+      request.evidence.payload.task_id === data.task.task_id),
 );
 const RequestTaskCancellationExchange = post(
   'RequestTaskCancellation',
   '/messages/request_task_cancellation',
   z.strictObject({ ...retry, task_id: Uuid }),
   Task,
+  (request, { data, commit_cursor }) =>
+    (request === undefined || request.task_id === data.task_id) &&
+    (data.execution_state === 'completed' ||
+      data.execution_state === 'failed' ||
+      data.execution_state === 'cancelled' ||
+      (data.cancellation_request_id !== null &&
+        commit_cursor !== undefined &&
+        (request === undefined || data.cancellation_request_id === request.request_id))),
 );
 const ReportTaskResultsExchange = post(
   'ReportTaskResults',
   '/messages/report_task_results',
   ReportTaskResults,
   taskResult,
+  (request, { data }) =>
+    request === undefined ||
+    (request.evidence.asset_id === data.task.asset_id &&
+      request.evidence.payload.task_id === data.task.task_id),
 );
 const GetTaskObjectsExchange = post(
   'GetTaskObjects',
   '/messages/get_task_objects',
   associatedQuery({ task_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetAssignedTasksExchange = post(
   'GetAssignedTasks',
   '/messages/get_assigned_tasks',
   z.union([assignedFirst, Continuation]),
   AssignedTasks,
+  (request, { data }) =>
+    pageSize(request, data.tasks) &&
+    (request === undefined ||
+      'page_token' in request ||
+      (request.asset_id === data.asset_id &&
+        request.process_generation === data.process_generation &&
+        request.read_id === data.read_id)),
 );
 const SetTaskOrderExchange = committedPost(
   'SetTaskOrder',
@@ -747,15 +702,28 @@ const SetTaskOrderExchange = committedPost(
     task_ids: uniqueArray(Uuid),
   }),
   Asset,
+  (request, { data }) => request === undefined || request.asset_id === data.id,
 );
 const ConfirmTaskOrderExchange = post(
   'ConfirmTaskOrder',
   '/messages/confirm_task_order',
   ConfirmTaskOrder,
   assetEvidenceResult,
+  (request, { data }) => request === undefined || request.evidence.asset_id === data.asset.id,
 );
 const UploadObjectExchange = Object.freeze({
-  ...committedPost('UploadObject', '/objects', UploadDescriptor, ObjectImage),
+  ...committedPost(
+    'UploadObject',
+    '/objects',
+    UploadDescriptor,
+    ObjectImage,
+    (request, { data }) =>
+      request === undefined ||
+      (request.object_id === data.object_id &&
+        request.byte_length === data.byte_length &&
+        request.sha256 === data.sha256 &&
+        request.content_type === data.content_type),
+  ),
   transport: 'upload',
   requestMedia: 'multipart/form-data',
 });
@@ -764,61 +732,112 @@ const ListObjectsExchange = post(
   '/messages/list_objects',
   listQuery(filters.objects),
   page(ObjectImage, (value) => value.object_id),
+  (request, { data }) => pageSize(request, data.items),
 );
 const GetObjectExchange = post(
   'GetObject',
   '/messages/get_object',
   z.strictObject({ object_id: Uuid }),
   ObjectImage,
+  (request, { data }) => request === undefined || request.object_id === data.object_id,
 );
 const EditObjectExchange = committedPost(
   'EditObject',
   '/messages/edit_object',
   z.strictObject({ ...edit, object_id: Uuid, edits: ObjectEdits }),
   ObjectImage,
+  (request, { data }) => request === undefined || request.object_id === data.object_id,
 );
 const DeleteObjectExchange = committedPost(
   'DeleteObject',
   '/messages/delete_object',
   z.strictObject({ ...retry, object_id: Uuid }),
   deleted,
+  () => true,
 );
-const ReadObjectContentExchange = Object.freeze({
-  ...content,
-  transport: 'content',
-  responseMedia: 'binary',
-  response: contract(z.union([contentResult, HttpError]), 'http_response'),
-});
+
 const ReleaseHistoryViewExchange = post(
   'ReleaseHistoryView',
   '/messages/release_history_view',
   Release,
   Released,
+  () => true,
 );
-const ReadSnapshotExchange = post(
+const snapshot = post(
   'ReadSnapshot',
   '/messages/read_snapshot',
   ReadSnapshot,
   SnapshotPage,
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    (request === undefined ||
+      'page_token' in request ||
+      (request.load_id === data.load_id &&
+        data.limits.max_message_bytes <= request.max_message_bytes &&
+        data.limits.max_json_values <= request.max_json_values &&
+        data.limits.max_changes <= request.max_changes)),
 );
+const ReadSnapshotExchange = Object.freeze({
+  ...snapshot,
+  response: { ...snapshot.response, messageLimits: { path: ['data', 'limits'] } },
+  responseBudget(request: ReadSnapshot | undefined, budget: Budget): Budget {
+    return request === undefined || 'page_token' in request
+      ? budget
+      : messageBudget(budget, request);
+  },
+});
 const ReleaseSnapshotExchange = post(
   'ReleaseSnapshot',
   '/messages/release_snapshot',
   Release,
   Released,
+  () => true,
 );
-const ReadChangesExchange = post('ReadChanges', '/messages/read_changes', ReadChanges, ReplayPage);
+const changes = post(
+  'ReadChanges',
+  '/messages/read_changes',
+  ReadChanges,
+  ReplayPage,
+  (request, { data }) => {
+    if (request === undefined || 'page_token' in request) return true;
+    const first = data.messages[0];
+    return (
+      (first === undefined ? data.through_cursor : first.data.previous_cursor) ===
+      request.from_cursor
+    );
+  },
+);
+const ReadChangesExchange = Object.freeze({
+  ...changes,
+  responseBudget(request: ReadChanges | undefined, budget: Budget): Budget {
+    return request === undefined || 'page_token' in request
+      ? budget
+      : messageBudget(budget, request);
+  },
+});
 const BeginAssetContactExchange = post(
   'BeginAssetContact',
   '/messages/begin_asset_contact',
   BeginAssetContact,
   ContactChallenge,
+  (request, { data }) =>
+    request === undefined ||
+    (request.asset_id === data.asset_id &&
+      request.process_generation === data.process_generation &&
+      (request.mode === 'current'
+        ? data.mode === 'current'
+        : data.mode === 'replace' &&
+          request.expected_process_generation === data.expected_process_generation)),
 );
 const ReplaceAssetProcessExchange = committedPost(
   'ReplaceAssetProcess',
   '/messages/replace_asset_process',
   ReplaceAssetProcess,
   assetEvidenceResult,
+  (request, { data }) =>
+    request === undefined ||
+    (request.asset_id === data.asset.id &&
+      request.process_generation === data.asset.process_generation),
 );
 export type ExchangeCatalog = {
   readonly ListResources: typeof ListResourcesExchange;

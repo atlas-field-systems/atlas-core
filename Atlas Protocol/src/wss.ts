@@ -7,14 +7,26 @@ import type { ClientFrame, ServerFrame } from './synchronization.js';
 
 export type WssContext = Readonly<{
   datasetId?: string;
-  protocolVersion?: string;
   requestId?: string;
   subscriptionId?: string;
   budget?: Partial<Budget>;
 }>;
-function check(frame: ClientFrame | ServerFrame, context: WssContext): void {
+function check(frame: ClientFrame | ServerFrame, context: WssContext, readingServer = false): void {
+  const mismatch = frame.type === 'error' && frame.error.code === 'protocol_mismatch';
+  if (frame.type === 'error') {
+    const error = frame.error;
+    if (
+      (error.code === 'dataset_mismatch' &&
+        error.details !== undefined &&
+        error.details.dataset_id !== frame.dataset_id) ||
+      (error.code === 'protocol_mismatch' &&
+        error.details !== undefined &&
+        error.details.protocol_version !== frame.protocol_version)
+    )
+      throw new ProtocolError('invalid_value');
+  }
   if (
-    frame.protocol_version !== (context.protocolVersion ?? PROTOCOL_VERSION) ||
+    (frame.protocol_version !== PROTOCOL_VERSION && !(readingServer && mismatch)) ||
     (context.datasetId !== undefined && frame.dataset_id !== context.datasetId) ||
     (context.requestId !== undefined &&
       (!('request_id' in frame) || frame.request_id !== context.requestId))
@@ -45,7 +57,7 @@ export function readWssClient(bytes: Uint8Array, context: WssContext = {}): Clie
 }
 export function readWssServer(bytes: Uint8Array, context: WssContext = {}): ServerFrame {
   const frame = readJson(wss.serverFrame, bytes, context.budget);
-  check(frame, context);
+  check(frame, context, true);
   return frame;
 }
 export function writeWssClient(frame: ClientFrame, context: WssContext = {}): Uint8Array {
