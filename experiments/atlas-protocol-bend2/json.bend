@@ -536,7 +536,6 @@ def next_step(scanned: ScannedToken, parser: Parser) -> Result<&2, &2, C.Failure
         next : Parser <- advance(token, p)
         return Parsing{rest, next}
 
-# Each iteration consumes a nonempty token, except the final end-of-input step.
 def parse_loop(fuel: Nat, step: ParseStep) -> Result<&2, &2, C.Failure, C.Json>:
   match fuel step:
     case _ Parsed{value}:

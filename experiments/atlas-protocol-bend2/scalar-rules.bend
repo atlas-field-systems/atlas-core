@@ -225,3 +225,15 @@ def duration(a: String, b: String, low_seconds: U32, low_nanos: U32,
 
 def scalar(+schema: C.Json, +text: String) -> Bool:
   well_formed(text) && (Bool.not(C.has(schema, "pattern")) || nonblank(text))
+
+def standard(+name: String, +value: C.Json) -> Bool:
+  +text = C.string(value)
+  C.choose(Bool, String.eq(name, "Uuid"), _ => uuid(text),
+    _ => C.choose(Bool, String.eq(name, "NewId"), _ => new_id(text),
+      _ => C.choose(Bool, String.eq(name, "Counter"), _ => counter(text, "18446744073709551615", False{}),
+        _ => C.choose(Bool, String.eq(name, "Sequence"), _ => counter(text, "18446744073709551615", True{}),
+          _ => C.choose(Bool, String.eq(name, "ObjectLength"), _ => counter(text, "2000000000", False{}),
+            _ => C.choose(Bool, String.eq(name, "Secret"), _ => secret(text),
+              _ => C.choose(Bool, String.eq(name, "Timestamp"), _ => timestamp_valid(timestamp(text)),
+                _ => C.choose(Bool, String.eq(name, "Sha256"), _ => sha256(text),
+                  _ => C.choose(Bool, String.eq(name, "ContentType"), _ => content_type(text), _ => True{})))))))))

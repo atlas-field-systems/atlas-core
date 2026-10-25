@@ -340,16 +340,16 @@ def alternatives_state(alternatives: List<&2, C.Json>, +value: C.Json, +jobs: Li
       Running{Con{Check{h, value}, Con{CloseChoice{}, jobs}}, values,
         Con{Choice{t, value, jobs, values, C.failure(C.InvalidValue{})}, choices}}
 
-def check_state(~resolve: String -> C.Json,
+def check_state(~resolve: List<&2, C.Member> -> String -> C.Json,
     ~number: String -> String -> String -> Bool -> Bool -> Bool -> Bool,
     ~format: String -> String, ~scalar: C.Json -> String -> Bool,
     ~scope: String -> C.Json -> C.Code,
     +schema: C.Json, +value: C.Json, +jobs: List<&2, Job>, +values: List<&2, C.Json>,
-    +choices: List<&2, Choice>) -> State:
+    +choices: List<&2, Choice>, +registry: List<&2, C.Member>) -> State:
   C.choose(State, C.equal(schema, C.JBool{False{}}) || missing(schema),
     _ => reject(choices, C.failure(C.InvalidValue{})),
     _ => C.choose(State, C.has(schema, "$ref"),
-      _ => Running{Con{Check{resolve(C.string(C.get(schema, "$ref"))), value}, jobs}, values, choices},
+      _ => Running{Con{Check{resolve(registry, C.string(C.get(schema, "$ref"))), value}, jobs}, values, choices},
       _ => C.choose(State, C.has(schema, "title"),
         _ => Running{Con{Check{C.JObj{C.remove_member(C.members(schema), "title")}, value},
           Con{Refine{C.string(C.get(schema, "title"))}, Con{CloseChoice{}, jobs}}}, values,
@@ -391,17 +391,17 @@ def drop_choice(choices: List<&2, Choice>) -> List<&2, Choice>:
     case Con{h, t}:
       t
 
-def step(~resolve: String -> C.Json,
+def step(~resolve: List<&2, C.Member> -> String -> C.Json,
     ~number: String -> String -> String -> Bool -> Bool -> Bool -> Bool,
     ~format: String -> String, ~scalar: C.Json -> String -> Bool,
     ~scope: String -> C.Json -> C.Code,
     ~refine: String -> C.Json -> Result<&2, &2, C.Failure, Unit>,
-    jobs: List<&2, Job>, +values: List<&2, C.Json>, +choices: List<&2, Choice>) -> State:
+    jobs: List<&2, Job>, +values: List<&2, C.Json>, +choices: List<&2, Choice>, +registry: List<&2, C.Member>) -> State:
   match jobs:
     case Nil{}:
       Accepted{top(values)}
     case Con{Check{s, v}, rest}:
-      check_state(~resolve, ~number, ~format, ~scalar, ~scope, s, v, rest, values, choices)
+      check_state(~resolve, ~number, ~format, ~scalar, ~scope, s, v, rest, values, choices, registry)
     case Con{Refine{name}, rest}:
       refined(refine(name, top(values)), rest, values, choices)
     case Con{Discard{}, rest}:
@@ -413,12 +413,12 @@ def step(~resolve: String -> C.Json,
     case Con{FinishObject{keys}, rest}:
       finish_object(build_members(List.reverse(&2, String, keys), values, Nil{}), rest, choices)
 
-def run(~resolve: String -> C.Json,
+def run(~resolve: List<&2, C.Member> -> String -> C.Json,
     ~number: String -> String -> String -> Bool -> Bool -> Bool -> Bool,
     ~format: String -> String, ~scalar: C.Json -> String -> Bool,
     ~scope: String -> C.Json -> C.Code,
     ~refine: String -> C.Json -> Result<&2, &2, C.Failure, Unit>,
-    fuel: Nat, state: State) -> Result<&2, &2, C.Failure, C.Json>:
+    fuel: Nat, state: State, +registry: List<&2, C.Member>) -> Result<&2, &2, C.Failure, C.Json>:
   match fuel state:
     case _ Accepted{value}:
       Done{value}
@@ -428,13 +428,13 @@ def run(~resolve: String -> C.Json,
       Fail{C.failure(C.ResourceLimit{})}
     case 1n+p Running{jobs, values, choices}:
       run(~resolve, ~number, ~format, ~scalar, ~scope, ~refine, p,
-        step(~resolve, ~number, ~format, ~scalar, ~scope, ~refine, jobs, values, choices))
+        step(~resolve, ~number, ~format, ~scalar, ~scope, ~refine, jobs, values, choices, registry), registry)
 
-def validate(~resolve: String -> C.Json,
+def validate(~resolve: List<&2, C.Member> -> String -> C.Json,
     ~number: String -> String -> String -> Bool -> Bool -> Bool -> Bool,
     ~format: String -> String, ~scalar: C.Json -> String -> Bool,
     ~scope: String -> C.Json -> C.Code,
     ~refine: String -> C.Json -> Result<&2, &2, C.Failure, Unit>,
-    schema: C.Json, value: C.Json, fuel: U32) -> Result<&2, &2, C.Failure, C.Json>:
+    schema: C.Json, value: C.Json, fuel: U32, registry: List<&2, C.Member>) -> Result<&2, &2, C.Failure, C.Json>:
   run(~resolve, ~number, ~format, ~scalar, ~scope, ~refine, U32.to_nat(fuel),
-    Running{[Check{schema, value}], Nil{}, Nil{}})
+    Running{[Check{schema, value}], Nil{}, Nil{}}, registry)
