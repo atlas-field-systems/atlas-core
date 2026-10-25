@@ -347,7 +347,7 @@ export function readPreparedJson<S extends z.ZodType>(
   if (type && definition.controlTypes?.includes(type)) {
     const control = effectiveBudget('wss_control', lower);
     if (bytes.byteLength > control.maxBytes) throw new ProtocolError('payload_too_large');
-    preflight(source, control);
+    if (facts.values > control.maxValues) throw new ProtocolError('resource_limit');
   }
   let value: unknown;
   try {

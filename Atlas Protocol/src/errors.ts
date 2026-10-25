@@ -92,20 +92,7 @@ export const errorCatalog = Object.freeze({
   500: error500,
   507: error507,
 });
-export const ErrorObject = z
-  .union([
-    error400,
-    error401,
-    error404,
-    error409,
-    error410,
-    error413,
-    error422,
-    error429,
-    error500,
-    error507,
-  ])
-  .meta({ id: 'ErrorObject' });
+export const ErrorObject = z.union(Object.values(errorCatalog)).meta({ id: 'ErrorObject' });
 export function errorEnvelope<S extends z.ZodType>(error: S) {
   return z.strictObject({ dataset_id: Uuid, error });
 }

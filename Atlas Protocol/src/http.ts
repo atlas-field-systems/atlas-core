@@ -23,11 +23,9 @@ type Binding<R extends z.ZodType, S extends z.ZodType> = Readonly<{
   transport: string;
   discovery: boolean;
   requestMedia: string;
-  responseMedia: string;
   successStatuses: readonly number[];
   request: JsonContract<R>;
   response: JsonContract<S>;
-  success: z.ZodType;
   historyKind?: 'asset' | 'observation' | 'track';
 }>;
 export type HttpContext = Readonly<{

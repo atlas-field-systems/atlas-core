@@ -22,39 +22,23 @@ export const ResourceKind = z.enum(['asset', 'track', 'geofeature', 'task', 'obj
 const putFields = { kind: z.literal('put'), resource_id: Uuid, version: Counter };
 export const Put = z
   .discriminatedUnion('resource_kind', [
-    z
-      .strictObject({ ...putFields, resource_kind: z.literal('asset'), image: Asset })
-      .refine(
-        (value) => value.resource_id === value.image.id && value.version === value.image.version,
-        'Put identity differs',
-      ),
-    z
-      .strictObject({ ...putFields, resource_kind: z.literal('track'), image: Track })
-      .refine(
-        (value) => value.resource_id === value.image.id && value.version === value.image.version,
-        'Put identity differs',
-      ),
-    z
-      .strictObject({ ...putFields, resource_kind: z.literal('geofeature'), image: Geofeature })
-      .refine(
-        (value) => value.resource_id === value.image.id && value.version === value.image.version,
-        'Put identity differs',
-      ),
-    z
-      .strictObject({ ...putFields, resource_kind: z.literal('task'), image: Task })
-      .refine(
-        (value) =>
-          value.resource_id === value.image.task_id && value.version === value.image.version,
-        'Put identity differs',
-      ),
-    z
-      .strictObject({ ...putFields, resource_kind: z.literal('object'), image: ObjectImage })
-      .refine(
-        (value) =>
-          value.resource_id === value.image.object_id && value.version === value.image.version,
-        'Put identity differs',
-      ),
+    z.strictObject({ ...putFields, resource_kind: z.literal('asset'), image: Asset }),
+    z.strictObject({ ...putFields, resource_kind: z.literal('track'), image: Track }),
+    z.strictObject({ ...putFields, resource_kind: z.literal('geofeature'), image: Geofeature }),
+    z.strictObject({ ...putFields, resource_kind: z.literal('task'), image: Task }),
+    z.strictObject({ ...putFields, resource_kind: z.literal('object'), image: ObjectImage }),
   ])
+  .refine(
+    (value) =>
+      value.version === value.image.version &&
+      value.resource_id ===
+        (value.resource_kind === 'task'
+          ? value.image.task_id
+          : value.resource_kind === 'object'
+            ? value.image.object_id
+            : value.image.id),
+    'Put identity differs',
+  )
   .meta({ id: 'Put' });
 export const Delete = z
   .strictObject({

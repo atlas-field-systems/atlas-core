@@ -48,54 +48,9 @@ test('HTTP consumes each successful body through its authoritative schema once',
   assert.equal(validations, 1);
 });
 
-test('all 66 request and typed response pairs cross their complete HTTP boundaries', () => {
+test('all 66 HTTP examples cover the authoritative exchange inventory', () => {
   assert.equal(Object.keys(s.examples).length, 66);
   assert.deepEqual(Object.keys(p.exchanges).sort(), Object.keys(s.examples).sort());
-  for (const [name, [input, data]] of Object.entries(s.examples)) {
-    const definition = p.exchanges[name];
-    assert.equal(definition.operationId, name);
-    const headers = requestHeaders();
-    const incoming = { method: definition.method, path: definition.path, headers };
-    if (definition.transport === 'reference') headers.set('Accept', 'text/html');
-    if (definition.transport === 'upload') {
-      headers.set('Content-Type', 'multipart/form-data; boundary=atlas');
-      incoming.uploadDescriptor = encode(input);
-    } else if (definition.method === 'POST') incoming.body = encode(input);
-    if (definition.transport === 'content')
-      incoming.path = `/objects/${s.requestId}/content?disposition=inline`;
-    assert.deepEqual(p.readHttpRequest(definition, incoming), input, `${name} request`);
-    refuses(() => p.readJson(definition.request, encode({ ...input, unknown: true })), undefined);
-    const received = { status: 200, headers: responseHeaders() };
-    if (definition.transport === 'content') {
-      received.headers.set('Content-Type', s.storage.content_type);
-      received.headers.set('Content-Length', s.storage.byte_length);
-      received.headers.set('Atlas-Content-SHA256', s.storage.sha256);
-      received.headers.set('Content-Disposition', 'inline');
-    } else if (definition.transport === 'reference') {
-      received.headers.set('Content-Type', 'text/html');
-      received.body = new TextEncoder().encode('<!doctype html><title>Atlas</title>');
-    } else received.body = encode({ dataset_id: s.id, data, commit_cursor: 'commit' });
-    const result = p.readHttp(definition, received, { datasetId: s.id, request: input });
-    assert.equal(
-      result.kind,
-      definition.transport === 'content'
-        ? 'content'
-        : definition.transport === 'reference'
-          ? 'reference'
-          : 'success',
-      `${name} response`,
-    );
-    if (result.kind === 'success') assert.deepEqual(result.body.data, data);
-    const errorBody = {
-      dataset_id: s.id,
-      error: { code: 'unauthorized', message: 'Authentication required', request_id: s.requestId },
-    };
-    assert.equal(
-      p.readHttp(definition, { status: 401, headers: responseHeaders(), body: encode(errorBody) })
-        .kind,
-      'error',
-    );
-  }
 });
 
 test('HTTP rejects wrong context, compression, status, media and mismatched response identities', () => {
@@ -320,23 +275,28 @@ test('complete WSS authentication, controls, replies, replay, changes and errors
     ['geofeature', s.geofeature],
     ['task', s.task],
     ['object', s.object],
-  ])
+  ]) {
+    const change = {
+      kind: 'put',
+      resource_kind: kind,
+      resource_id: image.id ?? image.task_id ?? image.object_id,
+      version: image.version,
+      image,
+    };
+    for (const mismatch of [{ resource_id: s.processId }, { version: '1' }])
+      refuses(
+        () => p.readJson(p.contract(p.Put), encode({ ...change, ...mismatch })),
+        'invalid_value',
+      );
     frames.push(
       event('change_batch', {
         subscription_id: s.requestId,
         previous_cursor: 'before',
         commit_cursor: 'after',
-        changes: [
-          {
-            kind: 'put',
-            resource_kind: kind,
-            resource_id: image.id ?? image.task_id ?? image.object_id,
-            version: image.version,
-            image,
-          },
-        ],
+        changes: [change],
       }),
     );
+  }
   for (const frame of frames) assert.deepEqual(p.readJson(p.wss.serverFrame, encode(frame)), frame);
   const authenticate = {
     type: 'authenticate',

@@ -92,9 +92,7 @@ export const HistoryPage = z
   })
   .refine((value) => {
     const seen = new Set<string>();
-    for (let index = 0; index < value.readings.length; index++) {
-      const reading = value.readings[index];
-      if (!reading) continue;
+    for (const [index, reading] of value.readings.entries()) {
       const key = readingKey(reading);
       if (seen.has(key)) return false;
       seen.add(key);

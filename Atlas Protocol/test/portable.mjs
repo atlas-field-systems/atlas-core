@@ -19,6 +19,13 @@ export function runPortable(p) {
     if (!condition) throw new Error(message);
   };
   const encode = (value) => new TextEncoder().encode(JSON.stringify(value));
+  const responseHeaders = () =>
+    new Headers({
+      'Atlas-Dataset-ID': s.id,
+      'Atlas-Protocol-Version': '0.1.0',
+      'Atlas-Request-ID': s.requestId,
+      'Content-Type': 'application/json',
+    });
   const same = (a, b) => {
     if (Object.is(a, b)) return true;
     if (Array.isArray(a) || Array.isArray(b))
@@ -38,6 +45,7 @@ export function runPortable(p) {
   for (const [name, [input, data]] of Object.entries(s.examples))
     check(name, () => {
       const binding = p.exchanges[name];
+      assert(binding.operationId === name, 'Operation identity differs');
       const requestHeaders = new Headers({
         Authorization: `Bearer ${'A'.repeat(43)}`,
         'Atlas-Dataset-ID': s.id,
@@ -53,16 +61,15 @@ export function runPortable(p) {
       if (binding.transport === 'content')
         request.path = `/objects/${s.requestId}/content?disposition=inline`;
       const parsed = p.readHttpRequest(binding, request);
-      assert(
-        JSON.stringify(parsed) === JSON.stringify(p.readJson(binding.request, encode(input))),
-        'Request facts differ',
-      );
-      const headers = new Headers({
-        'Atlas-Dataset-ID': s.id,
-        'Atlas-Protocol-Version': '0.1.0',
-        'Atlas-Request-ID': s.requestId,
-        'Content-Type': 'application/json',
-      });
+      assert(same(parsed, input), 'Request facts differ');
+      let rejected = false;
+      try {
+        p.readJson(binding.request, encode({ ...input, unknown: true }));
+      } catch (error) {
+        rejected = error instanceof p.ProtocolError;
+      }
+      assert(rejected, 'Unknown request member accepted');
+      const headers = responseHeaders();
       const received = { status: 200, headers };
       if (binding.transport === 'content') {
         headers.set('Content-Type', s.storage.content_type);
@@ -74,7 +81,28 @@ export function runPortable(p) {
         received.body = new TextEncoder().encode('<!doctype html><title>Atlas</title>');
       } else received.body = encode({ dataset_id: s.id, data, commit_cursor: 'cursor' });
       const response = p.readHttp(binding, received, { datasetId: s.id, request: parsed });
-      assert(response.kind !== 'error', 'Success was lost');
+      const expectedKind =
+        binding.transport === 'content'
+          ? 'content'
+          : binding.transport === 'reference'
+            ? 'reference'
+            : 'success';
+      assert(response.kind === expectedKind, 'Response kind differs');
+      if (response.kind === 'success')
+        assert(same(response.body.data, data), 'Response facts differ');
+      const errorBody = {
+        dataset_id: s.id,
+        error: {
+          code: 'unauthorized',
+          message: 'Authentication required',
+          request_id: s.requestId,
+        },
+      };
+      assert(
+        p.readHttp(binding, { status: 401, headers: responseHeaders(), body: encode(errorBody) })
+          .kind === 'error',
+        'Error response was lost',
+      );
     });
   check('maximum collinear, thin and subnormal polygons in one complete frame', () => {
     const ring = [

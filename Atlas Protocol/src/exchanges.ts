@@ -99,10 +99,7 @@ const observationResult = z
     'Observation Track sections differ',
   );
 const taskResult = z.strictObject({ task: Task, evidence_disposition: EvidenceDisposition });
-const assetEvidenceResult = z.strictObject({
-  asset: Asset,
-  evidence_disposition: EvidenceDisposition,
-});
+const assetEvidenceResult = assetResult.extend({ evidence_disposition: EvidenceDisposition });
 const RegisterAsset = z.strictObject({
   asset_id: NewId,
   registration_id: NewId,

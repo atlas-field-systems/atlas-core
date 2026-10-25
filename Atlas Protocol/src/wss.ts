@@ -2,7 +2,6 @@ import { readJson, writeJson, effectiveBudget } from './json.js';
 import type { Budget } from './json.js';
 import { PROTOCOL_VERSION } from './scalars.js';
 import { ProtocolError } from './failure.js';
-import { NegotiatedLimits } from './administration.js';
 import { wss } from './synchronization.js';
 import type { ClientFrame, ServerFrame } from './synchronization.js';
 
@@ -13,14 +12,7 @@ export type WssContext = Readonly<{
   subscriptionId?: string;
   budget?: Partial<Budget>;
 }>;
-function check(frame: unknown, context: WssContext): void {
-  if (
-    !frame ||
-    typeof frame !== 'object' ||
-    !('protocol_version' in frame) ||
-    !('dataset_id' in frame)
-  )
-    throw new ProtocolError('invalid_value');
+function check(frame: ClientFrame | ServerFrame, context: WssContext): void {
   if (
     frame.protocol_version !== (context.protocolVersion ?? PROTOCOL_VERSION) ||
     (context.datasetId !== undefined && frame.dataset_id !== context.datasetId) ||
@@ -28,13 +20,8 @@ function check(frame: unknown, context: WssContext): void {
       (!('request_id' in frame) || frame.request_id !== context.requestId))
   )
     throw new ProtocolError('invalid_value');
-  if (
-    'data' in frame &&
-    frame.data !== null &&
-    typeof frame.data === 'object' &&
-    'limits' in frame.data
-  ) {
-    const limits = NegotiatedLimits.parse(frame.data.limits);
+  if ('data' in frame && 'limits' in frame.data) {
+    const limits = frame.data.limits;
     const budget = effectiveBudget('wss_data', context.budget);
     if (
       limits.max_message_bytes > budget.maxBytes ||
@@ -46,8 +33,6 @@ function check(frame: unknown, context: WssContext): void {
   if (
     context.subscriptionId !== undefined &&
     'data' in frame &&
-    frame.data !== null &&
-    typeof frame.data === 'object' &&
     'subscription_id' in frame.data &&
     frame.data.subscription_id !== context.subscriptionId
   )
