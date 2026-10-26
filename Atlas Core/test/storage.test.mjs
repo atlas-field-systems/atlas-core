@@ -5,6 +5,7 @@ import { uuid } from './helpers.mjs';
 import { writeFile, rm, readdir, stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Diagnostics, faultFrames } from '../dist/diagnostics.js';
+import { setTimeout as delay } from 'node:timers/promises';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 test('queried-back embedded engine durability, bounded IPC admission and explicit worker loss', async t => {
   const f = await fixture(t);
@@ -58,9 +59,11 @@ test('diagnostic floods rotate within budget, expose loss and isolate a failed s
     for (const line of lines.trim().split('\n')) assert.ok(JSON.parse(line).event);
   }
   assert.ok(bytes <= 32_768);
-  const blocked = join(f.directory, 'blocked-sink'); await writeFile(blocked, 'regular file');
-  const failed = new Diagnostics(join(blocked, 'logs'), 65_536, 'INFO');
-  failed.emit({ severity: 'INFO', component: 'runtime', event: 'sink_failure_test' }); await failed.close();
-  assert.equal(failed.inspect().sinkFailures, 1);
+  await f.core.close();
+  const blocked = join(f.directory, 'logs'); await rm(blocked, { recursive: true }); await writeFile(blocked, 'regular file');
+  await f.restart();
+  assert.equal(ok(await f.call('GetHealth')).healthy, true);
+  for (let i = 0; f.core.diagnostics.inspect().sinkFailures === 0 && i < 100; i++) await delay(10);
+  assert.ok(f.core.diagnostics.inspect().sinkFailures > 0);
   assert.equal(ok(await f.call('GetHealth')).healthy, true);
 });
