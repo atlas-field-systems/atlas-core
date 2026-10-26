@@ -1,14 +1,87 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixture, registration, report, telemetry } from './helpers.mjs';
+import { fixture, registration, report, telemetry, root, secret } from './helpers.mjs';
 import { uuid } from './helpers.mjs';
-import { writeFile, rm, readdir, stat, readFile } from 'node:fs/promises';
+import { writeFile, rm, readdir, stat, readFile, mkdtemp } from 'node:fs/promises';
+import { Worker } from 'node:worker_threads';
+import Database from 'better-sqlite3';
+import { defaults } from '../dist/settings.js';
 import { join } from 'node:path';
 import { Diagnostics, faultFrames } from '../dist/diagnostics.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { storageUsage } from '../dist/server.js';
 import { digest } from '../dist/exact.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
+test('worker commits through a parent stall and bounds unacknowledged pages with required headroom', { timeout: 20000 }, async t => {
+  const directory = await mkdtemp(join(root, 'artifacts', 'reply-permits-'));
+  const settings = { ...defaults, freeDiskBytes: 0, workerQueueCount: 40, workerQueueBytes: 1_048_576,
+    resourceImageBytes: 65536, limits: { ...defaults.limits, max_message_bytes: 212992 } };
+  const worker = new Worker(new URL('../dist/worker.js', import.meta.url), { workerData: { directory, accountingRoot: directory, settings }, stdout: true, stderr: true });
+  worker.stdout.resume(); worker.stderr.resume();
+  t.after(async () => { await worker.terminate(); await rm(directory, { recursive: true, force: true }); });
+  let ready;
+  const started = new Promise((resolve, reject) => { ready = resolve; worker.once('error', reject); });
+  const pending = new Map(), received = [];
+  worker.on('message', message => {
+    if (message.type === 'ready') { ready(message); return; }
+    received.push(message);
+    const resolve = pending.get(message.id); assert.ok(resolve, 'Every response has a waiting caller');
+    pending.delete(message.id); resolve(message);
+  });
+  let serial = 0;
+  function send(kind, data, reserved = false) {
+    const id = ++serial;
+    const response = new Promise(resolve => pending.set(id, resolve));
+    worker.postMessage({ id, kind, data, reserved, enqueuedAtNs: process.hrtime.bigint() });
+    return { id, response };
+  }
+  const ack = message => worker.postMessage({ type: 'received', id: message.id });
+  const state = await started, credential = secret(), apiKey = uuid();
+  ack(await send('provision', { request_id: uuid(), api_key_id: apiKey, secret: credential }, true).response);
+  const administrator = secret();
+  ack(await send('provision', { request_id: uuid(), api_key_id: uuid(), secret: administrator }, true).response);
+  const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.1.0' };
+  const exchange = (name, request, reserved = false) => send('exchange', { operation: { name, request }, context }, reserved);
+  const writes = Array.from({ length: 32 }, () => exchange('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(),
+    geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }));
+  const db = new Database(join(directory, 'core.sqlite'), { readonly: true });
+  const pause = new Int32Array(new SharedArrayBuffer(4));
+  let committed = 0;
+  try {
+    const deadline = Date.now() + 5000;
+    while (committed < writes.length && Date.now() < deadline) {
+      Atomics.wait(pause, 0, 0, 20);
+      committed = db.prepare('SELECT count(*) AS count FROM entity_geofeatures').get().count;
+    }
+  } finally { db.close(); }
+  assert.equal(committed, writes.length, 'All admitted writes commit while the parent processes no replies or acknowledgments');
+  for (const reply of await Promise.all(writes.map(write => write.response))) { assert.equal(reply.type, 'reply', JSON.stringify(reply)); ack(reply); }
+  const pages = Array.from({ length: 12 }, () => exchange('ListGeofeatures', { page_size: 100 }));
+  await pages[0].response;
+  await delay(100);
+  const held = received.filter(reply => pages.some(page => page.id === reply.id));
+  assert.ok(held.length > 1 && held.length < pages.length, 'Several complete pages fit, and excess pages wait for acknowledgment');
+  assert.ok(held.reduce((bytes, reply) => bytes + Buffer.byteLength(JSON.stringify(reply)), 0) <= settings.limits.max_message_bytes * 3,
+    'Unacknowledged ordinary replies stay within the three-page byte allowance');
+  const health = await exchange('GetHealth', {}, true).response;
+  assert.equal(health.type, 'reply'); assert.equal(health.value.response.body.data.healthy, true); ack(health);
+  for (const page of pages) {
+    const reply = await page.response; assert.equal(reply.type, 'reply', JSON.stringify(reply));
+    assert.equal(reply.value.response.body.data.items.length, writes.length); ack(reply);
+  }
+  const tiny = Array.from({ length: 36 }, () => send('authorize', { context, discovery: false }));
+  const heldTiny = await Promise.all(tiny.map(call => call.response));
+  for (const reply of heldTiny) assert.equal(reply.type, 'reply');
+  const blocked = exchange('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } });
+  const required = await send('exchange', { operation: { name: 'RevokeApiKey', request: { request_id: uuid(), api_key_id: apiKey } },
+    context: { ...context, verifier: digest(administrator) } }, true).response;
+  assert.equal(required.type, 'reply');
+  assert.equal(received.some(reply => reply.id === blocked.id), false, 'Ordinary reply count saturation preserves required admission');
+  for (const reply of heldTiny) ack(reply);
+  ack(required);
+  const revoked = await blocked.response;
+  assert.equal(revoked.type, 'refusal'); assert.equal(revoked.error.body.error.code, 'unauthorized', 'Authority is rechecked after a response-permit wait'); ack(revoked);
+});
 test('queried-back embedded engine durability, bounded IPC admission and explicit worker loss', async t => {
   const f = await fixture(t);
   const engine = await f.core.rpc.call('inspect', {}, 0, true);
@@ -96,6 +169,7 @@ test('tiny HTTP requests coexist and required exchanges fit the reserved IPC cap
     payload: { task_id: task.task_id, event: 'state', state: 'failed', reason: 'cannot_execute' } } }, context, 8192);
   for (const response of await Promise.all([outcome, terminal])) assert.equal(response.kind, 'success');
   await Promise.all(pending);
+  await f.core.close();
   assert.equal(f.core.rpc.usage.operations, 0); assert.equal(f.core.rpc.usage.bytes, 0);
 });
 test('draining readiness is an authenticated 503 success and ordinary work stops', async t => {

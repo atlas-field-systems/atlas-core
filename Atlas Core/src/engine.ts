@@ -67,7 +67,7 @@ export class Engine {
     }
     return authority;
   }
-  async execute(operation: PublicOperation, context: Context, completed: (execution: 'first' | 'replay' | 'read') => void = () => {}, produce: () => Promise<void> = async () => {}): Promise<ResponseOf<ExchangeName>> {
+  async execute(operation: PublicOperation, context: Context, completed: (execution: 'first' | 'replay' | 'read') => void = () => {}, produce: () => Promise<void> = async () => {}, release: () => void = () => {}): Promise<ResponseOf<ExchangeName>> {
     const authority = this.authorize(context, operation.name === 'GetHealth');
     if (this.state !== 'serving' && operation.name !== 'GetHealth' && operation.name !== 'GetReadiness') refuse('resource_limit');
     let data: unknown, cursor: string | undefined, execution: 'first' | 'replay' | 'read' = 'read';
@@ -97,7 +97,9 @@ export class Engine {
         try { committed = run(); }
         catch (error) {
           if (!(error instanceof Refusal) || error.code !== 'storage_limit') throw error;
+          release();
           await this.expireForStorage(error);
+          await produce();
           committed = run();
         }
         data = committed.data; cursor = committed.cursor; execution = committed.execution;
@@ -184,11 +186,14 @@ export class Engine {
     this.store.transact(null, tx => this.identity.createKey(tx, request, null, recordActivity), () => this.admitStorage(Buffer.byteLength(JSON.stringify(request)) * 16 + 65_536));
   }
   async tick(): Promise<void> { this.entities.tick(); await this.reads.cleanup(); this.temporary.expire(); this.store.checkpoint(); }
-  async reserveStorage(bytes: number, required = false): Promise<void> {
+  async reserveStorage(bytes: number, required = false, produce: () => Promise<void> = async () => {}, release: () => void = () => {}): Promise<void> {
+    await produce();
     try { this.admitStorage(bytes, required); }
     catch (error) {
       if (!(error instanceof Refusal) || error.code !== 'storage_limit') throw error;
+      release();
       await this.expireForStorage(error);
+      await produce();
       this.admitStorage(bytes, required);
     }
   }

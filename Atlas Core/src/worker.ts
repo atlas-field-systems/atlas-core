@@ -14,37 +14,58 @@ port.postMessage({ type: 'ready', dataset: engine.store.dataset, run: engine.sto
 const Message = z.strictObject({ id: z.number().int().positive(), kind: z.string(), data: z.unknown(), reserved: z.boolean(), enqueuedAtNs: z.bigint().nonnegative() });
 const Received = z.strictObject({ type: z.literal('received'), id: z.number().int().positive() });
 const active = new Map<number, Promise<void>>();
-const replies = new Map<number, boolean>();
-const ordinaryResponses: (() => void)[] = [], requiredResponses: (() => void)[] = [];
-let ordinaryBusy = false, requiredBusy = false;
-async function responseSlot(id: number, reserved: boolean): Promise<void> {
-  if (reserved ? requiredBusy : ordinaryBusy) await new Promise<void>(resolve => (reserved ? requiredResponses : ordinaryResponses).push(resolve));
-  else if (reserved) requiredBusy = true;
-  else ordinaryBusy = true;
-  replies.set(id, reserved);
+const replies = new Map<number, number>();
+const waitingResponses: { id: number; reserved: boolean; bytes: number; resolve: () => void }[] = [];
+const charge = (bytes: number): number => bytes * 8 + 1024;
+const pageBytes = charge(setup.settings.limits.max_message_bytes);
+const responseBytes = Math.max(setup.settings.workerQueueBytes, pageBytes * 4);
+const reservedCount = Math.min(4, Math.max(1, Math.floor(setup.settings.workerQueueCount / 4)));
+let usedResponseBytes = 0;
+function admitResponses(): void {
+  for (let i = 0; i < waitingResponses.length;) {
+    const next = waitingResponses[i];
+    if (next === undefined) break;
+    const count = setup.settings.workerQueueCount - (next.reserved ? 0 : reservedCount);
+    const bytes = responseBytes - (next.reserved ? 0 : pageBytes);
+    if (replies.size >= count || usedResponseBytes + next.bytes > bytes) { i++; continue; }
+    waitingResponses.splice(i, 1);
+    replies.set(next.id, next.bytes); usedResponseBytes += next.bytes;
+    next.resolve();
+  }
 }
-function received(id: number): void {
-  const reserved = replies.get(id);
-  if (reserved === undefined) throw new Error('unknown_worker_reply');
-  replies.delete(id);
-  const next = (reserved ? requiredResponses : ordinaryResponses).shift();
-  if (next) next();
-  else if (reserved) requiredBusy = false;
-  else ordinaryBusy = false;
+async function responsePermit(id: number, reserved: boolean, bytes: number): Promise<void> {
+  if (replies.has(id)) return;
+  await new Promise<void>(resolve => { waitingResponses.push({ id, reserved, bytes: charge(bytes), resolve }); admitResponses(); });
 }
+function releaseResponse(id: number): void {
+  const bytes = replies.get(id);
+  if (bytes === undefined) return;
+  replies.delete(id); usedResponseBytes -= bytes;
+  admitResponses();
+}
+function finishResponse(id: number, bytes: number): void {
+  const permit = replies.get(id);
+  if (permit === undefined || charge(bytes) > permit) throw new Error('worker_response_exceeds_permit');
+  replies.set(id, charge(bytes)); usedResponseBytes -= permit - charge(bytes); admitResponses();
+}
+const smallReplies = new Set(['authorize', 'provision', 'open-enroll', 'enrollment-revoke', 'tick', 'describe-upload', 'reserve-upload', 'upload-written',
+  'file-reclaimed', 'installed', 'abandon', 'reclaim', 'capture-removed', 'integrity', 'subscribe', 'drain', 'pressure', 'applied-settings', 'close']);
+const preparesAfterWait = new Set(['exchange', 'close', 'tick', 'open-enroll', 'prepare-upload', 'describe-upload', 'reserve-upload']);
 async function execute(raw: unknown): Promise<void> {
   const message = Message.parse(raw);
-  const produce = async () => { if (!replies.has(message.id)) await responseSlot(message.id, message.reserved); };
-  if (message.kind !== 'close' && message.kind !== 'exchange') await produce();
+  const maximum = smallReplies.has(message.kind) ? 4096 : setup.settings.limits.max_message_bytes;
+  const produce = (bytes = maximum) => responsePermit(message.id, message.reserved, bytes);
+  const release = () => releaseResponse(message.id);
   engine.store.metrics.ipc_wait_ms += Math.max(0, Number(process.hrtime.bigint() - message.enqueuedAtNs) / 1_000_000);
   try {
+    if (!preparesAfterWait.has(message.kind)) await produce();
     let result: unknown;
     switch (message.kind) {
       case 'exchange': {
         const data = z.strictObject({ operation: z.unknown(), context: Context }).parse(message.data);
         if (!isPublicOperation(data.operation)) refuse('invalid_request');
         let execution: 'first' | 'replay' | 'read' = 'read';
-        const response = await engine.execute(data.operation, data.context, outcome => { execution = outcome; }, produce);
+        const response = await engine.execute(data.operation, data.context, outcome => { execution = outcome; }, produce, release);
         result = { response, execution }; break;
       }
       case 'authorize': {
@@ -58,7 +79,10 @@ async function execute(raw: unknown): Promise<void> {
         if (!engine.settings.openEnrollment) refuse('unauthorized');
         if (data.dataset !== engine.store.dataset) refuse('dataset_mismatch');
         if (engine.identity.openBinding(data.request.api_key_id) === null) refuse('identity_conflict');
-        await engine.reserveStorage(1_048_576);
+        await engine.reserveStorage(1_048_576, false, produce, release);
+        if (!engine.settings.openEnrollment) refuse('unauthorized');
+        if (data.dataset !== engine.store.dataset) refuse('dataset_mismatch');
+        if (engine.identity.openBinding(data.request.api_key_id) === null) refuse('identity_conflict');
         const outcome = engine.store.transact(null, tx => {
           const registration = engine.entities.register(tx, data.request);
           return { asset_id: registration.asset.id, api_key_id: registration.api_key.api_key_id, binding_id: engine.identity.markOpen(registration.api_key.api_key_id) };
@@ -73,12 +97,12 @@ async function execute(raw: unknown): Promise<void> {
       case 'prepare-upload': {
         const data = z.object({ context: Context, descriptor: UploadDescriptor.optional(), attempt: Uuid, owner: WriterIdentity }).parse(message.data);
         engine.authorize(data.context);
-        await engine.reserveStorage(Number(data.descriptor?.byte_length ?? 0) + 32768);
+        await engine.reserveStorage(Number(data.descriptor?.byte_length ?? 0) + 32768, false, produce, release);
         const authority = engine.authorize(data.context);
         result = engine.store.db.transaction(() => engine.objects.prepare(data.descriptor, data.attempt, data.owner, authority.keyId))(); break;
       }
-      case 'describe-upload': { const data = z.object({ context: Context, attempt: Uuid, descriptor: UploadDescriptor }).parse(message.data); engine.authorize(data.context); await engine.reserveStorage(Math.max(0, Number(data.descriptor.byte_length) - engine.objects.attempt(data.attempt).bytes)); engine.authorize(data.context); engine.objects.describe(data.attempt, data.descriptor); result = {}; break; }
-      case 'reserve-upload': { const data = z.object({ context: Context, attempt: Uuid, bytes: z.number().int().nonnegative(), written: z.number().int().nonnegative() }).parse(message.data); engine.authorize(data.context); engine.objects.progress(data.attempt, data.written); await engine.reserveStorage(Math.max(0, data.bytes - engine.objects.attempt(data.attempt).bytes)); engine.authorize(data.context); engine.objects.reserve(data.attempt, data.bytes); result = {}; break; }
+      case 'describe-upload': { const data = z.object({ context: Context, attempt: Uuid, descriptor: UploadDescriptor }).parse(message.data); engine.authorize(data.context); await engine.reserveStorage(Math.max(0, Number(data.descriptor.byte_length) - engine.objects.attempt(data.attempt).bytes), false, produce, release); engine.authorize(data.context); engine.objects.describe(data.attempt, data.descriptor); result = {}; break; }
+      case 'reserve-upload': { const data = z.object({ context: Context, attempt: Uuid, bytes: z.number().int().nonnegative(), written: z.number().int().nonnegative() }).parse(message.data); engine.authorize(data.context); engine.objects.progress(data.attempt, data.written); await engine.reserveStorage(Math.max(0, data.bytes - engine.objects.attempt(data.attempt).bytes), false, produce, release); engine.authorize(data.context); engine.objects.reserve(data.attempt, data.bytes); result = {}; break; }
       case 'upload-written': { const data = z.object({ attempt: Uuid, written: z.number().int().nonnegative() }).parse(message.data); engine.objects.progress(data.attempt, data.written); result = {}; break; }
       case 'attempt': result = engine.objects.attempt(Uuid.parse(message.data)); break;
       case 'retired-files': result = engine.objects.retired(); break;
@@ -119,17 +143,25 @@ async function execute(raw: unknown): Promise<void> {
       case 'close':
         await Promise.allSettled([...active].filter(([id]) => id !== message.id).map(([, work]) => work));
         await engine.close(); result = {};
-        await responseSlot(message.id, true);
+        await produce();
         port?.postMessage({ type: 'reply', id: message.id, value: result }); port?.close(); return;
       default: throw new Error('unknown_worker_operation');
     }
-    if (Buffer.byteLength(JSON.stringify(result)) > setup.settings.limits.max_message_bytes) refuse('resource_limit');
+    await produce();
+    const bytes = Buffer.byteLength(JSON.stringify(result));
+    if (bytes > maximum) refuse('resource_limit');
+    finishResponse(message.id, bytes);
     port?.postMessage({ type: 'reply', id: message.id, value: result });
-  } catch (error) { await produce(); port?.postMessage({ type: 'refusal', id: message.id, error: publicError(error, engine.store.dataset) }); }
+  } catch (error) {
+    await produce(4096);
+    const failure = publicError(error, engine.store.dataset);
+    finishResponse(message.id, Buffer.byteLength(JSON.stringify(failure)));
+    port?.postMessage({ type: 'refusal', id: message.id, error: failure });
+  }
 }
 port.on('message', (raw: unknown) => {
   const acknowledgement = Received.safeParse(raw);
-  if (acknowledgement.success) { received(acknowledgement.data.id); return; }
+  if (acknowledgement.success) { if (!replies.has(acknowledgement.data.id)) throw new Error('unknown_worker_reply'); releaseResponse(acknowledgement.data.id); return; }
   const message = Message.parse(raw);
   const work = execute(raw);
   active.set(message.id, work); void work.finally(() => active.delete(message.id));
