@@ -123,7 +123,11 @@ test('preparation failures end their receipts and cleanup failures preserve both
     throw new Refusal('storage_limit');
   });
   const failedRequest = { ...request, load_id: uuid() };
-  await assert.rejects(reads.snapshot(failedRequest, f.context.verifier), error => error instanceof AggregateError && error.errors[0].code === 'storage_limit');
+  const initial = reads.snapshot(failedRequest, f.context.verifier).catch(error => error);
+  const failedDeadline = performance.now() + 5000;
+  while (f.engine.temporary.receipts('snapshot').find(receipt => receipt.request === failedRequest.load_id)?.state !== 'failed') { assert.ok(performance.now() < failedDeadline); await yieldToLoop(); }
+  const retry = reads.snapshot(failedRequest, f.context.verifier).catch(error => error);
+  for (const error of await Promise.all([initial, retry])) assert.ok(error instanceof AggregateError && error.errors[0].code === 'storage_limit', 'Concurrent exact retries must wait for the same recorded cleanup outcome');
   const charged = f.engine.temporary.receipts('snapshot').find(receipt => receipt.request === failedRequest.load_id);
   assert.equal(charged.state, 'failed'); assert.ok(charged.bytes > 0);
   const facts = JSON.parse(charged.data); assert.equal(facts.failure.body.error.code, 'storage_limit'); assert.equal(facts.cleanup_failure.body.error.code, 'integrity_fault');

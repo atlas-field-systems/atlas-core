@@ -243,7 +243,7 @@ export class Reads {
       const build = this.build(receipt, { kind: 'snapshot', baseline: '', expires: reserved.expires, load: request.load_id, size: request.page_size, limits }, source => this.picture(source), verifier);
       this.builds.set(receipt.id, build);
       try { await build; } finally { this.builds.delete(receipt.id); }
-    } else if (receipt.state === 'building') await this.builds.get(receipt.id);
+    } else await this.builds.get(receipt.id);
     await produce(); this.identity.authorize(verifier);
     return this.snapshotPage({ id: receipt.id, position: 0 });
   }
@@ -303,7 +303,7 @@ export class Reads {
       }, verifier);
       this.builds.set(receipt.id, build);
       try { await build; } finally { this.builds.delete(receipt.id); }
-    } else if (receipt.state === 'building') await this.builds.get(receipt.id);
+    } else await this.builds.get(receipt.id);
     await produce(); this.identity.authorize(verifier);
     return this.historyPage({ id: receipt.id, position: 0 });
   }
