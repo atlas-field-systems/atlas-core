@@ -9,6 +9,7 @@ import type { DatabaseWorker } from './rpc.js';
 import type { Context } from './engine.js';
 import type { Settings } from './settings.js';
 import type { Diagnostics } from './diagnostics.js';
+import { faultFrames } from './diagnostics.js';
 import { QueuePressure } from './rpc.js';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -145,6 +146,8 @@ export class ChangesConnection {
     }
   }
   private error(error: unknown, requestId?: NewId): Promise<void> {
+    if (error instanceof AggregateError) for (const [index, cause] of error.errors.slice(0, 2).entries()) this.diagnostics.emit({ severity: 'ERROR', component: 'synchronization',
+      event: index === 0 ? 'primary_failure' : 'cleanup_failure', code: publicError(cause, this.dataset).body.error.code, ...faultFrames(cause) });
     return this.send({ type: 'error', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION,
       ...(requestId === undefined ? {} : { request_id: requestId }), error: publicError(error, this.dataset).body.error });
   }
