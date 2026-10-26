@@ -8,45 +8,72 @@ import { publicError, refuse } from './fault.js';
 
 const port = parentPort;
 if (port === null) throw new Error('worker_requires_parent');
-const setup = z.object({ directory: z.string(), settings: Settings, establish: z.object({ dataset: Uuid, actionId: Uuid }).optional() }).parse(workerData);
-const engine = new Engine(setup.directory, setup.settings, setup.establish);
+const setup = z.object({ directory: z.string(), accountingRoot: z.string(), settings: Settings, establish: z.object({ dataset: Uuid, actionId: Uuid }).optional() }).parse(workerData);
+const engine = new Engine(setup.directory, setup.settings, setup.establish, setup.accountingRoot);
 port.postMessage({ type: 'ready', dataset: engine.store.dataset, run: engine.store.run, engine: engine.store.engine() });
-const Message = z.strictObject({ id: z.number().int().positive(), kind: z.string(), data: z.unknown() });
+const Message = z.strictObject({ id: z.number().int().positive(), kind: z.string(), data: z.unknown(), enqueuedAtNs: z.bigint().nonnegative() });
 const active = new Set<Promise<void>>();
 async function execute(raw: unknown): Promise<void> {
   const message = Message.parse(raw);
+  engine.store.metrics.ipc_wait_ms += Math.max(0, Number(process.hrtime.bigint() - message.enqueuedAtNs) / 1_000_000);
   try {
     let result: unknown;
     switch (message.kind) {
       case 'exchange': {
         const data = z.strictObject({ operation: z.unknown(), context: Context }).parse(message.data);
         if (!isPublicOperation(data.operation)) refuse('invalid_request');
-        result = await engine.execute(data.operation, data.context); break;
+        let execution: 'first' | 'replay' | 'read' = 'read';
+        const response = await engine.execute(data.operation, data.context, outcome => { execution = outcome; });
+        result = { response, execution }; break;
       }
       case 'authorize': {
         const data = z.object({ context: Context, discovery: z.boolean() }).parse(message.data);
         result = engine.authorize(data.context, data.discovery); break;
       }
       case 'provision': engine.provision(exchanges.CreateApiKey.request.schema.parse(message.data)); result = {}; break;
+      case 'enrollment-inspect': result = { enabled: engine.settings.openEnrollment, bindings: engine.identity.openBindings() }; break;
+      case 'open-enroll': {
+        const data = z.object({ dataset: Uuid, request: exchanges.RegisterAsset.request.schema }).parse(message.data);
+        if (!engine.settings.openEnrollment) refuse('unauthorized');
+        if (data.dataset !== engine.store.dataset) refuse('dataset_mismatch');
+        if (engine.identity.openBinding(data.request.api_key_id) === null) refuse('identity_conflict');
+        await engine.reserveStorage(1_048_576);
+        const outcome = engine.store.transact(null, tx => {
+          const registration = engine.entities.register(tx, data.request);
+          return { asset_id: registration.asset.id, api_key_id: registration.api_key.api_key_id, binding_id: engine.identity.markOpen(registration.api_key.api_key_id) };
+        });
+        result = { ...outcome.data, commit_cursor: outcome.cursor }; break;
+      }
+      case 'enrollment-revoke': {
+        const data = z.object({ binding: Uuid, key: Uuid, confirm: z.literal(true) }).parse(message.data);
+        engine.store.transact(null, tx => engine.identity.revokeOpen(tx, data.binding, data.key)); result = { revoked: true }; break;
+      }
       case 'tick': await engine.tick(); result = {}; break;
       case 'prepare-upload': {
         const data = z.object({ context: Context, descriptor: UploadDescriptor.optional(), attempt: Uuid, owner: WriterIdentity }).parse(message.data);
+        engine.authorize(data.context);
+        await engine.reserveStorage(Number(data.descriptor?.byte_length ?? 0) + 32768);
         const authority = engine.authorize(data.context);
         result = engine.store.db.transaction(() => engine.objects.prepare(data.descriptor, data.attempt, data.owner, authority.keyId))(); break;
       }
-      case 'describe-upload': { const data = z.object({ context: Context, attempt: Uuid, descriptor: UploadDescriptor }).parse(message.data); engine.authorize(data.context); engine.objects.describe(data.attempt, data.descriptor); result = {}; break; }
-      case 'reserve-upload': { const data = z.object({ context: Context, attempt: Uuid, bytes: z.number().int().nonnegative() }).parse(message.data); engine.authorize(data.context); engine.objects.reserve(data.attempt, data.bytes); result = {}; break; }
+      case 'describe-upload': { const data = z.object({ context: Context, attempt: Uuid, descriptor: UploadDescriptor }).parse(message.data); engine.authorize(data.context); await engine.reserveStorage(Math.max(0, Number(data.descriptor.byte_length) - engine.objects.attempt(data.attempt).bytes)); engine.authorize(data.context); engine.objects.describe(data.attempt, data.descriptor); result = {}; break; }
+      case 'reserve-upload': { const data = z.object({ context: Context, attempt: Uuid, bytes: z.number().int().nonnegative(), written: z.number().int().nonnegative() }).parse(message.data); engine.authorize(data.context); engine.objects.progress(data.attempt, data.written); await engine.reserveStorage(Math.max(0, data.bytes - engine.objects.attempt(data.attempt).bytes)); engine.authorize(data.context); engine.objects.reserve(data.attempt, data.bytes); result = {}; break; }
+      case 'upload-written': { const data = z.object({ attempt: Uuid, written: z.number().int().nonnegative() }).parse(message.data); engine.objects.progress(data.attempt, data.written); result = {}; break; }
       case 'attempt': result = engine.objects.attempt(Uuid.parse(message.data)); break;
+      case 'retired-files': result = engine.objects.retired(); break;
+      case 'file-reclaimed': engine.objects.reclaimed(Uuid.parse(message.data)); result = {}; break;
       case 'installed': engine.objects.installed(Uuid.parse(message.data)); result = {}; break;
       case 'abandon': engine.objects.abandon(Uuid.parse(message.data)); result = {}; break;
       case 'reclaim': engine.objects.reclaim(Uuid.parse(message.data)); result = {}; break;
       case 'attempts': result = engine.objects.attempts(); break;
+      case 'capture-files': result = engine.temporary.captureFiles(); break;
+      case 'capture-removed': engine.temporary.fileRemoved(Uuid.parse(message.data)); result = {}; break;
       case 'file': {
         const data = z.object({ context: Context, object: Uuid }).parse(message.data); engine.authorize(data.context);
         result = engine.objects.file(data.object); break;
       }
       case 'integrity': { const data = z.object({ object: Uuid, fault: z.boolean() }).parse(message.data); engine.objects.integrity(data.object, data.fault); result = {}; break; }
-      case 'inspect': result = { ...engine.store.engine(), state: engine.state, pressure: engine.pressure }; break;
+      case 'inspect': result = { ...engine.store.engine(), state: engine.state, pressure: engine.pressure, metrics: engine.store.metrics }; break;
       case 'subscribe': {
         const data = z.object({ context: Context, request: SubscribeChanges }).parse(message.data); engine.authorize(data.context);
         engine.store.parseCursor(data.request.from_cursor);
@@ -55,11 +82,16 @@ async function execute(raw: unknown): Promise<void> {
       case 'feed': {
         const data = z.object({ context: Context, from: z.string(), boundary: z.string().nullable() }).parse(message.data); engine.authorize(data.context);
         const boundary = data.boundary ?? engine.store.cursor();
-        const messages = engine.store.messages(data.from, boundary, 1);
+        const messages = [...engine.store.messages(data.from, boundary, 1)];
         result = { through: boundary, messages, earliest: engine.store.earliest() }; break;
       }
       case 'drain': engine.state = 'draining'; result = {}; break;
       case 'pressure': engine.pressure = z.boolean().parse(message.data); result = {}; break;
+      case 'applied-settings': {
+        const revision = z.object({ revision: z.string() }).parse(message.data).revision;
+        if (engine.store.meta('settings_revision') !== revision) engine.store.transact(null, tx => { engine.identity.activity(tx, 'configuration', 'Local administrator applied settings'); engine.store.setMeta('settings_revision', revision); });
+        result = {}; break;
+      }
       case 'close':
         await Promise.allSettled([...active]); await engine.close(); result = {};
         port?.postMessage({ type: 'reply', id: message.id, value: result }); port?.close(); return;

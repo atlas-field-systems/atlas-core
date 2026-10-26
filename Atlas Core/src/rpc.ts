@@ -22,8 +22,8 @@ export class DatabaseWorker {
   private failed = false;
   private closing = false;
   private readonly exited: Promise<number>;
-  constructor(directory: string, private readonly settings: Settings, establish?: { dataset: Uuid; actionId: Uuid }) {
-    this.worker = new Worker(new URL('./worker.js', import.meta.url), { workerData: { directory, settings, establish },
+  constructor(directory: string, private readonly settings: Settings, establish?: { dataset: Uuid; actionId: Uuid }, accountingRoot = directory, private readonly onFailure: () => void = () => {}) {
+    this.worker = new Worker(new URL('./worker.js', import.meta.url), { workerData: { directory, settings, establish, accountingRoot },
       resourceLimits: { maxOldGenerationSizeMb: 1024 }, stdout: true, stderr: true });
     this.worker.stdout.resume(); this.worker.stderr.resume();
     this.exited = new Promise(resolve => this.worker.once('exit', code => { this.fail(); resolve(code); }));
@@ -48,7 +48,9 @@ export class DatabaseWorker {
   get available(): boolean { return !this.failed && !this.closing; }
   get usage() { return { operations: this.pending.size, bytes: this.queuedBytes }; }
   private fail(): void {
+    const notify = !this.failed && !this.closing;
     this.failed = true;
+    if (notify) this.onFailure();
     for (const pending of this.pending.values()) pending.reject(new Error('database_worker_failed'));
     this.pending.clear(); this.queuedBytes = 0;
   }
@@ -61,18 +63,22 @@ export class DatabaseWorker {
     const serial = ++this.serial;
     return new Promise((resolve, reject) => {
       this.pending.set(serial, { bytes, resolve, reject }); this.queuedBytes += bytes;
-      try { this.worker.postMessage({ id: serial, kind, data }); }
+      try { this.worker.postMessage({ id: serial, kind, data, enqueuedAtNs: process.hrtime.bigint() }); }
       catch (error) { this.pending.delete(serial); this.queuedBytes -= bytes; reject(error); }
     });
   }
   async exchange<K extends ExchangeName>(name: K, request: RequestOf<K>, context: Context, bytes: number): Promise<ResponseOf<K>> {
+    return (await this.exchangeDetailed(name, request, context, bytes)).response;
+  }
+  async exchangeDetailed<K extends ExchangeName>(name: K, request: RequestOf<K>, context: Context, bytes: number): Promise<{ response: ResponseOf<K>; execution: 'first' | 'replay' | 'read' }> {
     const value = await this.call('exchange', { operation: { name, request }, context }, bytes,
-      name === 'ReportTaskExecution' || name === 'RequestTaskCancellation' || name === 'ConfirmTaskOrder' || name === 'GetReadiness');
-    if (!isResponse(name, value)) throw new Error('invalid_worker_response');
-    return value;
+      name === 'ReportTaskExecution' || name === 'RequestTaskCancellation' || name === 'ConfirmTaskOrder' || name === 'GetReadiness' || name === 'GetHealth' || name === 'ListResources');
+    const result = z.object({ response: z.unknown(), execution: z.enum(['first', 'replay', 'read']) }).parse(value);
+    if (!isResponse(name, result.response)) throw new Error('invalid_worker_response');
+    return { response: result.response, execution: result.execution };
   }
   async close(): Promise<void> {
-    if (this.failed) { await this.exited; return; }
+    if (this.failed) { await this.worker.terminate(); await this.exited; return; }
     this.closing = true;
     await this.call('close', {}, 0, true);
     const code = await this.exited;

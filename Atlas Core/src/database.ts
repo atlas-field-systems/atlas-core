@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { existsSync, statSync } from 'node:fs';
 import { z } from 'zod';
 import { Change, Counter, ReplayMessage, Uuid, contract, writeJson } from '@atlas/protocol';
 import { canonical, id, next, now, zero } from './exact.js';
@@ -14,6 +15,7 @@ export class Transaction {
   readonly retries: { scope: string; request: string; facts: string }[] = [];
   readonly committed: (() => void)[] = [];
   dirty = false;
+  replayed = false;
   replayCursor: string | undefined;
   constructor(readonly store: Store, readonly authority: Authority | null) {}
   change(change: Change): void {
@@ -27,6 +29,7 @@ export class Transaction {
     if (row === undefined) return false;
     const found = Retry.parse(row);
     if (found.facts !== canonical(facts)) refuse('identity_conflict');
+    this.replayed = true;
     if (found.cursor !== null) this.replayCursor = found.cursor;
     return true;
   }
@@ -39,8 +42,13 @@ export class Store {
   readonly db: Database.Database;
   readonly dataset: Uuid;
   readonly run = id();
+  readonly metrics = { transactions: 0, rollbacks: 0, commit_ms: 0, transaction_ms: 0, ipc_wait_ms: 0,
+    checkpoints: 0, checkpoint_ms: 0, wal_bytes: 0, wal_frames: 0, checkpointed_frames: 0, checkpoint_busy: 0,
+    contact_refreshes: 0, capture_builds: 0, capture_failures: 0, capture_releases: 0, capture_expiries: 0, captured_bytes: 0 };
   constructor(readonly path: string, readonly settings: Settings, establish?: { dataset: Uuid; actionId: Uuid }) {
+    const fresh = !existsSync(path) || statSync(path).size === 0;
     this.db = new Database(path);
+    if (fresh) this.db.pragma('auto_vacuum = FULL');
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('synchronous = FULL');
     this.db.pragma('foreign_keys = ON');
@@ -72,6 +80,18 @@ export class Store {
   }
   get sequence(): Counter { return Counter.parse(this.meta('sequence')); }
   cursor(sequence = this.sequence): string { return `${this.dataset}/${sequence.padStart(20, '0')}`; }
+  cursorAt(source: Database.Database): string {
+    return this.cursor(Counter.parse(Meta.parse(source.prepare("SELECT value FROM core_meta WHERE key='sequence'").get()).value));
+  }
+  maximumReplayBytes(): number {
+    return z.object({ bytes: z.number() }).parse(this.db.prepare('SELECT coalesce(max(bytes),0) AS bytes FROM commit_log').get()).bytes;
+  }
+  resetMetadata(dataset: Uuid, action: Uuid, hard: boolean): void {
+    this.db.exec(hard ? 'DELETE FROM retry; DELETE FROM commit_log' : "DELETE FROM retry WHERE scope NOT LIKE 'setup/%'; DELETE FROM commit_log");
+    this.setMeta('dataset', dataset); this.setMeta('sequence', zero); this.setMeta('earliest', zero);
+    this.db.prepare("DELETE FROM core_meta WHERE key='settings_revision'").run();
+    this.setMeta('establishment', JSON.stringify({ dataset, actionId: action }));
+  }
   parseCursor(cursor: string): Counter {
     const prefix = `${this.dataset}/`;
     if (!cursor.startsWith(prefix) || !/^\d{20}$/.test(cursor.slice(prefix.length))) refuse('cursor_expired', { earliest_recoverable_cursor: this.earliest() });
@@ -80,9 +100,12 @@ export class Store {
     return value.data;
   }
   earliest(): string { return this.cursor(Counter.parse(this.meta('earliest'))); }
-  transact<T>(authority: Authority | null, action: (tx: Transaction) => T): { data: T; cursor?: string } {
+  transact<T>(authority: Authority | null, action: (tx: Transaction) => T): { data: T; cursor?: string; execution: 'first' | 'replay' | 'read' } {
     const committed: (() => void)[] = [];
-    const result = this.db.transaction(() => {
+    const began = performance.now();
+    let beforeCommit = began;
+    let result: { data: T; cursor?: string; execution: 'first' | 'replay' | 'read' };
+    try { result = this.db.transaction(() => {
       const tx = new Transaction(this, authority);
       const data = action(tx);
       committed.push(...tx.committed);
@@ -105,8 +128,12 @@ export class Store {
         for (const retry of tx.retries) this.db.prepare('INSERT INTO retry VALUES(?,?,?,?)').run(retry.scope, retry.request, retry.facts, cursor);
         this.prune();
       }
-      return { data, ...(cursor === undefined ? {} : { cursor }) };
-    })();
+      beforeCommit = performance.now();
+      return { data, ...(cursor === undefined ? {} : { cursor }), execution: tx.dirty ? 'first' as const : tx.replayed ? 'replay' as const : 'read' as const };
+    })(); } catch (error) { this.metrics.rollbacks++; throw error; }
+    this.metrics.transactions++;
+    this.metrics.transaction_ms += performance.now() - began;
+    this.metrics.commit_ms += performance.now() - beforeCommit;
     for (const action of committed) action();
     return result;
   }
@@ -123,13 +150,22 @@ export class Store {
       bytes -= r.bytes;
     }
   }
-  messages(from: string, through: string, max = 1000): ReplayMessage[] {
+  *messages(from: string, through: string, max = 1000): Generator<ReplayMessage> {
     const start = this.parseCursor(from).padStart(20, '0');
     const end = this.parseCursor(through).padStart(20, '0');
-    return this.db.prepare('SELECT sequence,previous,message FROM commit_log WHERE sequence>? AND sequence<=? ORDER BY sequence LIMIT ?')
-      .all(start, end, max).map(value => ReplayMessage.parse(JSON.parse(LogRow.parse(value).message)));
+    for (const value of this.db.prepare('SELECT sequence,previous,message FROM commit_log WHERE sequence>? AND sequence<=? ORDER BY sequence LIMIT ?').iterate(start, end, max)) {
+      yield ReplayMessage.parse(JSON.parse(LogRow.parse(value).message));
+    }
   }
-  checkpoint(): void { this.db.pragma('wal_checkpoint(PASSIVE)'); }
+  checkpoint(): void {
+    const began = performance.now();
+    const result = z.array(z.object({ busy: z.number().int(), log: z.number().int(), checkpointed: z.number().int() })).length(1).parse(this.db.pragma('wal_checkpoint(PASSIVE)'))[0];
+    if (result === undefined) throw new Error('checkpoint_result_missing');
+    this.metrics.checkpoints++; this.metrics.checkpoint_ms += performance.now() - began;
+    this.metrics.wal_frames = result.log; this.metrics.checkpointed_frames = result.checkpointed;
+    this.metrics.checkpoint_busy += result.busy;
+    this.metrics.wal_bytes = existsSync(`${this.path}-wal`) ? statSync(`${this.path}-wal`).size : 0;
+  }
   close(): void { this.checkpoint(); this.db.close(); }
   engine() {
     return { ...z.object({ version: z.string(), sourceId: z.string() }).parse(this.db.prepare('SELECT sqlite_version() AS version,sqlite_source_id() AS sourceId').get()),

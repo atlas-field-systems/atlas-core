@@ -11,7 +11,8 @@ export class Identity {
   constructor(private readonly store: Store) {
     store.db.exec(`CREATE TABLE IF NOT EXISTS identity_operators(id TEXT PRIMARY KEY,image TEXT NOT NULL,deleted INTEGER NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS identity_keys(id TEXT PRIMARY KEY,image TEXT NOT NULL,verifier TEXT NOT NULL UNIQUE,asset_id TEXT) STRICT;
-      CREATE TABLE IF NOT EXISTS identity_activity(id TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;`);
+      CREATE TABLE IF NOT EXISTS identity_activity(id TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS identity_asset_bindings(key_id TEXT PRIMARY KEY,asset_id TEXT NOT NULL,dataset_id TEXT NOT NULL,request_id TEXT NOT NULL UNIQUE,open_binding TEXT UNIQUE) STRICT;`);
   }
   authorize(verifier: string): Authority {
     const row = this.store.db.prepare('SELECT image FROM identity_keys WHERE verifier=?').get(verifier);
@@ -70,15 +71,16 @@ export class Identity {
     this.activity(tx, 'operator', 'Operator deleted');
     return { deleted: true };
   }
-  createKey(tx: Transaction, request: RequestOf<'CreateApiKey'>, assetId: Uuid | null = null): ApiKey {
+  createKey(tx: Transaction, request: RequestOf<'CreateApiKey'>, assetId: Uuid | null = null, recordActivity = true): ApiKey {
     if (request.operator_id !== undefined && !this.operatorExists(request.operator_id)) refuse('operator_deleted');
     const facts = credentialFacts(request);
     if (tx.retry('setup/CreateApiKey', request.request_id, facts)) return this.key(request.api_key_id);
     if (this.store.db.prepare('SELECT id FROM identity_keys WHERE id=? OR verifier=?').get(request.api_key_id, digest(request.secret))) refuse('identity_conflict');
     const image: ApiKey = { api_key_id: request.api_key_id, operator_id: request.operator_id ?? null, created_at: now(), revoked_at: null };
     this.store.db.prepare('INSERT INTO identity_keys VALUES(?,?,?,?)').run(image.api_key_id, JSON.stringify(image), digest(request.secret), assetId);
+    if (assetId !== null) this.store.db.prepare('INSERT INTO identity_asset_bindings VALUES(?,?,?,?,NULL)').run(image.api_key_id, assetId, this.store.dataset, request.request_id);
     tx.remember('setup/CreateApiKey', request.request_id, facts);
-    this.activity(tx, 'credential', 'Credential created');
+    if (recordActivity) this.activity(tx, 'credential', tx.authority === null ? 'Local administrator created credential' : 'Credential created');
     return image;
   }
   revoke(tx: Transaction, keyId: Uuid): ApiKey {
@@ -104,7 +106,7 @@ export class Identity {
     let after = '';
     while (true) {
       const values = kind === 'asset'
-        ? this.store.db.prepare('SELECT image,verifier,asset_id FROM identity_keys WHERE asset_id=? AND id>? ORDER BY id LIMIT 32').all(owner, after)
+        ? this.store.db.prepare('SELECT k.image,k.verifier,k.asset_id FROM identity_keys k JOIN identity_asset_bindings b ON b.key_id=k.id WHERE b.asset_id=? AND b.dataset_id=? AND k.id>? ORDER BY k.id LIMIT 32').all(owner, this.store.dataset, after)
         : this.store.db.prepare("SELECT image,verifier,asset_id FROM identity_keys WHERE json_extract(image,'$.operator_id')=? AND id>? ORDER BY id LIMIT 32").all(owner, after);
       for (const value of values) {
         const image = ApiKey.parse(JSON.parse(KeyRow.parse(value).image));
@@ -138,6 +140,28 @@ export class Identity {
   }
   clearDataset(hard: boolean): void {
     this.store.db.exec('DELETE FROM identity_activity');
-    if (hard) this.store.db.exec('DELETE FROM identity_keys; DELETE FROM identity_operators');
+    if (hard) this.store.db.exec('DELETE FROM identity_keys; DELETE FROM identity_operators; DELETE FROM identity_asset_bindings');
+  }
+  checkRegistration(request: Uuid): void {
+    const row = this.store.db.prepare('SELECT dataset_id FROM identity_asset_bindings WHERE request_id=?').get(request);
+    if (row && z.object({ dataset_id: Uuid }).parse(row).dataset_id !== this.store.dataset) refuse('identity_conflict');
+  }
+  markOpen(keyId: Uuid): Uuid {
+    const row = z.object({ open_binding: Uuid.nullable() }).parse(this.store.db.prepare('SELECT open_binding FROM identity_asset_bindings WHERE key_id=?').get(keyId));
+    if (row.open_binding !== null) return row.open_binding;
+    if (this.openBindings().length >= 128) refuse('resource_limit');
+    const binding = id(); this.store.db.prepare('UPDATE identity_asset_bindings SET open_binding=? WHERE key_id=?').run(binding, keyId);
+    return binding;
+  }
+  openBinding(key: Uuid): Uuid | null | undefined {
+    const row = this.store.db.prepare('SELECT open_binding FROM identity_asset_bindings WHERE key_id=?').get(key);
+    return row === undefined ? undefined : z.object({ open_binding: Uuid.nullable() }).parse(row).open_binding;
+  }
+  openBindings() {
+    return this.store.db.prepare("SELECT b.open_binding AS binding_id,b.key_id AS api_key_id,b.asset_id,b.dataset_id FROM identity_asset_bindings b JOIN identity_keys k ON k.id=b.key_id WHERE b.open_binding IS NOT NULL AND json_extract(k.image,'$.revoked_at') IS NULL ORDER BY b.open_binding LIMIT 1000").all().map(row => z.object({ binding_id: Uuid, api_key_id: Uuid, asset_id: Uuid, dataset_id: Uuid }).parse(row));
+  }
+  revokeOpen(tx: Transaction, binding: Uuid, key: Uuid): void {
+    if (!this.store.db.prepare('SELECT key_id FROM identity_asset_bindings WHERE open_binding=? AND key_id=?').get(binding, key)) refuse('identity_conflict');
+    this.revoke(tx, key);
   }
 }

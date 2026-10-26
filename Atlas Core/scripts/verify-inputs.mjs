@@ -67,10 +67,12 @@ try {
   db.close();
 }
 const report = {
-  sourceRevision: execFileSync('git', ['rev-parse', 'HEAD'], {
+  sourceRevision: process.env.ATLAS_SOURCE_REVISION ?? execFileSync('git', ['rev-parse', 'HEAD'], {
     cwd: root,
     encoding: 'utf8',
   }).trim(),
+  sourceTree: process.env.ATLAS_SOURCE_TREE ?? execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { cwd: root, encoding: 'utf8' }).trim(),
+  sourceDirty: process.env.ATLAS_SOURCE_DIRTY === undefined ? execFileSync('git', ['status', '--porcelain', '--untracked-files=normal'], { cwd: root, encoding: 'utf8' }).trim().length > 0 : process.env.ATLAS_SOURCE_DIRTY !== 'false',
   target: { os: process.platform, architecture: process.arch },
   node: process.versions.node,
   npm,

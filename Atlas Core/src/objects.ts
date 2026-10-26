@@ -7,7 +7,7 @@ import { refuse } from './fault.js';
 import type { Store, Transaction } from './database.js';
 
 const Image = z.object({ image: z.string() });
-export const WriterIdentity = z.strictObject({ pid: z.number().int().positive(), boot: z.string().min(1).max(128), start: z.string().regex(/^\d+$/) });
+export const WriterIdentity = z.strictObject({ pid: z.number().int().positive(), boot: z.string().min(1).max(128), start: z.string().regex(/^\d+$/), namespace: z.string().regex(/^pid:\[\d+\]$/), launch: Uuid.exactOptional() });
 export type WriterIdentity = z.infer<typeof WriterIdentity>;
 export const Attempt = z.strictObject({ id: Uuid, object_id: Uuid, descriptor: z.string(), owner: z.string(), state: z.enum(['active', 'installed', 'published', 'abandoned', 'reclaimed']),
   staging: z.string(), installed: z.string(), bytes: z.number(), key_id: Uuid });
@@ -16,7 +16,8 @@ export class Objects {
   constructor(private readonly store: Store, private readonly reference: (association: Association) => void) {
     store.db.exec(`CREATE TABLE IF NOT EXISTS object_images(id TEXT PRIMARY KEY,image TEXT NOT NULL,deleted INTEGER NOT NULL,path TEXT NOT NULL,fault INTEGER NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS object_holds(task TEXT NOT NULL,object TEXT NOT NULL,PRIMARY KEY(task,object)) STRICT;
-      CREATE TABLE IF NOT EXISTS object_attempts(id TEXT PRIMARY KEY,object_id TEXT NOT NULL,descriptor TEXT NOT NULL,owner TEXT NOT NULL,state TEXT NOT NULL,staging TEXT NOT NULL,installed TEXT NOT NULL,bytes INTEGER NOT NULL,key_id TEXT NOT NULL) STRICT;`);
+      CREATE TABLE IF NOT EXISTS object_attempts(id TEXT PRIMARY KEY,object_id TEXT NOT NULL,descriptor TEXT NOT NULL,owner TEXT NOT NULL,state TEXT NOT NULL,staging TEXT NOT NULL,installed TEXT NOT NULL,bytes INTEGER NOT NULL,key_id TEXT NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS object_progress(attempt TEXT PRIMARY KEY,written INTEGER NOT NULL) STRICT;`);
   }
   get(objectId: Uuid): ObjectImage {
     const row = this.store.db.prepare('SELECT image FROM object_images WHERE id=? AND deleted=0').get(objectId);
@@ -55,6 +56,14 @@ export class Objects {
     this.reserve(attemptId, Number(descriptor.byte_length));
     this.store.db.prepare('UPDATE object_attempts SET descriptor=?,object_id=? WHERE id=?').run(canonical(descriptor), descriptor.object_id, attemptId);
   }
+  progress(attemptId: Uuid, written: number): void {
+    const attempt = this.attempt(attemptId);
+    if (attempt.state !== 'active' || written > attempt.bytes || written < 0) refuse('integrity_fault');
+    this.store.db.prepare('INSERT INTO object_progress VALUES(?,?) ON CONFLICT(attempt) DO UPDATE SET written=max(written,excluded.written)').run(attemptId, written);
+  }
+  get unwritten(): number {
+    return z.object({ bytes: z.number() }).parse(this.store.db.prepare("SELECT coalesce(sum(a.bytes-coalesce(p.written,0)),0) AS bytes FROM object_attempts a LEFT JOIN object_progress p ON p.attempt=a.id WHERE a.state IN ('active','installed')").get()).bytes;
+  }
   publish(tx: Transaction, attemptId: Uuid): ObjectImage {
     const attempt = this.attempt(attemptId);
     if (attempt.state !== 'installed') refuse('integrity_fault');
@@ -82,6 +91,7 @@ export class Objects {
   abandon(attemptId: Uuid): void {
     const attempt = this.attempt(attemptId);
     if (attempt.state === 'published') return;
+    if (this.store.db.prepare('SELECT id FROM object_images WHERE path=?').get(attempt.installed)) refuse('integrity_fault');
     this.store.db.prepare("UPDATE object_attempts SET state='abandoned' WHERE id=?").run(attemptId);
   }
   reclaim(attemptId: Uuid): void {
@@ -134,5 +144,15 @@ export class Objects {
   *picture(source: Database.Database): Generator<ObjectImage> {
     for (const row of source.prepare('SELECT image FROM object_images WHERE deleted=0 ORDER BY id').iterate()) yield ObjectImage.parse(JSON.parse(Image.parse(row).image));
   }
-  clearDataset(): void { this.store.db.exec('DELETE FROM object_images; DELETE FROM object_holds; DELETE FROM object_attempts'); }
+  clearDataset(): void { this.store.db.exec('DELETE FROM object_images; DELETE FROM object_holds; DELETE FROM object_attempts; DELETE FROM object_progress'); }
+  retired(): { object: Uuid; path: string }[] {
+    return this.store.db.prepare("SELECT id AS object,path FROM object_images WHERE deleted=1 AND path<>'' LIMIT 32").all().map(row => z.object({ object: Uuid, path: z.string() }).parse(row));
+  }
+  reclaimed(object: Uuid): void {
+    const row = this.store.db.prepare('SELECT path FROM object_images WHERE id=? AND deleted=1').get(object);
+    if (!row) refuse('integrity_fault');
+    const path = z.object({ path: z.string() }).parse(row).path;
+    this.store.db.prepare("UPDATE object_attempts SET state='reclaimed',bytes=0 WHERE installed=? AND state='published'").run(path);
+    this.store.db.prepare("UPDATE object_images SET path='' WHERE id=? AND deleted=1").run(object);
+  }
 }

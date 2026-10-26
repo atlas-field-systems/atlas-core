@@ -1,14 +1,23 @@
-import { readFile, open, rename, mkdir, lstat, rm } from 'node:fs/promises';
+import { readFile, readlink, open, rename, mkdir, lstat, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { id } from './exact.js';
+import { Uuid } from '@atlas/protocol';
 import { WriterIdentity } from './objects.js';
 
 export async function processIdentity(pid = process.pid): Promise<WriterIdentity> {
-  const [boot, raw] = await Promise.all([readFile('/proc/sys/kernel/random/boot_id', 'utf8'), readFile(`/proc/${pid}/stat`, 'utf8')]);
+  const [boot, raw, namespace] = await Promise.all([readFile('/proc/sys/kernel/random/boot_id', 'utf8'), readFile(`/proc/${pid}/stat`, 'utf8'), readlink('/proc/self/ns/pid')]);
   const start = raw.slice(raw.lastIndexOf(')') + 2).split(' ')[19];
-  return WriterIdentity.parse({ pid, boot: boot.trim(), start });
+  return WriterIdentity.parse({ pid, boot: boot.trim(), start, namespace });
+}
+export async function currentWriter(): Promise<WriterIdentity> {
+  const owner = await processIdentity();
+  const launch = Uuid.safeParse(process.env.ATLAS_LAUNCH_ID);
+  return { ...owner, ...(launch.success ? { launch: launch.data } : {}) };
 }
 export async function exited(identity: WriterIdentity): Promise<boolean> {
+  const observer = await processIdentity();
+  if (observer.boot !== identity.boot) return true;
+  if (observer.namespace !== identity.namespace) return false;
   try {
     const actual = await processIdentity(identity.pid);
     return actual.boot !== identity.boot || actual.start !== identity.start;
@@ -18,6 +27,10 @@ export async function exited(identity: WriterIdentity): Promise<boolean> {
   }
 }
 export async function flushDirectory(directory: string): Promise<void> { const handle = await open(directory, 'r'); try { await handle.sync(); } finally { await handle.close(); } }
+export async function removeCapture(directory: string, capture: Uuid): Promise<void> {
+  for (const suffix of ['', '-journal', '-wal', '-shm']) await rm(join(directory, `${capture}.sqlite${suffix}`), { force: true });
+  await flushDirectory(directory);
+}
 export async function atomicJson(path: string, value: unknown): Promise<void> {
   const data = JSON.stringify(value) + '\n';
   if (Buffer.byteLength(data) > 65_536) throw new Error('record_limit');

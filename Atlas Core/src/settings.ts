@@ -6,6 +6,7 @@ const bytes = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 export const Settings = z.strictObject({
   host: z.string().min(1).max(255), port: z.number().int().min(0).max(65535),
   trustedOrigins: z.array(z.url().refine(value => new URL(value).origin === value)).max(64),
+  openEnrollment: z.boolean(),
   limits: MessageLimits, temporary: TemporaryLimits,
   workerQueueCount: count.max(4096), workerQueueBytes: bytes,
   maxConnections: count.max(1024), maxUploads: count.max(64), maxDownloads: count.max(64),
@@ -15,11 +16,12 @@ export const Settings = z.strictObject({
   diagnosticBytes: bytes.max(268_435_456), diagnosticLevel: z.enum(['INFO', 'DEBUG', 'WARN', 'ERROR']),
 }).refine(s => s.workerQueueCount >= 4 && s.workerQueueBytes >= 1_048_576 && s.reserveBytes < s.storageBytes &&
   s.objectBytes <= s.storageBytes && s.resourceImageBytes >= 65_536 && s.limits.max_message_bytes >= s.resourceImageBytes * 3 + 16_384 &&
+  s.limits.max_request_bytes >= 65_536 && s.limits.max_request_json_values >= 8192 && s.limits.max_json_depth >= 16 &&
   s.limits.max_changes >= 3 && s.limits.max_json_values >= 65_536 && s.limits.max_control_bytes >= 4096 && s.limits.max_control_json_values >= 1024,
   'Settings cannot represent required control effects');
 export type Settings = z.infer<typeof Settings>;
 export const defaults: Settings = Settings.parse({
-  host: '0.0.0.0', port: 7443, trustedOrigins: [],
+  host: '0.0.0.0', port: 7443, trustedOrigins: [], openEnrollment: false,
   limits: { max_request_bytes: 1_048_576, max_request_json_values: 65_536, max_message_bytes: 4_194_304,
     max_json_values: 262_144, max_changes: 1000, max_control_bytes: 16_384,
     max_control_json_values: 4096, max_json_depth: 32, max_object_bytes: 2_000_000_000 },

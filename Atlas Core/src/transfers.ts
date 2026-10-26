@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { open, link, unlink, mkdir, stat, rm } from 'node:fs/promises';
+import { open, link, unlink, stat, rm } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -10,10 +10,11 @@ import type { UploadDescriptor } from '@atlas/protocol';
 import { Attempt, WriterIdentity } from './objects.js';
 import { id } from './exact.js';
 import { Refusal, refuse } from './fault.js';
-import { exited, flushDirectory, processIdentity } from './ownership.js';
+import { currentWriter, exited, flushDirectory, ownedDirectory } from './ownership.js';
 import type { Context } from './engine.js';
 import type { DatabaseWorker } from './rpc.js';
 import type { Settings } from './settings.js';
+import type { Diagnostics } from './diagnostics.js';
 
 export class Transfers {
   private uploads = 0;
@@ -21,17 +22,18 @@ export class Transfers {
   private closing = false;
   private readonly active = new Set<Promise<unknown>>();
   private readonly streams = new Set<Readable>();
+  private readonly receivers = new Map<FastifyRequest, { context: Context; stream?: Readable }>();
   private owner: WriterIdentity | undefined;
-  constructor(private readonly rpc: DatabaseWorker, private readonly directory: string, private readonly settings: Settings) {}
+  constructor(private readonly rpc: DatabaseWorker, private readonly directory: string, private readonly settings: Settings, private readonly diagnostics: Diagnostics, private readonly exitedLaunches: ReadonlySet<Uuid>) {}
   async initialize(): Promise<void> {
-    this.owner = await processIdentity();
-    await mkdir(join(this.directory, 'staging'), { recursive: true, mode: 0o700 });
-    await mkdir(join(this.directory, 'installed'), { recursive: true, mode: 0o700 });
+    this.owner = await currentWriter();
+    await ownedDirectory(join(this.directory, 'staging'));
+    await ownedDirectory(join(this.directory, 'installed'));
     if ((await stat(join(this.directory, 'staging'))).dev !== (await stat(join(this.directory, 'installed'))).dev) throw new Error('object_filesystem_mismatch');
     const attempts = z.array(Attempt).parse(await this.rpc.call('attempts', {}, 0, true));
     for (const attempt of attempts) {
       const owner = WriterIdentity.parse(JSON.parse(attempt.owner));
-      if (await exited(owner)) await this.cleanup(attempt.id);
+      if (owner.launch !== undefined && this.exitedLaunches.has(owner.launch) || await exited(owner)) await this.cleanup(attempt.id);
     }
   }
   private async authorize(context: Context): Promise<void> { await this.rpc.call('authorize', { context, discovery: false }, 256, true); }
@@ -46,6 +48,8 @@ export class Transfers {
   private async receive(request: FastifyRequest, context: Context, parse: (bytes: Uint8Array) => UploadDescriptor) {
     if (this.closing || this.uploads >= this.settings.maxUploads) refuse('resource_limit');
     this.uploads++;
+    const receiver: { context: Context; stream?: Readable } = { context };
+    this.receivers.set(request, receiver);
     const attemptId = id();
     let attempt: Attempt | undefined, file: FileHandle | undefined, primary: unknown;
     try {
@@ -56,6 +60,7 @@ export class Transfers {
       for await (const part of request.parts()) {
         if (part.type !== 'file' || part.encoding !== '7bit' && part.encoding !== 'binary' && part.encoding !== '8bit') refuse('invalid_request');
         this.streams.add(part.file);
+        receiver.stream = part.file;
         try {
           if (part.fieldname === 'descriptor' && descriptor === undefined) {
             const chunks: Buffer[] = []; let bytes = 0;
@@ -73,32 +78,44 @@ export class Transfers {
             for await (const raw of part.file) {
               if (!Buffer.isBuffer(raw)) refuse('invalid_request');
               if (length + raw.byteLength > this.settings.limits.max_object_bytes || descriptor !== undefined && BigInt(length + raw.byteLength) > BigInt(descriptor.byte_length)) refuse('payload_too_large');
-              await this.rpc.call('reserve-upload', { context, attempt: attemptId, bytes: length + raw.byteLength }, 512);
+              await this.rpc.call('reserve-upload', { context, attempt: attemptId, bytes: length + raw.byteLength, written: length }, 512);
               let offset = 0;
               while (offset < raw.byteLength) { const write = await file.write(raw, offset); if (write.bytesWritten === 0) throw new Error('file_write_incomplete'); offset += write.bytesWritten; }
               hash.update(raw); length += raw.byteLength;
             }
             if (part.file.truncated) refuse('payload_too_large');
+            await this.rpc.call('upload-written', { attempt: attemptId, written: length }, 256);
           } else refuse('invalid_request');
-        } finally { this.streams.delete(part.file); if (!part.file.readableEnded) part.file.destroy(); }
+        } finally { delete receiver.stream; this.streams.delete(part.file); if (!part.file.readableEnded) part.file.destroy(); }
       }
       if (!seenFile || descriptor === undefined || file === undefined || String(length) !== descriptor.byte_length || hash.digest('hex') !== descriptor.sha256) refuse('invalid_request');
+      this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_verified', bytes: length });
       await file.sync(); await file.close(); file = undefined;
+      this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_flushed', bytes: length });
       await link(join(this.directory, attempt.staging), join(this.directory, attempt.installed));
       await flushDirectory(join(this.directory, 'installed'));
       await unlink(join(this.directory, attempt.staging)); await flushDirectory(join(this.directory, 'staging'));
       await this.rpc.call('installed', attemptId, 128);
-      const response = await this.rpc.exchange('UploadObject', descriptor, { ...context, attempt: attemptId }, Buffer.byteLength(JSON.stringify(descriptor)));
+      this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_installed', bytes: length });
+      const response = await this.rpc.exchangeDetailed('UploadObject', descriptor, { ...context, attempt: attemptId }, Buffer.byteLength(JSON.stringify(descriptor)));
+      this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_published', bytes: length, outcome: response.execution });
       await this.cleanup(attemptId);
-      return response;
+      return { ...response, request: descriptor };
     } catch (error) { primary = error; throw error; }
     finally {
       let cleanup: unknown;
       try { if (file) await file.close(); if (attempt !== undefined && primary !== undefined && this.rpc.available) await this.cleanup(attemptId); }
       catch (error) { cleanup = error; }
       this.uploads--;
+      this.receivers.delete(request);
       if (cleanup !== undefined) throw new AggregateError(primary === undefined ? [cleanup] : [primary, cleanup], 'upload_cleanup_failed');
     }
+  }
+  async recheck(): Promise<void> {
+    await Promise.all([...this.receivers].map(async ([request, receiver]) => {
+      try { await this.authorize(receiver.context); }
+      catch { receiver.stream?.destroy(new Refusal('unauthorized')); request.raw.destroy(); }
+    }));
   }
   private async cleanup(attemptId: Uuid): Promise<void> {
     const attempt = Attempt.parse(await this.rpc.call('attempt', attemptId, 128, true));
@@ -108,6 +125,18 @@ export class Transfers {
     await rm(join(this.directory, attempt.installed), { force: true });
     await flushDirectory(join(this.directory, 'installed')); await flushDirectory(join(this.directory, 'staging'));
     await this.rpc.call('reclaim', attemptId, 128, true);
+  }
+  async reclaimDeleted(): Promise<void> {
+    if (this.downloads > 0 || this.closing) return;
+    const retired = z.array(z.object({ object: Uuid, path: z.string() })).max(32).parse(await this.rpc.call('retired-files', {}, 8192, true));
+    for (const file of retired) {
+      if (this.downloads > 0) return;
+      if (!/^installed\/[0-9a-f-]{36}-[0-9a-f-]{36}$/.test(file.path)) throw new Error('invalid_owned_file');
+      await rm(join(this.directory, file.path), { force: true });
+      await flushDirectory(join(this.directory, 'installed'));
+      await this.rpc.call('file-reclaimed', file.object, 128, true);
+      this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_reclaimed', count: 1 });
+    }
   }
   async download(objectId: Uuid, context: Context): Promise<{ image: ObjectImage; stream: Readable }> {
     if (this.closing || this.downloads >= this.settings.maxDownloads) refuse('resource_limit');
@@ -145,5 +174,10 @@ export class Transfers {
       throw error;
     }
   }
-  async close(): Promise<void> { this.closing = true; for (const stream of this.streams) stream.destroy(); await Promise.allSettled(this.active); }
+  async close(): Promise<void> {
+    this.closing = true;
+    for (const [request, receiver] of this.receivers) { receiver.stream?.destroy(); request.raw.destroy(); }
+    for (const stream of this.streams) stream.destroy();
+    await Promise.allSettled(this.active);
+  }
 }

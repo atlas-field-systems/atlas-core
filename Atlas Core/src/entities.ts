@@ -2,10 +2,10 @@ import type Database from 'better-sqlite3';
 import { z } from 'zod';
 import { caseFold } from 'unicode-case-folding';
 import { Asset, ContactChallenge, Geofeature, Observation, Track, Uuid, readSections } from '@atlas/protocol';
-import type { AssetReport, InputSection, ObservationReport, RequestOf, SectionName, Timestamp } from '@atlas/protocol';
+import type { AssetReport, InputSection, ObservationReport, RequestOf, SectionName } from '@atlas/protocol';
 import { credentialFacts, id, instant, next, now, zero } from './exact.js';
 import { Evidence, eligible, evidenceFor } from './evidence.js';
-import { refuse } from './fault.js';
+import { Refusal, refuse } from './fault.js';
 import type { Store, Transaction } from './database.js';
 import type { Identity } from './identity.js';
 import type { Temporary } from './temporary.js';
@@ -67,8 +67,9 @@ export class Entities {
     if (!row) refuse(kind === 'asset' ? 'asset_not_found' : 'entity_not_found');
     return z.object({ id: Uuid }).parse(row).id;
   }
-  saveAsset(tx: Transaction, value: Asset): Asset {
+  saveAsset(tx: Transaction, value: Asset, required = false): Asset {
     const image = Asset.parse(value);
+    if (!required && Buffer.byteLength(JSON.stringify(image)) > this.store.settings.resourceImageBytes - 1024) refuse('resource_limit');
     this.rename(image);
     this.store.db.prepare('UPDATE entity_assets SET image=? WHERE id=?').run(JSON.stringify(image), image.id);
     tx.change({ kind: 'put', resource_kind: 'asset', resource_id: image.id, version: image.version, image });
@@ -76,6 +77,7 @@ export class Entities {
   }
   private saveObservation(value: Observation): Observation {
     const image = Observation.parse(value);
+    if (Buffer.byteLength(JSON.stringify(image)) > this.store.settings.resourceImageBytes) refuse('resource_limit');
     this.rename(image);
     this.store.db.prepare('UPDATE entity_observations SET image=? WHERE id=?').run(JSON.stringify(image), image.id);
     return image;
@@ -95,6 +97,7 @@ export class Entities {
     return image;
   }
   register(tx: Transaction, request: RequestOf<'RegisterAsset'>) {
+    this.identity.checkRegistration(request.request_id);
     if (this.known(request.asset_id, 'asset')) this.asset(request.asset_id);
     if (tx.retry('RegisterAsset', request.request_id, credentialFacts(request))) return { asset: this.asset(request.asset_id), api_key: this.identity.key(request.api_key_id) };
     if (this.store.db.prepare('SELECT id FROM entity_registrations WHERE id=? OR asset=?').get(request.registration_id, request.asset_id)) refuse('identity_conflict');
@@ -163,8 +166,11 @@ export class Entities {
   begin(request: RequestOf<'BeginAssetContact'>): ContactChallenge {
     const asset = this.asset(request.asset_id);
     const allocation = this.temporary.validateContext(request.allocation_context);
-    if (request.mode === 'current' ? request.process_generation !== asset.process_generation : request.expected_process_generation !== asset.process_generation) refuse('generation_mismatch');
-    const existing = this.temporary.receipts('contact').find(receipt => {
+    const contacts = this.temporary.receipts('contact');
+    for (const receipt of contacts) {
+      if (receipt.state === 'ready' && ContactData.parse(JSON.parse(receipt.data)).deadline <= performance.now()) this.temporary.set({ ...receipt, state: 'consumed' });
+    }
+    const existing = contacts.find(receipt => {
       const data = ContactData.parse(JSON.parse(receipt.data));
       return receipt.context === allocation.context && receipt.request === request.request_id ||
         data.challenge.asset_id === asset.id && receipt.state === 'ready' && data.deadline > performance.now();
@@ -172,9 +178,11 @@ export class Entities {
     if (existing && (existing.context !== allocation.context || existing.request !== request.request_id)) refuse('contact_busy');
     const reserved = this.temporary.reserve('contact', request.allocation_context, request.request_id, request);
     if (!reserved.fresh) return ContactData.parse(JSON.parse(reserved.receipt.data)).challenge;
+    if (request.mode === 'current' ? request.process_generation !== asset.process_generation : request.expected_process_generation !== asset.process_generation) refuse('generation_mismatch');
     if (request.mode === 'replace' && this.store.db.prepare('SELECT generation FROM entity_generations WHERE asset=? AND generation=?').get(asset.id, request.process_generation)) refuse('generation_mismatch');
     const issued = now();
-    const duration = Math.max(1, Math.min(10_000, Math.floor(reserved.receipt.deadline - performance.now())));
+    const duration = Math.min(10_000, Math.floor(reserved.receipt.deadline - performance.now()));
+    if (duration < 1) refuse('allocation_expired');
     const challenge = ContactChallenge.parse({ challenge_id: reserved.receipt.id, asset_id: asset.id, process_generation: request.process_generation,
       mode: request.mode, core_run_id: this.store.run, issued_at: issued, expires_at: new Date(Date.parse(issued) + duration).toISOString(),
       ...(request.mode === 'replace' ? { expected_process_generation: request.expected_process_generation } : {}) });
@@ -183,7 +191,8 @@ export class Entities {
   }
   private prove(tx: Transaction, asset: Asset, report: AssetReport, challengeId: Uuid): void {
     let receipt;
-    try { receipt = this.temporary.get(challengeId); } catch { refuse('challenge_expired'); }
+    try { receipt = this.temporary.get(challengeId); }
+    catch (error) { if (error instanceof Refusal && error.code === 'allocation_expired') refuse('challenge_expired'); throw error; }
     if (receipt.kind !== 'contact') refuse('challenge_context_mismatch');
     const data = ContactData.parse(JSON.parse(receipt.data));
     if (data.consumed !== null) refuse('challenge_consumed');
@@ -195,7 +204,7 @@ export class Entities {
     asset.heartbeat.last_contact_at = now();
     asset.communications.health = 'healthy';
     const contacted = performance.now();
-    tx.committed.push(() => this.contact.set(asset.id, contacted));
+    tx.committed.push(() => { this.contact.set(asset.id, contacted); this.store.metrics.contact_refreshes++; });
   }
   replace(tx: Transaction, request: RequestOf<'ReplaceAssetProcess'>) {
     const asset = this.asset(request.asset_id);
@@ -332,21 +341,27 @@ export class Entities {
     tx.remember('DeleteGeofeature', request.request_id, request);
     return { deleted: true };
   }
-  restartContact(tx: Transaction): void {
-    for (const image of this.assets('', 100_000)) {
-      if (image.communications.health !== 'offline' || image.heartbeat.last_contact_at !== null) {
-        image.communications.health = 'offline'; image.heartbeat.last_contact_at = null;
-        image.version = next(image.version); this.saveAsset(tx, image);
+  restartContact(): void {
+    let after = '';
+    while (true) {
+      const batch = this.assets(after, 16);
+      for (const image of batch) {
+        if (image.communications.health !== 'offline' || image.heartbeat.last_contact_at !== null) {
+          image.communications.health = 'offline'; image.heartbeat.last_contact_at = null;
+          image.version = next(image.version); this.store.transact(null, tx => this.saveAsset(tx, image, true));
+        }
+        after = image.id;
       }
+      if (batch.length < 16) break;
     }
   }
-  tick(tx: Transaction): void {
+  tick(): void {
     for (const [assetId, at] of this.contact) {
       const elapsed = performance.now() - at;
       const health = elapsed < 15_000 ? 'healthy' : elapsed < 60_000 ? 'degraded' : 'offline';
       const asset = this.asset(assetId);
-      if (health !== asset.communications.health) { asset.communications.health = health; asset.version = next(asset.version); this.saveAsset(tx, asset); }
-      if (health === 'offline') tx.committed.push(() => this.contact.delete(assetId));
+      if (health !== asset.communications.health) this.store.transact(null, tx => { asset.communications.health = health; asset.version = next(asset.version); this.saveAsset(tx, asset, true); });
+      if (health === 'offline') this.contact.delete(assetId);
     }
   }
   assets(after: string, limit: number): Asset[] {
@@ -376,7 +391,6 @@ export class Entities {
     }
     return { source: entity, tracks: kind === 'observation' ? [this.observation(entity).track_id] : [] };
   }
-  contactTime(assetId: Uuid): Timestamp | null { return this.asset(assetId).heartbeat.last_contact_at; }
   clearDataset(): void {
     this.store.db.exec('DELETE FROM entity_registrations; DELETE FROM entity_generations; DELETE FROM entity_tracks; DELETE FROM entity_observations; DELETE FROM entity_assets; DELETE FROM entity_geofeatures; DELETE FROM entity_identity');
     this.contact.clear();

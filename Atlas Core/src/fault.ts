@@ -32,6 +32,7 @@ export function publicError(error: unknown, dataset: Uuid, requestId = id()): Ht
       default: code = 'invalid_request';
     }
   } else if (error instanceof RangeError && error.message === 'counter_exhausted') code = 'counter_exhausted';
+  else if (error instanceof Error && 'code' in error && ['ENOSPC', 'EDQUOT', 'SQLITE_FULL'].includes(String(error.code))) code = 'storage_limit';
   if (code === 'protocol_mismatch') details = { protocol_version: PROTOCOL_VERSION };
   if (code === 'dataset_mismatch') details = { dataset_id: dataset };
   return HttpError.parse({ kind: 'error', status: statuses[code], body: { dataset_id: dataset,

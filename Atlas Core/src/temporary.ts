@@ -4,17 +4,21 @@ import { Timestamp, Uuid } from '@atlas/protocol';
 import { canonical, id } from './exact.js';
 import { refuse } from './fault.js';
 import type { Store } from './database.js';
+import { WriterIdentity } from './objects.js';
 
 const Context = z.strictObject({ key: Uuid, context: Uuid, deadline: z.number(), expires: Timestamp });
 const Receipt = z.object({ id: Uuid, context: z.string(), request: z.string(), kind: z.enum(['contact', 'snapshot', 'history']),
   facts: z.string(), state: z.enum(['building', 'ready', 'failed', 'released', 'consumed']), data: z.string(),
   deadline: z.number(), bytes: z.number(), refs: z.number(), key_id: Uuid });
 export type Receipt = z.infer<typeof Receipt>;
+export const CaptureFile = z.object({ id: Uuid, kind: z.enum(['snapshot', 'history']), owner: z.string(), bytes: z.number(), refs: z.number() });
+export type CaptureFile = z.infer<typeof CaptureFile>;
 export class Temporary {
   private readonly secret = randomBytes(32);
   constructor(private readonly store: Store) {
     store.db.exec(`CREATE TABLE IF NOT EXISTS temporary_receipts(id TEXT PRIMARY KEY,context TEXT NOT NULL,request TEXT NOT NULL,kind TEXT NOT NULL,facts TEXT NOT NULL,state TEXT NOT NULL,data TEXT NOT NULL,deadline REAL NOT NULL,bytes INTEGER NOT NULL,refs INTEGER NOT NULL,key_id TEXT NOT NULL,UNIQUE(context,kind,request)) STRICT;
-      DELETE FROM temporary_receipts;`);
+      DELETE FROM temporary_receipts;
+      CREATE TABLE IF NOT EXISTS temporary_files(id TEXT PRIMARY KEY,kind TEXT NOT NULL,owner TEXT NOT NULL,bytes INTEGER NOT NULL,refs INTEGER NOT NULL) STRICT;`);
   }
   seal(kind: string, data: unknown): string {
     const raw = canonical({ kind, run: this.store.run, dataset: this.store.dataset, data });
@@ -44,7 +48,7 @@ export class Temporary {
     return context;
   }
   expire(): void {
-    this.store.db.prepare('DELETE FROM temporary_receipts WHERE deadline<=?').run(performance.now());
+    this.store.db.prepare("DELETE FROM temporary_receipts WHERE deadline<=? AND state<>'building' AND (kind='contact' OR (bytes=0 AND refs=0))").run(performance.now());
   }
   reserve(kind: Receipt['kind'], token: string, request: string, facts: unknown): { receipt: Receipt; fresh: boolean; expires: Timestamp } {
     const context = this.validateContext(token);
@@ -69,15 +73,26 @@ export class Temporary {
   }
   set(receipt: Receipt): void {
     this.store.db.prepare('UPDATE temporary_receipts SET state=@state,data=@data,bytes=@bytes,refs=@refs WHERE id=@id').run(receipt);
+    this.store.db.prepare('UPDATE temporary_files SET bytes=?,refs=? WHERE id=?').run(receipt.bytes, receipt.refs, receipt.id);
+  }
+  peek(receiptId: string): Receipt | undefined {
+    const row = this.store.db.prepare('SELECT * FROM temporary_receipts WHERE id=?').get(receiptId);
+    return row === undefined ? undefined : Receipt.parse(row);
   }
   get(receiptId: string): Receipt {
-    const row = this.store.db.prepare('SELECT * FROM temporary_receipts WHERE id=?').get(receiptId);
-    if (!row) refuse('allocation_expired');
-    const receipt = Receipt.parse(row);
+    const receipt = this.peek(receiptId);
+    if (!receipt) refuse('allocation_expired');
     if (receipt.deadline <= performance.now()) refuse('allocation_expired');
     return receipt;
   }
   receipts(kind: Receipt['kind']): Receipt[] {
     return this.store.db.prepare('SELECT * FROM temporary_receipts WHERE kind=?').all(kind).map(row => Receipt.parse(row));
   }
+  ownFile(receipt: Receipt, owner: WriterIdentity): void {
+    if (this.captureFiles().length >= 4096 || receipt.kind === 'contact') refuse('resource_limit');
+    this.store.db.prepare('INSERT INTO temporary_files VALUES(?,?,?,?,?)').run(receipt.id, receipt.kind, canonical(owner), 32768, 0);
+  }
+  captureFiles(): CaptureFile[] { return this.store.db.prepare('SELECT * FROM temporary_files LIMIT 4096').all().map(row => CaptureFile.parse(row)); }
+  fileRemoved(id: Uuid): void { this.store.db.prepare('DELETE FROM temporary_files WHERE id=?').run(id); }
+  clearDataset(): void { this.store.db.exec('DELETE FROM temporary_receipts; DELETE FROM temporary_files'); }
 }
