@@ -1,0 +1,44 @@
+{
+  "name": "@atlas/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.22.1",
+    "npm": "11.19.0"
+  },
+  "packageManager": "npm@11.19.0",
+  "scripts": {
+    "protocol:prepare": "node scripts/prepare-protocol.mjs",
+    "verify:inputs": "node scripts/verify-inputs.mjs",
+    "build": "node scripts/verify-inputs.mjs && tsc -p tsconfig.json",
+    "test": "node --run build && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@atlas/protocol": "file:artifacts/atlas-protocol-0.1.0.tgz",
+    "@fastify/multipart": "10.1.6",
+    "@fastify/websocket": "11.3.4",
+    "better-sqlite3": "13.0.3",
+    "fastify": "5.12.7",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "24.19.2",
+    "@types/ws": "8.18.2",
+    "typescript": "6.0.2"
+  },
+  "atlasBuild": {
+    "protocol": {
+      "version": "0.1.0",
+      "sha256": "820ee8d23e966edbff3cbc4e021846c5f40860d6fa1f88909b36dc9b0faaddeb"
+    },
+    "sqlite": {
+      "version": "3.53.4",
+      "sourceId": "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc"
+    }
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true
+  }
+}
