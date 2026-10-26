@@ -79,15 +79,17 @@ async function execute(raw: unknown): Promise<void> {
         if (!engine.settings.openEnrollment) refuse('unauthorized');
         if (data.dataset !== engine.store.dataset) refuse('dataset_mismatch');
         if (engine.identity.openBinding(data.request.api_key_id) === null) refuse('identity_conflict');
-        await engine.reserveStorage(1_048_576, false, produce, release);
-        if (!engine.settings.openEnrollment) refuse('unauthorized');
-        if (data.dataset !== engine.store.dataset) refuse('dataset_mismatch');
-        if (engine.identity.openBinding(data.request.api_key_id) === null) refuse('identity_conflict');
-        const outcome = engine.store.transact(null, tx => {
-          const registration = engine.entities.register(tx, data.request);
-          return { asset_id: registration.asset.id, api_key_id: registration.api_key.api_key_id, binding_id: engine.identity.markOpen(registration.api_key.api_key_id) };
-        });
-        result = { ...outcome.data, commit_cursor: outcome.cursor }; break;
+        result = await engine.reserveStorage(admit => {
+          if (!engine.settings.openEnrollment) refuse('unauthorized');
+          if (data.dataset !== engine.store.dataset) refuse('dataset_mismatch');
+          if (engine.identity.openBinding(data.request.api_key_id) === null) refuse('identity_conflict');
+          admit(1_048_576);
+          const outcome = engine.store.transact(null, tx => {
+            const registration = engine.entities.register(tx, data.request);
+            return { asset_id: registration.asset.id, api_key_id: registration.api_key.api_key_id, binding_id: engine.identity.markOpen(registration.api_key.api_key_id) };
+          });
+          return { ...outcome.data, commit_cursor: outcome.cursor };
+        }, produce, release); break;
       }
       case 'enrollment-revoke': {
         const data = z.object({ binding: Uuid, key: Uuid, confirm: z.literal(true) }).parse(message.data);
@@ -97,12 +99,30 @@ async function execute(raw: unknown): Promise<void> {
       case 'prepare-upload': {
         const data = z.object({ context: Context, descriptor: UploadDescriptor.optional(), attempt: Uuid, owner: WriterIdentity }).parse(message.data);
         engine.authorize(data.context);
-        await engine.reserveStorage(Number(data.descriptor?.byte_length ?? 0) + 32768, false, produce, release);
-        const authority = engine.authorize(data.context);
-        result = engine.store.db.transaction(() => engine.objects.prepare(data.descriptor, data.attempt, data.owner, authority.keyId))(); break;
+        result = await engine.reserveStorage(admit => {
+          const authority = engine.authorize(data.context);
+          admit(Number(data.descriptor?.byte_length ?? 0) + 32768);
+          return engine.store.db.transaction(() => engine.objects.prepare(data.descriptor, data.attempt, data.owner, authority.keyId))();
+        }, produce, release); break;
       }
-      case 'describe-upload': { const data = z.object({ context: Context, attempt: Uuid, descriptor: UploadDescriptor }).parse(message.data); engine.authorize(data.context); await engine.reserveStorage(Math.max(0, Number(data.descriptor.byte_length) - engine.objects.attempt(data.attempt).bytes), false, produce, release); engine.authorize(data.context); engine.objects.describe(data.attempt, data.descriptor); result = {}; break; }
-      case 'reserve-upload': { const data = z.object({ context: Context, attempt: Uuid, bytes: z.number().int().nonnegative(), written: z.number().int().nonnegative() }).parse(message.data); engine.authorize(data.context); engine.objects.progress(data.attempt, data.written); await engine.reserveStorage(Math.max(0, data.bytes - engine.objects.attempt(data.attempt).bytes), false, produce, release); engine.authorize(data.context); engine.objects.reserve(data.attempt, data.bytes); result = {}; break; }
+      case 'describe-upload': {
+        const data = z.object({ context: Context, attempt: Uuid, descriptor: UploadDescriptor }).parse(message.data);
+        engine.authorize(data.context);
+        await engine.reserveStorage(admit => {
+          engine.authorize(data.context);
+          admit(Math.max(0, Number(data.descriptor.byte_length) - engine.objects.attempt(data.attempt).bytes));
+          engine.objects.describe(data.attempt, data.descriptor);
+        }, produce, release); result = {}; break;
+      }
+      case 'reserve-upload': {
+        const data = z.object({ context: Context, attempt: Uuid, bytes: z.number().int().nonnegative(), written: z.number().int().nonnegative() }).parse(message.data);
+        engine.authorize(data.context); engine.objects.progress(data.attempt, data.written);
+        await engine.reserveStorage(admit => {
+          engine.authorize(data.context);
+          admit(Math.max(0, data.bytes - engine.objects.attempt(data.attempt).bytes));
+          engine.objects.reserve(data.attempt, data.bytes);
+        }, produce, release); result = {}; break;
+      }
       case 'upload-written': { const data = z.object({ attempt: Uuid, written: z.number().int().nonnegative() }).parse(message.data); engine.objects.progress(data.attempt, data.written); result = {}; break; }
       case 'attempt': result = engine.objects.attempt(Uuid.parse(message.data)); break;
       case 'retired-files': result = engine.objects.retired(); break;

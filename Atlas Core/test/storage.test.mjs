@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, registration, report, telemetry, root, secret } from './helpers.mjs';
 import { uuid } from './helpers.mjs';
-import { writeFile, rm, readdir, stat, readFile, mkdtemp, mkdir } from 'node:fs/promises';
+import { writeFile, rm, readdir, stat, statfs, readFile, mkdtemp, mkdir } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
 import Database from 'better-sqlite3';
 import { defaults } from '../dist/settings.js';
@@ -83,15 +83,22 @@ test('worker commits through a parent stall and bounds unacknowledged pages with
   const revoked = await blocked.response;
   assert.equal(revoked.type, 'refusal'); assert.equal(revoked.error.body.error.code, 'unauthorized', 'Authority is rechecked after a response-permit wait'); ack(revoked);
 });
-test('upload reservations released by one acknowledgment retain aggregate headroom and fresh deltas', { timeout: 30000 }, async t => {
-  for (const kind of ['prepare-upload', 'describe-upload', 'reserve-upload', 'fresh-delta', 'object-quota']) await t.test(kind, async t => {
+test('upload reservations released by one acknowledgment retain aggregate headroom and fresh deltas', { timeout: 45000 }, async t => {
+  for (const kind of ['prepare-upload', 'describe-upload', 'reserve-upload', 'fresh-delta', 'object-quota', 'history-expiry', 'free-disk']) await t.test(kind, async t => {
     const directory = await mkdtemp(join(root, 'artifacts', 'upload-permits-'));
-    const accountingRoot = join(directory, 'accounting');
+    const accountingRoot = join(directory, kind === 'history-expiry' ? 'captures' : 'accounting');
     await mkdir(accountingRoot);
     const MiB = 1_048_576;
     const settings = { ...defaults, freeDiskBytes: 0, workerQueueCount: 4096, workerQueueBytes: MiB, maxUploads: 8,
       storageBytes: (kind === 'object-quota' ? 64 : 12) * MiB, objectBytes: (kind === 'object-quota' ? 6 : 12) * MiB, reserveBytes: 4 * MiB,
       resourceImageBytes: 65536, limits: { ...defaults.limits, max_message_bytes: 212992 } };
+    const declaredBytes = (kind === 'free-disk' ? 1536 : 5) * MiB;
+    if (kind === 'free-disk') {
+      const disk = await statfs(accountingRoot, { bigint: true });
+      settings.freeDiskBytes = Number(disk.bavail * disk.bsize) - 2048 * MiB;
+      assert.ok(settings.freeDiskBytes > 0);
+      settings.storageBytes = 8192 * MiB; settings.objectBytes = 4096 * MiB;
+    }
     const worker = new Worker(new URL('../dist/worker.js', import.meta.url), { workerData: { directory, accountingRoot, settings }, stdout: true, stderr: true });
     worker.stdout.resume(); worker.stderr.resume();
     t.after(async () => { await worker.terminate(); await rm(directory, { recursive: true, force: true }); });
@@ -119,9 +126,20 @@ test('upload reservations released by one acknowledgment retain aggregate headro
     for (let i = 0; i < 3; i++) assert.equal((await consume(exchange('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(),
       geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }))).type, 'reply');
     const owner = await currentWriter(), attempts = [uuid(), uuid()];
-    const descriptors = attempts.map(() => ({ request_id: uuid(), object_id: uuid(), byte_length: String(5 * MiB), sha256: 'a'.repeat(64),
+    const descriptors = attempts.map(() => ({ request_id: uuid(), object_id: uuid(), byte_length: String(declaredBytes), sha256: 'a'.repeat(64),
       content_type: 'application/octet-stream', metadata: { associations: [] } }));
     if (kind !== 'prepare-upload') for (const attempt of attempts) assert.equal((await consume(send('prepare-upload', { context, attempt, owner }))).type, 'reply');
+    let expiredView;
+    if (kind === 'history-expiry') {
+      const asset = registration(); assert.equal((await consume(exchange('RegisterAsset', asset))).type, 'reply');
+      const health = await consume(exchange('GetHealth', {}, true)); assert.equal(health.type, 'reply');
+      const history = await consume(exchange('GetAssetMovementHistory', { query_id: uuid(), entity_id: asset.asset_id,
+        allocation_context: health.value.response.body.data.allocation_context, page_size: 100 }));
+      assert.equal(history.type, 'reply', JSON.stringify(history)); expiredView = history.value.response.body.data.view_id;
+      const captureBytes = (await stat(join(accountingRoot, `${expiredView}.sqlite`))).size;
+      assert.ok(captureBytes > 4096);
+      await writeFile(join(accountingRoot, 'pressure.bin'), Buffer.alloc(settings.storageBytes - settings.reserveBytes - captureBytes - declaredBytes + 4096));
+    }
     async function fillReplies() {
       const medium = await exchange('ListGeofeatures', { page_size: 3 }).response;
       assert.equal(medium.type, 'reply');
@@ -133,7 +151,7 @@ test('upload reservations released by one acknowledgment retain aggregate headro
       }
     }
     const filled = await fillReplies();
-    const upload = (index, bytes = 5 * MiB) => kind === 'prepare-upload'
+    const upload = (index, bytes = declaredBytes) => kind === 'prepare-upload'
       ? send('prepare-upload', { context, attempt: attempts[index], owner, descriptor: descriptors[index] })
       : kind === 'describe-upload' ? send('describe-upload', { context, attempt: attempts[index], descriptor: descriptors[index] })
         : send('reserve-upload', { context, attempt: attempts[index], bytes, written: 0 });
@@ -150,9 +168,16 @@ test('upload reservations released by one acknowledgment retain aggregate headro
     const db = new Database(join(directory, 'core.sqlite'), { readonly: true });
     t.after(() => db.close());
     const charges = () => db.prepare("SELECT id,bytes FROM object_attempts WHERE state<>'reclaimed' ORDER BY id").all();
-    assert.equal(charges().reduce((sum, attempt) => sum + attempt.bytes, 0), (kind === 'fresh-delta' ? 6 : 5) * MiB);
-    assert.ok(charges().reduce((sum, attempt) => sum + attempt.bytes, 0) + settings.reserveBytes <= settings.storageBytes);
-    assert.ok(charges().reduce((sum, attempt) => sum + attempt.bytes, 0) <= settings.objectBytes);
+    const retained = charges().reduce((sum, attempt) => sum + attempt.bytes, 0);
+    assert.equal(retained, kind === 'fresh-delta' ? 6 * MiB : declaredBytes);
+    assert.ok(retained + settings.reserveBytes <= settings.storageBytes);
+    assert.ok(retained <= settings.objectBytes);
+    const disk = await statfs(accountingRoot, { bigint: true });
+    assert.ok(retained + settings.freeDiskBytes <= Number(disk.bavail * disk.bsize));
+    if (expiredView !== undefined) {
+      assert.deepEqual(db.prepare('SELECT state,bytes FROM temporary_receipts WHERE id=?').get(expiredView), { state: 'released', bytes: 0 });
+      assert.equal((await readdir(accountingRoot)).some(file => file.startsWith(expiredView)), false, 'Storage admission reclaims the real history file before retrying');
+    }
     if (kind !== 'fresh-delta') {
       const winner = replies.findIndex(reply => reply.type === 'reply'), loser = 1 - winner;
       const before = charges();
@@ -161,7 +186,7 @@ test('upload reservations released by one acknowledgment retain aggregate headro
       assert.equal((await consume(send('abandon', attempts[winner]))).type, 'reply');
       assert.equal((await consume(send('reclaim', attempts[winner]))).type, 'reply');
       assert.equal((await consume(upload(loser))).type, 'reply', 'Reclaimed capacity admits the refused upload');
-      assert.equal(charges().reduce((sum, attempt) => sum + attempt.bytes, 0), 5 * MiB);
+      assert.equal(charges().reduce((sum, attempt) => sum + attempt.bytes, 0), declaredBytes);
     }
     const blockedFill = await fillReplies();
     const beforeRevocation = charges();
