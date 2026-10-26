@@ -1,4 +1,5 @@
 import { ErrorObject, HttpError, ProtocolError, PROTOCOL_VERSION } from '@atlas/protocol';
+import { z } from 'zod';
 import type { Uuid } from '@atlas/protocol';
 import { id } from './exact.js';
 
@@ -22,6 +23,7 @@ export class Refusal extends Error {
 }
 export function refuse(code: Code, details?: ErrorObject['details']): never { throw new Refusal(code, details); }
 export function publicError(error: unknown, dataset: Uuid, requestId = id()): HttpError {
+  for (let depth = 0; error instanceof AggregateError && depth < 8; depth++) error = error.errors[0];
   let code: Code = 'integrity_fault';
   let details: ErrorObject['details'];
   if (error instanceof Refusal) { code = error.code; details = error.details; }
@@ -38,4 +40,12 @@ export function publicError(error: unknown, dataset: Uuid, requestId = id()): Ht
   return HttpError.parse({ kind: 'error', status: statuses[code], body: { dataset_id: dataset,
     error: { code, message: code.replaceAll('_', ' '), request_id: requestId,
       ...(details === undefined ? {} : { details }) } } });
+}
+export const WorkerFailure = z.strictObject({ error: HttpError, causes: z.tuple([HttpError, HttpError]).optional() });
+export function workerFailure(error: unknown, dataset: Uuid): z.infer<typeof WorkerFailure> {
+  const failure: z.infer<typeof WorkerFailure> = { error: publicError(error, dataset) };
+  if (error instanceof AggregateError && error.errors.length >= 2) {
+    failure.causes = [publicError(error.errors[0], dataset), publicError(error.errors[1], dataset)];
+  }
+  return failure;
 }

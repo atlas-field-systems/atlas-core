@@ -4,7 +4,7 @@ import { SubscribeChanges, Uuid, UploadDescriptor, exchanges } from '@atlas/prot
 import { Context, Engine, isPublicOperation } from './engine.js';
 import { Settings } from './settings.js';
 import { WriterIdentity } from './objects.js';
-import { publicError, refuse } from './fault.js';
+import { workerFailure, refuse } from './fault.js';
 
 const port = parentPort;
 if (port === null) throw new Error('worker_requires_parent');
@@ -154,9 +154,9 @@ async function execute(raw: unknown): Promise<void> {
     port?.postMessage({ type: 'reply', id: message.id, value: result });
   } catch (error) {
     await produce(4096);
-    const failure = publicError(error, engine.store.dataset);
+    const failure = workerFailure(error, engine.store.dataset);
     finishResponse(message.id, Buffer.byteLength(JSON.stringify(failure)));
-    port?.postMessage({ type: 'refusal', id: message.id, error: failure });
+    port?.postMessage({ type: 'refusal', id: message.id, ...failure });
   }
 }
 port.on('message', (raw: unknown) => {

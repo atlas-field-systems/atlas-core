@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, rm, writeFile, readdir } from 'node:fs/promises';
-import { watch } from 'node:fs';
+import { mkdtemp, mkdir, rm, writeFile, readdir, readFile } from 'node:fs/promises';
+import { watch, mkdirSync, writeFileSync } from 'node:fs';
+import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { setImmediate as yieldToLoop } from 'node:timers/promises';
 import { Engine } from '../dist/engine.js';
@@ -9,7 +10,7 @@ import { Reads } from '../dist/reads.js';
 import { defaults } from '../dist/settings.js';
 import { digest } from '../dist/exact.js';
 import { publicError, Refusal } from '../dist/fault.js';
-import { root, uuid, secret, report, telemetry } from './helpers.mjs';
+import { root, uuid, secret, report, telemetry, fixture } from './helpers.mjs';
 
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 async function local(t, temporary = {}) {
@@ -127,7 +128,10 @@ test('preparation failures end their receipts and cleanup failures preserve both
   const failedDeadline = performance.now() + 5000;
   while (f.engine.temporary.receipts('snapshot').find(receipt => receipt.request === failedRequest.load_id)?.state !== 'failed') { assert.ok(performance.now() < failedDeadline); await yieldToLoop(); }
   const retry = reads.snapshot(failedRequest, f.context.verifier).catch(error => error);
-  for (const error of await Promise.all([initial, retry])) assert.ok(error instanceof AggregateError && error.errors[0].code === 'storage_limit', 'Concurrent exact retries must wait for the same recorded cleanup outcome');
+  for (const error of await Promise.all([initial, retry])) {
+    assert.ok(error instanceof AggregateError && error.errors[0].code === 'storage_limit', 'Concurrent exact retries must wait for the same recorded cleanup outcome');
+    assert.equal(publicError(new AggregateError([error, new Refusal('integrity_fault')]), f.engine.store.dataset).status, 507);
+  }
   const charged = f.engine.temporary.receipts('snapshot').find(receipt => receipt.request === failedRequest.load_id);
   assert.equal(charged.state, 'failed'); assert.ok(charged.bytes > 0);
   const facts = JSON.parse(charged.data); assert.equal(facts.failure.body.error.code, 'storage_limit'); assert.equal(facts.cleanup_failure.body.error.code, 'integrity_fault');
@@ -136,6 +140,61 @@ test('preparation failures end their receipts and cleanup failures preserve both
   await rm(broken, { recursive: true }); await reads.close();
   assert.equal(f.engine.temporary.peek(charged.id).bytes, 0);
   assert.deepEqual(JSON.parse(f.engine.temporary.peek(charged.id).data), facts);
+});
+test('worker capture failures preserve primary HTTP errors, safe cleanup diagnostics and retry charges', { timeout: 30000 }, async t => {
+  const cleanup = [];
+  let watcher, broken, pressure;
+  t.after(async () => {
+    watcher?.close();
+    if (broken) await rm(broken, { recursive: true, force: true });
+    if (pressure) await rm(pressure, { force: true });
+    for (const close of cleanup.reverse()) await close();
+  });
+  const f = await fixture({ after: fn => cleanup.push(fn) }, { storageBytes: 64 * 1024 * 1024, objectBytes: 16 * 1024 * 1024, reserveBytes: 1024 * 1024 });
+  const ok = response => { assert.equal(response.status, 200, JSON.stringify(response.json)); return response.json.data; };
+  for (let i = 0; i < 256; i++) ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(),
+    geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }));
+  const health = ok(await f.call('GetHealth'));
+  const request = { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits };
+  const failures = [];
+  f.core.rpc.worker.on('message', message => { if (message.type === 'refusal') failures.push(message); });
+  pressure = join(f.directory, 'private-pressure-sentinel.bin');
+  let injectionFailure;
+  watcher = watch(join(f.directory, 'captures'), (event, filename) => {
+    if (broken || !filename || !/^[0-9a-f-]{36}\.sqlite$/.test(filename)) return;
+    broken = join(f.directory, 'captures', `${filename}-shm`);
+    try { mkdirSync(broken); writeFileSync(pressure, Buffer.alloc(f.settings.storageBytes)); }
+    catch (error) { injectionFailure = error; }
+  });
+  const initial = await f.call('ReadSnapshot', request);
+  watcher.close(); assert.equal(injectionFailure, undefined); assert.ok(broken, 'The real capture file must have been observed');
+  assert.equal(initial.status, 507, JSON.stringify(initial.json)); assert.equal(initial.json.error.code, 'storage_limit');
+  assert.equal('details' in initial.json.error, false);
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  let charged;
+  try {
+    charged = db.prepare('SELECT * FROM temporary_receipts WHERE request=?').get(request.load_id);
+    assert.equal(charged.state, 'failed'); assert.ok(charged.bytes > 0);
+    const facts = JSON.parse(charged.data);
+    assert.equal(facts.failure.body.error.code, 'storage_limit'); assert.equal(facts.cleanup_failure.body.error.code, 'integrity_fault');
+    const retry = await f.call('ReadSnapshot', request);
+    assert.equal(retry.status, 507); assert.equal(retry.json.error.code, 'storage_limit');
+    assert.deepEqual(db.prepare('SELECT * FROM temporary_receipts WHERE request=?').get(request.load_id), charged);
+    assert.equal(db.prepare('SELECT bytes FROM temporary_files WHERE id=?').get(charged.id).bytes, charged.bytes);
+  } finally { db.close(); }
+  for (const failure of failures) {
+    assert.deepEqual(failure.causes.map(cause => cause.body.error.code), ['storage_limit', 'integrity_fault']);
+    assert.deepEqual(Object.keys(failure).sort(), ['causes', 'error', 'id', 'type']);
+  }
+  assert.equal(failures.length, 2);
+  assert.ok(!JSON.stringify(failures).includes(f.directory)); assert.ok(!JSON.stringify(failures).includes(f.apiKey));
+  await rm(broken, { recursive: true }); await rm(pressure); await f.core.close();
+  let logs = '';
+  for (const name of await readdir(join(f.directory, 'logs'))) logs += await readFile(join(f.directory, 'logs', name), 'utf8');
+  const events = logs.trim().split('\n').map(line => JSON.parse(line));
+  assert.ok(events.filter(event => event.event === 'primary_failure' && event.code === 'storage_limit').length >= 2);
+  assert.ok(events.filter(event => event.event === 'cleanup_failure' && event.code === 'integrity_fault').length >= 2);
+  assert.ok(!logs.includes(f.directory)); assert.ok(!logs.includes(f.apiKey)); assert.ok(!logs.includes('ERR_FS_EISDIR'));
 });
 test('release persists successful reclamation before revocation refuses its response', async t => {
   const f = await local(t);

@@ -56,6 +56,8 @@ Keep this context within event and queue bounds. If a fatal error cannot emit a 
 event, expose that the evidence is unavailable. Do not infer successful work from silence.
 Unstructured stdout/stderr, runtime/dependency output, and memory dumps are not retained.
 There is no raw-capture mode or sensitive export path. Some fatal failures may have no details.
+Worker cleanup failures carry only validated public errors for the primary and cleanup
+causes. HTTP keeps the primary status and records both safe codes in Core's owned sink.
 
 ## Collection and lifetime
 

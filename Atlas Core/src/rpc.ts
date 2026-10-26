@@ -1,15 +1,15 @@
 import { Worker } from 'node:worker_threads';
 import { z } from 'zod';
-import { HttpError, Uuid, exchanges } from '@atlas/protocol';
+import { Uuid, exchanges } from '@atlas/protocol';
 import type { ExchangeName, RequestOf, ResponseOf } from '@atlas/protocol';
-import { Refusal } from './fault.js';
+import { Refusal, WorkerFailure } from './fault.js';
 import type { Settings } from './settings.js';
 import type { Context } from './engine.js';
 import { requiredEffect } from './capacity.js';
 
 const Ready = z.strictObject({ type: z.literal('ready'), dataset: Uuid, run: Uuid, engine: z.unknown() });
 const Reply = z.strictObject({ type: z.literal('reply'), id: z.number().int(), value: z.unknown() });
-const Failed = z.strictObject({ type: z.literal('refusal'), id: z.number().int(), error: HttpError });
+const Failed = WorkerFailure.extend({ type: z.literal('refusal'), id: z.number().int() });
 function isResponse<K extends ExchangeName>(name: K, value: unknown): value is ResponseOf<K> {
   return exchanges[name].response.schema.safeParse(value).success;
 }
@@ -44,7 +44,11 @@ export class DatabaseWorker {
         this.pending.delete(messageId); this.queuedBytes -= pending.bytes;
         this.worker.postMessage({ type: 'received', id: messageId });
         if (reply.success) pending.resolve(reply.data.value);
-        else if (failure.success) pending.reject(new Refusal(failure.data.error.body.error.code, failure.data.error.body.error.details));
+        else if (failure.success) {
+          const { error, causes } = failure.data;
+          pending.reject(causes === undefined ? new Refusal(error.body.error.code, error.body.error.details)
+            : new AggregateError(causes.map(cause => new Refusal(cause.body.error.code, cause.body.error.details)), 'worker_cleanup_failed'));
+        }
       });
     });
   }
