@@ -132,7 +132,6 @@ export class Tasks {
     if (admitted.duplicate) return { task, evidence_disposition: 'duplicate' as const };
     const payload = evidence.payload;
     const before = this.internal(task.task_id);
-    if (task.command === 'move_to' && before.started !== 0 && payload.event === 'cancellation_refused' && payload.state === 'pending') refuse('invalid_request');
     const asset = this.entities.asset(task.asset_id);
     this.validateExecution(task, payload, before.control_revision, evidence.origin.process_generation);
     if (terminal(task)) {
@@ -150,6 +149,7 @@ export class Tasks {
     const isTerminal = payload.state === 'completed' || payload.state === 'failed' || payload.state === 'cancelled';
     const newer = before.generation !== evidence.origin.process_generation || BigInt(evidence.sequence) > BigInt(before.sequence);
     if (isTerminal || newer) {
+      if (task.command === 'move_to' && before.started !== 0 && payload.event === 'cancellation_refused' && payload.state === 'pending') refuse('invalid_request');
       task.execution_state = payload.state;
       this.store.db.prepare('UPDATE task_internal SET generation=?,sequence=? WHERE id=?').run(evidence.origin.process_generation, evidence.sequence, task.task_id);
     }

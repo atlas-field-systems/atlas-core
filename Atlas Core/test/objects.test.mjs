@@ -11,16 +11,19 @@ import { fixture, uuid, registration, secret, root } from './helpers.mjs';
 import { Engine } from '../dist/engine.js';
 import { processIdentity } from '../dist/ownership.js';
 import { digest } from '../dist/exact.js';
+import { defaults } from '../dist/settings.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 const descriptor = bytes => ({ request_id: uuid(), object_id: uuid(), byte_length: String(bytes.byteLength), sha256: createHash('sha256').update(bytes).digest('hex'), content_type: 'application/octet-stream', metadata: { associations: [] } });
-test('startup reclaims owned abandoned uploads across bounded worker response pages', async t => {
-  const f = await fixture(t); await f.core.close();
+test('startup reclaims escaped abandoned upload descriptors across bounded worker response pages', async t => {
+  const f = await fixture(t, { resourceImageBytes: 65536, maxUploads: 64, limits: { ...defaults.limits, max_message_bytes: 212992 } }); await f.core.close();
   const engine = new Engine(f.directory, f.settings);
   const owner = { ...await processIdentity(), start: '0' };
   const authority = engine.identity.authorize(digest(f.apiKey));
   try {
     for (let i = 0; i < 65; i++) {
-      const attempt = engine.store.db.transaction(() => engine.objects.prepare(undefined, uuid(), owner, authority.keyId))();
+      const input = descriptor(Buffer.from('partial'));
+      input.metadata.description = '"'.repeat(4096);
+      const attempt = engine.store.db.transaction(() => engine.objects.prepare(input, uuid(), owner, authority.keyId))();
       engine.objects.reserve(attempt.id, 7); engine.objects.abandon(attempt.id);
       await writeFile(join(f.directory, 'objects', attempt.staging), 'partial');
     }
@@ -83,11 +86,21 @@ test('revocation interrupts an idle multipart writer and releases its files and 
   assert.equal((await readdir(staging)).length, 1);
   ok(await f.call('RevokeApiKey', { api_key_id: key.api_key_id, request_id: uuid() }));
   await Promise.race([closed, delay(3000).then(() => { throw new Error('revoked_upload_still_open'); })]);
-  for (let i = 0; (await readdir(staging)).length !== 0 && i < 100; i++) await delay(20);
+  const cleanupDeadline = Date.now() + 2000;
+  while ((await readdir(staging)).length !== 0 && Date.now() < cleanupDeadline) await delay(20);
   assert.deepEqual(await readdir(staging), []);
   assert.deepEqual(await readdir(join(f.directory, 'objects', 'installed')), []);
   assert.equal((await f.call('GetObject', { object_id: input.object_id })).status, 404);
-  ok(await f.upload(descriptor(Buffer.from('next')), Buffer.from('next')));
+  const nextBytes = Buffer.from('next'), nextInput = descriptor(nextBytes);
+  let uploaded;
+  do {
+    uploaded = await f.upload(nextInput, nextBytes);
+    if (uploaded.status === 200) break;
+    assert.equal(uploaded.json?.error.code, 'resource_limit', JSON.stringify(uploaded.json));
+    await delay(20);
+  } while (Date.now() < cleanupDeadline);
+  assert.equal(ok(uploaded).object_id, nextInput.object_id);
+  assert.deepEqual((await f.call('ReadObjectContent', { object_id: nextInput.object_id, disposition: 'inline' })).bytes, nextBytes);
 });
 test('verified process exit reclaims owned attempts and captures while ambiguous files survive', { timeout: 15000 }, async t => {
   const cleanup = [];

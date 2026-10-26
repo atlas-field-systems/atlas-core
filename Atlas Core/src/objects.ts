@@ -101,10 +101,10 @@ export class Objects {
   }
   attempts(after = ''): Attempt[] {
     const attempts: Attempt[] = [];
-    let bytes = 0;
+    let bytes = 2;
     for (const row of this.store.db.prepare("SELECT * FROM object_attempts WHERE id>? AND state IN ('active','installed','abandoned') ORDER BY id LIMIT 32").iterate(after)) {
       const attempt = Attempt.parse(row);
-      bytes += Buffer.byteLength(attempt.descriptor) + Buffer.byteLength(attempt.owner) + 2048;
+      bytes += Buffer.byteLength(JSON.stringify(attempt)) + (attempts.length === 0 ? 0 : 1);
       if (bytes > this.store.settings.limits.max_message_bytes - 16384) {
         if (attempts.length === 0) refuse('resource_limit');
         break;

@@ -62,6 +62,21 @@ test('retained Tasks accept exact creation retries and cancellation after Asset 
   assert.equal((await f.call('ReportTaskExecution', { evidence })).json.error.code, 'asset_not_found');
   assert.equal((await f.call('ReportTaskResults', { evidence: { ...evidence, payload: { task_id: task.task_id, declarations: [{ object_id: uuid(), required: false }] } } })).json.error.code, 'asset_not_found');
 });
+test('delayed cancellation refusal clears intent without rolling back started work or its queue', async t => {
+  const f = await fixture(t); const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const task = ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } }));
+  const cancellation = uuid(); ok(await f.call('RequestTaskCancellation', { task_id: task.task_id, request_id: cancellation }));
+  const evidence = (sequence, payload) => ({ dataset_id: f.core.dataset, asset_id: asset.id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence, generated_at: null, payload: { task_id: task.task_id, ...payload } });
+  const refusal = evidence('10', { event: 'cancellation_refused', state: 'pending', reason: 'cannot_cancel', cancellation_request_id: cancellation });
+  ok(await f.call('ReportTaskExecution', { evidence: evidence('50', { event: 'state', state: 'in_progress' }) }));
+  const started = ok(await f.call('GetAsset', { asset_id: asset.id }));
+  assert.deepEqual(started.task_queue.requested_task_ids, []);
+  const response = ok(await f.call('ReportTaskExecution', { evidence: refusal }));
+  assert.equal(response.evidence_disposition, 'accepted');
+  assert.equal(response.task.execution_state, 'in_progress'); assert.equal(response.task.cancellation_request_id, null);
+  assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })), started);
+  assert.equal(ok(await f.call('ReportTaskExecution', { evidence: refusal })).evidence_disposition, 'duplicate');
+});
 test('pending cancellation refusal cannot restore a started Move To to an absent queue slot', async t => {
   const f = await fixture(t); const asset = ok(await f.call('RegisterAsset', registration())).asset;
   const task = ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } }));
