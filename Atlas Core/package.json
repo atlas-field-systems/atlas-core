@@ -20,7 +20,8 @@
     "cli": "node dist/cli.js",
     "test:container": "node --test test/container.test.mjs",
     "fixture:retention": "node scripts/retention.mjs",
-    "release:source": "node scripts/export-source.mjs"
+    "release:source": "node scripts/export-source.mjs",
+    "release:consume": "node scripts/consume-source.mjs"
   },
   "dependencies": {
     "@atlas/protocol": "file:artifacts/atlas-protocol-0.1.0.tgz",

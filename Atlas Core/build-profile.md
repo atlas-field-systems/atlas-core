@@ -39,6 +39,16 @@ After a clean committed build, run `npm run reference:export`,
 the checked stock reference, source archive, image ID, engine/build inputs, and
 release manifest. Manifest generation rejects dirty source or mismatched image inputs.
 
+`source.tar` exports the repository under `atlas/`, including Core and Protocol.
+From Core in the matching release checkout, run `npm run release:consume`, or
+`npm run release:consume -- /absolute/source.tar /absolute/release-manifest.json`.
+The consumer checks the paired archive hash and both manifests and locks. It
+extracts outside Git, prepares Protocol, frozen-installs Core and builds it.
+Protocol, dependency, schema and native-engine inputs must match the release.
+Git archives omit `.git`. The consumer supplies `ATLAS_SOURCE_REVISION`,
+`ATLAS_SOURCE_TREE` and `ATLAS_SOURCE_DIRTY=false` from verified paired metadata.
+Image builds and manifest generation still require the clean release checkout.
+
 ## Shared schema profile
 
 The [Protocol profile](../Atlas%20Protocol/schema-profile.md) owns runtime schema

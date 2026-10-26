@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+const repository = git(['rev-parse', '--show-toplevel']);
 const docker = args => execFileSync('sudo', ['-n', 'docker', ...args], { cwd: root, encoding: 'utf8', maxBuffer: 1_048_576 }).trim();
 assert.equal(git(['status', '--porcelain', '--untracked-files=normal']), '', 'Release manifest requires a clean committed checkout');
 const source = JSON.parse(await readFile(join(root, 'package.json')));
@@ -24,7 +25,7 @@ const reference = await readFile(join(root, 'artifacts', 'openapi.json'));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 assert.equal(hash(reference), inputs.openapiSha256);
 const archive = await readFile(join(root, 'artifacts', 'source.tar'));
-assert.equal(hash(archive), hash(execFileSync('git', ['archive', '--format=tar', '--prefix=atlas/', 'HEAD'], { cwd: root, maxBuffer: 33_554_432 })), 'Source archive must match this exact committed tree');
+assert.equal(hash(archive), hash(execFileSync('git', ['archive', '--format=tar', '--prefix=atlas/', 'HEAD'], { cwd: repository, maxBuffer: 33_554_432 })), 'Source archive must match this exact committed tree');
 const manifest = { release: source.version, sourceRevision: revision, sourceTree: tree,
   sourceArchive: { file: 'source.tar', sha256: hash(archive), bytes: archive.byteLength },
   protocol: source.atlasBuild.protocol, container: source.atlasBuild.container, npmArtifact: source.atlasBuild.npm,
