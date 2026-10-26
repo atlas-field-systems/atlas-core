@@ -15,6 +15,9 @@ Bound queued operation counts and bytes before copying arguments. Exhaustion ref
 unadmitted work with `resource_limit`. Reserve admission for required terminal/control
 effects and keep inspection and stop reachable. A cancelled or lost caller wait does
 not undo a commit or establish that an operation failed. Reconcile original retry facts.
+Charge request copies separately from responses. One ordinary and one reserved response
+producer each hold a complete bounded result until the server acknowledges receipt.
+Waiting capture builds do not hold a response producer or block reporting.
 
 Worker failure stops new database admission and makes Core unavailable under
 [readiness rules](readiness.md). Do not automatically replay in-flight operations
@@ -50,8 +53,10 @@ or storage types into Protocol. Ordinary prepared queries are the initial access
 
 The synchronization owner requests snapshot/history materialization through this
 worker. Capture one consistent source view, bound its construction and read lifetime,
-and end the source transaction before serving saved pages. Capture work may yield
-outside write transactions so queued reporting can proceed. Charge source reads,
+and end the source transaction before serving saved pages. Capture work yields in
+bounded batches outside main write transactions so reporting can proceed. Disposable
+capture files use batched SQLite transactions without durable per-row journals.
+Reserve concurrent bytes and references before writing each batch. Charge source reads,
 temporary files, captures, WAL, indexes, and unreclaimed files to aggregate budgets.
 
 The worker owns checkpoint scheduling and observes WAL bytes and checkpoint progress.

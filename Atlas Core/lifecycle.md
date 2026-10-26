@@ -12,7 +12,8 @@
 
 Updates require an explicit Reset between missions. There is no operational-data
 migration or backup/restore. Hard Reset keeps software and unrelated host resources.
-Incompatible retained formats never authorize an automatic wipe.
+Installation-format conversion must be deliberate and preserve identity, revocation,
+and credentials. Incompatible retained formats never authorize an automatic wipe.
 
 ## Commands
 
@@ -39,7 +40,8 @@ The secret is a 32-byte random base64url value. Commands never print that secret
 | `enrollment revoke` | `--binding UUID --api-key UUID --confirm`; revoke that exact binding |
 
 All settings apply through explicit Restart. The selected default Settings are
-exported by `dist/settings.js`. Local open enrollment is off by default. Public
+exported by `dist/settings.js`. Settings use local commands, never public SDK routes.
+Local open enrollment is off by default. Public
 RegisterAsset always requires a valid key; local enrollment adds no permission tier.
 Disabling enrollment prevents new enrollments but does not revoke existing bindings.
 
@@ -49,7 +51,8 @@ Each mutation holds the installation lock and awaits owned subprocesses and writ
 Concurrent mutations return `management_busy`; inspection remains available.
 Core owns policy and its private mode-0600 Unix maintenance endpoint. Commands own
 Docker access and never edit live SQL. Containers disable logging and automatic restart.
-No persistent management service or detached cleanup worker runs after a command exits.
+There is no persistent management service, takeover control, or automatic recovery.
+No detached cleanup worker runs after a command exits.
 
 After interrupted Start, Stop, or settings work, inspect actual state before retrying.
 A lost control reply proves no exit. Verify immutable container ID, launch, host boot,
@@ -76,7 +79,7 @@ without opening an ordinary writer or trusting phase labels alone.
   establishment: refuse for repair. Never wipe ambiguous state.
 
 Ordinary Start refuses incomplete destructive work. Nothing resumes automatically.
-Hard Reset retains minimal recovery facts until completion. Fresh setup retires its
+Hard Reset retains minimal recovery facts until verified completion. Fresh setup retires its
 old exit proofs before accepting new credentials. User-owned diagnostic exports survive.
 Old requests from independent integrations remain fenced by Dataset.
 
@@ -87,9 +90,11 @@ associations, readings, report retries, keys, and bounded logs. It expires HTTP 
 snapshots and contact challenges and sets Asset contact offline. Partial uploads restart
 from zero. Whole-Core restart does not promise mission continuity or replay physical work.
 
-HTTPS/WSS use normal certificate verification and explicit trusted origins. Setup
-needs no cloud login. Credentials stay out of URLs and diagnostics. Operator and key
+HTTPS/WSS use normal certificate verification and explicit trusted origins, with no TLS bypass.
+Offline setup supplies local trust, preloaded images and reference data, and the first credential.
+Setup needs no cloud login. Credentials stay out of URLs and diagnostics. Operator and key
 rules remain in [Protocol identity](../Atlas%20Protocol/identity.md).
 [Diagnostics](diagnostics.md#collection-and-lifetime) owns log and export lifetime.
+Await diagnostic writers before clearing logs. Unmanaged container or host logs must not escape Reset.
 
 [Next: service readiness](readiness.md)

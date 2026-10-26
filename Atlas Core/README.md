@@ -56,6 +56,9 @@ under the [schema profile](../Atlas%20Protocol/schema-profile.md).
 Core validates requests independently of SDK, and SDK validates responses before
 exposing typed values. Node-specific storage, private SQL, and filesystem types stay inside Core.
 
+Authorization, Tasks, transactions, file publication, recovery, and SDK workflows
+remain ordinary handwritten code. Use supported libraries without a custom schema
+compiler, blanket generated client/server layer, or generated database accessors.
 The [build profile](build-profile.md) records exact locks and reproducible exports.
 Protocol supplies its package, dependency lock, and qualification commands.
 Core implements all 66 initial exchanges. SDK workflows remain unimplemented.
