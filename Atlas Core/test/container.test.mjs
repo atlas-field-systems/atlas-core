@@ -55,7 +55,7 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   await writeFile(writerPath, JSON.stringify(created));
   const writerBefore = await readFile(writerPath, 'utf8');
   await installationLock(installation, async () => {
-    for (let i = 0; i < 3; i++) assert.equal((await cli('inspect')).ok, true);
+    for (let i = 0; i < 3; i++) { const inspected = await cli('inspect'); assert.equal(inspected.ok, true, JSON.stringify(inspected)); }
   });
   assert.equal(await readFile(writerPath, 'utf8'), writerBefore);
   assert.deepEqual(await readdir(join(installation, 'control', 'exits')), []);
