@@ -84,6 +84,9 @@ For exact ordering in one scope, P9 at `.0000001Z` precedes P1 at `.0000002Z`.
 Equal instants `.1Z` and `.100Z` use the identity tie-break and retain both spellings.
 Unknown/uncertain readings remain in their separate group. Repeat with a Track's
 mixed sources sharing a constituent ID: their different scopes remain distinct.
+Separately, accept P4 at Core `12:00:00Z` with source time `12:01:00Z`. At `12:02:00Z`, a new
+query still groups P4 as uncertain under [time classification](reports.md#time-and-contact),
+even after carry-forward, replay, or Restart. A known-only query excludes P4.
 These are independent expected outcomes, not claims of executed runtime tests.
 
 [Movement history](movement-history.md)

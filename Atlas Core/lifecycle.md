@@ -93,4 +93,4 @@ Operator profiles and key bindings follow [Protocol identity](../Atlas%20Protoco
 Deletion and new bindings serialize in Core's transaction; a deleted profile cannot
 gain an active binding. Past attribution remains, with no permission tiers.
 
-[Next: fusion](fusion.md)
+[Next: service readiness](readiness.md)

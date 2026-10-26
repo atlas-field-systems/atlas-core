@@ -55,9 +55,13 @@ Radio encoding and edge-link retries remain external.
 Deployment supplies correct UTC clocks. Atlas does not estimate offsets, correct
 drift, or rewrite source times. Measurement time, Core receipt time, and actual
 state-change time remain separate. Unchanged fresh status is not a new change time.
+Core compares each new reading's effective source time with Core UTC at first successful admission.
 Otherwise valid future-dated measurements are time-uncertain, without usable fresh
-age. Unknown time stays unknown. Clock-uncertainty compatibility metadata cannot
-introduce an offset-calculation subsystem.
+age. Null time is unknown; other accepted times are known. Retain this classification
+with the scoped reading through retries, carry-forward, fusion, and Restart.
+Elapsed time never promotes an uncertain reading to known. Source time stays unchanged.
+History exposes this retained classification as `time_status`; frozen views and new
+queries agree about the same reading. Clock-uncertainty metadata adds no offset calculation.
 
 Fresh contact requires accepted current-process evidence created after a Core
 challenge and received within its monotonic expiry. The [contact exchange](contact.md)

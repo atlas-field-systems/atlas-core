@@ -6,10 +6,11 @@ drone or turn a network acknowledgment into physical success.
 
 ## Deployment
 
-Start with one TypeScript server on Node.js, ordinary internal modules, one SQLite
-database in WAL mode, and local Object files. Core runs in a Docker container on
-a Linux host. Explicit local TypeScript commands control its lifecycle and settings.
-These are implementation choices, not Protocol requirements.
+Core is one TypeScript server on Node.js, with ordinary internal modules,
+one SQLite database, and local Object files. Fastify supplies the HTTP adapter;
+the [database worker](database.md) owns SQLite, transactions, and checkpoints.
+Core runs in a Docker container on Linux. Explicit local TypeScript commands
+control its lifecycle and settings. Protocol remains independent of these choices.
 
 Operators and independent integrations connect over adequate IP using the SDK or
 public HTTP API with credentials. Gateway software and constrained-radio transport
@@ -33,6 +34,20 @@ does not require a cloud service.
 Core's internal owners use direct calls and a shared transaction boundary.
 Keep each domain's tables private behind its owner. Add no generic event bus,
 scheduler service, or module framework without a concrete need.
+
+## HTTP adapter
+
+Fastify owns routing, bounded body ingestion, streams, and connection shutdown.
+Pass original bounded UTF-8 to Protocol before ordinary JSON parsing. Use Protocol's
+readers and writers; Fastify schemas do not become another contract definition.
+Disable input coercion, default insertion, field removal, and default request logging.
+Stream multipart Object content separately from its bounded JSON descriptor.
+
+The adapter authenticates requests and dispatches complete domain operations to
+the database worker. Domain modules own policy and durable effects. Recheck authority
+and Dataset inside the transaction. Keep framework types at the HTTP boundary.
+Use supported WebSocket integration with explicit connection and queue ownership.
+Socket failure after commit leaves the recorded effect intact and delivery uncertain.
 
 ## Shared boundary, private mechanisms
 
@@ -61,8 +76,9 @@ and automatic mission recovery across Core restart are also outside scope.
 
 ## Reading order
 
-[Storage](storage.md) → [Lifecycle](lifecycle.md) → [Fusion](fusion.md) →
-[Diagnostics](diagnostics.md) → [Qualification](qualification.md).
+[Storage](storage.md) → [Database worker](database.md) → [Lifecycle](lifecycle.md) →
+[Service readiness](readiness.md) → [Fusion](fusion.md) → [Diagnostics](diagnostics.md) →
+[Qualification](qualification.md).
 
 [Limits](limits.md) bounds admission. [Lifecycle](lifecycle.md) owns local commands
 and destructive recovery. Shared behavior remains in [Protocol](../Atlas%20Protocol/README.md).
