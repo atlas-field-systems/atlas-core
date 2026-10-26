@@ -30,8 +30,8 @@ movement sample, or public change. Force rollback and verify neither side publis
 Make O17 silent, resume it, and verify T42 remains the same retained Track.
 Include a churn case with new Observations alongside accumulated inactive records.
 Neither silence nor picture capacity permits eviction of the retained records.
-Use the independent [history-only evidence example](../Atlas%20Protocol/report-evidence.md#independent-acceptance-example)
-and [retained-Dataset qualification](workload-qualification.md) requirements.
+Use the [history-only evidence example](../Atlas%20Protocol/report-evidence.md#independent-acceptance-example)
+and [retained-Dataset requirements](workload-qualification.md).
 
 For schema export, follow the [build gates](build-profile.md), delete outputs,
 and export again with exact locked tools. Qualify independent boundary examples,
@@ -39,8 +39,11 @@ runtime/OpenAPI equivalence, browser-safe package consumption, and binary adapte
 Do not buffer large files in a JSON validator. An inferred type check is not a
 request/response-validation test.
 
-Use the [Protocol boundary qualification cases](protocol-qualification.md) to retain
-demonstrated validator pitfalls without treating the experiment as a qualified runtime.
+`npm test` exercises all 66 HTTP exchanges, real WSS handoff, immutable evidence,
+Tasks, streams, revocation, capacity refusal, worker loss, and offline establishment.
+`npm run test:container` exercises the pinned image and CLI on fresh installations,
+including command interruption, explicit recovery, settings failures and Hard Reset.
+Protocol boundary cases remain in [protocol-qualification.md](protocol-qualification.md).
 
 A test must fail when its required assertion cannot run. Observe the promised
 path, not just an eventual value that a hidden fallback could produce. Test the
@@ -83,7 +86,7 @@ recovery. Conflicting or unreadable facts must stop cleanup without deleting dat
 The [workload qualification inputs](workload-qualification.md) reference budgets and
 own initial targets, selected cumulative-turnover pressure fixtures, and Full
 recovery acceptance. Pressure results do not establish supported retained workloads.
-No workload qualification has run in this documentation-only baseline.
+The bounded `npm run fixture:retention` does not qualify the sustained workload.
 Neither tuning nor capacity failure permits weaker retention or atomicity.
 
 ## Report honestly
@@ -94,4 +97,4 @@ not establish power-loss durability. Simulated Assets do not establish flight or
 radio readiness. An external integration test must use public HTTP and credentials,
 without relying on Core-owned process supervision.
 
-This completes the Core reading path. Continue with [SDK](../Atlas%20SDK/README.md).
+[Next: SDK](../Atlas%20SDK/README.md)

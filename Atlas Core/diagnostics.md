@@ -65,7 +65,8 @@ and unmanaged crash files; discard unstructured output at launch. No collector o
 launcher process retains another copy. Local commands send safe progress and failure
 output to the caller, without a retained stopped-state log or later import into Core.
 
-Normal logs, rotation overhead, and export staging total at most 256 MiB. Include
+Normal logs use eight rotating files within half the configured diagnostic budget.
+The remaining half bounds a concurrent export. Their total is at most 256 MiB. Include
 transient buffers in [aggregate capacity](storage.md#retention-and-capacity). Target eight hours
 of default-detail history, including a four-hour mission; age is not a hard expiry.
 Expose retained ranges/gaps. Disk bounds and retention

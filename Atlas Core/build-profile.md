@@ -2,8 +2,8 @@
 
 Protocol supplies executable schemas, exact boundary adapters, dependency locks,
 and stock reference export. Its [qualification commands](../Atlas%20Protocol/qualification.md)
-exercise built packages. Core and SDK remain unimplemented and must pass the
-remaining integration and deployment gates before release.
+exercise built packages. Core has an executable server and functional workflows;
+SDK and the sustained deployment gates remain unqualified.
 
 ## Reproducible build inputs
 
@@ -14,8 +14,7 @@ schema, exporter, validator, database, and build-tool dependencies.
 
 Lock direct and transitive dependencies with integrity hashes. Pin build and runtime
 container images by digest. No floating tags, implicit global tools, or automatic
-upgrades. Choose supported available versions during implementation and commit
-those locks. This page assigns no unverified library release numbers.
+upgrades. The committed lock supplies the selected versions.
 
 Use a supported Node.js LTS release and a Debian-based image, pinned by digest.
 Keep SQLite, WAL, Object files, and owned logs in explicit persistent local mounts.
@@ -28,6 +27,17 @@ or absolute build paths. Two clean exports from identical locked inputs must
 produce identical files. Never patch generated output or build a custom compiler.
 Private handwritten SQL and storage adapters stay behind Core modules. Protocol
 never acquires database types or Node-specific dependencies.
+
+Selected inputs: Node 24.22.1, npm 11.19.0, Fastify 5.12.7, multipart 10.1.6,
+websocket 11.3.4, better-sqlite3 13.0.3, and embedded SQLite 3.53.4.
+`package.json.atlasBuild` pins the Protocol hash and Debian amd64 image digest.
+The base image bundles a newer npm; the build verifies and installs the pinned npm
+artifact before frozen installation. `verify:inputs` queries the native engine.
+
+After a clean committed build, run `npm run reference:export`,
+`npm run release:source`, and `npm run release:manifest`. Ignored `artifacts/` contains
+the checked stock reference, source archive, image ID, engine/build inputs, and
+release manifest. Manifest generation rejects dirty source or mismatched image inputs.
 
 ## Shared schema profile
 
@@ -80,5 +90,5 @@ Unsupported export behavior blocks selection of that tooling. Use an equivalent
 allowed schema or a narrow boundary adapter with independent examples. Do not
 weaken Protocol or fork the exporter. Reproducibility does not establish durability,
 capacity, physical execution, or runtime conformance. Protocol commands live in
-its qualification guide. Core and SDK provide their own build and integration
-commands when those implementations exist.
+its qualification guide. Core commands live in its README. SDK supplies its
+commands with its implementation.
