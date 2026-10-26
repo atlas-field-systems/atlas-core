@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { request } from 'node:https';
 import { join } from 'node:path';
@@ -11,6 +11,7 @@ import { defaults } from '../dist/settings.js';
 import { installationLock } from '../dist/installation.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { processIdentity, exited as writerExited } from '../dist/ownership.js';
+import { createContainer } from '../dist/docker.js';
 const exec = promisify(execFile);
 test('real CLI and pinned container retain Restart, fence Reset, recover proof and require new Hard Reset setup', { timeout: 180000 }, async t => {
   const image = (await readFile(join(root, 'artifacts', 'image-id'), 'utf8')).trim();
@@ -43,9 +44,21 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
     }
     await rm(base, { recursive: true, force: true });
   });
+  const firstUse = await cli('inspect'); assert.equal(firstUse.ok, true); assert.equal(firstUse.data.setup_required, true);
   const setup = await cli('setup', '--image', image, '--certificate', cert, '--key', key, '--credential-file', credentials, '--settings', settingsFile);
   assert.equal(setup.ok, true, JSON.stringify(setup));
-  installationIds.add(JSON.parse(await readFile(join(installation, 'setup', 'installation.json'))).installation_id);
+  const manifest = JSON.parse(await readFile(join(installation, 'setup', 'installation.json')));
+  installationIds.add(manifest.installation_id);
+  assert.deepEqual(await readdir(join(installation, 'control', 'exits')), []);
+  const created = await createContainer(installation, manifest.installation_id, image, 'serve', port);
+  const writerPath = join(installation, 'control', 'writer.json');
+  await writeFile(writerPath, JSON.stringify(created));
+  const writerBefore = await readFile(writerPath, 'utf8');
+  await installationLock(installation, async () => {
+    for (let i = 0; i < 3; i++) assert.equal((await cli('inspect')).ok, true);
+  });
+  assert.equal(await readFile(writerPath, 'utf8'), writerBefore);
+  assert.deepEqual(await readdir(join(installation, 'control', 'exits')), []);
   const start = await cli('start'); assert.equal(start.ok, true, JSON.stringify(start));
   await installationLock(installation, async () => {
     assert.equal((await cli('stop')).code, 'management_busy');
@@ -63,6 +76,7 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   let health = await api('/health'); assert.equal(health.status, 200); dataset = health.body.dataset_id;
   const r = registration('Retained'); assert.equal((await api('/messages/register_asset', r)).status, 200);
   assert.equal((await cli('restart')).ok, true);
+  assert.deepEqual(await readdir(join(installation, 'control', 'exits')), []);
   health = await api('/health'); assert.equal(health.body.dataset_id, dataset);
   assert.equal((await api('/messages/get_asset', { asset_id: r.asset_id })).status, 200);
   const candidate = { ...settings, storageBytes: 63_000_000_000, openEnrollment: true };
@@ -127,6 +141,12 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   const reset = await cli('hard-reset', '--confirm-destructive'); assert.equal(reset.ok, true, JSON.stringify(reset));
   assert.equal(await readFile(join(installation, 'unrelated.txt'), 'utf8'), 'keep');
   await assert.rejects(readFile(join(installation, 'setup', 'tls.key')));
+  assert.equal((await cli('start')).code, 'setup_required');
+  const hardReset = JSON.parse(await readFile(join(installation, 'recovery', 'action.json')));
+  await writeFile(join(installation, 'recovery', 'action.json'), JSON.stringify({ ...hardReset, phase: 'established' }));
+  assert.equal((await cli('start')).code, 'recovery_required');
+  const finishHardReset = await cli('recover'); assert.equal(finishHardReset.ok, true, JSON.stringify(finishHardReset));
+  assert.equal((await cli('start')).code, 'setup_required');
   assert.equal((await cli('inspect')).ok, true);
   const proof = JSON.parse(await readFile(join(installation, 'recovery', 'proof.json'))); assert.notEqual(proof.dataset, dataset);
   const newKey = secret();

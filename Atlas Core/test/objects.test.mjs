@@ -8,8 +8,29 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { fixture, uuid, registration, secret, root } from './helpers.mjs';
+import { Engine } from '../dist/engine.js';
+import { processIdentity } from '../dist/ownership.js';
+import { digest } from '../dist/exact.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 const descriptor = bytes => ({ request_id: uuid(), object_id: uuid(), byte_length: String(bytes.byteLength), sha256: createHash('sha256').update(bytes).digest('hex'), content_type: 'application/octet-stream', metadata: { associations: [] } });
+test('startup reclaims owned abandoned uploads across bounded worker response pages', async t => {
+  const f = await fixture(t); await f.core.close();
+  const engine = new Engine(f.directory, f.settings);
+  const owner = { ...await processIdentity(), start: '0' };
+  const authority = engine.identity.authorize(digest(f.apiKey));
+  try {
+    for (let i = 0; i < 65; i++) {
+      const attempt = engine.store.db.transaction(() => engine.objects.prepare(undefined, uuid(), owner, authority.keyId))();
+      engine.objects.reserve(attempt.id, 7); engine.objects.abandon(attempt.id);
+      await writeFile(join(f.directory, 'objects', attempt.staging), 'partial');
+    }
+  } finally { await engine.close(); }
+  assert.equal((await readdir(join(f.directory, 'objects', 'staging'))).length, 65);
+  await f.restart();
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
+  assert.deepEqual(await f.core.rpc.call('file-owners', {}, 1024, true), []);
+  assert.equal(ok(await f.call('GetHealth')).healthy, true);
+});
 test('stream publication, exact retry, integrity faults, permanent holds and deletion lifetime', async t => {
   const f = await fixture(t);
   const bytes = Buffer.alloc(1_000_000, 0x9a), request = descriptor(bytes);

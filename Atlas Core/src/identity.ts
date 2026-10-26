@@ -72,9 +72,13 @@ export class Identity {
     return { deleted: true };
   }
   createKey(tx: Transaction, request: RequestOf<'CreateApiKey'>, assetId: Uuid | null = null, recordActivity = true): ApiKey {
-    if (request.operator_id !== undefined && !this.operatorExists(request.operator_id)) refuse('operator_deleted');
     const facts = credentialFacts(request);
     if (tx.retry('setup/CreateApiKey', request.request_id, facts)) return this.key(request.api_key_id);
+    if (request.operator_id !== undefined) {
+      const row = this.store.db.prepare('SELECT deleted FROM identity_operators WHERE id=?').get(request.operator_id);
+      if (row === undefined) refuse('operator_not_found');
+      if (z.object({ deleted: z.number() }).parse(row).deleted !== 0) refuse('operator_deleted');
+    }
     if (this.store.db.prepare('SELECT id FROM identity_keys WHERE id=? OR verifier=?').get(request.api_key_id, digest(request.secret))) refuse('identity_conflict');
     const image: ApiKey = { api_key_id: request.api_key_id, operator_id: request.operator_id ?? null, created_at: now(), revoked_at: null };
     this.store.db.prepare('INSERT INTO identity_keys VALUES(?,?,?,?)').run(image.api_key_id, JSON.stringify(image), digest(request.secret), assetId);
@@ -120,6 +124,7 @@ export class Identity {
       api_key_id: tx.authority?.keyId ?? null, operator_id: tx.authority?.operatorId ?? null,
       operator_deleted: tx.authority?.operatorId !== null && tx.authority?.operatorId !== undefined && !this.operatorExists(tx.authority.operatorId) };
     this.store.db.prepare('INSERT INTO identity_activity VALUES(?,?)').run(entry.activity_id, JSON.stringify(entry));
+    tx.retainedBytes += Buffer.byteLength(JSON.stringify(entry)) + 8192;
     tx.dirty = true;
   }
   keys(after: string, limit: number): ApiKey[] {

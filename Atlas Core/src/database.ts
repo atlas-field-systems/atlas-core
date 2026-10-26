@@ -15,6 +15,7 @@ export class Transaction {
   readonly retries: { scope: string; request: string; facts: string }[] = [];
   readonly committed: (() => void)[] = [];
   dirty = false;
+  retainedBytes = 0;
   replayed = false;
   replayCursor: string | undefined;
   constructor(readonly store: Store, readonly authority: Authority | null) {}
@@ -100,7 +101,7 @@ export class Store {
     return value.data;
   }
   earliest(): string { return this.cursor(Counter.parse(this.meta('earliest'))); }
-  transact<T>(authority: Authority | null, action: (tx: Transaction) => T): { data: T; cursor?: string; execution: 'first' | 'replay' | 'read' } {
+  transact<T>(authority: Authority | null, action: (tx: Transaction) => T, admit?: (tx: Transaction) => void): { data: T; cursor?: string; execution: 'first' | 'replay' | 'read' } {
     const committed: (() => void)[] = [];
     const began = performance.now();
     let beforeCommit = began;
@@ -108,6 +109,7 @@ export class Store {
     try { result = this.db.transaction(() => {
       const tx = new Transaction(this, authority);
       const data = action(tx);
+      if (tx.dirty || tx.retainedBytes > 0) admit?.(tx);
       committed.push(...tx.committed);
       let cursor = tx.replayCursor;
       if (tx.dirty) {

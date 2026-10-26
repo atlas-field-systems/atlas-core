@@ -2,6 +2,16 @@ import { opendirSync, statSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Refusal } from './fault.js';
 import type { Settings } from './settings.js';
+import type { ExchangeName, RequestOf } from '@atlas/protocol';
+
+export function requiredEffect(name: ExchangeName, request: RequestOf<ExchangeName>): boolean {
+  if (name === 'ReportTaskExecution' && 'evidence' in request && 'event' in request.evidence.payload) {
+    const payload = request.evidence.payload;
+    return payload.event === 'cancellation_refused' || payload.state === 'completed' || payload.state === 'cancelled' || payload.state === 'failed';
+  }
+  return name === 'RequestTaskCancellation' || name === 'SetTaskOrder' || name === 'RevokeApiKey' ||
+    name === 'DeleteOperator' || name === 'DeleteAsset' || name === 'DeleteObject' || name === 'DeleteGeofeature';
+}
 
 export function diskUsage(root: string): { bytes: number; free: number } {
   let bytes = 0, files = 0;

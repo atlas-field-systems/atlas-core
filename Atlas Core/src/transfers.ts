@@ -30,10 +30,15 @@ export class Transfers {
     await ownedDirectory(join(this.directory, 'staging'));
     await ownedDirectory(join(this.directory, 'installed'));
     if ((await stat(join(this.directory, 'staging'))).dev !== (await stat(join(this.directory, 'installed'))).dev) throw new Error('object_filesystem_mismatch');
-    const attempts = z.array(Attempt).parse(await this.rpc.call('attempts', {}, 0, true));
-    for (const attempt of attempts) {
-      const owner = WriterIdentity.parse(JSON.parse(attempt.owner));
-      if (owner.launch !== undefined && this.exitedLaunches.has(owner.launch) || await exited(owner)) await this.cleanup(attempt.id);
+    let after: Uuid | undefined;
+    while (true) {
+      const attempts = z.array(Attempt).max(32).parse(await this.rpc.call('attempts', after === undefined ? {} : { after }, 1024, true));
+      if (attempts.length === 0) break;
+      for (const attempt of attempts) {
+        const owner = WriterIdentity.parse(JSON.parse(attempt.owner));
+        if (owner.launch !== undefined && this.exitedLaunches.has(owner.launch) || await exited(owner)) await this.cleanup(attempt.id);
+        after = attempt.id;
+      }
     }
   }
   private async authorize(context: Context): Promise<void> { await this.rpc.call('authorize', { context, discovery: false }, 256, true); }

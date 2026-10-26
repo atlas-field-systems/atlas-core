@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { Counter, Uuid } from '@atlas/protocol';
-import { readFile, mkdir, rm } from 'node:fs/promises';
+import { readFile, mkdir, open } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { atomicJson, exited, processIdentity } from './ownership.js';
 import { Settings } from './settings.js';
 import { WriterIdentity } from './objects.js';
-import { id } from './exact.js';
 import { readLocalJson } from './local-json.js';
 
 export const ImageId = z.string().regex(/^sha256:[0-9a-f]{64}$/);
@@ -37,24 +37,17 @@ export async function optionalJson<S extends z.ZodType>(path: string, schema: S)
 }
 export async function installationLock<T>(root: string, action: () => Promise<T>): Promise<T> {
   await mkdir(join(root, 'control'), { recursive: true, mode: 0o700 });
-  const path = join(root, 'control', 'command.lock');
-  const schema = z.strictObject({ id: Uuid, owner: WriterIdentity });
-  const token = id();
-  try { await mkdir(path, { mode: 0o700 }); }
-  catch (error) {
-    if (!(error instanceof Error) || !('code' in error) || error.code !== 'EEXIST') throw error;
-    const previous = await optionalJson(join(path, 'owner.json'), schema);
-    if (previous === undefined || !await exited(previous.owner)) throw new Error('management_busy');
-    await rm(path, { recursive: true });
-    await mkdir(path, { mode: 0o700 });
-  }
-  await atomicJson(join(path, 'owner.json'), { id: token, owner: await processIdentity() });
-  try { return await action(); }
-  finally {
-    const owner = await readJsonFile(join(path, 'owner.json'), schema);
-    if (owner.id !== token) throw new Error('management_lock_changed');
-    await rm(path, { recursive: true });
-  }
+  const file = await open(join(root, 'control', 'command.flock'), constants.O_CREAT | constants.O_RDWR | constants.O_NOFOLLOW, 0o600);
+  try {
+    if (!(await file.stat()).isFile()) throw new Error('management_lock_invalid');
+    // The command retains the locked open description after the short-lived flock child exits.
+    const locked = spawnSync('/usr/bin/flock', ['--exclusive', '--nonblock', '--conflict-exit-code', '73', '3'],
+      { cwd: process.cwd(), stdio: ['ignore', 'ignore', 'ignore', file.fd] });
+    if (locked.error) throw locked.error;
+    if (locked.status === 73) throw new Error('management_busy');
+    if (locked.status !== 0) throw new Error('management_lock_failed');
+    return await action();
+  } finally { await file.close(); }
 }
 export function recoveryDecision(action: Action, marker: Marker, proof: z.infer<typeof Proof> | undefined): 'preserve' | 'establish' {
   const agrees = marker.marker?.actionId === action.action_id && marker.marker.dataset === action.intended_dataset && marker.dataset === action.intended_dataset;

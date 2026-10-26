@@ -2,8 +2,47 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
 import { fixture, uuid, registration } from './helpers.mjs';
-import { recoveryDecision } from '../dist/installation.js';
+import { installationLock, recoveryDecision } from '../dist/installation.js';
+import { processIdentity } from '../dist/ownership.js';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { root } from './helpers.mjs';
+import { setTimeout as delay } from 'node:timers/promises';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 const run = data => new Promise((resolve, reject) => { const worker = new Worker(new URL('../dist/offline.js', import.meta.url), { workerData: data }); let value; worker.on('message', result => { value = result; }); worker.once('error', reject); worker.once('exit', code => code === 0 ? resolve(value) : reject(new Error('offline_failed'))); });
+test('installation mutation lock excludes contenders after dead and ownerless commands', async t => {
+  await mkdir(join(root, 'artifacts'), { recursive: true });
+  const directory = await mkdtemp(join(root, 'artifacts', 'locks-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const ended = { ...await processIdentity(), start: '0' };
+  for (let round = 0; round < 20; round++) {
+    const installation = join(directory, String(round));
+    const oldLock = join(installation, 'control', 'command.lock');
+    await mkdir(oldLock, { recursive: true });
+    await writeFile(join(oldLock, 'owner.json'), JSON.stringify({ id: uuid(), owner: ended }));
+    let active = 0, overlap = false;
+    const results = await Promise.allSettled(Array.from({ length: 12 }, () => installationLock(installation, async () => {
+      if (++active > 1) overlap = true;
+      await delay(20);
+      active--;
+    })));
+    assert.equal(overlap, false, 'Dead-owner takeover must never overlap protected actions');
+    assert.ok(results.some(result => result.status === 'fulfilled'));
+    for (const result of results) if (result.status === 'rejected') assert.equal(result.reason.message, 'management_busy');
+  }
+  const ownerless = join(directory, 'ownerless');
+  await mkdir(join(ownerless, 'control', 'command.lock'), { recursive: true });
+  assert.equal(await installationLock(ownerless, async () => 'acquired'), 'acquired');
+  const installation = join(directory, 'killed');
+  const source = `import { installationLock } from ${JSON.stringify(new URL('../dist/installation.js', import.meta.url).href)}; await installationLock(${JSON.stringify(installation)}, async () => { process.stdout.write('locked'); await new Promise(() => { setInterval(() => {}, 1000); }); });`;
+  const child = spawn(process.execPath, ['--input-type=module', '-e', source], { cwd: root, stdio: ['ignore', 'pipe', 'inherit'] });
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  await once(child.stdout, 'data');
+  await assert.rejects(installationLock(installation, async () => {}), /management_busy/);
+  const exited = once(child, 'exit'); child.kill('SIGKILL'); await exited;
+  assert.equal(await installationLock(installation, async () => 'recovered'), 'recovered');
+});
 test('atomic Dataset marker preserves setup, matching recovery regenerates proof, ambiguity refuses', async t => {
   const f = await fixture(t);
   const old = f.core.dataset;

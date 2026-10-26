@@ -49,8 +49,8 @@ export class Tasks {
     return image;
   }
   create(tx: Transaction, request: RequestOf<'CreateTask'>): Task {
-    const asset = this.entities.asset(request.asset_id);
     if (tx.retry('CreateTask', request.request_id, request)) return this.get(request.task_id);
+    const asset = this.entities.asset(request.asset_id);
     if (this.store.db.prepare('SELECT id FROM task_images WHERE id=?').get(request.task_id)) refuse('identity_conflict');
     if (!asset.capabilities.commands.some(c => c.command === request.command && c.scheduling.some(s => s === request.scheduling))) refuse('unsupported_command');
     const count = z.object({ count: z.number() }).parse(this.store.db.prepare(`SELECT count(*) AS count FROM task_images WHERE asset=? AND json_extract(image,'$.execution_state') NOT IN ('completed','failed','cancelled')`).get(asset.id)).count;
@@ -97,7 +97,7 @@ export class Tasks {
       task.version = next(task.version);
       this.save(tx, task, true);
       const slot = this.internal(task.task_id);
-      if (task.command === 'move_to' && slot.started === 0 && this.entities.known(task.asset_id, 'asset')) {
+      if (task.command === 'move_to' && slot.started === 0 && this.entities.isLive(task.asset_id, 'asset')) {
         const asset = this.entities.asset(task.asset_id);
         asset.task_queue.revision = next(asset.task_queue.revision);
         asset.version = next(asset.version); this.entities.saveAsset(tx, asset, true);
@@ -132,6 +132,7 @@ export class Tasks {
     if (admitted.duplicate) return { task, evidence_disposition: 'duplicate' as const };
     const payload = evidence.payload;
     const before = this.internal(task.task_id);
+    if (task.command === 'move_to' && before.started !== 0 && payload.event === 'cancellation_refused' && payload.state === 'pending') refuse('invalid_request');
     const asset = this.entities.asset(task.asset_id);
     this.validateExecution(task, payload, before.control_revision, evidence.origin.process_generation);
     if (terminal(task)) {
@@ -260,7 +261,7 @@ export class Tasks {
     if (changed) { asset.version = next(asset.version); this.entities.saveAsset(tx, asset, true); }
     return { asset, evidence_disposition: 'accepted' as const };
   }
-  assigned(request: RequestOf<'GetAssignedTasks'>): AssignedTasks {
+  assigned(tx: Transaction, request: RequestOf<'GetAssignedTasks'>): AssignedTasks {
     let context: z.infer<typeof AssignedContext>;
     let after = '', size: number, deadline: number;
     if ('page_token' in request) {
@@ -284,6 +285,7 @@ export class Tasks {
         context = { asset_id: asset.id, process_generation: asset.process_generation, read_id: request.read_id,
           core_run_id: this.store.run, captured_at: captured, instructions_valid_until: AssignedTasks.shape.instructions_valid_until.parse(new Date(Date.parse(captured) + 10_000).toISOString()),
           task_queue: asset.task_queue, task_control: asset.task_control };
+        tx.retainedBytes = Buffer.byteLength(JSON.stringify(context));
         this.store.db.prepare('INSERT INTO task_instructions VALUES(?,?,?)').run(request.read_id, canonical(request), JSON.stringify(context));
         this.store.db.prepare('INSERT INTO task_instruction_lifetime VALUES(?,?,?)').run(request.read_id, this.store.run, deadline);
       }
@@ -302,7 +304,6 @@ export class Tasks {
     return boundedPage(tasks, shortened => ({ ...context, tasks, next_page_token: more || shortened
       ? this.temporary.seal('assigned', { context, after: tasks.at(-1)?.task_id ?? after, size, deadline }) : null }), this.store.settings.limits, this.store.dataset);
   }
-  hasRead(read: Uuid): boolean { return this.store.db.prepare('SELECT read_id FROM task_instructions WHERE read_id=?').get(read) !== undefined; }
   guarded(feature: Uuid): boolean {
     return this.store.db.prepare(`SELECT id FROM task_images WHERE geofeature=? AND json_extract(image,'$.execution_state') NOT IN ('completed','failed','cancelled') LIMIT 1`).get(feature) !== undefined;
   }

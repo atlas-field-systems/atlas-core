@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { stat } from 'node:fs/promises';
+import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { setImmediate } from 'node:timers/promises';
 import { z } from 'zod';
@@ -13,7 +14,9 @@ import type { Entities } from './entities.js';
 import type { Identity } from './identity.js';
 import type { Objects } from './objects.js';
 import type { Tasks } from './tasks.js';
+import { FailedCapture } from './temporary.js';
 import type { Receipt, Temporary } from './temporary.js';
+import { publicError } from './fault.js';
 import { currentWriter, ownedDirectory, removeCapture } from './ownership.js';
 import { boundedPage } from './pages.js';
 
@@ -128,8 +131,10 @@ export class Reads {
         kind === 'task' && this.tasks.get(q.parent).result_declarations.some(declaration => declaration.object_id === a.object_id));
   }
   trackObservations(request: RequestOf<'GetTrackObservations'>) {
-    return this.page('GetTrackObservations', request, exchanges.GetTrackObservations.request.schema.options[0], (a, n) => this.entities.observations(a, n), a => a.id,
-      (a, q) => { this.entities.track(q.track_id); return a.track_id === q.track_id && one(q.publisher_ids, a.publisher_id) && one(q.source_asset_ids, a.source_asset_id); });
+    const query = 'page_token' in request ? exchanges.GetTrackObservations.request.schema.options[0].parse(this.temporary.open(request.page_token, 'GetTrackObservations', PageToken).query) : request;
+    this.entities.track(query.track_id);
+    return this.page('GetTrackObservations', request, exchanges.GetTrackObservations.request.schema.options[0], (a, n) => this.entities.trackObservations(query.track_id, a, n), a => a.id,
+      (a, q) => one(q.publisher_ids, a.publisher_id) && one(q.source_asset_ids, a.source_asset_id));
   }
   negotiate(request: NegotiatedLimits): NegotiatedLimits {
     const limits = this.store.settings.limits;
@@ -137,64 +142,100 @@ export class Reads {
     return { max_message_bytes: limits.max_message_bytes, max_json_values: limits.max_json_values, max_changes: limits.max_changes };
   }
   private path(receiptId: Uuid): string { return join(this.directory, `${receiptId}.sqlite`); }
-  private async build(receipt: Receipt, metadata: z.infer<typeof Capture>, rows: (source: Database.Database) => Generator<{ key: string; data: string }>, verifier: string): Promise<void> {
-    await ownedDirectory(this.directory);
-    const source = new Database(this.store.path, { readonly: true });
-    const path = this.path(receipt.id);
-    this.files.set(receipt.id, path);
-    let target: Database.Database | undefined;
+  get unwritten(): number {
+    let bytes = 0;
+    for (const file of this.temporary.captureFiles()) {
+      let written = 0;
+      try { written = statSync(this.path(file.id)).size; }
+      catch (error) { if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error; }
+      bytes += Math.max(0, file.bytes - written);
+    }
+    return bytes;
+  }
+  private async build(receipt: Receipt, metadata: z.infer<typeof Capture>, rows: (source: Database.Database) => Generator<{ key: string; data: string } | null>, verifier: string): Promise<void> {
+    let source: Database.Database | undefined, target: Database.Database | undefined;
+    let iterator: ReturnType<typeof rows> | undefined;
     let count = 0, bytes = 32768;
+    let owned = false;
+    const check = () => { this.identity.authorize(verifier); if (receipt.deadline <= performance.now()) refuse('allocation_expired'); };
     try {
-      this.temporary.ownFile(receipt, await currentWriter());
-      const limits = this.store.settings.temporary;
-      if (receipt.kind === 'snapshot' ? bytes > Number(limits.max_snapshot_bytes) || bytes > Number(limits.max_total_snapshot_bytes) : bytes > Number(limits.max_history_bytes)) refuse('resource_limit');
-      await this.reserve(bytes);
-      this.identity.authorize(verifier);
-      target = new Database(path);
+      await ownedDirectory(this.directory);
+      check();
+      const owner = await currentWriter(); check();
+      this.temporary.ownFile(receipt, owner);
+      owned = true;
+      this.files.set(receipt.id, this.path(receipt.id));
+      this.temporary.charge(receipt, bytes, count);
+      await this.reserve(65_536);
+      check();
+      source = new Database(this.store.path, { readonly: true, fileMustExist: true });
+      target = new Database(this.path(receipt.id));
+      target.pragma('journal_mode = OFF'); target.pragma('synchronous = OFF'); target.pragma('cache_size = -2048');
       target.exec('CREATE TABLE items(position INTEGER PRIMARY KEY,key TEXT NOT NULL UNIQUE,data TEXT NOT NULL) STRICT');
       source.exec('BEGIN');
       metadata.baseline = this.store.cursorAt(source);
       const insert = target.prepare('INSERT INTO items VALUES(?,?,?)');
-      for (const row of rows(source)) {
-        const added = Buffer.byteLength(row.key) + Buffer.byteLength(row.data) + 1024;
-        const limits = this.store.settings.temporary;
-        const siblings = this.temporary.captureFiles().filter(r => r.id !== receipt.id);
-        const totalBytes = siblings.filter(r => r.kind === receipt.kind).reduce((sum, r) => sum + r.bytes, 0);
-        const totalRefs = siblings.filter(r => r.kind === 'history').reduce((sum, r) => sum + r.refs, 0);
-        if (receipt.deadline <= performance.now()) refuse('allocation_expired');
-        if (receipt.kind === 'snapshot' ? bytes + added > Number(limits.max_snapshot_bytes) || totalBytes + bytes + added > Number(limits.max_total_snapshot_bytes)
-          : count >= limits.max_history_references_per_view || totalRefs + count >= limits.max_total_history_references || totalBytes + bytes + added > Number(limits.max_history_bytes)) refuse('resource_limit');
-        bytes += added; count++;
-        await this.reserve(added + 8192);
-        this.identity.authorize(verifier);
-        this.temporary.set({ ...receipt, bytes, refs: count });
-        insert.run(count, row.key, row.data);
-        if (count % 64 === 0) { await setImmediate(); this.identity.authorize(verifier); }
+      const write = target.transaction((batch: { key: string; data: string }[], start: number) => {
+        for (const [index, row] of batch.entries()) insert.run(start + index + 1, row.key, row.data);
+      });
+      iterator = rows(source);
+      let done = false;
+      while (!done) {
+        check();
+        const batch: { key: string; data: string }[] = [];
+        let added = 0, scanned = 0;
+        const until = performance.now() + 8;
+        while (scanned++ < 64 && added < 262_144 && performance.now() < until) {
+          const row = iterator.next();
+          if (row.done) { done = true; break; }
+          if (row.value === null) continue;
+          added += Math.ceil((Buffer.byteLength(row.value.key) + Buffer.byteLength(row.value.data)) * 1.05) + 2048;
+          batch.push(row.value);
+        }
+        this.temporary.charge(receipt, bytes + added, count + batch.length);
+        bytes += added;
+        await this.reserve(65_536);
+        check();
+        write(batch, count); count += batch.length;
+        await setImmediate(); check();
       }
+      iterator = undefined;
       source.exec('COMMIT');
+      source.close(); source = undefined;
       target.close(); target = undefined;
-      const actual = (await stat(path)).size;
+      const actual = (await stat(this.path(receipt.id))).size;
       if (actual > bytes) refuse('resource_limit');
-      this.identity.authorize(verifier);
-      if (receipt.deadline <= performance.now()) refuse('allocation_expired');
-      this.temporary.set({ ...receipt, state: 'ready', data: JSON.stringify(metadata), bytes, refs: count });
+      check();
+      this.temporary.set({ ...receipt, state: 'ready', data: JSON.stringify(metadata), bytes: actual, refs: count });
       this.store.metrics.capture_builds++; this.store.metrics.captured_bytes += actual;
     } catch (error) {
       this.store.metrics.capture_failures++;
-      try {
-        if (source.inTransaction) source.exec('ROLLBACK');
-        if (target?.open) target.close();
-        this.temporary.set({ ...receipt, state: 'failed', data: '{}', bytes, refs: count });
-        await removeCapture(this.directory, receipt.id);
-        this.files.delete(receipt.id);
-        this.temporary.fileRemoved(receipt.id);
-        this.temporary.set({ ...receipt, state: 'failed', data: '{}', bytes: 0, refs: 0 });
-      } catch (cleanup) { throw new AggregateError([error, cleanup], 'capture_cleanup_failed'); }
+      const failure: z.infer<typeof FailedCapture> = error instanceof AggregateError
+        ? { failure: publicError(error.errors[0], this.store.dataset), cleanup_failure: publicError(error.errors[1], this.store.dataset) }
+        : { failure: publicError(error, this.store.dataset) };
+      const charged = this.temporary.peek(receipt.id) ?? receipt;
+      const failed = { ...charged, state: 'failed' as const, data: JSON.stringify(failure) };
+      this.temporary.set(failed);
+      const failures: unknown[] = [];
+      try { iterator?.return(undefined); } catch (cleanup) { failures.push(cleanup); }
+      for (const database of [source, target]) {
+        try { if (database?.open) { if (database.inTransaction) database.exec('ROLLBACK'); database.close(); } }
+        catch (cleanup) { failures.push(cleanup); }
+      }
+      try { if (owned) await removeCapture(this.directory, receipt.id); }
+      catch (cleanup) { failures.push(cleanup); }
+      if (failures.length > 0) {
+        const cleanup = failures.length === 1 ? failures[0] : new AggregateError(failures, 'capture_cleanup_failed');
+        this.temporary.set({ ...failed, data: JSON.stringify({ ...failure, cleanup_failure: publicError(cleanup, this.store.dataset) }) });
+        throw new AggregateError([error, cleanup], 'capture_cleanup_failed');
+      }
+      this.temporary.reclaimed(failed);
+      this.files.delete(receipt.id);
       throw error;
-    } finally { source.close(); }
+    }
   }
-  async snapshot(request: RequestOf<'ReadSnapshot'>, verifier: string): Promise<SnapshotPage> {
-    if ('page_token' in request) return this.snapshotPage(this.temporary.open(request.page_token, 'snapshot-page', CaptureToken));
+  async snapshot(request: RequestOf<'ReadSnapshot'>, verifier: string, produce: () => Promise<void> = async () => {}): Promise<SnapshotPage> {
+    if ('page_token' in request) { await produce(); this.identity.authorize(verifier); return this.snapshotPage(this.temporary.open(request.page_token, 'snapshot-page', CaptureToken)); }
     const limits = this.negotiate(request);
     const reserved = this.store.db.transaction(() => this.temporary.reserve('snapshot', request.allocation_context, request.load_id, request))();
     const receipt = reserved.receipt;
@@ -203,7 +244,7 @@ export class Reads {
       this.builds.set(receipt.id, build);
       try { await build; } finally { this.builds.delete(receipt.id); }
     } else if (receipt.state === 'building') await this.builds.get(receipt.id);
-    this.identity.authorize(verifier);
+    await produce(); this.identity.authorize(verifier);
     return this.snapshotPage({ id: receipt.id, position: 0 });
   }
   private *picture(source: Database.Database): Generator<{ key: string; data: string }> {
@@ -221,7 +262,7 @@ export class Reads {
     }
   }
   private snapshotPage(token: z.infer<typeof CaptureToken>): SnapshotPage {
-    const receipt = this.temporary.get(token.id);
+    const receipt = this.temporary.outcome(token.id);
     if (receipt.state !== 'ready' || receipt.kind !== 'snapshot') refuse('allocation_expired');
     const metadata = Capture.parse(JSON.parse(receipt.data));
     if (metadata.kind !== 'snapshot') refuse('allocation_expired');
@@ -240,8 +281,8 @@ export class Reads {
         release_token: this.temporary.seal('release', { id: receipt.id, kind: 'snapshot' }) }), metadata.limits);
     } finally { database.close(); }
   }
-  async history(kind: 'asset' | 'observation' | 'track', request: HistoryQuery, verifier: string): Promise<HistoryPage> {
-    if ('page_token' in request) return this.historyPage(this.temporary.open(request.page_token, 'history-page', CaptureToken));
+  async history(kind: 'asset' | 'observation' | 'track', request: HistoryQuery, verifier: string, produce: () => Promise<void> = async () => {}): Promise<HistoryPage> {
+    if ('page_token' in request) { await produce(); this.identity.authorize(verifier); return this.historyPage(this.temporary.open(request.page_token, 'history-page', CaptureToken)); }
     const query = request;
     const selection = this.entities.sourceForHistory(kind, request.entity_id);
     const reserved = this.store.db.transaction(() => this.temporary.reserve('history', request.allocation_context, request.query_id, { kind, ...request }))();
@@ -251,10 +292,10 @@ export class Reads {
         const evidence = this.entities.evidence;
         function* rows() {
           for (const { identity, reading } of evidence.positions(selection.source, source)) {
-            if (query.time_groups !== undefined && !query.time_groups.includes(reading.time_status)) continue;
+            if (query.time_groups !== undefined && !query.time_groups.includes(reading.time_status)) { yield null; continue; }
             if (reading.time_status === 'known' && reading.observed_at !== null &&
               (query.source_time_from !== undefined && instant(reading.observed_at) < instant(query.source_time_from) ||
-                query.source_time_before !== undefined && instant(reading.observed_at) >= instant(query.source_time_before))) continue;
+                query.source_time_before !== undefined && instant(reading.observed_at) >= instant(query.source_time_before))) { yield null; continue; }
             yield { key: identity, data: JSON.stringify({ identity, tracks: selection.tracks }) };
           }
         }
@@ -263,11 +304,11 @@ export class Reads {
       this.builds.set(receipt.id, build);
       try { await build; } finally { this.builds.delete(receipt.id); }
     } else if (receipt.state === 'building') await this.builds.get(receipt.id);
-    this.identity.authorize(verifier);
+    await produce(); this.identity.authorize(verifier);
     return this.historyPage({ id: receipt.id, position: 0 });
   }
   private historyPage(token: z.infer<typeof CaptureToken>): HistoryPage {
-    const receipt = this.temporary.get(token.id);
+    const receipt = this.temporary.outcome(token.id);
     if (receipt.kind !== 'history' || receipt.state !== 'ready') refuse('allocation_expired');
     const metadata = Capture.parse(JSON.parse(receipt.data));
     if (metadata.kind !== 'history') refuse('allocation_expired');
@@ -301,10 +342,9 @@ export class Reads {
     this.identity.authorize(verifier);
     this.temporary.set({ ...receipt, state: 'released' });
     await removeCapture(this.directory, receipt.id);
+    this.temporary.reclaimed({ ...receipt, state: 'released' });
     this.files.delete(receipt.id);
-    this.temporary.fileRemoved(receipt.id);
     this.identity.authorize(verifier);
-    this.temporary.set({ ...receipt, state: 'released', bytes: 0, refs: 0 });
     if (receipt.state !== 'released') this.store.metrics.capture_releases++;
     return { released: true as const };
   }
@@ -328,13 +368,29 @@ export class Reads {
         next_page_token: through !== context.boundary ? this.temporary.seal('replay', { ...context, from: through }) : null };
     }, context.limits);
   }
+  feed(from: string, boundary: string) {
+    const messages: ReplayPage['messages'] = [];
+    const limits = this.store.settings.limits;
+    let bytes = 4096, changes = 0;
+    for (const message of this.store.messages(from, boundary, 64)) {
+      const length = Buffer.byteLength(JSON.stringify(message));
+      const count = message.type === 'change_batch' ? message.data.changes.length : 0;
+      if (bytes + length > limits.max_message_bytes || changes + count > limits.max_changes) {
+        if (messages.length === 0) refuse('resource_limit');
+        break;
+      }
+      messages.push(message); bytes += length; changes += count;
+    }
+    return this.boundedPage(messages, () => ({ through: boundary, messages, earliest: this.store.earliest() }));
+  }
   async cleanup(): Promise<void> {
     for (const receiptId of this.files.keys()) {
       const receipt = this.temporary.peek(receiptId);
       if ((receipt === undefined || receipt.deadline <= performance.now()) && !this.builds.has(receiptId)) {
-        await removeCapture(this.directory, receiptId); this.files.delete(receiptId);
-        this.temporary.fileRemoved(receiptId);
-        if (receipt) this.temporary.set({ ...receipt, state: 'released', bytes: 0, refs: 0 });
+        await removeCapture(this.directory, receiptId);
+        if (receipt) this.temporary.reclaimed({ ...receipt, state: receipt.state === 'failed' ? 'failed' : 'released' });
+        else this.temporary.fileRemoved(receiptId);
+        this.files.delete(receiptId);
         this.store.metrics.capture_expiries++;
       }
     }
@@ -342,11 +398,20 @@ export class Reads {
   async expireHistory(): Promise<void> {
     for (const receipt of this.temporary.receipts('history')) {
       if (receipt.state !== 'ready' || this.builds.has(receipt.id)) continue;
-      await removeCapture(this.directory, receipt.id); this.files.delete(receipt.id);
-      this.temporary.fileRemoved(receipt.id);
-      this.temporary.set({ ...receipt, state: 'released', bytes: 0, refs: 0 });
+      await removeCapture(this.directory, receipt.id);
+      this.temporary.reclaimed({ ...receipt, state: 'released' });
+      this.files.delete(receipt.id);
       this.store.metrics.capture_expiries++;
     }
   }
-  async close(): Promise<void> { await Promise.allSettled(this.builds.values()); for (const id of this.files.keys()) { await removeCapture(this.directory, id); this.temporary.fileRemoved(id); } this.files.clear(); }
+  async close(): Promise<void> {
+    await Promise.allSettled(this.builds.values());
+    for (const id of this.files.keys()) {
+      await removeCapture(this.directory, id);
+      const receipt = this.temporary.peek(id);
+      if (receipt) this.temporary.reclaimed({ ...receipt, state: receipt.state === 'failed' ? 'failed' : 'released' });
+      else this.temporary.fileRemoved(id);
+      this.files.delete(id);
+    }
+  }
 }

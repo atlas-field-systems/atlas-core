@@ -12,9 +12,9 @@ import { Tasks } from './tasks.js';
 import { Objects } from './objects.js';
 import { Reads } from './reads.js';
 import { Temporary } from './temporary.js';
-import { refuse } from './fault.js';
+import { Refusal, refuse } from './fault.js';
 import type { Settings } from './settings.js';
-import { diskUsage, hasCapacity } from './capacity.js';
+import { diskUsage, hasCapacity, requiredEffect } from './capacity.js';
 import { canonical } from './exact.js';
 
 export type PublicOperation = { [K in ExchangeName]: { name: K; request: RequestOf<K> } }[ExchangeName];
@@ -28,8 +28,6 @@ export function isPublicOperation(value: unknown): value is PublicOperation {
   const request = exchanges[parsed.data.name].request.schema.safeParse(parsed.data.request);
   return request.success && canonical(request.data) === canonical(parsed.data.request);
 }
-const ordinary = new Set<ExchangeName>(['CreateApiKey', 'CreateOperator', 'EditOperator', 'RegisterAsset', 'UpdateAsset', 'CreateObservation', 'ReportObservation',
-  'EditObservation', 'EditTrack', 'CreateGeofeature', 'EditGeofeature', 'CreateTask', 'UploadObject', 'EditObject']);
 export class Engine {
   readonly store: Store;
   readonly identity: Identity;
@@ -69,41 +67,43 @@ export class Engine {
     }
     return authority;
   }
-  async execute(operation: PublicOperation, context: Context, completed: (execution: 'first' | 'replay' | 'read') => void = () => {}): Promise<ResponseOf<ExchangeName>> {
+  async execute(operation: PublicOperation, context: Context, completed: (execution: 'first' | 'replay' | 'read') => void = () => {}, produce: () => Promise<void> = async () => {}): Promise<ResponseOf<ExchangeName>> {
     const authority = this.authorize(context, operation.name === 'GetHealth');
     if (this.state !== 'serving' && operation.name !== 'GetHealth' && operation.name !== 'GetReadiness') refuse('resource_limit');
-    if (ordinary.has(operation.name)) {
-      const bytes = Buffer.byteLength(JSON.stringify(operation.request)) * 16 + this.settings.limits.max_message_bytes;
-      let usage = diskUsage(this.accountingRoot);
-      if (!hasCapacity(usage, this.settings, bytes + this.objects.unwritten)) { await this.reads.expireHistory(); usage = diskUsage(this.accountingRoot); }
-      this.pressure = !hasCapacity(usage, this.settings, 32768 + this.objects.unwritten);
-      if (!hasCapacity(usage, this.settings, bytes + this.objects.unwritten)) refuse('storage_limit');
-    }
-    if (operation.name === 'GetAssignedTasks' && 'read_id' in operation.request && !this.tasks.hasRead(operation.request.read_id)) {
-      const asset = this.entities.asset(operation.request.asset_id);
-      await this.reserveStorage(Buffer.byteLength(JSON.stringify({ queue: asset.task_queue, control: asset.task_control })) * 4 + 32768, true);
-    }
     let data: unknown, cursor: string | undefined, execution: 'first' | 'replay' | 'read' = 'read';
     switch (operation.name) {
-      case 'ReadSnapshot': data = await this.reads.snapshot(operation.request, context.verifier); break;
-      case 'GetAssetMovementHistory': data = await this.reads.history('asset', operation.request, context.verifier); break;
-      case 'GetObservationMovementHistory': data = await this.reads.history('observation', operation.request, context.verifier); break;
-      case 'GetTrackMovementHistory': data = await this.reads.history('track', operation.request, context.verifier); break;
+      case 'ReadSnapshot': data = await this.reads.snapshot(operation.request, context.verifier, produce); break;
+      case 'GetAssetMovementHistory': data = await this.reads.history('asset', operation.request, context.verifier, produce); break;
+      case 'GetObservationMovementHistory': data = await this.reads.history('observation', operation.request, context.verifier, produce); break;
+      case 'GetTrackMovementHistory': data = await this.reads.history('track', operation.request, context.verifier, produce); break;
       case 'ReleaseSnapshot': data = await this.reads.release(operation.request.release_token, 'snapshot', context.verifier); break;
       case 'ReleaseHistoryView': data = await this.reads.release(operation.request.release_token, 'history', context.verifier); break;
-      case 'GetReference': return { kind: 'reference', status: 200, media: 'application/vnd.oai.openapi+json', document: new TextDecoder().decode(exportReference()) };
+      case 'GetReference': await produce(); this.authorize(context); return { kind: 'reference', status: 200, media: 'application/vnd.oai.openapi+json', document: new TextDecoder().decode(exportReference()) };
       case 'ReadObjectContent': {
+        await produce(); this.authorize(context);
         const image = this.objects.get(operation.request.object_id);
         return { kind: 'content', status: 200, descriptor: { object_id: image.object_id, byte_length: image.byte_length, sha256: image.sha256, content_type: image.content_type, disposition: operation.request.disposition } };
       }
       default: {
-        const committed = this.store.transact(authority, tx => {
+        await produce();
+        const run = () => this.store.transact(authority, tx => {
           this.authorize(context, operation.name === 'GetHealth');
           return this.dispatch(tx, operation, context);
+        }, tx => {
+          const effects = [...tx.effects.values()].reduce((bytes, effect) => bytes + Buffer.byteLength(JSON.stringify(effect)), 0);
+          this.admitStorage(65_536 + Buffer.byteLength(JSON.stringify(operation.request)) * 16 + effects * 4 + tx.retainedBytes * 4, requiredEffect(operation.name, operation.request));
         });
+        let committed: ReturnType<typeof run>;
+        try { committed = run(); }
+        catch (error) {
+          if (!(error instanceof Refusal) || error.code !== 'storage_limit') throw error;
+          await this.expireForStorage(error);
+          committed = run();
+        }
         data = committed.data; cursor = committed.cursor; execution = committed.execution;
       }
     }
+    await produce();
     this.authorize(context, operation.name === 'GetHealth');
     if (data !== null && typeof data === 'object' && 'evidence_disposition' in data && data.evidence_disposition === 'duplicate') execution = 'replay';
     completed(execution);
@@ -163,7 +163,7 @@ export class Engine {
       case 'RequestTaskCancellation': return tasks.cancel(tx, operation.request);
       case 'ReportTaskResults': return tasks.results(tx, operation.request);
       case 'GetTaskObjects': return reads.associated('task', operation.request);
-      case 'GetAssignedTasks': return tasks.assigned(operation.request);
+      case 'GetAssignedTasks': return tasks.assigned(tx, operation.request);
       case 'SetTaskOrder': return tasks.order(tx, operation.request);
       case 'ConfirmTaskOrder': return tasks.confirm(tx, operation.request);
       case 'UploadObject': if (context.attempt === undefined) refuse('invalid_request'); return objects.publish(tx, context.attempt);
@@ -172,7 +172,7 @@ export class Engine {
       case 'EditObject': return objects.edit(tx, operation.request);
       case 'DeleteObject': return objects.delete(tx, operation.request);
       case 'ReadChanges': return reads.replay(operation.request);
-      case 'BeginAssetContact': return entities.begin(operation.request);
+      case 'BeginAssetContact': return entities.begin(tx, operation.request);
       case 'ReplaceAssetProcess': return entities.replace(tx, operation.request);
       case 'ReadSnapshot': case 'GetAssetMovementHistory': case 'GetObservationMovementHistory': case 'GetTrackMovementHistory':
       case 'ReleaseSnapshot': case 'ReleaseHistoryView': case 'GetReference': case 'ReadObjectContent': throw new Error('async_operation_in_transaction');
@@ -181,14 +181,25 @@ export class Engine {
   }
   provision(request: RequestOf<'CreateApiKey'>, recordActivity = true): void {
     Secret.parse(request.secret);
-    this.store.transact(null, tx => this.identity.createKey(tx, request, null, recordActivity));
+    this.store.transact(null, tx => this.identity.createKey(tx, request, null, recordActivity), () => this.admitStorage(Buffer.byteLength(JSON.stringify(request)) * 16 + 65_536));
   }
   async tick(): Promise<void> { this.entities.tick(); await this.reads.cleanup(); this.temporary.expire(); this.store.checkpoint(); }
   async reserveStorage(bytes: number, required = false): Promise<void> {
-    let usage = diskUsage(this.accountingRoot);
-    if (!hasCapacity(usage, this.settings, bytes + this.objects.unwritten, required)) { await this.reads.expireHistory(); usage = diskUsage(this.accountingRoot); }
-    this.pressure = !hasCapacity(usage, this.settings, 32768 + this.objects.unwritten);
-    if (!hasCapacity(usage, this.settings, bytes + this.objects.unwritten, required)) refuse('storage_limit');
+    try { this.admitStorage(bytes, required); }
+    catch (error) {
+      if (!(error instanceof Refusal) || error.code !== 'storage_limit') throw error;
+      await this.expireForStorage(error);
+      this.admitStorage(bytes, required);
+    }
+  }
+  private async expireForStorage(primary: Refusal): Promise<void> {
+    try { await this.reads.expireHistory(); }
+    catch (cleanup) { throw new AggregateError([primary, cleanup], 'storage_cleanup_failed'); }
+  }
+  private admitStorage(bytes: number, required = false): void {
+    const usage = diskUsage(this.accountingRoot);
+    this.pressure = !hasCapacity(usage, this.settings, 32768 + this.objects.unwritten + this.reads.unwritten);
+    if (!hasCapacity(usage, this.settings, bytes + this.objects.unwritten + this.reads.unwritten, required)) refuse('storage_limit');
   }
   async close(): Promise<void> { this.state = 'draining'; await this.reads.close(); this.store.close(); }
   establish(dataset: Uuid, action: Uuid, hard: boolean): void {

@@ -5,6 +5,17 @@ import { exchanges } from '@atlas/protocol';
 import { fixture, uuid, secret, report, telemetry, registration } from './helpers.mjs';
 
 function ok(result) { assert.equal(result.status, 200, JSON.stringify(result.json)); return result.json.data; }
+test('Track Observation membership validates unknown references independently of unrelated records', async t => {
+  const f = await fixture(t); const unknown = uuid();
+  assert.equal((await f.call('GetTrackObservations', { track_id: unknown })).json.error.code, 'entity_not_found');
+  const pairs = [];
+  for (let i = 0; i < 8; i++) pairs.push(ok(await f.call('CreateObservation', { request_id: uuid(), observation_id: uuid(), publisher_id: uuid() })));
+  assert.equal((await f.call('GetTrackObservations', { track_id: unknown })).json.error.code, 'entity_not_found');
+  for (const pair of pairs) {
+    assert.deepEqual(ok(await f.call('GetTrackObservations', { track_id: pair.track.id })).items.map(item => item.id), [pair.observation.id]);
+    assert.deepEqual(ok(await f.call('GetTrackObservations', { track_id: pair.track.id, publisher_ids: [uuid()] })).items, []);
+  }
+});
 test('every HTTP exchange succeeds through HTTPS, the worker, SQLite and files', { timeout: 120000 }, async t => {
   const f = await fixture(t);
   let health = ok(await f.call('GetHealth'));

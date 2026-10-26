@@ -45,3 +45,50 @@ test('Pause and fresh Resume effects commit with ordered Asset confirmations', a
   const current = ok(await f.call('GetAsset', { asset_id: asset.id }));
   assert.equal(current.task_control.confirmed.revision, '2'); assert.equal(current.task_control.confirmed.queue_state, 'running');
 });
+test('retained Tasks accept exact creation retries and cancellation after Asset deletion', async t => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const request = { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } };
+  const created = await f.call('CreateTask', request); const task = ok(created);
+  ok(await f.call('DeleteAsset', { asset_id: asset.id, request_id: uuid() }));
+  const retried = await f.call('CreateTask', request);
+  assert.deepEqual(ok(retried), task); assert.equal(retried.json.commit_cursor, created.json.commit_cursor);
+  assert.equal((await f.call('CreateTask', { ...request, request_id: uuid(), task_id: uuid() })).json.error.code, 'asset_not_found');
+  const cancellation = { task_id: task.task_id, request_id: uuid() };
+  const cancelled = ok(await f.call('RequestTaskCancellation', cancellation));
+  assert.equal(cancelled.cancellation_request_id, cancellation.request_id); assert.equal(cancelled.execution_state, 'pending');
+  assert.deepEqual(ok(await f.call('RequestTaskCancellation', cancellation)), cancelled);
+  const evidence = { dataset_id: f.core.dataset, asset_id: asset.id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null, payload: { task_id: task.task_id, event: 'state', state: 'completed' } };
+  assert.equal((await f.call('ReportTaskExecution', { evidence })).json.error.code, 'asset_not_found');
+  assert.equal((await f.call('ReportTaskResults', { evidence: { ...evidence, payload: { task_id: task.task_id, declarations: [{ object_id: uuid(), required: false }] } } })).json.error.code, 'asset_not_found');
+});
+test('pending cancellation refusal cannot restore a started Move To to an absent queue slot', async t => {
+  const f = await fixture(t); const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const task = ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } }));
+  const evidence = payload => ({ dataset_id: f.core.dataset, asset_id: asset.id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null, payload: { task_id: task.task_id, ...payload } });
+  ok(await f.call('ReportTaskExecution', { evidence: evidence({ event: 'state', state: 'in_progress' }) }));
+  const cancellation = uuid(); ok(await f.call('RequestTaskCancellation', { task_id: task.task_id, request_id: cancellation }));
+  const refusal = { ...evidence({ event: 'cancellation_refused', state: 'pending', reason: 'cannot_cancel', cancellation_request_id: cancellation }), sequence: '2' };
+  assert.equal((await f.call('ReportTaskExecution', { evidence: refusal })).json.error.code, 'invalid_request');
+  let current = ok(await f.call('GetTask', { task_id: task.task_id }));
+  assert.equal(current.execution_state, 'in_progress'); assert.equal(current.cancellation_request_id, cancellation);
+  assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })).task_queue.requested_task_ids, []);
+  ok(await f.call('ReportTaskExecution', { evidence: { ...refusal, payload: { ...refusal.payload, state: 'in_progress' } } }));
+  current = ok(await f.call('GetTask', { task_id: task.task_id })); assert.equal(current.execution_state, 'in_progress'); assert.equal(current.cancellation_request_id, null);
+});
+test('delayed proven Resume survives Restart while its old instructions cannot satisfy new read rounds', async t => {
+  const f = await fixture(t); const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const resume = ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'resume', scheduling: 'immediate', inputs: {}, expires_at: new Date(Date.now() + 59000).toISOString() }));
+  const request = { asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid(), page_size: 1 };
+  const read = ok(await f.call('GetAssignedTasks', request));
+  const evidence = { dataset_id: f.core.dataset, asset_id: asset.id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null,
+    payload: { task_id: resume.task_id, event: 'state', state: 'completed', control_revision: read.task_control.revision, queue_state: 'running', applied_at: read.captured_at, read_id: read.read_id, core_run_id: read.core_run_id, captured_at: read.captured_at, instructions_valid_until: read.instructions_valid_until, queue_revision: read.task_queue.revision } };
+  await f.restart();
+  assert.equal((await f.call('GetAssignedTasks', request)).json.error.code, 'allocation_expired');
+  const fresh = ok(await f.call('GetAssignedTasks', { ...request, read_id: uuid() }));
+  assert.notEqual(fresh.core_run_id, read.core_run_id); assert.notEqual(fresh.read_id, read.read_id);
+  const forged = { ...evidence, payload: { ...evidence.payload, read_id: fresh.read_id } };
+  assert.equal((await f.call('ReportTaskExecution', { evidence: forged })).json.error.code, 'control_not_confirmed');
+  assert.equal(ok(await f.call('ReportTaskExecution', { evidence })).task.execution_state, 'completed');
+  assert.equal(ok(await f.call('GetAsset', { asset_id: asset.id })).task_control.confirmed.queue_state, 'running');
+});

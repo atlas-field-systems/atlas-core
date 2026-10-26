@@ -72,6 +72,10 @@ export class Administration {
     }
     const saved = await this.writer();
     if (saved?.container === writer.container) await rm(join(this.root, 'control', 'writer.json'), { force: true });
+    if (writer.kind === 'oneshot' && (await this.action())?.writer?.container !== writer.container) {
+      await rm(join(this.root, 'control', 'exits', `${writer.container}.json`), { force: true });
+      await flushDirectory(join(this.root, 'control', 'exits'));
+    }
     await flushDirectory(join(this.root, 'control'));
   }
   private async containerExists(writer: Writer): Promise<boolean> {
@@ -81,20 +85,40 @@ export class Administration {
   }
   private async offline(mode: 'inspect-marker' | 'establish' | 'provision', input: unknown = {}, image?: string) {
     const manifest = await this.manifest();
+    if (mode === 'inspect-marker') {
+      const container = await createContainer(this.root, manifest.installation_id, image ?? manifest.image, mode);
+      let primary: unknown;
+      try {
+        const value: unknown = JSON.parse(await docker(['start', '--attach', '--interactive', container.container], JSON.stringify(input)));
+        return value;
+      } catch (error) { primary = error; throw error; }
+      finally {
+        try {
+          const state = await inspectContainer(container, manifest.installation_id);
+          if (state.State.Running) { await docker(['kill', '--signal=TERM', container.container]); await docker(['wait', container.container]); }
+          await verifyWriterExit(container, manifest.installation_id);
+          await docker(['rm', container.container]);
+        } catch (cleanup) { if (primary !== undefined) throw new AggregateError([primary, cleanup], 'inspection_cleanup_failed'); throw cleanup; }
+      }
+    }
     const writer = await this.writer();
     if (writer) await this.verifyExit(writer, manifest.installation_id);
-    if (writer && mode !== 'inspect-marker') await this.removeStopped(writer, manifest.installation_id);
+    if (writer) await this.removeStopped(writer, manifest.installation_id);
     const container = await createContainer(this.root, manifest.installation_id, image ?? manifest.image, mode);
-    let output: string;
-    if (mode === 'inspect-marker') output = await docker(['start', '--attach', '--interactive', container.container], JSON.stringify(input));
-    else output = await startContainer(this.root, container, manifest.installation_id, true, JSON.stringify(input));
+    const output = await startContainer(this.root, container, manifest.installation_id, true, JSON.stringify(input));
     await this.verifyExit(container, manifest.installation_id);
     await this.removeStopped(container, manifest.installation_id);
     const value: unknown = JSON.parse(output);
     return value;
   }
   async inspect(): Promise<unknown> {
-    const manifest = await this.manifest();
+    const manifest = await this.manifest().catch(error => {
+      if (error instanceof Error && error.message === 'setup_required') return undefined;
+      throw error;
+    });
+    if (manifest === undefined) {
+      return { running: false, setup_required: true, action: await this.action(), settings: await this.settingsShow() };
+    }
     const writer = await this.writer();
     if (writer) {
       const container = await inspectContainer(writer, manifest.installation_id);
@@ -114,7 +138,9 @@ export class Administration {
   }
   async start(): Promise<void> {
     await this.requireComplete();
-    const manifest = await this.manifest(), settings = await this.settings(), old = await this.writer();
+    const manifest = await optionalJson(join(this.root, 'setup', 'installation.json'), Manifest);
+    if (!manifest) throw new Error('setup_required');
+    const settings = await this.settings(), old = await this.writer();
     if (old) {
       if (await this.containerExists(old) && (await inspectContainer(old, manifest.installation_id)).State.Running) {
         if (!z.object({ ready: z.boolean() }).parse(await maintenance(this.root, { operation: 'inspect' })).ready) throw new Error('start_failed');

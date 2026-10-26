@@ -9,6 +9,8 @@ import type { DatabaseWorker } from './rpc.js';
 import type { Context } from './engine.js';
 import type { Settings } from './settings.js';
 import type { Diagnostics } from './diagnostics.js';
+import { QueuePressure } from './rpc.js';
+import { setTimeout as delay } from 'node:timers/promises';
 
 type Subscription = { request: SubscribeChanges; handoff: string; cursor: string; complete: boolean; ended: boolean };
 export class ChangesConnection {
@@ -22,6 +24,7 @@ export class ChangesConnection {
   private incomingBytes = 0;
   private received: Promise<void> = Promise.resolve();
   private polling = false;
+  private nextPoll: NodeJS.Immediate | undefined;
   private closed = false;
   private readonly authenticateTimer: NodeJS.Timeout;
   private readonly timer: NodeJS.Timeout;
@@ -100,29 +103,35 @@ export class ChangesConnection {
   private async poll(): Promise<void> {
     if (this.polling || this.closed || this.context === undefined) return;
     this.polling = true;
+    let backlog = false;
     try {
       await this.rpc.call('authorize', { context: this.context, discovery: false }, 512, true);
       const subscription = this.subscription;
       if (!subscription || subscription.ended) return;
-      const result = z.object({ through: z.string(), messages: z.array(ReplayMessage).max(1000), earliest: z.string() }).parse(
-        await this.rpc.call('feed', { context: this.context, from: subscription.cursor, boundary: subscription.complete ? null : subscription.handoff }, this.settings.limits.max_message_bytes + 1024));
-      for (const message of result.messages) {
-        if (subscription.ended || this.closed) return;
-        await this.rpc.call('authorize', { context: this.context, discovery: false }, 512, true);
-        const frame: ServerFrame = message.type === 'change_batch'
-          ? { type: 'change_batch', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION, data: { ...message.data, subscription_id: subscription.request.subscription_id } }
-          : { type: 'progress', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION, data: { ...message.data, subscription_id: subscription.request.subscription_id } };
-        await this.send(frame);
-        subscription.cursor = message.type === 'change_batch' ? message.data.commit_cursor : message.data.through_cursor;
-      }
-      if (!subscription.complete && subscription.cursor === subscription.handoff) {
-        await this.send({ type: 'handoff_complete', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION,
-          data: { subscription_id: subscription.request.subscription_id, handoff_cursor: subscription.handoff } });
-        subscription.complete = true;
-        this.diagnostics.emit({ severity: 'INFO', component: 'synchronization', event: 'handoff_complete', cursor: subscription.handoff });
-      }
+      const until = performance.now() + 25;
+      do {
+        const result = z.object({ through: z.string(), messages: z.array(ReplayMessage).max(1000), earliest: z.string() }).parse(
+          await this.rpc.call('feed', { context: this.context, from: subscription.cursor, boundary: subscription.complete ? null : subscription.handoff }, 2048));
+        for (const message of result.messages) {
+          if (subscription.ended || this.closed) return;
+          await this.rpc.call('authorize', { context: this.context, discovery: false }, 512, true);
+          const frame: ServerFrame = message.type === 'change_batch'
+            ? { type: 'change_batch', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION, data: { ...message.data, subscription_id: subscription.request.subscription_id } }
+            : { type: 'progress', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION, data: { ...message.data, subscription_id: subscription.request.subscription_id } };
+          await this.send(frame);
+          subscription.cursor = message.type === 'change_batch' ? message.data.commit_cursor : message.data.through_cursor;
+        }
+        if (!subscription.complete && subscription.cursor === subscription.handoff) {
+          await this.send({ type: 'handoff_complete', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION,
+            data: { subscription_id: subscription.request.subscription_id, handoff_cursor: subscription.handoff } });
+          subscription.complete = true;
+          this.diagnostics.emit({ severity: 'INFO', component: 'synchronization', event: 'handoff_complete', cursor: subscription.handoff });
+        }
+        backlog = subscription.cursor !== result.through || !subscription.complete;
+      } while (backlog && !subscription.ended && !this.closed && performance.now() < until);
     } catch (error) {
-      if (error instanceof Refusal && error.code !== 'unauthorized' && this.subscription && !this.subscription.ended) {
+      if (error instanceof QueuePressure) { backlog = false; }
+      else if (error instanceof Refusal && error.code !== 'unauthorized' && this.subscription && !this.subscription.ended) {
         this.subscription.ended = true;
         const fault = publicError(error, this.dataset).body.error;
         const earliest = fault.code === 'cursor_expired' ? fault.details.earliest_recoverable_cursor : this.subscription.cursor;
@@ -130,7 +139,10 @@ export class ChangesConnection {
         await this.send({ type: 'gap', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION,
           data: { subscription_id: this.subscription.request.subscription_id, reason: error.code === 'cursor_expired' ? 'cursor_expired' : 'resource_limit', earliest_recoverable_cursor: earliest } }).catch(() => this.close(1013));
       } else { await this.error(error).catch(() => {}); this.close(error instanceof Refusal && error.code === 'unauthorized' ? 1008 : 1011); }
-    } finally { this.polling = false; }
+    } finally {
+      this.polling = false;
+      if (backlog && !this.closed && !this.subscription?.ended) this.nextPoll = setImmediate(() => { this.nextPoll = undefined; void this.poll(); });
+    }
   }
   private error(error: unknown, requestId?: NewId): Promise<void> {
     return this.send({ type: 'error', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION,
@@ -158,7 +170,10 @@ export class ChangesConnection {
       if (error) { next.reject(); this.close(error instanceof Refusal && error.code === 'unauthorized' ? 1008 : 1011); } else { next.resolve(); this.flush(); }
     };
     void (async () => {
-      if (next.authorize && this.context !== undefined) await this.rpc.call('authorize', { context: this.context, discovery: false }, 512, true);
+      if (next.authorize && this.context !== undefined) while (!this.closed) {
+        try { await this.rpc.call('authorize', { context: this.context, discovery: false }, 512, true); break; }
+        catch (error) { if (!(error instanceof QueuePressure)) throw error; await delay(10); }
+      }
       if (this.closed) throw new Error('socket_closed');
       this.socket.send(next.bytes, { binary: false }, written);
     })().catch(error => { written(error instanceof Error ? error : new Error('socket_write_failed')); });
@@ -168,6 +183,6 @@ export class ChangesConnection {
     this.diagnostics.emit({ severity: code === 1013 ? 'WARN' : 'INFO', component: 'synchronization', event: code === 1013 ? 'slow_client_closed' : 'connection_closed', count: code });
     this.socket.close(code); const timer = setTimeout(() => this.socket.terminate(), 1000); timer.unref(); this.finish();
   }
-  private finish(): void { if (this.closed) return; this.closed = true; clearTimeout(this.timer); clearTimeout(this.authenticateTimer); for (const item of this.queue) item.reject(); this.queue.length = 0; this.onClose(); }
+  private finish(): void { if (this.closed) return; this.closed = true; clearTimeout(this.timer); clearTimeout(this.authenticateTimer); if (this.nextPoll) clearImmediate(this.nextPoll); for (const item of this.queue) item.reject(); this.queue.length = 0; this.onClose(); }
 }
 function bytesOf(frame: ClientFrame): number { return Buffer.byteLength(JSON.stringify(frame)); }

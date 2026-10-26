@@ -46,6 +46,12 @@ export class Entities {
     const row = this.store.db.prepare('SELECT kind,alive FROM entity_identity WHERE id=?').get(id);
     return row !== undefined && EntityRow.parse(row).kind === kind;
   }
+  isLive(id: Uuid, kind: Entity['entity_type']): boolean {
+    const row = this.store.db.prepare('SELECT kind,alive FROM entity_identity WHERE id=?').get(id);
+    if (row === undefined) return false;
+    const identity = EntityRow.parse(row);
+    return identity.kind === kind && identity.alive !== 0;
+  }
   asset(id: Uuid): Asset {
     this.live(id, 'asset');
     return Asset.parse(JSON.parse(ImageRow.parse(this.store.db.prepare('SELECT image FROM entity_assets WHERE id=?').get(id)).image));
@@ -163,7 +169,7 @@ export class Entities {
     }
     return { disposition: 'accepted', changed };
   }
-  begin(request: RequestOf<'BeginAssetContact'>): ContactChallenge {
+  begin(tx: Transaction, request: RequestOf<'BeginAssetContact'>): ContactChallenge {
     const asset = this.asset(request.asset_id);
     const allocation = this.temporary.validateContext(request.allocation_context);
     const contacts = this.temporary.receipts('contact');
@@ -178,6 +184,7 @@ export class Entities {
     if (existing && (existing.context !== allocation.context || existing.request !== request.request_id)) refuse('contact_busy');
     const reserved = this.temporary.reserve('contact', request.allocation_context, request.request_id, request);
     if (!reserved.fresh) return ContactData.parse(JSON.parse(reserved.receipt.data)).challenge;
+    tx.retainedBytes += Buffer.byteLength(JSON.stringify(request)) + 16384;
     if (request.mode === 'current' ? request.process_generation !== asset.process_generation : request.expected_process_generation !== asset.process_generation) refuse('generation_mismatch');
     if (request.mode === 'replace' && this.store.db.prepare('SELECT generation FROM entity_generations WHERE asset=? AND generation=?').get(asset.id, request.process_generation)) refuse('generation_mismatch');
     const issued = now();
@@ -212,6 +219,7 @@ export class Entities {
     if (asset.process_generation !== request.expected_process_generation || this.store.db.prepare('SELECT generation FROM entity_generations WHERE asset=? AND generation=?').get(asset.id, request.process_generation)) refuse('generation_mismatch');
     let receipt;
     try { receipt = this.temporary.get(request.challenge_id); } catch { refuse('challenge_expired'); }
+    if (receipt.kind !== 'contact') refuse('challenge_context_mismatch');
     const c = ContactData.parse(JSON.parse(receipt.data)).challenge;
     if (c.mode !== 'replace' || c.expected_process_generation !== request.expected_process_generation) refuse('challenge_context_mismatch');
     asset.process_generation = request.process_generation;
@@ -369,6 +377,11 @@ export class Entities {
   }
   observations(after: string, limit: number): Observation[] {
     return this.store.db.prepare('SELECT image FROM entity_observations WHERE id>? ORDER BY id LIMIT ?').all(after, limit).map(row => Observation.parse(JSON.parse(ImageRow.parse(row).image)));
+  }
+  trackObservations(track: Uuid, after: string, limit: number): Observation[] {
+    this.track(track);
+    return this.store.db.prepare('SELECT o.image FROM entity_tracks t JOIN entity_observations o ON o.id=t.observation WHERE t.id=? AND o.id>? ORDER BY o.id LIMIT ?')
+      .all(track, after, limit).map(row => Observation.parse(JSON.parse(ImageRow.parse(row).image)));
   }
   tracks(after: string, limit: number): Track[] {
     return this.store.db.prepare('SELECT image FROM entity_tracks WHERE id>? ORDER BY id LIMIT ?').all(after, limit).map(row => Track.parse(JSON.parse(ImageRow.parse(row).image)));

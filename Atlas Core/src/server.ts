@@ -64,7 +64,7 @@ export async function createCore(options: ServerOptions) {
   const exitedLaunches = new Set(options.exitedLaunches ?? []);
   const transfers = new Transfers(rpc, join(options.directory, 'objects'), settings, diagnostics, exitedLaunches);
   await transfers.initialize();
-  const captures = z.array(CaptureFile).max(4096).parse(await rpc.call('capture-files', {}, 4_194_304, true));
+  const captures = z.array(CaptureFile).max(4096).parse(await rpc.call('capture-files', {}, 1024, true));
   const captureDirectory = await ownedDirectory(join(options.directory, 'captures'));
   for (const capture of captures) {
     const owner = WriterIdentity.parse(JSON.parse(capture.owner));
@@ -190,7 +190,7 @@ export async function createCore(options: ServerOptions) {
           }
           throw error;
         }
-        const exchange = await rpc.exchangeDetailed(name, input, context, (Buffer.isBuffer(request.body) ? request.body.byteLength * 8 : 1024) + settings.limits.max_message_bytes);
+        const exchange = await rpc.exchangeDetailed(name, input, context, Buffer.isBuffer(request.body) ? request.body.byteLength * 8 + 1024 : 1024);
         const result = exchange.response;
         record(request, name, result, exchange.execution);
         if (result.kind === 'error') throw new Refusal(result.body.error.code, result.body.error.details);

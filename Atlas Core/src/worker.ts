@@ -11,10 +11,31 @@ if (port === null) throw new Error('worker_requires_parent');
 const setup = z.object({ directory: z.string(), accountingRoot: z.string(), settings: Settings, establish: z.object({ dataset: Uuid, actionId: Uuid }).optional() }).parse(workerData);
 const engine = new Engine(setup.directory, setup.settings, setup.establish, setup.accountingRoot);
 port.postMessage({ type: 'ready', dataset: engine.store.dataset, run: engine.store.run, engine: engine.store.engine() });
-const Message = z.strictObject({ id: z.number().int().positive(), kind: z.string(), data: z.unknown(), enqueuedAtNs: z.bigint().nonnegative() });
-const active = new Set<Promise<void>>();
+const Message = z.strictObject({ id: z.number().int().positive(), kind: z.string(), data: z.unknown(), reserved: z.boolean(), enqueuedAtNs: z.bigint().nonnegative() });
+const Received = z.strictObject({ type: z.literal('received'), id: z.number().int().positive() });
+const active = new Map<number, Promise<void>>();
+const replies = new Map<number, boolean>();
+const ordinaryResponses: (() => void)[] = [], requiredResponses: (() => void)[] = [];
+let ordinaryBusy = false, requiredBusy = false;
+async function responseSlot(id: number, reserved: boolean): Promise<void> {
+  if (reserved ? requiredBusy : ordinaryBusy) await new Promise<void>(resolve => (reserved ? requiredResponses : ordinaryResponses).push(resolve));
+  else if (reserved) requiredBusy = true;
+  else ordinaryBusy = true;
+  replies.set(id, reserved);
+}
+function received(id: number): void {
+  const reserved = replies.get(id);
+  if (reserved === undefined) throw new Error('unknown_worker_reply');
+  replies.delete(id);
+  const next = (reserved ? requiredResponses : ordinaryResponses).shift();
+  if (next) next();
+  else if (reserved) requiredBusy = false;
+  else ordinaryBusy = false;
+}
 async function execute(raw: unknown): Promise<void> {
   const message = Message.parse(raw);
+  const produce = async () => { if (!replies.has(message.id)) await responseSlot(message.id, message.reserved); };
+  if (message.kind !== 'close' && message.kind !== 'exchange') await produce();
   engine.store.metrics.ipc_wait_ms += Math.max(0, Number(process.hrtime.bigint() - message.enqueuedAtNs) / 1_000_000);
   try {
     let result: unknown;
@@ -23,7 +44,7 @@ async function execute(raw: unknown): Promise<void> {
         const data = z.strictObject({ operation: z.unknown(), context: Context }).parse(message.data);
         if (!isPublicOperation(data.operation)) refuse('invalid_request');
         let execution: 'first' | 'replay' | 'read' = 'read';
-        const response = await engine.execute(data.operation, data.context, outcome => { execution = outcome; });
+        const response = await engine.execute(data.operation, data.context, outcome => { execution = outcome; }, produce);
         result = { response, execution }; break;
       }
       case 'authorize': {
@@ -65,8 +86,12 @@ async function execute(raw: unknown): Promise<void> {
       case 'installed': engine.objects.installed(Uuid.parse(message.data)); result = {}; break;
       case 'abandon': engine.objects.abandon(Uuid.parse(message.data)); result = {}; break;
       case 'reclaim': engine.objects.reclaim(Uuid.parse(message.data)); result = {}; break;
-      case 'attempts': result = engine.objects.attempts(); break;
+      case 'attempts': { const data = z.object({ after: Uuid.optional() }).parse(message.data); result = engine.objects.attempts(data.after); break; }
       case 'capture-files': result = engine.temporary.captureFiles(); break;
+      case 'file-owners': {
+        const captures = engine.temporary.captureFiles().flatMap(record => { const owner = WriterIdentity.parse(JSON.parse(record.owner)); return owner.launch === undefined ? [] : [owner.launch]; });
+        result = [...new Set([...engine.objects.writerLaunches(), ...captures])]; break;
+      }
       case 'capture-removed': engine.temporary.fileRemoved(Uuid.parse(message.data)); result = {}; break;
       case 'file': {
         const data = z.object({ context: Context, object: Uuid }).parse(message.data); engine.authorize(data.context);
@@ -82,8 +107,7 @@ async function execute(raw: unknown): Promise<void> {
       case 'feed': {
         const data = z.object({ context: Context, from: z.string(), boundary: z.string().nullable() }).parse(message.data); engine.authorize(data.context);
         const boundary = data.boundary ?? engine.store.cursor();
-        const messages = [...engine.store.messages(data.from, boundary, 1)];
-        result = { through: boundary, messages, earliest: engine.store.earliest() }; break;
+        result = engine.reads.feed(data.from, boundary); break;
       }
       case 'drain': engine.state = 'draining'; result = {}; break;
       case 'pressure': engine.pressure = z.boolean().parse(message.data); result = {}; break;
@@ -93,14 +117,20 @@ async function execute(raw: unknown): Promise<void> {
         result = {}; break;
       }
       case 'close':
-        await Promise.allSettled([...active]); await engine.close(); result = {};
+        await Promise.allSettled([...active].filter(([id]) => id !== message.id).map(([, work]) => work));
+        await engine.close(); result = {};
+        await responseSlot(message.id, true);
         port?.postMessage({ type: 'reply', id: message.id, value: result }); port?.close(); return;
       default: throw new Error('unknown_worker_operation');
     }
+    if (Buffer.byteLength(JSON.stringify(result)) > setup.settings.limits.max_message_bytes) refuse('resource_limit');
     port?.postMessage({ type: 'reply', id: message.id, value: result });
-  } catch (error) { port?.postMessage({ type: 'refusal', id: message.id, error: publicError(error, engine.store.dataset) }); }
+  } catch (error) { await produce(); port?.postMessage({ type: 'refusal', id: message.id, error: publicError(error, engine.store.dataset) }); }
 }
 port.on('message', (raw: unknown) => {
+  const acknowledgement = Received.safeParse(raw);
+  if (acknowledgement.success) { received(acknowledgement.data.id); return; }
+  const message = Message.parse(raw);
   const work = execute(raw);
-  active.add(work); void work.finally(() => active.delete(work));
+  active.set(message.id, work); void work.finally(() => active.delete(message.id));
 });

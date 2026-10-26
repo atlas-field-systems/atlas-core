@@ -60,7 +60,15 @@ test('operator deletion serializes key binding and revokes every explicitly boun
   ok(await f.call('CreateApiKey', key));
   const deletion = { operator_id: operator, request_id: uuid() }; ok(await f.call('DeleteOperator', deletion)); ok(await f.call('DeleteOperator', deletion));
   assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${key.secret}` })).status, 401);
+  const recovered = ok(await f.call('CreateApiKey', key)); assert.equal(recovered.api_key_id, key.api_key_id); assert.notEqual(recovered.revoked_at, null);
   assert.equal((await f.call('CreateApiKey', { ...key, request_id: uuid(), api_key_id: uuid(), secret: secret() })).json.error.code, 'operator_deleted');
+  const unknown = await f.call('CreateApiKey', { api_key_id: uuid(), request_id: uuid(), secret: secret(), operator_id: uuid() });
+  assert.equal(unknown.status, 404); assert.equal(unknown.json.error.code, 'operator_not_found');
+  const racedOperator = uuid(); ok(await f.call('CreateOperator', { operator_id: racedOperator, request_id: uuid(), name: 'Crew' }));
+  const racedKey = { api_key_id: uuid(), request_id: uuid(), secret: secret(), operator_id: racedOperator };
+  const [binding, removed] = await Promise.all([f.call('CreateApiKey', racedKey), f.call('DeleteOperator', { operator_id: racedOperator, request_id: uuid() })]);
+  ok(removed); assert.ok(binding.status === 200 || binding.status === 410, JSON.stringify(binding.json));
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${racedKey.secret}` })).status, 401);
   assert.equal((await f.call('CreateOperator', { operator_id: operator, request_id: uuid(), name: 'Again' })).json.error.code, 'operator_deleted');
   assert.equal((await f.call('DeleteOperator', { operator_id: operator, request_id: uuid() })).json.error.code, 'operator_deleted');
 });

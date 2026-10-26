@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixture, registration } from './helpers.mjs';
+import { fixture, registration, report, telemetry } from './helpers.mjs';
 import { uuid } from './helpers.mjs';
 import { writeFile, rm, readdir, stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Diagnostics, faultFrames } from '../dist/diagnostics.js';
 import { setTimeout as delay } from 'node:timers/promises';
+import { storageUsage } from '../dist/server.js';
+import { digest } from '../dist/exact.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 test('queried-back embedded engine durability, bounded IPC admission and explicit worker loss', async t => {
   const f = await fixture(t);
@@ -27,12 +29,74 @@ test('real aggregate pressure refuses ordinary growth and preserves reserved can
   const f = await fixture(t, { storageBytes: 32 * 1024 * 1024, objectBytes: 16 * 1024 * 1024, reserveBytes: 1024 * 1024 });
   const a = ok(await f.call('RegisterAsset', registration())).asset;
   const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: a.id, command: 'pause', scheduling: 'immediate', inputs: {} }));
-  await writeFile(join(f.directory, 'pressure.bin'), Buffer.alloc(29 * 1024 * 1024));
+  const usage = await storageUsage(f.directory);
+  await writeFile(join(f.directory, 'pressure.bin'), Buffer.alloc(f.settings.storageBytes - f.settings.reserveBytes - usage.bytes - 32768));
   assert.equal((await f.call('RegisterAsset', registration())).json.error.code, 'storage_limit');
   assert.equal(ok(await f.call('RequestTaskCancellation', { task_id: task.task_id, request_id: uuid() })).execution_state, 'pending');
   assert.equal(ok(await f.call('GetReadiness')).ready, true);
   await rm(join(f.directory, 'pressure.bin'));
   ok(await f.call('RegisterAsset', registration()));
+});
+test('all Task evidence preserves ordinary headroom, exact retries bypass new admission, and terminal writes obey the ceiling', async t => {
+  const f = await fixture(t, { storageBytes: 16 * 1024 * 1024, objectBytes: 4 * 1024 * 1024, reserveBytes: 2 * 1024 * 1024 });
+  const request = registration(); const registered = await f.call('RegisterAsset', request); const asset = ok(registered).asset;
+  const taskRequest = { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'pause', scheduling: 'immediate', inputs: {} };
+  const taskResponse = await f.call('CreateTask', taskRequest); const task = ok(taskResponse);
+  const origin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const evidence = (sequence, payload) => ({ dataset_id: f.core.dataset, asset_id: asset.id, origin, report_id: uuid(), sequence: String(sequence), generated_at: null, payload });
+  const progress = { evidence: evidence(1, { task_id: task.task_id, event: 'state', state: 'acknowledged' }) };
+  ok(await f.call('ReportTaskExecution', progress));
+  const results = { evidence: evidence(1, { task_id: task.task_id, declarations: [{ object_id: uuid(), required: true }] }) };
+  ok(await f.call('ReportTaskResults', results));
+  const adoption = { evidence: evidence(1, { queue_revision: '0' }) }; ok(await f.call('ConfirmTaskOrder', adoption));
+  const assigned = { asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid() }; const instructions = ok(await f.call('GetAssignedTasks', assigned));
+  const publisher = uuid(), observation = uuid(), publisherOrigin = { kind: 'publisher', publisher_id: publisher };
+  ok(await f.call('CreateObservation', { request_id: uuid(), observation_id: observation, publisher_id: publisher }));
+  const observationReport = { observation_id: observation, publisher_id: publisher, report: report(f.core.dataset, observation, publisherOrigin, 1, { telemetry: telemetry(publisherOrigin, 1) }) };
+  ok(await f.call('ReportObservation', observationReport));
+  const pressure = join(f.directory, 'pressure.bin');
+  async function fill(required) {
+    await rm(pressure, { force: true });
+    const usage = await storageUsage(f.directory);
+    await writeFile(pressure, Buffer.alloc(f.settings.storageBytes - (required ? 0 : f.settings.reserveBytes) - usage.bytes - 32768));
+  }
+  await fill(false);
+  const replay = await f.call('RegisterAsset', request); assert.equal(ok(replay).asset.id, asset.id); assert.equal(replay.json.commit_cursor, registered.json.commit_cursor);
+  assert.equal((await f.call('RegisterAsset', { ...request, alias: 'different' })).json.error.code, 'identity_conflict');
+  assert.equal(ok(await f.call('CreateTask', taskRequest)).task_id, task.task_id);
+  assert.equal(ok(await f.call('ReportTaskExecution', progress)).evidence_disposition, 'duplicate');
+  assert.equal(ok(await f.call('ReportTaskResults', results)).evidence_disposition, 'duplicate');
+  assert.equal(ok(await f.call('ConfirmTaskOrder', adoption)).evidence_disposition, 'duplicate');
+  assert.deepEqual(ok(await f.call('GetAssignedTasks', assigned)), instructions);
+  assert.equal(ok(await f.call('ReportObservation', observationReport)).evidence_disposition, 'duplicate');
+  assert.equal((await f.call('ReportTaskExecution', { evidence: evidence(2, { task_id: task.task_id, event: 'state', state: 'in_progress' }) })).json.error.code, 'storage_limit');
+  assert.equal((await f.call('ReportTaskResults', { evidence: evidence(2, { task_id: task.task_id, declarations: [{ object_id: uuid(), required: false }] }) })).json.error.code, 'storage_limit');
+  assert.equal((await f.call('ConfirmTaskOrder', { evidence: evidence(2, { queue_revision: '0' }) })).json.error.code, 'storage_limit');
+  assert.equal((await f.call('GetAssignedTasks', { ...assigned, read_id: uuid() })).json.error.code, 'storage_limit');
+  const terminal = { evidence: evidence(2, { task_id: task.task_id, event: 'state', state: 'failed', reason: 'cannot_execute' }) };
+  assert.equal(ok(await f.call('ReportTaskExecution', terminal)).task.execution_state, 'failed');
+  await fill(true);
+  assert.equal((await f.call('ReportTaskExecution', { evidence: evidence(3, terminal.evidence.payload) })).json.error.code, 'storage_limit');
+  assert.equal(ok(await f.call('ReportTaskExecution', terminal)).evidence_disposition, 'duplicate');
+  await rm(pressure);
+  assert.equal((await f.call('ReportTaskExecution', { evidence: evidence(3, terminal.evidence.payload) })).status, 200);
+});
+test('tiny HTTP requests coexist and required exchanges fit the reserved IPC capacity', async t => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'pause', scheduling: 'immediate', inputs: {} }));
+  const reads = await Promise.all(Array.from({ length: 32 }, () => f.call('ListAssets', {})));
+  for (const response of reads) assert.equal(ok(response).items[0].id, asset.id);
+  const context = { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.1.0' };
+  const pending = [];
+  for (let i = 0; i < 15; i++) pending.push(f.core.rpc.exchange('ListAssets', {}, context, 1_048_576).catch(error => error));
+  const outcome = f.core.rpc.exchange('RequestTaskCancellation', { task_id: task.task_id, request_id: uuid() }, context, 4096);
+  const terminal = f.core.rpc.exchange('ReportTaskExecution', { evidence: { dataset_id: f.core.dataset, asset_id: asset.id,
+    origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null,
+    payload: { task_id: task.task_id, event: 'state', state: 'failed', reason: 'cannot_execute' } } }, context, 8192);
+  for (const response of await Promise.all([outcome, terminal])) assert.equal(response.kind, 'success');
+  await Promise.all(pending);
+  assert.equal(f.core.rpc.usage.operations, 0); assert.equal(f.core.rpc.usage.bytes, 0);
 });
 test('draining readiness is an authenticated 503 success and ordinary work stops', async t => {
   const f = await fixture(t);

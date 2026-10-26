@@ -1,12 +1,12 @@
 import { Worker } from 'node:worker_threads';
-import { open, unlink, readdir } from 'node:fs/promises';
+import { open, unlink, opendir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { Uuid } from '@atlas/protocol';
 import { createCore } from './server.js';
 import { Action, ExitProof, Manifest, Marker, Proof, SavedSettings, optionalJson, readJsonFile, recoveryDecision } from './installation.js';
 import { maintenanceServer } from './maintenance.js';
-import { processIdentity } from './ownership.js';
+import { flushDirectory, processIdentity } from './ownership.js';
 import { faultFrames } from './diagnostics.js';
 
 const [mode, root] = process.argv.slice(2);
@@ -44,14 +44,17 @@ try {
       const marker = Marker.parse(await offline({ mode: 'inspect-marker', directory: join(root, 'data') }));
       if (pending.installation_id !== manifest.installation_id || recoveryDecision(pending, marker, proof) !== 'preserve') throw new Error('repair_required');
     }
-    const proofs = await readdir(join(root, 'control', 'exits')).catch(error => { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return []; throw error; });
-    if (proofs.length > 4096) throw new Error('exit_proof_limit');
+    const directory = join(root, 'control', 'exits');
+    const proofs = await opendir(directory).catch(error => { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined; throw error; });
+    const verified: { file: string; launch: Uuid }[] = [];
     const exitedLaunches: Uuid[] = [];
-    for (const file of proofs) {
+    if (proofs) for await (const entry of proofs) {
+      if (verified.length >= 100_000) throw new Error('exit_proof_limit');
+      const file = entry.name;
       if (!/^[0-9a-f]{64}\.json$/.test(file)) continue;
-      const proof = await readJsonFile(join(root, 'control', 'exits', file), ExitProof);
+      const proof = await readJsonFile(join(directory, file), ExitProof);
       if (proof.installation !== manifest.installation_id || `${proof.container}.json` !== file) throw new Error('repair_required');
-      exitedLaunches.push(proof.launch);
+      exitedLaunches.push(proof.launch); verified.push({ file, launch: proof.launch });
     }
     const core = await createCore({ directory: join(root, 'data'), accountingRoot: root, certificate: join(root, 'setup', 'tls.pem'), key: join(root, 'setup', 'tls.key'), settings: settings.saved, exitedLaunches });
     let maintenance: Awaited<ReturnType<typeof maintenanceServer>> | undefined;
@@ -65,6 +68,10 @@ try {
       if (failures.length > 0) throw new AggregateError(failures, 'runtime_shutdown_failed');
       await unlink(lock);
     })();
+    const requiredLaunches = new Set(z.array(Uuid).max(8192).parse(await core.rpc.call('file-owners', {}, 1024, true)));
+    if (pending?.writer) requiredLaunches.add(pending.writer.launch);
+    for (const proof of verified) if (!requiredLaunches.has(proof.launch)) await unlink(join(directory, proof.file));
+    if (verified.length > 0) await flushDirectory(directory);
     maintenance = await maintenanceServer(root, async request => {
       switch (request.operation) {
         case 'inspect': return { dataset: core.dataset, run: core.run, ready: listening && core.rpc.available, worker: core.rpc.available, queues: core.rpc.usage, diagnostics: core.diagnostics.inspect() };

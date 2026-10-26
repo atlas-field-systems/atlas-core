@@ -2,9 +2,10 @@ import { Worker } from 'node:worker_threads';
 import { z } from 'zod';
 import { HttpError, Uuid, exchanges } from '@atlas/protocol';
 import type { ExchangeName, RequestOf, ResponseOf } from '@atlas/protocol';
-import { refuse, Refusal } from './fault.js';
+import { Refusal } from './fault.js';
 import type { Settings } from './settings.js';
 import type { Context } from './engine.js';
+import { requiredEffect } from './capacity.js';
 
 const Ready = z.strictObject({ type: z.literal('ready'), dataset: Uuid, run: Uuid, engine: z.unknown() });
 const Reply = z.strictObject({ type: z.literal('reply'), id: z.number().int(), value: z.unknown() });
@@ -13,6 +14,7 @@ function isResponse<K extends ExchangeName>(name: K, value: unknown): value is R
   return exchanges[name].response.schema.safeParse(value).success;
 }
 type Pending = { bytes: number; resolve: (value: unknown) => void; reject: (error: unknown) => void };
+export class QueuePressure extends Refusal { constructor() { super('resource_limit'); } }
 export class DatabaseWorker {
   readonly worker: Worker;
   readonly ready: Promise<z.infer<typeof Ready>>;
@@ -40,6 +42,7 @@ export class DatabaseWorker {
         const pending = this.pending.get(messageId);
         if (!pending) { this.fail(); return; }
         this.pending.delete(messageId); this.queuedBytes -= pending.bytes;
+        this.worker.postMessage({ type: 'received', id: messageId });
         if (reply.success) pending.resolve(reply.data.value);
         else if (failure.success) pending.reject(new Refusal(failure.data.error.body.error.code, failure.data.error.body.error.details));
       });
@@ -57,13 +60,15 @@ export class DatabaseWorker {
   async call(kind: string, data: unknown, bytes: number, reserved = false): Promise<unknown> {
     await this.ready;
     if (this.failed || this.closing && kind !== 'close') throw new Error('database_worker_failed');
-    const maxCount = this.settings.workerQueueCount - (reserved ? 0 : 4);
-    const maxBytes = this.settings.workerQueueBytes - (reserved ? 0 : 1_048_576);
-    if (!Number.isSafeInteger(bytes) || bytes < 0 || this.pending.size >= maxCount || this.queuedBytes + bytes > maxBytes) refuse('resource_limit');
+    const maxCount = this.settings.workerQueueCount - (reserved ? 0 : Math.min(4, Math.max(1, Math.floor(this.settings.workerQueueCount / 4))));
+    const maxBytes = this.settings.workerQueueBytes - (reserved ? 0 : Math.min(1_048_576, Math.floor(this.settings.workerQueueBytes / 4)));
+    if (!Number.isSafeInteger(bytes) || bytes < 0 || this.pending.size >= maxCount || this.queuedBytes + bytes > maxBytes) throw new QueuePressure();
+    bytes = Math.max(bytes, Buffer.byteLength(JSON.stringify(data)) * 8 + 1024);
+    if (this.queuedBytes + bytes > maxBytes) throw new QueuePressure();
     const serial = ++this.serial;
     return new Promise((resolve, reject) => {
       this.pending.set(serial, { bytes, resolve, reject }); this.queuedBytes += bytes;
-      try { this.worker.postMessage({ id: serial, kind, data, enqueuedAtNs: process.hrtime.bigint() }); }
+      try { this.worker.postMessage({ id: serial, kind, data, reserved, enqueuedAtNs: process.hrtime.bigint() }); }
       catch (error) { this.pending.delete(serial); this.queuedBytes -= bytes; reject(error); }
     });
   }
@@ -72,7 +77,7 @@ export class DatabaseWorker {
   }
   async exchangeDetailed<K extends ExchangeName>(name: K, request: RequestOf<K>, context: Context, bytes: number): Promise<{ response: ResponseOf<K>; execution: 'first' | 'replay' | 'read' }> {
     const value = await this.call('exchange', { operation: { name, request }, context }, bytes,
-      name === 'ReportTaskExecution' || name === 'RequestTaskCancellation' || name === 'ConfirmTaskOrder' || name === 'GetReadiness' || name === 'GetHealth' || name === 'ListResources');
+      requiredEffect(name, request) || name === 'GetReadiness' || name === 'GetHealth' || name === 'ListResources');
     const result = z.object({ response: z.unknown(), execution: z.enum(['first', 'replay', 'read']) }).parse(value);
     if (!isResponse(name, result.response)) throw new Error('invalid_worker_response');
     return { response: result.response, execution: result.execution };

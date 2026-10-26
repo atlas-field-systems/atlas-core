@@ -41,3 +41,16 @@ test('successful replacement retry precedes generation checks and never reuses a
   const obsolete = report(f.core.dataset, asset.id, { kind: 'asset_process', process_generation: asset.process_generation }, 1, { status: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { condition: 'healthy' } } });
   assert.equal((await f.call('UpdateAsset', { asset_id: asset.id, request_id: uuid(), report: obsolete })).json.error.code, 'generation_mismatch');
 });
+test('replacement with a snapshot or history receipt refuses the challenge context without changing generation', async t => {
+  const f = await fixture(t); const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const health = ok(await f.call('GetHealth'));
+  const snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 }));
+  const history = ok(await f.call('GetAssetMovementHistory', { query_id: uuid(), entity_id: asset.id, allocation_context: health.allocation_context }));
+  for (const challenge_id of [snapshot.capture_id, history.view_id]) {
+    const process_generation = uuid();
+    const response = await f.call('ReplaceAssetProcess', { request_id: uuid(), asset_id: asset.id, expected_process_generation: asset.process_generation, process_generation, challenge_id,
+      first_report: { ...report(f.core.dataset, asset.id, { kind: 'asset_process', process_generation }, 1, {}), contact_proof: { challenge_id } } });
+    assert.equal(response.status, 409); assert.equal(response.json.error.code, 'challenge_context_mismatch');
+    assert.equal(ok(await f.call('GetAsset', { asset_id: asset.id })).process_generation, asset.process_generation);
+  }
+});

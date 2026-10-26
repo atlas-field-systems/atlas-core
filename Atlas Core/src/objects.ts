@@ -99,7 +99,28 @@ export class Objects {
     if (attempt.state !== 'abandoned') refuse('integrity_fault');
     this.store.db.prepare("UPDATE object_attempts SET state='reclaimed',bytes=0 WHERE id=?").run(attemptId);
   }
-  attempts(): Attempt[] { return this.store.db.prepare("SELECT * FROM object_attempts WHERE state IN ('active','installed','abandoned') LIMIT 4096").all().map(row => Attempt.parse(row)); }
+  attempts(after = ''): Attempt[] {
+    const attempts: Attempt[] = [];
+    let bytes = 0;
+    for (const row of this.store.db.prepare("SELECT * FROM object_attempts WHERE id>? AND state IN ('active','installed','abandoned') ORDER BY id LIMIT 32").iterate(after)) {
+      const attempt = Attempt.parse(row);
+      bytes += Buffer.byteLength(attempt.descriptor) + Buffer.byteLength(attempt.owner) + 2048;
+      if (bytes > this.store.settings.limits.max_message_bytes - 16384) {
+        if (attempts.length === 0) refuse('resource_limit');
+        break;
+      }
+      attempts.push(attempt);
+    }
+    return attempts;
+  }
+  writerLaunches(): Uuid[] {
+    const launches: Uuid[] = [];
+    for (const row of this.store.db.prepare("SELECT DISTINCT json_extract(owner,'$.launch') AS launch FROM object_attempts WHERE state IN ('active','installed','abandoned') AND json_extract(owner,'$.launch') IS NOT NULL").iterate()) {
+      if (launches.length >= 4096) refuse('resource_limit');
+      launches.push(z.object({ launch: Uuid }).parse(row).launch);
+    }
+    return launches;
+  }
   edit(tx: Transaction, request: RequestOf<'EditObject'>): ObjectImage {
     const image = this.get(request.object_id);
     if (tx.retry('EditObject', request.request_id, request)) return image;
