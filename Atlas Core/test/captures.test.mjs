@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile, readdir, readFile } from 'node:fs/promises';
 import { watch, mkdirSync, writeFileSync } from 'node:fs';
 import Database from 'better-sqlite3';
+import WebSocket from 'ws';
+import { once } from 'node:events';
+import { readWssServer, writeWssClient } from '@atlas/protocol';
 import { join } from 'node:path';
 import { setImmediate as yieldToLoop } from 'node:timers/promises';
 import { Engine } from '../dist/engine.js';
@@ -141,7 +144,7 @@ test('preparation failures end their receipts and cleanup failures preserve both
   assert.equal(f.engine.temporary.peek(charged.id).bytes, 0);
   assert.deepEqual(JSON.parse(f.engine.temporary.peek(charged.id).data), facts);
 });
-test('worker capture failures preserve primary HTTP errors, safe cleanup diagnostics and retry charges', { timeout: 30000 }, async t => {
+for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve primary ${transport} errors, safe cleanup diagnostics and retry charges`, { timeout: 30000 }, async t => {
   const cleanup = [];
   let watcher, broken, pressure;
   t.after(async () => {
@@ -156,6 +159,28 @@ test('worker capture failures preserve primary HTTP errors, safe cleanup diagnos
     geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }));
   const health = ok(await f.call('GetHealth'));
   const request = { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits };
+  let snapshot = async () => {
+    const response = await f.call('ReadSnapshot', request);
+    assert.equal(response.status, 507, JSON.stringify(response.json));
+    return response.json.error;
+  };
+  if (transport === 'WSS') {
+    const socket = new WebSocket(f.address.replace('https:', 'wss:') + '/changes', { ca: f.ca });
+    cleanup.push(() => socket.terminate());
+    await once(socket, 'open', { signal: AbortSignal.timeout(10000) });
+    const control = async frame => {
+      const response = once(socket, 'message', { signal: AbortSignal.timeout(10000) });
+      socket.send(writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.1.0' }), { binary: false });
+      const [bytes] = await response;
+      return readWssServer(bytes, { datasetId: f.core.dataset, requestId: frame.request_id });
+    };
+    assert.equal((await control({ type: 'authenticate', request_id: uuid(), api_key: f.apiKey })).type, 'authenticated');
+    snapshot = async () => {
+      const response = await control({ type: 'read_snapshot', request_id: uuid(), data: request });
+      assert.equal(response.type, 'error', JSON.stringify(response));
+      return response.error;
+    };
+  }
   const failures = [];
   f.core.rpc.worker.on('message', message => { if (message.type === 'refusal') failures.push(message); });
   pressure = join(f.directory, 'private-pressure-sentinel.bin');
@@ -166,10 +191,9 @@ test('worker capture failures preserve primary HTTP errors, safe cleanup diagnos
     try { mkdirSync(broken); writeFileSync(pressure, Buffer.alloc(f.settings.storageBytes)); }
     catch (error) { injectionFailure = error; }
   });
-  const initial = await f.call('ReadSnapshot', request);
+  const initial = await snapshot();
   watcher.close(); assert.equal(injectionFailure, undefined); assert.ok(broken, 'The real capture file must have been observed');
-  assert.equal(initial.status, 507, JSON.stringify(initial.json)); assert.equal(initial.json.error.code, 'storage_limit');
-  assert.equal('details' in initial.json.error, false);
+  assert.equal(initial.code, 'storage_limit'); assert.equal('details' in initial, false);
   const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
   let charged;
   try {
@@ -177,8 +201,8 @@ test('worker capture failures preserve primary HTTP errors, safe cleanup diagnos
     assert.equal(charged.state, 'failed'); assert.ok(charged.bytes > 0);
     const facts = JSON.parse(charged.data);
     assert.equal(facts.failure.body.error.code, 'storage_limit'); assert.equal(facts.cleanup_failure.body.error.code, 'integrity_fault');
-    const retry = await f.call('ReadSnapshot', request);
-    assert.equal(retry.status, 507); assert.equal(retry.json.error.code, 'storage_limit');
+    const retry = await snapshot();
+    assert.equal(retry.code, 'storage_limit'); assert.equal('details' in retry, false);
     assert.deepEqual(db.prepare('SELECT * FROM temporary_receipts WHERE request=?').get(request.load_id), charged);
     assert.equal(db.prepare('SELECT bytes FROM temporary_files WHERE id=?').get(charged.id).bytes, charged.bytes);
   } finally { db.close(); }

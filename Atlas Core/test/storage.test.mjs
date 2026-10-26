@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, registration, report, telemetry, root, secret } from './helpers.mjs';
 import { uuid } from './helpers.mjs';
-import { writeFile, rm, readdir, stat, readFile, mkdtemp } from 'node:fs/promises';
+import { writeFile, rm, readdir, stat, readFile, mkdtemp, mkdir } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
 import Database from 'better-sqlite3';
 import { defaults } from '../dist/settings.js';
@@ -11,6 +11,7 @@ import { Diagnostics, faultFrames } from '../dist/diagnostics.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { storageUsage } from '../dist/server.js';
 import { digest } from '../dist/exact.js';
+import { currentWriter } from '../dist/ownership.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 test('worker commits through a parent stall and bounds unacknowledged pages with required headroom', { timeout: 20000 }, async t => {
   const directory = await mkdtemp(join(root, 'artifacts', 'reply-permits-'));
@@ -81,6 +82,98 @@ test('worker commits through a parent stall and bounds unacknowledged pages with
   ack(required);
   const revoked = await blocked.response;
   assert.equal(revoked.type, 'refusal'); assert.equal(revoked.error.body.error.code, 'unauthorized', 'Authority is rechecked after a response-permit wait'); ack(revoked);
+});
+test('upload reservations released by one acknowledgment retain aggregate headroom and fresh deltas', { timeout: 30000 }, async t => {
+  for (const kind of ['prepare-upload', 'describe-upload', 'reserve-upload', 'fresh-delta', 'object-quota']) await t.test(kind, async t => {
+    const directory = await mkdtemp(join(root, 'artifacts', 'upload-permits-'));
+    const accountingRoot = join(directory, 'accounting');
+    await mkdir(accountingRoot);
+    const MiB = 1_048_576;
+    const settings = { ...defaults, freeDiskBytes: 0, workerQueueCount: 4096, workerQueueBytes: MiB, maxUploads: 8,
+      storageBytes: (kind === 'object-quota' ? 64 : 12) * MiB, objectBytes: (kind === 'object-quota' ? 6 : 12) * MiB, reserveBytes: 4 * MiB,
+      resourceImageBytes: 65536, limits: { ...defaults.limits, max_message_bytes: 212992 } };
+    const worker = new Worker(new URL('../dist/worker.js', import.meta.url), { workerData: { directory, accountingRoot, settings }, stdout: true, stderr: true });
+    worker.stdout.resume(); worker.stderr.resume();
+    t.after(async () => { await worker.terminate(); await rm(directory, { recursive: true, force: true }); });
+    let ready;
+    const started = new Promise((resolve, reject) => { ready = resolve; worker.once('error', reject); });
+    const pending = new Map(), held = new Map();
+    worker.on('message', message => {
+      if (message.type === 'ready') { ready(message); return; }
+      held.set(message.id, message);
+      const resolve = pending.get(message.id); assert.ok(resolve); pending.delete(message.id); resolve(message);
+    });
+    let serial = 0;
+    const send = (kind, data, reserved = false) => {
+      const id = ++serial, response = new Promise(resolve => pending.set(id, resolve));
+      worker.postMessage({ id, kind, data, reserved, enqueuedAtNs: process.hrtime.bigint() });
+      return { id, response };
+    };
+    const ack = message => { held.delete(message.id); worker.postMessage({ type: 'received', id: message.id }); };
+    const consume = async call => { const reply = await call.response; ack(reply); return reply; };
+    const state = await started, credential = secret(), key = uuid(), administrator = secret();
+    assert.equal((await consume(send('provision', { request_id: uuid(), api_key_id: key, secret: credential }, true))).type, 'reply');
+    assert.equal((await consume(send('provision', { request_id: uuid(), api_key_id: uuid(), secret: administrator }, true))).type, 'reply');
+    const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.1.0' };
+    const exchange = (name, request, reserved = false) => send('exchange', { operation: { name, request }, context }, reserved);
+    for (let i = 0; i < 3; i++) assert.equal((await consume(exchange('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(),
+      geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }))).type, 'reply');
+    const owner = await currentWriter(), attempts = [uuid(), uuid()];
+    const descriptors = attempts.map(() => ({ request_id: uuid(), object_id: uuid(), byte_length: String(5 * MiB), sha256: 'a'.repeat(64),
+      content_type: 'application/octet-stream', metadata: { associations: [] } }));
+    if (kind !== 'prepare-upload') for (const attempt of attempts) assert.equal((await consume(send('prepare-upload', { context, attempt, owner }))).type, 'reply');
+    async function fillReplies() {
+      const medium = await exchange('ListGeofeatures', { page_size: 3 }).response;
+      assert.equal(medium.type, 'reply');
+      for (;;) {
+        const call = send('authorize', { context, discovery: false });
+        const reply = await Promise.race([call.response, delay(50).then(() => undefined)]);
+        if (reply === undefined) return { medium, waiting: call };
+        assert.equal(reply.type, 'reply');
+      }
+    }
+    const filled = await fillReplies();
+    const upload = (index, bytes = 5 * MiB) => kind === 'prepare-upload'
+      ? send('prepare-upload', { context, attempt: attempts[index], owner, descriptor: descriptors[index] })
+      : kind === 'describe-upload' ? send('describe-upload', { context, attempt: attempts[index], descriptor: descriptors[index] })
+        : send('reserve-upload', { context, attempt: attempts[index], bytes, written: 0 });
+    const calls = kind === 'fresh-delta' ? [upload(0), upload(0, 6 * MiB)] : [upload(0), upload(1)];
+    await delay(50);
+    for (const call of calls) assert.equal(held.has(call.id), false, 'Both reservations wait for the same acknowledgment');
+    if (kind === 'prepare-upload') for (const reply of [...held.values()]) ack(reply);
+    else ack(filled.medium);
+    const replies = await Promise.all(calls.map(consume));
+    assert.equal((await filled.waiting.response).type, 'reply');
+    if (kind === 'fresh-delta') assert.deepEqual(replies.map(reply => reply.type), ['reply', 'reply']);
+    else assert.deepEqual(replies.map(reply => reply.type === 'reply' ? 'reply' : reply.error.body.error.code).sort(), ['reply', 'storage_limit']);
+    for (const reply of [...held.values()]) ack(reply);
+    const db = new Database(join(directory, 'core.sqlite'), { readonly: true });
+    t.after(() => db.close());
+    const charges = () => db.prepare("SELECT id,bytes FROM object_attempts WHERE state<>'reclaimed' ORDER BY id").all();
+    assert.equal(charges().reduce((sum, attempt) => sum + attempt.bytes, 0), (kind === 'fresh-delta' ? 6 : 5) * MiB);
+    assert.ok(charges().reduce((sum, attempt) => sum + attempt.bytes, 0) + settings.reserveBytes <= settings.storageBytes);
+    assert.ok(charges().reduce((sum, attempt) => sum + attempt.bytes, 0) <= settings.objectBytes);
+    if (kind !== 'fresh-delta') {
+      const winner = replies.findIndex(reply => reply.type === 'reply'), loser = 1 - winner;
+      const before = charges();
+      const retry = await consume(upload(loser)); assert.equal(retry.type, 'refusal'); assert.equal(retry.error.body.error.code, 'storage_limit');
+      assert.deepEqual(charges(), before, 'A refused retry retains the exact charges');
+      assert.equal((await consume(send('abandon', attempts[winner]))).type, 'reply');
+      assert.equal((await consume(send('reclaim', attempts[winner]))).type, 'reply');
+      assert.equal((await consume(upload(loser))).type, 'reply', 'Reclaimed capacity admits the refused upload');
+      assert.equal(charges().reduce((sum, attempt) => sum + attempt.bytes, 0), 5 * MiB);
+    }
+    const blockedFill = await fillReplies();
+    const beforeRevocation = charges();
+    const blockedAttempt = db.prepare("SELECT id,bytes FROM object_attempts WHERE state='active' ORDER BY id LIMIT 1").get();
+    const blocked = send('reserve-upload', { context, attempt: blockedAttempt.id, bytes: blockedAttempt.bytes + 1, written: 0 });
+    const revoked = await consume(send('exchange', { operation: { name: 'RevokeApiKey', request: { request_id: uuid(), api_key_id: key } },
+      context: { ...context, verifier: digest(administrator) } }, true));
+    assert.equal(revoked.type, 'reply'); assert.equal(held.has(blocked.id), false);
+    ack(blockedFill.medium);
+    const denied = await consume(blocked); assert.equal(denied.type, 'refusal'); assert.equal(denied.error.body.error.code, 'unauthorized');
+    assert.deepEqual(charges(), beforeRevocation, 'Revocation during a permit wait retains the exact charges');
+  });
 });
 test('queried-back embedded engine durability, bounded IPC admission and explicit worker loss', async t => {
   const f = await fixture(t);
@@ -168,8 +261,14 @@ test('tiny HTTP requests coexist and required exchanges fit the reserved IPC cap
     origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null,
     payload: { task_id: task.task_id, event: 'state', state: 'failed', reason: 'cannot_execute' } } }, context, 8192);
   for (const response of await Promise.all([outcome, terminal])) assert.equal(response.kind, 'success');
-  await Promise.all(pending);
-  await f.core.close();
+  for (const response of await Promise.all(pending)) {
+    if (response.kind === 'success') assert.equal(response.body.data.items[0].id, asset.id);
+    else assert.equal(response.code, 'resource_limit');
+  }
+  assert.equal(ok(await f.call('GetTask', { task_id: task.task_id })).execution_state, 'failed');
+  const idleDeadline = performance.now() + 2000;
+  while (f.core.rpc.usage.operations > 0 && performance.now() < idleDeadline) await delay(10);
+  assert.equal(f.core.rpc.available, true, 'Queue accounting is checked on the live worker');
   assert.equal(f.core.rpc.usage.operations, 0); assert.equal(f.core.rpc.usage.bytes, 0);
 });
 test('draining readiness is an authenticated 503 success and ordinary work stops', async t => {
