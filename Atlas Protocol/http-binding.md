@@ -7,6 +7,8 @@ key metadata. Releases return `{released: true}`. Failure statuses and details
 are defined once in [errors](errors.md). Response headers always describe the
 actual context, even when it differs from the request. On success that Dataset
 must match the request and body; protocol version must match exactly.
+HTTP 401 replies include `WWW-Authenticate: Bearer` under the
+[HTTP authentication challenge rule](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.2).
 
 GetReference selects application/vnd.oai.openapi+json or text/html with Accept,
 and returns raw OpenAPI JSON or HTML. It has no JSON request body. The standalone

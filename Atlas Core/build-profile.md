@@ -17,6 +17,11 @@ container images by digest. No floating tags, implicit global tools, or automati
 upgrades. Choose supported available versions during implementation and commit
 those locks. This page assigns no unverified library release numbers.
 
+Use a supported Node.js LTS release and a Debian-based image, pinned by digest.
+Keep SQLite, WAL, Object files, and owned logs in explicit persistent local mounts.
+Qualify target architecture, native driver compatibility, permissions, shutdown,
+and same-filesystem Object installation. The container writable layer is not retained storage.
+
 A clean build uses frozen locks and fails on a mismatch. Stock tooling exports
 checked-in runtime schemas with stable ordering, line endings, and no timestamps
 or absolute build paths. Two clean exports from identical locked inputs must
@@ -64,6 +69,12 @@ shared package loads in browsers without Node storage or filesystem dependencies
 Verify host validation settings remain unchanged under concurrent use. Stream binary
 adapters without passing file bytes through JSON validators. Preserve the
 [demonstrated boundary pitfalls](protocol-qualification.md) as relevant regressions.
+
+Exercise the actual Fastify adapter and [database worker](database.md), including
+bounded queue refusal and worker loss after commit. Record the embedded SQLite
+identity and queried-back WAL/FULL settings. Include exact SQL counter/time/alias
+round trips and concurrent capture/checkpoint work. Framework or driver defaults
+are not evidence that Atlas's boundary or durability rules hold.
 
 Unsupported export behavior blocks selection of that tooling. Use an equivalent
 allowed schema or a narrow boundary adapter with independent examples. Do not

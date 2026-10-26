@@ -3,6 +3,7 @@
 **An accepted change must survive, and its related facts must agree.**
 One SQLite database holds operational and installation-lifetime tables. Core is
 its exclusive writer; local administration commands never edit live SQL.
+The [database worker](database.md) owns connections, exact SQL encodings, and durability settings.
 Core stores accepted Asset and Observation sections with their source and ordering
 facts. Track results and associations remain distinct from that source evidence.
 Public resource images are built from these committed facts.
@@ -54,9 +55,8 @@ parent directory. Then take a short transaction, recheck current authority and
 Dataset, and commit ready metadata, retry result, and public change together.
 Only then acknowledge publication.
 
-The initial durability target is healthy local Linux storage with same-filesystem
-staging, supported flush semantics, and SQLite WAL with `synchronous=FULL` on every
-writer. Power-loss durability requires an actual qualification test.
+Staging and installed paths share a local filesystem with supported flush semantics.
+Database durability and actual power-loss qualification follow the [worker contract](database.md#driver-and-durability).
 
 After interruption, Core's Object owner cleans only proven-owned abandoned attempts
 after verifying their writers have exited. Missing SQL references alone do not prove
@@ -93,4 +93,4 @@ Stopped-state local commands are outside public activity history. Their safe out
 goes to the local caller. The [destructive recovery record](lifecycle.md#reset-recovery)
 authorizes only the recorded maintenance work; it is not an activity journal.
 
-[Next: lifecycle](lifecycle.md)
+[Next: database worker](database.md)

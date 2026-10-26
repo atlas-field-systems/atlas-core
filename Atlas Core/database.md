@@ -1,0 +1,66 @@
+# Database worker
+
+**One bounded Node.js worker owns Core's SQLite connections, transactions, and
+checkpoints.** HTTP and WSS handling stay on the server thread. Domain modules
+keep their private SQL and run complete stateful operations through this owner.
+
+## Operations and shutdown
+
+Dispatch a complete domain operation with validated original facts, not individual
+SQL statements from concurrent callers. Related owners share the operation's
+[commit boundary](storage.md#one-commit-boundary). Do not hold a write transaction
+across network or file waits. Recheck authority, Dataset, and revisions before commit.
+
+Bound queued operation counts and bytes before copying arguments. Exhaustion refuses
+unadmitted work with `resource_limit`. Reserve admission for required terminal/control
+effects and keep inspection and stop reachable. A cancelled or lost caller wait does
+not undo a commit or establish that an operation failed. Reconcile original retry facts.
+
+Worker failure stops new database admission and makes Core unavailable under
+[readiness rules](readiness.md). Do not automatically replay in-flight operations
+or restart the worker. Local administration owns explicit Core recovery.
+Stop admission, finish or cancel owned work, close connections, and await verified
+worker exit before deleting storage. Unverified exit blocks destructive cleanup.
+
+## Driver and durability
+
+Use `better-sqlite3` with prepared SQL. Select and lock a supported driver version,
+its embedded SQLite build, and the release container during implementation.
+Record the actual engine version, source ID, and compile options. Require a build
+with the [WAL-reset fix](https://sqlite.org/wal.html#walreset); check withdrawn releases
+too. The host's sqlite3 executable does not identify the embedded engine.
+
+Set and read back WAL mode and `synchronous=FULL` on every writer. The driver's
+[WAL default is NORMAL](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/performance.md#a-note-about-durability),
+which does not meet this durability target. Qualify file and directory flushes
+on healthy local Linux storage. Process-kill tests do not establish power-loss durability.
+
+## Exact private encodings
+
+Preserve Protocol's complete uint64 domain, exact nanosecond ordering, and original
+timestamp spellings. SQLite INTEGER is signed 64-bit; native JavaScript numbers
+and Date are not lossless storage for those domains. Use explicit exact encodings
+and sortable keys. Preserve original retry facts separately from current images.
+
+Use Protocol's pinned Unicode alias comparison with a database uniqueness constraint.
+SQLite NOCASE is insufficient. Validate private row mappings without leaking SQL
+or storage types into Protocol. Ordinary prepared queries are the initial access layer.
+
+## Reads, captures, and checkpoints
+
+The synchronization owner requests snapshot/history materialization through this
+worker. Capture one consistent source view, bound its construction and read lifetime,
+and end the source transaction before serving saved pages. Capture work may yield
+outside write transactions so queued reporting can proceed. Charge source reads,
+temporary files, captures, WAL, indexes, and unreclaimed files to aggregate budgets.
+
+The worker owns checkpoint scheduling and observes WAL bytes and checkpoint progress.
+Start with ordinary automatic/PASSIVE checkpoints; qualify concurrent capture work.
+Long overlapping readers can prevent WAL reuse. `journal_size_limit` is not a hard
+active-WAL ceiling. Keep blocking truncation off ordinary request paths.
+
+Verify the real worker/driver/container with exact-domain values, retry races,
+interrupted captures, disk pressure, shutdown, and the [retained workload](workload-qualification.md).
+These are implementation gates, not claims of measured capacity.
+
+[Next: lifecycle](lifecycle.md)
