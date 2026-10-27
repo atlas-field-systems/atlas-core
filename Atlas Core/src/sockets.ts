@@ -116,12 +116,14 @@ export class ChangesConnection {
         for (const message of result.messages) {
           if (subscription.ended || this.closed) return;
           await this.rpc.call('authorize', { context: this.context, discovery: false }, 512, true);
+          if (subscription.ended || this.closed) return;
           const frame: ServerFrame = message.type === 'change_batch'
             ? { type: 'change_batch', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION, data: { ...message.data, subscription_id: subscription.request.subscription_id } }
             : { type: 'progress', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION, data: { ...message.data, subscription_id: subscription.request.subscription_id } };
           await this.send(frame);
           subscription.cursor = message.type === 'change_batch' ? message.data.commit_cursor : message.data.through_cursor;
         }
+        if (subscription.ended || this.closed) return;
         if (!subscription.complete && subscription.cursor === subscription.handoff) {
           await this.send({ type: 'handoff_complete', dataset_id: this.dataset, protocol_version: PROTOCOL_VERSION,
             data: { subscription_id: subscription.request.subscription_id, handoff_cursor: subscription.handoff } });

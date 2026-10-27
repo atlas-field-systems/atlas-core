@@ -101,8 +101,7 @@ async function execute(raw: unknown): Promise<void> {
         engine.authorize(data.context);
         result = await engine.reserveStorage(admit => {
           const authority = engine.authorize(data.context);
-          admit(Number(data.descriptor?.byte_length ?? 0) + 32768);
-          return engine.store.db.transaction(() => engine.objects.prepare(data.descriptor, data.attempt, data.owner, authority.keyId))();
+          return engine.store.db.transaction(() => engine.objects.prepare(data.descriptor, data.attempt, data.owner, authority.keyId, admit))();
         }, produce, release); break;
       }
       case 'describe-upload': {
@@ -110,8 +109,7 @@ async function execute(raw: unknown): Promise<void> {
         engine.authorize(data.context);
         await engine.reserveStorage(admit => {
           engine.authorize(data.context);
-          admit(Math.max(0, Number(data.descriptor.byte_length) - engine.objects.attempt(data.attempt).bytes));
-          engine.objects.describe(data.attempt, data.descriptor);
+          engine.objects.describe(data.attempt, data.descriptor, admit);
         }, produce, release); result = {}; break;
       }
       case 'reserve-upload': {
@@ -119,8 +117,7 @@ async function execute(raw: unknown): Promise<void> {
         engine.authorize(data.context); engine.objects.progress(data.attempt, data.written);
         await engine.reserveStorage(admit => {
           engine.authorize(data.context);
-          admit(Math.max(0, data.bytes - engine.objects.attempt(data.attempt).bytes));
-          engine.objects.reserve(data.attempt, data.bytes);
+          engine.objects.reserve(data.attempt, data.bytes, admit);
         }, produce, release); result = {}; break;
       }
       case 'upload-written': { const data = z.object({ attempt: Uuid, written: z.number().int().nonnegative() }).parse(message.data); engine.objects.progress(data.attempt, data.written); result = {}; break; }

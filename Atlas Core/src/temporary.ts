@@ -31,8 +31,9 @@ export class Temporary {
     if (token.length > 1_500_000) refuse('allocation_expired');
     const [body, signature, extra] = token.split('.');
     if (body === undefined || signature === undefined || extra !== undefined) refuse('allocation_expired');
-    const expected = createHmac('sha256', this.secret).update(body).digest('base64url');
-    if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) refuse('allocation_expired');
+    const expected = Buffer.from(createHmac('sha256', this.secret).update(body).digest('base64url'));
+    const supplied = Buffer.from(signature);
+    if (supplied.byteLength !== expected.byteLength || !timingSafeEqual(expected, supplied)) refuse('allocation_expired');
     let raw: unknown;
     try { raw = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); } catch { refuse('allocation_expired'); }
     const value = z.strictObject({ kind: z.literal(kind), run: z.literal(this.store.run), dataset: z.literal(this.store.dataset), data: z.unknown() }).safeParse(raw);

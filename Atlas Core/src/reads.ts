@@ -8,7 +8,7 @@ import { caseFold } from 'unicode-case-folding';
 import { Counter, HistoryPage, NegotiatedLimits, Put, ReplayPage, SnapshotPage, Timestamp, Uuid, exchanges } from '@atlas/protocol';
 import type { Continuation, HistoryQuery, RequestOf } from '@atlas/protocol';
 import { instant } from './exact.js';
-import { Refusal, refuse } from './fault.js';
+import { refuse } from './fault.js';
 import type { Store } from './database.js';
 import type { Entities } from './entities.js';
 import type { Identity } from './identity.js';
@@ -36,6 +36,7 @@ const aliases = (values: readonly string[] | undefined, value: string | undefine
 export class Reads {
   private readonly files = new Map<Uuid, string>();
   private readonly builds = new Map<Uuid, Promise<void>>();
+  private readonly reclamations = new Map<Uuid, Promise<void>>();
   constructor(private readonly store: Store, private readonly entities: Entities, private readonly identity: Identity,
     private readonly tasks: Tasks, private readonly objects: Objects, private readonly temporary: Temporary,
     private readonly directory: string, private readonly reserve: (bytes: number) => Promise<void>) {}
@@ -334,18 +335,13 @@ export class Reads {
   async release(token: string, kind: 'snapshot' | 'history', verifier: string) {
     const value = this.temporary.open(token, 'release', ReleaseToken);
     if (value.kind !== kind) refuse('allocation_expired');
-    let receipt;
-    try { receipt = this.temporary.get(value.id); }
-    catch (error) { if (error instanceof Refusal && error.code === 'allocation_expired') return { released: true as const }; throw error; }
+    const receipt = this.temporary.peek(value.id);
+    if (!receipt) return { released: true as const };
     if (receipt.kind !== kind) refuse('allocation_expired');
     await this.builds.get(receipt.id);
     this.identity.authorize(verifier);
-    this.temporary.set({ ...receipt, state: 'released' });
-    await removeCapture(this.directory, receipt.id);
-    this.temporary.reclaimed({ ...receipt, state: 'released' });
-    this.files.delete(receipt.id);
+    await this.reclaim(receipt.id, 'release');
     this.identity.authorize(verifier);
-    if (receipt.state !== 'released') this.store.metrics.capture_releases++;
     return { released: true as const };
   }
   replay(request: RequestOf<'ReadChanges'>): ReplayPage {
@@ -386,32 +382,37 @@ export class Reads {
   async cleanup(): Promise<void> {
     for (const receiptId of this.files.keys()) {
       const receipt = this.temporary.peek(receiptId);
-      if ((receipt === undefined || receipt.deadline <= performance.now()) && !this.builds.has(receiptId)) {
-        await removeCapture(this.directory, receiptId);
-        if (receipt) this.temporary.reclaimed({ ...receipt, state: receipt.state === 'failed' ? 'failed' : 'released' });
-        else this.temporary.fileRemoved(receiptId);
-        this.files.delete(receiptId);
-        this.store.metrics.capture_expiries++;
-      }
+      if ((receipt === undefined || receipt.state === 'released' || receipt.deadline <= performance.now()) && !this.builds.has(receiptId)) await this.reclaim(receiptId, 'expiry');
     }
   }
+  private historyForExpiry(): Receipt[] {
+    return this.temporary.receipts('history').filter(receipt => (receipt.state === 'ready' || receipt.state === 'released') && this.files.has(receipt.id) && !this.builds.has(receipt.id));
+  }
+  get reclaimableHistoryBytes(): number {
+    return this.historyForExpiry().reduce((bytes, receipt) => bytes + receipt.bytes, 0);
+  }
   async expireHistory(): Promise<void> {
-    for (const receipt of this.temporary.receipts('history')) {
-      if (receipt.state !== 'ready' || this.builds.has(receipt.id)) continue;
-      await removeCapture(this.directory, receipt.id);
-      this.temporary.reclaimed({ ...receipt, state: 'released' });
-      this.files.delete(receipt.id);
-      this.store.metrics.capture_expiries++;
-    }
+    for (const receipt of this.historyForExpiry()) await this.reclaim(receipt.id, 'expiry');
+  }
+  private async reclaim(receiptId: Uuid, reason: 'release' | 'expiry' | 'close'): Promise<void> {
+    const pending = this.reclamations.get(receiptId);
+    if (pending) return pending;
+    if (!this.files.has(receiptId)) return;
+    const receipt = this.temporary.peek(receiptId);
+    if (receipt) this.temporary.set({ ...receipt, state: receipt.state === 'failed' ? 'failed' : 'released' });
+    const removal = removeCapture(this.directory, receiptId).then(() => {
+      const current = this.temporary.peek(receiptId);
+      if (current) this.temporary.reclaimed(current);
+      else this.temporary.fileRemoved(receiptId);
+      this.files.delete(receiptId);
+      if (reason === 'release') this.store.metrics.capture_releases++;
+      else if (reason === 'expiry') this.store.metrics.capture_expiries++;
+    });
+    this.reclamations.set(receiptId, removal);
+    try { await removal; } finally { this.reclamations.delete(receiptId); }
   }
   async close(): Promise<void> {
     await Promise.allSettled(this.builds.values());
-    for (const id of this.files.keys()) {
-      await removeCapture(this.directory, id);
-      const receipt = this.temporary.peek(id);
-      if (receipt) this.temporary.reclaimed({ ...receipt, state: receipt.state === 'failed' ? 'failed' : 'released' });
-      else this.temporary.fileRemoved(id);
-      this.files.delete(id);
-    }
+    for (const id of this.files.keys()) await this.reclaim(id, 'close');
   }
 }

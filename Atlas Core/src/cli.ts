@@ -67,6 +67,6 @@ try {
   const code = safe.safeParse(error instanceof Error ? error.message : undefined);
   const classify = (value: unknown) => { const parsed = safe.safeParse(value instanceof Error ? value.message : undefined); return parsed.success ? parsed.data : 'management_failed'; };
   process.stdout.write(JSON.stringify({ at: new Date().toISOString(), severity: 'ERROR', event: 'command_failed', component: 'lifecycle', release: '0.1.0', ok: false, code: code.success ? code.data : 'management_failed', ...faultFrames(error),
-    ...(error instanceof AggregateError ? { primary_failure: classify(error.errors[0]), cleanup_failure: classify(error.errors[1]) } : {}) }) + '\n');
+    ...(error instanceof AggregateError ? { primary_failure: classify(error.errors[0]), cleanup_failure: classify(error.errors[1]), failures: error.errors.slice(0, 8).map(classify) } : {}) }) + '\n');
   process.exitCode = 1;
 }

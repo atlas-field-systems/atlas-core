@@ -22,6 +22,9 @@ export const Context = z.strictObject({ verifier: z.string().regex(/^[0-9a-f]{64
 export type Context = z.infer<typeof Context>;
 const Name = z.custom<ExchangeName>((value) => typeof value === 'string' && Object.hasOwn(exchanges, value));
 const Incoming = z.strictObject({ name: Name, request: z.unknown() });
+class StoragePressure extends Refusal {
+  constructor() { super('storage_limit'); }
+}
 export function isPublicOperation(value: unknown): value is PublicOperation {
   const parsed = Incoming.safeParse(value);
   if (!parsed.success) return false;
@@ -96,7 +99,7 @@ export class Engine {
         let committed: ReturnType<typeof run>;
         try { committed = run(); }
         catch (error) {
-          if (!(error instanceof Refusal) || error.code !== 'storage_limit') throw error;
+          if (!(error instanceof StoragePressure)) throw error;
           release();
           await this.expireForStorage(error);
           await produce();
@@ -191,21 +194,26 @@ export class Engine {
     await produce();
     try { return run(); }
     catch (error) {
-      if (!(error instanceof Refusal) || error.code !== 'storage_limit') throw error;
+      if (!(error instanceof StoragePressure)) throw error;
       release();
       await this.expireForStorage(error);
       await produce();
       return run();
     }
   }
-  private async expireForStorage(primary: Refusal): Promise<void> {
+  private async expireForStorage(primary: StoragePressure): Promise<void> {
     try { await this.reads.expireHistory(); }
     catch (cleanup) { throw new AggregateError([primary, cleanup], 'storage_cleanup_failed'); }
   }
   private admitStorage(bytes: number, required = false): void {
     const usage = diskUsage(this.accountingRoot);
-    this.pressure = !hasCapacity(usage, this.settings, 32768 + this.objects.unwritten + this.reads.unwritten);
-    if (!hasCapacity(usage, this.settings, bytes + this.objects.unwritten + this.reads.unwritten, required)) refuse('storage_limit');
+    const unwritten = this.objects.unwritten + this.reads.unwritten;
+    this.pressure = !hasCapacity(usage, this.settings, 32768 + unwritten);
+    if (!hasCapacity(usage, this.settings, bytes + unwritten, required)) {
+      const reclaimable = this.reads.reclaimableHistoryBytes;
+      if (reclaimable > 0 && hasCapacity(usage, this.settings, bytes + unwritten - reclaimable, required)) throw new StoragePressure();
+      refuse('storage_limit');
+    }
   }
   async close(): Promise<void> { this.state = 'draining'; await this.reads.close(); this.store.close(); }
   establish(dataset: Uuid, action: Uuid, hard: boolean): void {

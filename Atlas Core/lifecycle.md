@@ -53,6 +53,10 @@ Core owns policy and its private mode-0600 Unix maintenance endpoint. Commands o
 Docker access and never edit live SQL. Containers disable logging and automatic restart.
 There is no persistent management service, takeover control, or automatic recovery.
 No detached cleanup worker runs after a command exits.
+Failed Start attempts shutdown and writer-exit verification even when recording
+`apply_failure` fails. It retains the original, bookkeeping, and cleanup failures;
+an unwritten exit proof never counts as verified cleanup. CLI `failures` lists up to
+eight safe failure codes, including the primary; it omits raw error messages and paths.
 
 After interrupted Start, Stop, or settings work, inspect actual state before retrying.
 A lost control reply proves no exit. Verify immutable container ID, launch, host boot,
