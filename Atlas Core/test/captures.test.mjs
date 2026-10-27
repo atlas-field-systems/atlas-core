@@ -102,6 +102,71 @@ for (const kind of ['snapshot', 'history']) test(`1024 refused ${kind} allocatio
   assert.ok(kind === 'snapshot' ? admitted.capture_id : admitted.view_id);
   assert.ok(diskUsage(f.directory).bytes + f.engine.settings.reserveBytes <= f.engine.settings.storageBytes);
 });
+for (const kind of ['snapshot', 'history']) {
+  for (const invalidation of ['authority', 'deadline']) test(`${kind} admission rechecks ${invalidation} after waiting without reserving a receipt`, async t => {
+    const f = await local(t);
+    const administrator = secret();
+    if (invalidation === 'authority') f.engine.provision({ api_key_id: uuid(), request_id: uuid(), secret: administrator });
+    const entity = uuid();
+    await f.call('CreateObservation', { request_id: uuid(), observation_id: entity, publisher_id: uuid() });
+    const health = await f.call('GetHealth');
+    const request = kind === 'snapshot' ? { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }
+      : { query_id: uuid(), entity_id: entity, allocation_context: health.allocation_context };
+    const entered = Promise.withResolvers(), resume = Promise.withResolvers();
+    const reserve = f.engine.reserveStorage.bind(f.engine);
+    f.engine.reserveStorage = async reservation => { entered.resolve(); await resume.promise; return reserve(reservation); };
+    const pending = f.call(kind === 'snapshot' ? 'ReadSnapshot' : 'GetObservationMovementHistory', request).catch(error => error);
+    await entered.promise;
+    try {
+      if (invalidation === 'authority') await f.engine.execute({ name: 'RevokeApiKey', request: { request_id: uuid(), api_key_id: f.key.api_key_id } },
+        { ...f.context, verifier: digest(administrator) });
+      else {
+        const expired = performance.now() + 60_001;
+        t.mock.method(performance, 'now', () => expired);
+      }
+    } finally { resume.resolve(); }
+    const result = await pending;
+    t.mock.restoreAll();
+    assert.equal(result.code, invalidation === 'authority' ? 'unauthorized' : 'allocation_expired');
+    assert.deepEqual(f.engine.temporary.receipts(kind), []);
+    assert.deepEqual(f.engine.temporary.captureFiles(), []);
+    assert.equal(diskUsage(f.directory).bytes + f.engine.reads.unwritten <= f.engine.settings.storageBytes, true);
+  });
+  test(`${kind} batch admission precedes its quota charge and keeps terminal headroom across a wait`, async t => {
+    const f = await local(t);
+    const entity = uuid(), origin = { kind: 'publisher', publisher_id: uuid() };
+    await f.call('CreateObservation', { request_id: uuid(), observation_id: entity, publisher_id: origin.publisher_id,
+      report: report(f.engine.store.dataset, entity, origin, 1, { telemetry: telemetry(origin, 1) }) });
+    const health = await f.call('GetHealth');
+    const request = kind === 'snapshot' ? { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }
+      : { query_id: uuid(), entity_id: entity, allocation_context: health.allocation_context };
+    const entered = Promise.withResolvers(), resume = Promise.withResolvers();
+    const reserve = f.engine.reserveStorage.bind(f.engine);
+    let calls = 0;
+    f.engine.reserveStorage = async reservation => {
+      if (++calls === 2) { entered.resolve(); await resume.promise; }
+      return reserve(reservation);
+    };
+    const name = kind === 'snapshot' ? 'ReadSnapshot' : 'GetObservationMovementHistory';
+    const pending = f.call(name, request).catch(error => error);
+    await entered.promise;
+    const receipt = f.engine.temporary.receipts(kind)[0];
+    const unwritten = f.engine.reads.unwritten;
+    try {
+      assert.equal(receipt.refs, 0, 'The pending batch must not charge references before aggregate admission');
+      assert.ok(unwritten > 65536, 'Unwritten storage must retain metadata/outcome headroom after the capture file is created');
+      f.engine.settings.storageBytes = diskUsage(f.directory).bytes + f.engine.settings.reserveBytes + unwritten;
+      await assert.rejects(f.engine.reserveStorage(admit => admit(65536)), error => error.code === 'storage_limit');
+    } finally { resume.resolve(); }
+    assert.equal((await pending).code, 'storage_limit');
+    assert.equal(f.engine.temporary.peek(receipt.id).state, 'failed');
+    assert.equal(f.engine.temporary.peek(receipt.id).refs, 0);
+    assert.equal(f.engine.reads.unwritten, 0);
+    assert.deepEqual(f.engine.temporary.captureFiles(), []);
+    assert.ok(diskUsage(f.directory).bytes + f.engine.settings.reserveBytes <= f.engine.settings.storageBytes);
+    await assert.rejects(f.call(name, request), error => error.code === 'storage_limit');
+  });
+}
 test('history selections stream the executed SQL without a native sorter or scanning excluded positions', async t => {
   const f = await local(t, { max_history_references_per_view: 2 });
   const entity = uuid(), origin = { kind: 'publisher', publisher_id: uuid() };
@@ -109,7 +174,7 @@ test('history selections stream the executed SQL without a native sorter or scan
   const readingId = n => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
   const at = n => `2026-10-21T12:00:00.${String(n).padStart(9, '0')}Z`;
   const mixed = [
-    [9004, null], [9001, '9999-12-31T23:59:59Z'], [9003, null], [9002, '9999-12-31T23:59:59.1Z'],
+    [9004, null], [9001, '9999-12-31T23:59:59Z'], [9003, '9999-12-31T23:59:59.1Z'], [9002, null],
     [9006, '2026-10-21T12:00:00.1Z'], [9005, '2026-10-21T12:00:00.100Z'],
   ];
   f.engine.store.transact(null, tx => {
@@ -143,16 +208,21 @@ test('history selections stream the executed SQL without a native sorter or scan
   assert.deepEqual(narrow.readings.map(r => r.observed_at), [at(8000)]);
   assert.ok(plans.length > 0);
   assert.ok(plans.flat().every(row => !/TEMP B-TREE/.test(row.detail)), JSON.stringify(plans));
+  assert.ok(plans.flat().some(row => row.detail.includes('<expr>>?') && row.detail.includes('<expr><?')), JSON.stringify(plans));
   assert.equal(visited.length, 1);
   const ties = await query({ time_groups: ['known'], source_time_from: '2026-10-21T12:00:00.1Z' });
   assert.deepEqual(ties.readings.map(r => [r.source_evidence.reading_id, r.observed_at]), [[readingId(9005), mixed[5][1]], [readingId(9006), mixed[4][1]]]);
   f.engine.settings.temporary.max_history_references_per_view = 4;
   const unknown = await query({ time_groups: ['unknown', 'uncertain'], source_time_from: at(9999), source_time_before: at(10000) });
-  assert.deepEqual(unknown.readings.map(r => [r.source_evidence.reading_id, r.time_status]), [[readingId(9001), 'uncertain'], [readingId(9002), 'uncertain'], [readingId(9003), 'unknown'], [readingId(9004), 'unknown']]);
+  assert.deepEqual(unknown.readings.map(r => [r.source_evidence.reading_id, r.time_status]), [[readingId(9001), 'uncertain'], [readingId(9002), 'unknown'], [readingId(9003), 'uncertain'], [readingId(9004), 'unknown']]);
   assert.equal(visited.length, 4);
+  f.engine.settings.temporary.max_history_references_per_view = 6;
+  const combined = await query({ source_time_from: '2026-10-21T12:00:00.1Z' });
+  assert.deepEqual(combined.readings.map(r => r.source_evidence.reading_id), [9005, 9006, 9001, 9002, 9003, 9004].map(readingId));
   assert.deepEqual((await query({ time_groups: [] })).readings, []);
   assert.equal(visited.length, 0);
   assert.ok(plans.flat().every(row => !/TEMP B-TREE/.test(row.detail)), JSON.stringify(plans));
+  t.diagnostic(JSON.stringify([...new Set(plans.flat().map(row => row.detail))]));
 });
 test('history expiry makes pages unavailable before unlink and shares reclamation with concurrent release', { timeout: 10000 }, async t => {
   const f = await local(t), { page, request } = await historyView(f);
@@ -340,11 +410,13 @@ test('preparation failures end their receipts and cleanup failures preserve both
   await rm(join(f.directory, 'captures'));
   await assert.rejects(f.call('ReadSnapshot', request), error => error.code === 'integrity_fault');
   await assert.rejects(f.call('ReadSnapshot', { ...request, page_size: 1 }), error => error.code === 'allocation_conflict');
+  await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } });
   const directory = join(f.directory, 'cleanup-failure');
   let broken;
-  const reads = new Reads(f.engine.store, f.engine.entities, f.engine.identity, f.engine.tasks, f.engine.objects, f.engine.temporary, directory, async () => {
-    const receipt = f.engine.temporary.receipts('snapshot').find(receipt => receipt.state === 'building'); assert.ok(receipt);
-    broken = join(directory, `${receipt.id}.sqlite`); await mkdir(broken);
+  const reads = new Reads(f.engine.store, f.engine.entities, f.engine.identity, f.engine.tasks, f.engine.objects, f.engine.temporary, directory, async reservation => {
+    const receipt = f.engine.temporary.receipts('snapshot').find(receipt => receipt.state === 'building');
+    if (!receipt) return f.engine.reserveStorage(reservation);
+    broken = join(directory, `${receipt.id}.sqlite-shm`); await mkdir(broken);
     throw new Refusal('storage_limit');
   });
   const failedRequest = { ...request, load_id: uuid() };

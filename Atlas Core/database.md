@@ -62,6 +62,13 @@ capture files use batched SQLite transactions without durable per-row journals.
 Reserve concurrent bytes and references before writing each batch. Charge source reads,
 temporary files, captures, WAL, indexes, and unreclaimed files to aggregate budgets.
 
+Fresh capture admission covers receipt facts, ownership, bounded saved outcomes,
+and SQLite/WAL overhead before any insert. Metadata counts as disk use after commit;
+Reads keeps pending file and outcome headroom across waits until persisted.
+Each batch admits its new bytes and metadata write before charging quotas or writing.
+Exact ready and failed retries bypass fresh storage admission. Maintenance prunes
+expired receipts separately, so a refused allocation performs no cleanup writes.
+
 The worker owns checkpoint scheduling and observes WAL bytes and checkpoint progress.
 Start with ordinary automatic/PASSIVE checkpoints; qualify concurrent capture work.
 Long overlapping readers can prevent WAL reuse. `journal_size_limit` is not a hard

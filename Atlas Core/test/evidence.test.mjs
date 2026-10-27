@@ -15,8 +15,9 @@ test('Observation creation bounds the complete image and rolls back its pair, ev
       report: report(f.core.dataset, observation, origin, 1, { geometry: { state: 'value', classification: 'state_until_changed', observed_at: null,
         value: { type: 'LineString', coordinates: Array.from({ length: 1024 }, (_, i) => [1.123456789012345e-100 + i * 1e-115, -1.123456789012345e-100]) } } }) };
   };
-  const small = make('under limit'), pair = ok(await f.call('CreateObservation', small));
-  assert.ok(Buffer.byteLength(JSON.stringify(pair.observation)) < 65536);
+  const small = make('\u0000'.repeat(2200)), pair = ok(await f.call('CreateObservation', small));
+  const imageBytes = Buffer.byteLength(JSON.stringify(pair.observation));
+  assert.ok(imageBytes > 65536 - 1024 && imageBytes <= 65536);
   const withdraw = creation => ({ observation_id: creation.observation_id, publisher_id: creation.publisher_id,
     report: report(f.core.dataset, creation.observation_id, { kind: 'publisher', publisher_id: creation.publisher_id }, 2,
       { type: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null } }) });
@@ -27,7 +28,7 @@ test('Observation creation bounds the complete image and rolls back its pair, ev
     .map(table => [table, database.prepare(`SELECT count(*) AS n FROM ${table}`).get().n]));
   const before = counts(), oversized = make('\u0000'.repeat(4096));
   const rejected = await f.call('CreateObservation', oversized);
-  assert.equal(rejected.status, 429, JSON.stringify(rejected.json));
+  assert.equal(rejected.status, 429, 'The complete Observation must fit 65536 bytes before commit');
   assert.equal(rejected.json.error.code, 'resource_limit');
   assert.deepEqual(counts(), before);
   assert.equal((await f.call('GetObservation', { observation_id: oversized.observation_id })).status, 404);

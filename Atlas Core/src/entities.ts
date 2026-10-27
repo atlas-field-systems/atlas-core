@@ -82,9 +82,13 @@ export class Entities {
     tx.change({ kind: 'put', resource_kind: 'asset', resource_id: image.id, version: image.version, image });
     return image;
   }
-  private saveObservation(value: Observation): Observation {
+  private parseObservation(value: Observation): Observation {
     const image = Observation.parse(value);
     if (Buffer.byteLength(JSON.stringify(image)) > this.store.settings.resourceImageBytes) refuse('resource_limit');
+    return image;
+  }
+  private saveObservation(value: Observation): Observation {
+    const image = this.parseObservation(value);
     this.rename(image);
     this.store.db.prepare('UPDATE entity_observations SET image=? WHERE id=?').run(JSON.stringify(image), image.id);
     return image;
@@ -266,12 +270,13 @@ export class Entities {
       ...(request.alias === undefined ? {} : { alias: request.alias }), ...(request.description === undefined ? {} : { description: request.description }),
       type: { state: 'value', classification: 'state_until_changed', observed_at: null, evidence: null, value: { kind: null } } };
     if (request.report) this.observationReport(tx, observation, request.report);
-    const track = this.fuse(observation);
-    this.store.db.prepare('INSERT INTO entity_observations VALUES(?,?,?,?)').run(observation.id, JSON.stringify(Observation.parse(observation)), observation.publisher_id, subject);
+    const image = this.parseObservation(observation);
+    const track = this.fuse(image);
+    this.store.db.prepare('INSERT INTO entity_observations VALUES(?,?,?,?)').run(image.id, JSON.stringify(image), image.publisher_id, subject);
     this.store.db.prepare('INSERT INTO entity_tracks VALUES(?,?,?)').run(track.id, JSON.stringify(track), observation.id);
     this.saveTrack(tx, track);
     tx.remember('CreateObservation', request.request_id, request);
-    return { observation, track, ...(request.report ? { evidence_disposition: 'accepted' as const } : {}) };
+    return { observation: image, track, ...(request.report ? { evidence_disposition: 'accepted' as const } : {}) };
   }
   private fuse(observation: Observation, old?: Track): Track {
     return { dataset_id: observation.dataset_id, id: observation.track_id, entity_type: 'track', version: old ? next(old.version) : zero,

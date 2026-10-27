@@ -52,9 +52,8 @@ export class Temporary {
   expire(): void {
     this.store.db.prepare("DELETE FROM temporary_receipts WHERE deadline<=? AND state<>'building' AND (kind='contact' OR (bytes=0 AND refs=0))").run(performance.now());
   }
-  reserve(kind: Receipt['kind'], token: string, request: string, facts: unknown): { receipt: Receipt; fresh: boolean; expires: Timestamp } {
+  reserve(kind: Receipt['kind'], token: string, request: string, facts: unknown, admit: (receipt: Receipt) => void = () => {}): { receipt: Receipt; fresh: boolean; expires: Timestamp } {
     const context = this.validateContext(token);
-    this.expire();
     const found = this.store.db.prepare('SELECT * FROM temporary_receipts WHERE context=? AND kind=? AND request=?').get(context.context, kind, request);
     if (found) {
       const receipt = Receipt.parse(found);
@@ -65,11 +64,13 @@ export class Temporary {
     const limits = this.store.settings.temporary;
     const counts = z.object({ total: z.number(), active: z.number(), per_key: z.number() }).parse(this.store.db.prepare(`SELECT count(*) AS total,
       coalesce(sum(CASE WHEN kind=? AND state IN ('ready','building') THEN 1 ELSE 0 END),0) AS active,
-      coalesce(sum(CASE WHEN kind=? AND key_id=? AND state IN ('ready','building') THEN 1 ELSE 0 END),0) AS per_key FROM temporary_receipts`).get(kind, kind, context.key));
+      coalesce(sum(CASE WHEN kind=? AND key_id=? AND state IN ('ready','building') THEN 1 ELSE 0 END),0) AS per_key FROM temporary_receipts
+      WHERE deadline>? OR state='building' OR bytes>0 OR refs>0`).get(kind, kind, context.key, performance.now()));
     const max = kind === 'contact' ? limits.max_contact_challenges : kind === 'snapshot' ? limits.max_snapshot_captures : limits.max_history_views;
     const perKey = kind === 'snapshot' ? limits.max_snapshot_captures_per_key : kind === 'history' ? limits.max_history_views_per_key : max;
     if (counts.total >= limits.max_allocation_receipts || counts.active >= max || counts.per_key >= perKey) refuse('resource_limit');
     const receipt: Receipt = { id: id(), context: context.context, request, kind, facts: canonical(facts), state: 'building', data: '{}', deadline: context.deadline, bytes: 0, refs: 0, key_id: context.key };
+    admit(receipt);
     this.store.db.prepare('INSERT INTO temporary_receipts VALUES(@id,@context,@request,@kind,@facts,@state,@data,@deadline,@bytes,@refs,@key_id)').run(receipt);
     return { receipt, fresh: true, expires: context.expires };
   }
