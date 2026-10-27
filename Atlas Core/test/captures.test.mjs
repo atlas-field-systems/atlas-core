@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile, readdir, readFile } from 'node:fs/promises';
-import { watch } from 'node:fs';
+import { watch, statSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import WebSocket from 'ws';
 import { once } from 'node:events';
-import { readWssServer, writeWssClient } from '@atlas/protocol';
+import { readWssServer, writeWssClient, exchanges } from '@atlas/protocol';
 import { join } from 'node:path';
 import { setImmediate as yieldToLoop } from 'node:timers/promises';
 import { Engine } from '../dist/engine.js';
@@ -47,6 +47,113 @@ async function historyView(f) {
   const request = { query_id: uuid(), entity_id: observation, allocation_context: health.allocation_context, page_size: 1 };
   return { request, page: await f.call('GetObservationMovementHistory', request) };
 }
+for (const kind of ['snapshot', 'history']) test(`1024 refused ${kind} allocations leave no receipts, files or database growth without logging`, async t => {
+  const f = await local(t);
+  const MiB = 1024 * 1024;
+  f.engine.settings.storageBytes = 16 * MiB;
+  f.engine.settings.reserveBytes = 2 * MiB;
+  const observation = uuid(), publisher = uuid(), origin = { kind: 'publisher', publisher_id: publisher };
+  await f.call('CreateObservation', { request_id: uuid(), observation_id: observation, publisher_id: publisher,
+    report: report(f.engine.store.dataset, observation, origin, 1, { telemetry: telemetry(origin, 1) }) });
+  const health = await f.call('GetHealth');
+  const name = kind === 'snapshot' ? 'ReadSnapshot' : 'GetObservationMovementHistory';
+  const request = () => kind === 'snapshot'
+    ? { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }
+    : { query_id: uuid(), entity_id: observation, allocation_context: health.allocation_context };
+  const readyRequest = request(), ready = await f.call(name, readyRequest);
+  const failedRequest = request();
+  const quota = kind === 'snapshot' ? 'max_snapshot_bytes' : 'max_history_references_per_view';
+  const previousQuota = f.engine.settings.temporary[quota];
+  f.engine.settings.temporary[quota] = kind === 'snapshot' ? '0' : 0;
+  await assert.rejects(f.call(name, failedRequest), error => error.code === 'resource_limit');
+  f.engine.settings.temporary[quota] = previousQuota;
+  const expired = f.engine.temporary.reserve('contact', health.allocation_context, uuid(), {}).receipt;
+  f.engine.temporary.set({ ...expired, state: 'consumed', deadline: 0 });
+  f.engine.store.db.prepare('UPDATE temporary_receipts SET deadline=0 WHERE id=?').run(expired.id);
+  const pressure = join(f.directory, 'pressure.bin');
+  await writeFile(pressure, Buffer.alloc(f.engine.settings.storageBytes - f.engine.settings.reserveBytes - diskUsage(f.directory).bytes - 32768));
+  const filesBefore = await readdir(join(f.directory, 'captures'));
+  const receiptsBefore = f.engine.store.db.prepare('SELECT * FROM temporary_receipts ORDER BY id').all();
+  const ownersBefore = f.engine.temporary.captureFiles();
+  const bytesBefore = diskUsage(f.directory).bytes;
+  const databaseBytes = () => ['', '-wal', '-shm'].map(suffix => statSync(f.engine.store.path + suffix).size);
+  const databaseBefore = databaseBytes();
+  const refused = request();
+  const outcomes = [];
+  for (let i = 0; i < 1024; i++) {
+    try { await f.call(name, i === 0 ? refused : request()); outcomes.push('accepted'); }
+    catch (error) { outcomes.push(error.code); }
+  }
+  assert.deepEqual(new Set(outcomes), new Set(['storage_limit']));
+  const receiptsAfter = f.engine.store.db.prepare('SELECT * FROM temporary_receipts ORDER BY id').all();
+  t.diagnostic(JSON.stringify({ kind, refusals: outcomes.length, receiptsBefore: receiptsBefore.length, receiptsAfter: receiptsAfter.length,
+    bytesBefore, bytesAfter: diskUsage(f.directory).bytes, databaseBefore, databaseAfter: databaseBytes() }));
+  assert.equal(receiptsAfter.length, receiptsBefore.length);
+  assert.deepEqual(receiptsAfter, receiptsBefore);
+  assert.deepEqual(f.engine.temporary.captureFiles(), ownersBefore);
+  assert.deepEqual(await readdir(join(f.directory, 'captures')), filesBefore);
+  assert.deepEqual(databaseBytes(), databaseBefore);
+  assert.equal(diskUsage(f.directory).bytes, bytesBefore);
+  assert.ok(bytesBefore + f.engine.settings.reserveBytes <= f.engine.settings.storageBytes);
+  assert.deepEqual(await f.call(name, readyRequest), ready);
+  await assert.rejects(f.call(name, failedRequest), error => error.code === 'resource_limit');
+  await rm(pressure);
+  const admitted = await f.call(name, refused);
+  assert.ok(kind === 'snapshot' ? admitted.capture_id : admitted.view_id);
+  assert.ok(diskUsage(f.directory).bytes + f.engine.settings.reserveBytes <= f.engine.settings.storageBytes);
+});
+test('history selections stream the executed SQL without a native sorter or scanning excluded positions', async t => {
+  const f = await local(t, { max_history_references_per_view: 2 });
+  const entity = uuid(), origin = { kind: 'publisher', publisher_id: uuid() };
+  await f.call('CreateObservation', { request_id: uuid(), observation_id: entity, publisher_id: origin.publisher_id });
+  const readingId = n => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
+  const at = n => `2026-10-21T12:00:00.${String(n).padStart(9, '0')}Z`;
+  const mixed = [
+    [9004, null], [9001, '9999-12-31T23:59:59Z'], [9003, null], [9002, '9999-12-31T23:59:59.1Z'],
+    [9006, '2026-10-21T12:00:00.1Z'], [9005, '2026-10-21T12:00:00.100Z'],
+  ];
+  f.engine.store.transact(null, tx => {
+    for (const [n, time] of [...Array.from({ length: 8192 }, (_, n) => [n, at(n)]), ...mixed]) {
+      const input = exchanges.ReportObservation.request.schema.parse({ observation_id: entity, publisher_id: origin.publisher_id,
+        report: report(f.engine.store.dataset, entity, origin, n + 1, { telemetry: telemetry(origin, n % 90, time, readingId(n)) }, 'history_only') });
+      f.engine.entities.reportObservation(tx, input);
+    }
+  });
+  const health = await f.call('GetHealth');
+  const plans = [], visited = [];
+  const prepare = Database.prototype.prepare;
+  Database.prototype.prepare = function (sql) {
+    const statement = Reflect.apply(prepare, this, [sql]);
+    if (!this.readonly || !/FROM evidence_positions\b/.test(sql)) return statement;
+    const iterate = statement.iterate.bind(statement), database = this;
+    statement.iterate = function* (...bindings) {
+      plans.push(Reflect.apply(prepare, database, [`EXPLAIN QUERY PLAN ${sql}`]).all(...bindings));
+      for (const row of iterate(...bindings)) { visited.push(row.identity); yield row; }
+    };
+    return statement;
+  };
+  t.after(() => { Database.prototype.prepare = prepare; });
+  const query = async selection => {
+    visited.length = 0;
+    const page = await f.call('GetObservationMovementHistory', { entity_id: entity, query_id: uuid(), allocation_context: health.allocation_context, ...selection });
+    await f.call('ReleaseHistoryView', { release_token: page.release_token });
+    return page;
+  };
+  const narrow = await query({ time_groups: ['known'], source_time_from: at(8000), source_time_before: at(8001) });
+  assert.deepEqual(narrow.readings.map(r => r.observed_at), [at(8000)]);
+  assert.ok(plans.length > 0);
+  assert.ok(plans.flat().every(row => !/TEMP B-TREE/.test(row.detail)), JSON.stringify(plans));
+  assert.equal(visited.length, 1);
+  const ties = await query({ time_groups: ['known'], source_time_from: '2026-10-21T12:00:00.1Z' });
+  assert.deepEqual(ties.readings.map(r => [r.source_evidence.reading_id, r.observed_at]), [[readingId(9005), mixed[5][1]], [readingId(9006), mixed[4][1]]]);
+  f.engine.settings.temporary.max_history_references_per_view = 4;
+  const unknown = await query({ time_groups: ['unknown', 'uncertain'], source_time_from: at(9999), source_time_before: at(10000) });
+  assert.deepEqual(unknown.readings.map(r => [r.source_evidence.reading_id, r.time_status]), [[readingId(9001), 'uncertain'], [readingId(9002), 'uncertain'], [readingId(9003), 'unknown'], [readingId(9004), 'unknown']]);
+  assert.equal(visited.length, 4);
+  assert.deepEqual((await query({ time_groups: [] })).readings, []);
+  assert.equal(visited.length, 0);
+  assert.ok(plans.flat().every(row => !/TEMP B-TREE/.test(row.detail)), JSON.stringify(plans));
+});
 test('history expiry makes pages unavailable before unlink and shares reclamation with concurrent release', { timeout: 10000 }, async t => {
   const f = await local(t), { page, request } = await historyView(f);
   assert.ok(page.next_page_token);
