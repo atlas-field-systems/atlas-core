@@ -26,6 +26,7 @@ export class Entities {
       CREATE TABLE IF NOT EXISTS entity_tracks(id TEXT PRIMARY KEY,image TEXT NOT NULL,observation TEXT NOT NULL UNIQUE) STRICT;
       CREATE TABLE IF NOT EXISTS entity_geofeatures(id TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS entity_generations(asset TEXT NOT NULL,generation TEXT NOT NULL,PRIMARY KEY(asset,generation)) STRICT;
+      CREATE TABLE IF NOT EXISTS entity_process_retries(request TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS entity_registrations(id TEXT PRIMARY KEY,asset TEXT NOT NULL UNIQUE) STRICT;`);
   }
   private allocate(id: Uuid, kind: Entity['entity_type'], alias?: string): void {
@@ -214,7 +215,10 @@ export class Entities {
   }
   replace(tx: Transaction, request: RequestOf<'ReplaceAssetProcess'>) {
     const asset = this.asset(request.asset_id);
-    if (tx.retry('ReplaceAssetProcess', request.request_id, request)) return { asset, evidence_disposition: 'duplicate' as const };
+    if (tx.retry('ReplaceAssetProcess', request.request_id, request)) {
+      const row = ImageRow.parse(this.store.db.prepare('SELECT image FROM entity_process_retries WHERE request=?').get(request.request_id));
+      return { asset: Asset.parse(JSON.parse(row.image)), evidence_disposition: 'duplicate' as const };
+    }
     if (asset.process_generation !== request.expected_process_generation || this.store.db.prepare('SELECT generation FROM entity_generations WHERE asset=? AND generation=?').get(asset.id, request.process_generation)) refuse('generation_mismatch');
     let receipt;
     try { receipt = this.temporary.get(request.challenge_id); } catch { refuse('challenge_expired'); }
@@ -227,6 +231,9 @@ export class Entities {
     if (report.disposition !== 'accepted') refuse('challenge_consumed');
     asset.version = next(asset.version);
     this.saveAsset(tx, asset);
+    const image = JSON.stringify(asset);
+    tx.retainedBytes += Buffer.byteLength(image);
+    this.store.db.prepare('INSERT INTO entity_process_retries VALUES(?,?)').run(request.request_id, image);
     tx.remember('ReplaceAssetProcess', request.request_id, request);
     return { asset, evidence_disposition: 'accepted' as const };
   }
@@ -404,7 +411,7 @@ export class Entities {
     return { source: entity, tracks: kind === 'observation' ? [this.observation(entity).track_id] : [] };
   }
   clearDataset(): void {
-    this.store.db.exec('DELETE FROM entity_registrations; DELETE FROM entity_generations; DELETE FROM entity_tracks; DELETE FROM entity_observations; DELETE FROM entity_assets; DELETE FROM entity_geofeatures; DELETE FROM entity_identity');
+    this.store.db.exec('DELETE FROM entity_process_retries; DELETE FROM entity_registrations; DELETE FROM entity_generations; DELETE FROM entity_tracks; DELETE FROM entity_observations; DELETE FROM entity_assets; DELETE FROM entity_geofeatures; DELETE FROM entity_identity');
     this.contact.clear();
   }
 }

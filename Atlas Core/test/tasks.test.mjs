@@ -2,6 +2,37 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, uuid, registration } from './helpers.mjs';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
+for (const pendingSecondCancellation of [false, true]) {
+  test(`cancellation retries recover refused intent with ${pendingSecondCancellation ? 'a later cancellation pending' : 'no cancellation pending'} across Restart`, async t => {
+    const f = await fixture(t);
+    const asset = ok(await f.call('RegisterAsset', registration())).asset;
+    const task = ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } }));
+    const request = { task_id: task.task_id, request_id: uuid() };
+    const first = await f.call('RequestTaskCancellation', request);
+    const accepted = ok(first);
+    assert.equal(accepted.cancellation_request_id, request.request_id);
+    const refused = await f.call('ReportTaskExecution', { evidence: { dataset_id: f.core.dataset, asset_id: asset.id,
+      origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null,
+      payload: { task_id: task.task_id, event: 'cancellation_refused', state: 'pending', cancellation_request_id: request.request_id, reason: 'cannot_cancel' } } });
+    assert.equal(ok(refused).task.cancellation_request_id, null);
+    const laterRequest = { task_id: task.task_id, request_id: uuid() };
+    const latest = pendingSecondCancellation ? await f.call('RequestTaskCancellation', laterRequest) : refused;
+    ok(latest);
+    const current = ok(await f.call('GetTask', { task_id: task.task_id }));
+    const currentAsset = ok(await f.call('GetAsset', { asset_id: asset.id }));
+    assert.equal(current.cancellation_request_id, pendingSecondCancellation ? laterRequest.request_id : null);
+    for (const restart of [false, true]) {
+      if (restart) await f.restart();
+      const replay = await f.call('RequestTaskCancellation', request);
+      assert.deepEqual(ok(replay), accepted);
+      assert.equal(replay.json.commit_cursor, first.json.commit_cursor);
+      assert.deepEqual(ok(await f.call('GetTask', { task_id: task.task_id })), current);
+      assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })), currentAsset);
+      const changes = ok(await f.call('ReadChanges', { from_cursor: latest.json.commit_cursor, max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 }));
+      assert.deepEqual(changes.messages, []);
+    }
+  });
+}
 test('held cancellation slots, independent streams, late terminal evidence and permanent result holds', async t => {
   const f = await fixture(t);
   const asset = ok(await f.call('RegisterAsset', registration())).asset;
