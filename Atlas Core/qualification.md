@@ -45,6 +45,9 @@ The `Core build and tests` GitHub Actions job runs it on pull requests and pushe
 to main with Node 24.22.1 and npm 11.19.0. It prepares the hash-pinned Protocol
 artifact before frozen-installing Core with native-driver install scripts enabled.
 The build verifies the installed dependencies and embedded SQLite identity.
+On a source iterator's `SQLITE_CORRUPT`, tests retain DB/WAL/SHM files before cleanup
+under `artifacts/capture-failures`, with active-reader and fresh-reader checks.
+Four test-only bundles are capped at 32 MiB each; failed CI runs retain them for seven days.
 `npm run test:container` exercises the pinned image and CLI on fresh installations,
 including command interruption, explicit recovery, settings failures and Hard Reset.
 Protocol boundary cases remain in [protocol-qualification.md](protocol-qualification.md).

@@ -12,7 +12,7 @@
     "protocol:prepare": "node scripts/prepare-protocol.mjs",
     "verify:inputs": "node scripts/verify-inputs.mjs",
     "build": "node scripts/verify-inputs.mjs && tsc -p tsconfig.json",
-    "test": "node --run build && node --test test/boundaries.test.mjs test/contact.test.mjs test/evidence.test.mjs test/objects.test.mjs test/tasks.test.mjs test/synchronization.test.mjs test/captures.test.mjs test/workflows.test.mjs test/storage.test.mjs test/lifecycle.test.mjs",
+    "test": "node --run build && node --import ./test/capture-diagnostics.mjs --test test/boundaries.test.mjs test/contact.test.mjs test/evidence.test.mjs test/objects.test.mjs test/tasks.test.mjs test/synchronization.test.mjs test/captures.test.mjs test/workflows.test.mjs test/storage.test.mjs test/lifecycle.test.mjs",
     "build:prepare": "node scripts/prepare-build.mjs",
     "image:build": "node scripts/build-image.mjs",
     "reference:export": "node scripts/export-reference.mjs",
