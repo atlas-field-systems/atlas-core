@@ -81,7 +81,9 @@ Reserve headroom for required commits and failure reporting. Object quota alone
 does not bound aggregate disk use. Refuse admission honestly; never silently evict
 protected facts. After permit or expiry waits, recheck authority and the current
 byte delta, inspect capacity, and record the reservation in one synchronous step.
-Storage accounting remains a qualification gate.
+Upload descriptors and bounded SQLite/WAL overhead pass admission before persistence,
+even without new binary bytes. Metadata then counts as actual disk use; unwritten
+binary bytes stay reserved until written.
 
 ## History and activity
 
