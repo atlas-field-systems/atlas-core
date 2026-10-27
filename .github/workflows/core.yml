@@ -30,7 +30,8 @@ jobs:
           cache-dependency-path: |
             Atlas Protocol/package-lock.json
             Atlas Core/package-lock.json
-      - run: npm install --global npm@11.19.0
+      - run: npm run build:prepare
+      - run: npm install --global --offline --ignore-scripts --no-audit --no-fund ./artifacts/npm-11.19.0.tgz
       - run: npm run protocol:prepare
       - run: npm ci --include=dev
       - run: npm test
