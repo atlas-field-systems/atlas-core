@@ -225,7 +225,9 @@ test('upload reservations released by one acknowledgment retain aggregate headro
       assert.equal(medium.type, 'reply');
       for (;;) {
         const call = send('authorize', { context, discovery: false });
-        const reply = await Promise.race([call.response, delay(50).then(() => undefined)]);
+        const barrier = await send('authorize', { context, discovery: false }, true).response;
+        assert.equal(barrier.type, 'reply');
+        const reply = held.get(call.id);
         if (reply === undefined) return { medium, waiting: call };
         assert.equal(reply.type, 'reply');
       }
