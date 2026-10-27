@@ -1,0 +1,36 @@
+name: Atlas Core
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualification:
+    name: Core build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Atlas Core
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.22.1
+          cache: npm
+          cache-dependency-path: |
+            Atlas Protocol/package-lock.json
+            Atlas Core/package-lock.json
+      - run: npm install --global npm@11.19.0
+      - run: npm run protocol:prepare
+      - run: npm ci --include=dev
+      - run: npm test

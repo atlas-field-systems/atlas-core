@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile, readdir, readFile } from 'node:fs/promises';
-import { watch, mkdirSync, writeFileSync } from 'node:fs';
+import { watch } from 'node:fs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import WebSocket from 'ws';
 import { once } from 'node:events';
@@ -139,6 +142,11 @@ test('malformed capability signatures return allocation_expired over HTTP and va
 });
 test('retained picture and history captures keep a fixed source view while writes continue', { timeout: 120000 }, async t => {
   const f = await local(t);
+  const integrity = path => {
+    const db = new Database(path, { readonly: true, fileMustExist: true });
+    try { assert.equal(db.pragma('integrity_check', { simple: true }), 'ok', path); }
+    finally { db.close(); }
+  };
   const expected = new Set();
   for (let i = 0; i < 4096; i++) {
     const geofeature_id = uuid(); expected.add(geofeature_id);
@@ -158,6 +166,7 @@ test('retained picture and history captures keep a fixed source view while write
     page = await f.call('ReadSnapshot', { page_token: page.next_page_token });
   }
   assert.deepEqual(seen, expected); assert.equal(seen.has(appended), false);
+  integrity(join(f.directory, 'captures', `${page.capture_id}.sqlite`));
   await f.call('ReleaseSnapshot', { release_token: release });
   const observation = uuid(), publisher = uuid(), origin = { kind: 'publisher', publisher_id: publisher };
   await f.call('CreateObservation', { request_id: uuid(), observation_id: observation, publisher_id: publisher });
@@ -181,7 +190,9 @@ test('retained picture and history captures keep a fixed source view while write
     history = await f.call('GetObservationMovementHistory', { page_token: history.next_page_token });
   }
   assert.deepEqual(observed, positions);
+  integrity(join(f.directory, 'captures', `${history.view_id}.sqlite`));
   await f.call('ReleaseHistoryView', { release_token: historyRelease });
+  integrity(f.engine.store.path);
   assert.deepEqual(await readdir(join(f.directory, 'captures')), []);
 });
 test('concurrent capture reservations respect aggregate bytes and retain failed outcomes', async t => {
@@ -248,15 +259,50 @@ test('preparation failures end their receipts and cleanup failures preserve both
   assert.deepEqual(JSON.parse(f.engine.temporary.peek(charged.id).data), facts);
 });
 for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve primary ${transport} errors, safe cleanup diagnostics and retry charges`, { timeout: 30000 }, async t => {
+  // Run the native driver unchanged, then inject real filesystem faults before the next reservation.
+  const preload = `
+    import Database from ${JSON.stringify(import.meta.resolve('better-sqlite3'))};
+    import { mkdirSync, writeFileSync, truncateSync } from 'node:fs';
+    import { dirname, join } from 'node:path';
+    import { workerData } from 'node:worker_threads';
+    if (workerData?.directory) {
+      const pragma = Database.prototype.pragma;
+      Database.prototype.pragma = function (...args) {
+        const result = Reflect.apply(pragma, this, args);
+        if (this.readonly || dirname(this.name) !== join(workerData.directory, 'captures')) return result;
+        Database.prototype.pragma = pragma;
+        mkdirSync(this.name + '-shm');
+        const pressure = join(workerData.directory, 'private-pressure-sentinel.bin');
+        writeFileSync(pressure, 'pressure');
+        truncateSync(pressure, workerData.settings.storageBytes);
+        return result;
+      };
+    }
+  `;
+  if (process.env.ATLAS_CAPTURE_FAULT !== '1') {
+    const env = { ...process.env, ATLAS_CAPTURE_FAULT: '1' };
+    delete env.NODE_TEST_CONTEXT;
+    try {
+      const { stdout } = await promisify(execFile)(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(preload)}`, '--test', '--test-reporter=tap',
+        `--test-name-pattern=^worker capture failures preserve primary ${transport} errors`, fileURLToPath(import.meta.url)],
+      { cwd: root, env, signal: t.signal });
+      assert.match(stdout, /^# tests 1$/m);
+      assert.match(stdout, /^# pass 1$/m);
+    } catch (error) { throw new Error(`${error.stdout ?? ''}${error.stderr ?? ''}`, { cause: error }); }
+    return;
+  }
   const cleanup = [];
-  let watcher, broken, pressure;
+  let directory, pressure;
   t.after(async () => {
-    watcher?.close();
-    if (broken) await rm(broken, { recursive: true, force: true });
+    if (directory) for (const file of await readdir(join(directory, 'captures'), { withFileTypes: true })) {
+      if (file.isDirectory() && /^[0-9a-f-]{36}\.sqlite-shm$/.test(file.name)) await rm(join(directory, 'captures', file.name), { recursive: true });
+    }
     if (pressure) await rm(pressure, { force: true });
     for (const close of cleanup.reverse()) await close();
   });
   const f = await fixture({ after: fn => cleanup.push(fn) }, { storageBytes: 64 * 1024 * 1024, objectBytes: 16 * 1024 * 1024, reserveBytes: 1024 * 1024 });
+  directory = f.directory;
+  pressure = join(directory, 'private-pressure-sentinel.bin');
   const ok = response => { assert.equal(response.status, 200, JSON.stringify(response.json)); return response.json.data; };
   for (let i = 0; i < 256; i++) ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(),
     geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }));
@@ -264,7 +310,7 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
   const request = { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits };
   let snapshot = async () => {
     const response = await f.call('ReadSnapshot', request);
-    assert.equal(response.status, 507, JSON.stringify(response.json));
+    assert.equal(response.status, 507, JSON.stringify({ status: response.status, error: response.json.error }));
     return response.json.error;
   };
   if (transport === 'WSS') {
@@ -280,22 +326,13 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
     assert.equal((await control({ type: 'authenticate', request_id: uuid(), api_key: f.apiKey })).type, 'authenticated');
     snapshot = async () => {
       const response = await control({ type: 'read_snapshot', request_id: uuid(), data: request });
-      assert.equal(response.type, 'error', JSON.stringify(response));
+      assert.equal(response.type, 'error', JSON.stringify({ type: response.type, error: response.error }));
       return response.error;
     };
   }
   const failures = [];
   f.core.rpc.worker.on('message', message => { if (message.type === 'refusal') failures.push(message); });
-  pressure = join(f.directory, 'private-pressure-sentinel.bin');
-  let injectionFailure;
-  watcher = watch(join(f.directory, 'captures'), (event, filename) => {
-    if (broken || !filename || !/^[0-9a-f-]{36}\.sqlite$/.test(filename)) return;
-    broken = join(f.directory, 'captures', `${filename}-shm`);
-    try { mkdirSync(broken); writeFileSync(pressure, Buffer.alloc(f.settings.storageBytes)); }
-    catch (error) { injectionFailure = error; }
-  });
   const initial = await snapshot();
-  watcher.close(); assert.equal(injectionFailure, undefined); assert.ok(broken, 'The real capture file must have been observed');
   assert.equal(initial.code, 'storage_limit'); assert.equal('details' in initial, false);
   const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
   let charged;
@@ -309,6 +346,8 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
     assert.deepEqual(db.prepare('SELECT * FROM temporary_receipts WHERE request=?').get(request.load_id), charged);
     assert.equal(db.prepare('SELECT bytes FROM temporary_files WHERE id=?').get(charged.id).bytes, charged.bytes);
   } finally { db.close(); }
+  const broken = join(directory, 'captures', `${charged.id}.sqlite-shm`);
+  assert.ok((await readdir(join(directory, 'captures'), { withFileTypes: true })).some(file => file.name === `${charged.id}.sqlite-shm` && file.isDirectory()));
   for (const failure of failures) {
     assert.deepEqual(failure.causes.map(cause => cause.body.error.code), ['storage_limit', 'integrity_fault']);
     assert.deepEqual(Object.keys(failure).sort(), ['causes', 'error', 'id', 'type']);

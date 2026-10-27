@@ -70,7 +70,9 @@ export class Reads {
     if (more && items.length === 0) refuse('resource_limit');
     return this.boundedPage(items, shortened => {
       const last = items.at(-1);
-      return { items, next_page_token: more || shortened ? this.temporary.seal(name, { query, after: last === undefined ? after : key(last), deadline }) : null };
+      const next_page_token = more || shortened ? this.temporary.seal(name, { query, after: last === undefined ? after : key(last), deadline }) : null;
+      if (next_page_token !== null && Buffer.byteLength(JSON.stringify({ page_token: next_page_token })) > this.store.settings.limits.max_request_bytes) refuse('resource_limit');
+      return { items, next_page_token };
     });
   }
   assets(request: RequestOf<'ListAssets'>) {

@@ -41,6 +41,10 @@ request/response-validation test.
 
 `npm test` exercises all 66 HTTP exchanges, real WSS handoff, immutable evidence,
 Tasks, streams, revocation, capacity refusal, worker loss, and offline establishment.
+The `Core build and tests` GitHub Actions job runs it on pull requests and pushes
+to main with Node 24.22.1 and npm 11.19.0. It prepares the hash-pinned Protocol
+artifact before frozen-installing Core with native-driver install scripts enabled.
+The build verifies the installed dependencies and embedded SQLite identity.
 `npm run test:container` exercises the pinned image and CLI on fresh installations,
 including command interruption, explicit recovery, settings failures and Hard Reset.
 Protocol boundary cases remain in [protocol-qualification.md](protocol-qualification.md).
