@@ -4,12 +4,18 @@ import { Worker } from 'node:worker_threads';
 import { fixture, uuid, registration } from './helpers.mjs';
 import { installationLock, recoveryDecision } from '../dist/installation.js';
 import { processIdentity } from '../dist/ownership.js';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, open, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root } from './helpers.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { createHash } from 'node:crypto';
+import { createCore } from '../dist/server.js';
+import { DatabaseWorker } from '../dist/rpc.js';
+import { Transfers } from '../dist/transfers.js';
+import { defaults } from '../dist/settings.js';
+import { digest } from '../dist/exact.js';
 const run = data => new Promise((resolve, reject) => { const worker = new Worker(new URL('../dist/offline.js', import.meta.url), { workerData: data }); let value; worker.on('message', result => { value = result; }); worker.once('error', reject); worker.once('exit', code => code === 0 ? resolve(value) : reject(new Error('offline_failed'))); });
 test('installation mutation lock excludes contenders after dead and ownerless commands', async t => {
   await mkdir(join(root, 'artifacts'), { recursive: true });
@@ -67,4 +73,144 @@ test('atomic Dataset marker preserves setup, matching recovery regenerates proof
   assert.equal((await f.call('RegisterAsset', replacement)).status, 200);
   assert.equal((await f.call('DeleteAsset', { asset_id: replacement.asset_id, request_id: uuid() })).status, 200);
   assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${registered.secret}` })).status, 200);
+});
+
+const objectDescriptor = bytes => ({ request_id: uuid(), object_id: uuid(), byte_length: String(bytes.byteLength),
+  sha256: createHash('sha256').update(bytes).digest('hex'), content_type: 'application/octet-stream', metadata: { associations: [] } });
+
+for (const phase of ['file', 'integrity']) test(`Stop owns download preparation awaiting the ${phase} worker reply`, { timeout: 15000 }, async t => {
+  const f = await fixture(t);
+  const bytes = Buffer.from('owned download'), descriptor = objectDescriptor(bytes);
+  assert.equal((await f.upload(descriptor, bytes)).status, 200);
+  const held = Promise.withResolvers(), release = Promise.withResolvers(), cleaning = Promise.withResolvers();
+  t.after(() => release.resolve());
+  const call = f.core.rpc.call;
+  let intercepted = false, cleanupFinished = false;
+  t.mock.method(f.core.rpc, 'call', async function (kind, data, ...args) {
+    const value = await call.call(this, kind, data, ...args);
+    if (!intercepted && kind === phase && data.object === descriptor.object_id) {
+      intercepted = true; held.resolve(); await release.promise;
+    }
+    return value;
+  });
+  const closeTransfers = Transfers.prototype.close, download = Transfers.prototype.download;
+  const lateStreams = [];
+  t.mock.method(Transfers.prototype, 'close', async function () {
+    cleaning.resolve(); await closeTransfers.call(this); cleanupFinished = true;
+  });
+  t.mock.method(Transfers.prototype, 'download', async function (...args) {
+    const result = await download.apply(this, args);
+    if (cleanupFinished) lateStreams.push(result.stream);
+    return result;
+  });
+  const response = f.call('ReadObjectContent', { object_id: descriptor.object_id, disposition: 'inline' });
+  await held.promise;
+  const stopped = f.core.close();
+  await cleaning.promise;
+  await new Promise(resolve => setImmediate(resolve));
+  release.resolve();
+  const result = await response;
+  await stopped;
+  assert.deepEqual(lateStreams, [], 'No outgoing stream may start after transfer cleanup');
+  assert.equal(result.status, 429, 'Stop refuses the prepared download without requiring client disconnect');
+  assert.equal(result.json.error.code, 'resource_limit');
+  assert.equal(f.core.rpc.worker.threadId, -1, 'Stop awaits actual database worker exit');
+});
+
+test('transfer cleanup closes a prepared download that the caller never starts', async t => {
+  const f = await fixture(t);
+  const bytes = Buffer.from('unconsumed'), descriptor = objectDescriptor(bytes);
+  assert.equal((await f.upload(descriptor, bytes)).status, 200);
+  const transfers = new Transfers(f.core.rpc, join(f.directory, 'objects'), f.settings, f.core.diagnostics, new Set());
+  await transfers.initialize();
+  const probe = await open(f.certificate), prototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const createReadStream = prototype.createReadStream, handles = new Set(), sources = [];
+  t.after(async () => { for (const source of sources) source.destroy(); for (const handle of handles) await handle.close(); });
+  t.mock.method(prototype, 'createReadStream', function (...args) {
+    handles.add(this); const stream = createReadStream.apply(this, args); sources.push(stream); return stream;
+  });
+  const download = await transfers.download(descriptor.object_id, { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.1.0' });
+  assert.equal(download.stream.readableDidRead, false);
+  assert.ok(handles.size > 0, 'The download acquired a real file handle');
+  await transfers.close();
+  for (const handle of handles) await assert.rejects(handle.stat(), { code: 'EBADF' }, 'Cleanup awaits file closure even when the iterator never starts');
+});
+
+test('Stop retains a completed download handle cleanup failure and records it', async t => {
+  const f = await fixture({ after() {} });
+  const cleanupFailure = new Error('download_handle_cleanup_test_failure'), attempted = Promise.withResolvers();
+  const includesFailure = error => error === cleanupFailure || error instanceof AggregateError && error.errors.some(includesFailure);
+  let handle, closeHandle;
+  t.after(async () => {
+    if (handle) { handle.close.mock.restore(); await closeHandle.call(handle); }
+    await f.core.close().catch(error => assert.ok(includesFailure(error)));
+    await rm(f.directory, { recursive: true, force: true });
+  });
+  const bytes = Buffer.from('cleanup failure'), descriptor = objectDescriptor(bytes);
+  assert.equal((await f.upload(descriptor, bytes)).status, 200);
+  const probe = await open(f.certificate), prototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  const createReadStream = prototype.createReadStream;
+  t.mock.method(prototype, 'createReadStream', function (...args) {
+    if (!handle) {
+      handle = this; closeHandle = this.close;
+      t.mock.method(this, 'close', async () => { attempted.resolve(); throw cleanupFailure; });
+    }
+    return createReadStream.apply(this, args);
+  });
+  assert.deepEqual((await f.call('ReadObjectContent', { object_id: descriptor.object_id, disposition: 'inline' })).bytes, bytes);
+  await attempted.promise;
+  await new Promise(resolve => setImmediate(resolve));
+  await assert.rejects(f.core.close(), includesFailure, 'A settled transfer must not lose its cleanup failure before Stop');
+  assert.equal(f.core.rpc.worker.threadId, -1, 'Other shutdown owners still finish after transfer cleanup fails');
+  const logs = join(f.directory, 'logs');
+  const events = (await Promise.all((await readdir(logs)).map(name => readFile(join(logs, name), 'utf8'))))
+    .flatMap(text => text.trim().split('\n').filter(Boolean).map(line => JSON.parse(line)));
+  assert.ok(events.some(event => event.event === 'download_cleanup_failed' && event.severity === 'ERROR'));
+});
+
+for (const cleanupFails of [false, true]) test(`failed Core initialization awaits worker cleanup${cleanupFails ? ' and retains both failures' : ''}`, async t => {
+  await mkdir(join(root, 'artifacts'), { recursive: true });
+  const directory = await mkdtemp(join(root, 'artifacts', 'failed-start-'));
+  const call = DatabaseWorker.prototype.call, closeWorker = DatabaseWorker.prototype.close;
+  let rpc;
+  t.after(async () => { if (rpc?.worker.threadId !== -1 && rpc) await closeWorker.call(rpc); await rm(directory, { recursive: true, force: true }); });
+  t.mock.method(DatabaseWorker.prototype, 'call', function (...args) { rpc = this; return call.apply(this, args); });
+  const cleanupFailure = new Error('worker_cleanup_test_failure');
+  if (cleanupFails) t.mock.method(DatabaseWorker.prototype, 'close', async function () { await closeWorker.call(this); throw cleanupFailure; });
+  await assert.rejects(createCore({ directory, certificate: join(directory, 'missing.pem'), key: join(directory, 'missing.key'),
+    settings: { ...defaults, freeDiskBytes: 0 } }), error => {
+    if (!cleanupFails) return error.code === 'ENOENT';
+    return error instanceof AggregateError && error.errors[0].code === 'ENOENT' && error.errors.includes(cleanupFailure);
+  });
+  assert.ok(rpc, 'The real database worker was initialized before TLS failed');
+  assert.equal(rpc.worker.threadId, -1, 'Initialization rejects only after the acquired worker exits');
+});
+
+test('multipart independently bounds descriptor and content when the Object ceiling is smaller', async t => {
+  const f = await fixture(t, { limits: { ...defaults.limits, max_request_bytes: 65_536, max_object_bytes: 1024 } });
+  const bytes = Buffer.from('twelve bytes');
+  assert.equal(bytes.length, 12);
+  for (const reverse of [false, true]) {
+    const descriptor = objectDescriptor(bytes);
+    descriptor.metadata.description = 'd'.repeat(2300);
+    assert.ok(Buffer.byteLength(JSON.stringify(descriptor)) > 2048);
+    const uploaded = await f.upload(descriptor, bytes, reverse);
+    assert.equal(uploaded.status, 200, JSON.stringify(uploaded.json));
+    assert.deepEqual((await f.call('ReadObjectContent', { object_id: descriptor.object_id, disposition: 'inline' })).bytes, bytes);
+  }
+  for (const reverse of [false, true]) {
+    const oversized = Buffer.alloc(1025), descriptor = objectDescriptor(oversized);
+    const rejected = await f.upload(descriptor, oversized, reverse);
+    assert.equal(rejected.status, 413, JSON.stringify(rejected.json));
+    assert.equal(rejected.json.error.code, 'payload_too_large');
+    assert.equal((await f.call('GetObject', { object_id: descriptor.object_id })).status, 404);
+  }
+  const descriptor = objectDescriptor(bytes), boundary = 'descriptor-ceiling';
+  const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="descriptor"\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(descriptor).padEnd(65_537, ' ')}\r\n--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="content.bin"\r\n\r\n`), bytes, Buffer.from(`\r\n--${boundary}--\r\n`)]);
+  const rejected = await f.http('POST', '/objects', body, { 'Content-Type': `multipart/form-data; boundary=${boundary}` });
+  assert.equal(rejected.status, 413, JSON.stringify(rejected.json));
+  assert.equal(rejected.json.error.code, 'payload_too_large');
+  assert.equal((await f.call('GetObject', { object_id: descriptor.object_id })).status, 404);
 });
