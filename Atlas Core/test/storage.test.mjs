@@ -1,3 +1,4 @@
+import { mutableRoot } from './paths.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, registration, report, telemetry, root, secret } from './helpers.mjs';
@@ -156,7 +157,7 @@ test('an unwritten diagnostic reservation prevents competing growth and releases
   ok(await f.call('RegisterAsset', registration()));
 });
 test('contact expiry and restart obey the hard ceiling and can use required-effect headroom', { timeout: 30_000 }, async t => {
-  const directory = await mkdtemp(join(root, 'artifacts', 'contact-admission-'));
+  const directory = await mkdtemp(join(mutableRoot, 'contact-admission-'));
   const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 8 * 1_048_576, objectBytes: 1_048_576, reserveBytes: 1_048_576 };
   let engine = new Engine(directory, settings);
   t.after(async () => { await engine?.close(); await rm(directory, { recursive: true, force: true }); });
@@ -254,7 +255,7 @@ test('refused contact expiry still reclaims deleted Object files and then transi
 });
 test('upload descriptor admission preserves ordinary headroom when content adds no reservation', async t => {
   for (const contentBytes of [0, 7]) await t.test(`${contentBytes} content bytes already reserved`, async t => {
-    const directory = await mkdtemp(join(root, 'artifacts', 'descriptor-admission-'));
+    const directory = await mkdtemp(join(mutableRoot, 'descriptor-admission-'));
     const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 32 * 1_048_576, objectBytes: 16 * 1_048_576, reserveBytes: 1_048_576 };
     const rpc = new DatabaseWorker(directory, settings, undefined, directory);
     t.after(async () => { await rpc.close(); await rm(directory, { recursive: true, force: true }); });
@@ -285,7 +286,7 @@ test('upload descriptor admission preserves ordinary headroom when content adds 
 test('Object quota refusal preserves history with ample storage and with aggregate pressure', async t => {
   for (const kind of ['prepare-upload', 'describe-upload', 'reserve-upload']) for (const pressure of [false, true]) await t.test(`${kind}, pressure=${pressure}`, async t => {
     const MiB = 1_048_576;
-    const directory = await mkdtemp(join(root, 'artifacts', 'quota-history-')), captures = join(directory, 'captures');
+    const directory = await mkdtemp(join(mutableRoot, 'quota-history-')), captures = join(directory, 'captures');
     await mkdir(captures);
     const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 32 * MiB, objectBytes: MiB, reserveBytes: MiB };
     const rpc = new DatabaseWorker(directory, settings, undefined, captures);
@@ -331,7 +332,7 @@ test('Object quota refusal preserves history with ample storage and with aggrega
   });
 });
 test('worker commits through a parent stall and bounds unacknowledged pages with required headroom', { timeout: 20000 }, async t => {
-  const directory = await mkdtemp(join(root, 'artifacts', 'reply-permits-'));
+  const directory = await mkdtemp(join(mutableRoot, 'reply-permits-'));
   const settings = { ...defaults, freeDiskBytes: 0, workerQueueCount: 40, workerQueueBytes: 1_048_576,
     resourceImageBytes: 65536, limits: { ...defaults.limits, max_message_bytes: 212992 } };
   const worker = new Worker(new URL('../dist/worker.js', import.meta.url), { workerData: { directory, accountingRoot: directory, settings }, stdout: true, stderr: true });
@@ -402,7 +403,7 @@ test('worker commits through a parent stall and bounds unacknowledged pages with
 });
 test('upload reservations released by one acknowledgment retain aggregate headroom and fresh deltas', { timeout: 45000 }, async t => {
   for (const kind of ['prepare-upload', 'describe-upload', 'reserve-upload', 'fresh-delta', 'object-quota', 'history-expiry', 'free-disk']) await t.test(kind, async t => {
-    const directory = await mkdtemp(join(root, 'artifacts', 'upload-permits-'));
+    const directory = await mkdtemp(join(mutableRoot, 'upload-permits-'));
     const accountingRoot = join(directory, kind === 'history-expiry' ? 'captures' : 'accounting');
     await mkdir(accountingRoot);
     const MiB = 1_048_576;

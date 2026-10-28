@@ -2,7 +2,8 @@
 
 These disposable prototypes investigate the documented design at commit `1ca5623`.
 They are instruments for finding implementation traps, not an Atlas server or SDK.
-The Protocol, Core, and SDK pages remain the design authority.
+The findings link to that historical design. Current Protocol, Core, and SDK pages
+own the supported implementation.
 
 ## Run
 
@@ -47,6 +48,6 @@ The four runners investigate retry and execution recovery, synchronization,
 Object publication, and wire decoding. Their private schemas are experiment
 fixtures. They do not define public endpoints or fill gaps in Protocol.
 
-Python mechanisms cannot qualify the planned Go server. Process termination
+Python mechanisms did not qualify the then-planned Go server or the current TypeScript Core. Process termination
 cannot qualify power-loss durability. Docker management, physical execution,
 constrained radio, and the full deployment workload need separate qualification.

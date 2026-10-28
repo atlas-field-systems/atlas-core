@@ -69,6 +69,7 @@ Core implements all 66 initial exchanges. SDK workflows remain unimplemented.
 Use Node 24.22.1 and npm 11.19.0. From this directory:
 
 ```sh
+export ATLAS_TEST_ROOT="$(mktemp -d /var/tmp/atlas-tests.XXXXXX)"
 npm run protocol:prepare
 npm ci --include=dev
 npm run verify:inputs
@@ -81,7 +82,8 @@ npm run fixture:retention
 
 The entry points are `dist/runtime.js` in the container and `dist/cli.js` locally.
 Use [local commands](lifecycle.md#commands) for setup and operation. Tests create fresh
-owned installations under ignored `artifacts/`; they never use an existing installation.
+owned installations under `ATLAS_TEST_ROOT`, outside the source workspace. When omitted,
+the harness creates a new system temporary directory. Existing installations are never used.
 See [qualification](qualification.md) for the limits of the evidence.
 
 ## Scope

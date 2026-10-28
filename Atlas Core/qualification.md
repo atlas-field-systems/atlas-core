@@ -44,9 +44,16 @@ Tasks, streams, revocation, capacity refusal, worker loss, and offline establish
 The `Core build and tests` GitHub Actions job runs it on pull requests and pushes
 to main with Node 24.22.1 and npm 11.19.0. It prepares the hash-pinned Protocol
 artifact before frozen-installing Core with native-driver install scripts enabled.
-The build verifies the installed dependencies and embedded SQLite identity.
+The job also builds the pinned image, runs the actual CLI/container suite, and runs
+the bounded retention fixture. The build verifies dependencies and SQLite identity.
+Set `ATLAS_TEST_ROOT` to an absolute directory outside the managed workspace.
+The harness rejects source-local roots. Keep the entire installation there, including
+SQLite sidecars, captures, Object files, TLS files, and diagnostic logs. Redirect
+command output there too, for example `npm test >"$ATLAS_TEST_ROOT/suite.log" 2>&1`.
+This isolates mutable files from workspace tooling; moving only `core.sqlite` does not.
+Build artifacts remain separate from test installations. CI uses the runner's temporary directory.
 On a source iterator's `SQLITE_CORRUPT`, tests retain DB/WAL/SHM files before cleanup
-under `artifacts/capture-failures`, with active-reader and fresh-reader checks.
+under `$ATLAS_TEST_ROOT/capture-failures`, with active-reader and fresh-reader checks.
 Four test-only bundles are capped at 32 MiB each; failed CI runs retain them for seven days.
 `npm run test:container` exercises the pinned image and CLI on fresh installations,
 including command interruption, explicit recovery, settings failures and Hard Reset.
@@ -66,7 +73,7 @@ Diagnostic records alone cannot establish that work committed or executed.
 
 | Scenario | Required evidence |
 | --- | --- |
-| Lost non-report write reply | At default Core and SDK Summary detail, match the attempt; keep SDK outcome unknown; retry has new attempt context and the same prepared identity; one durable effect and complete picture application |
+| Lost non-report write reply | With default Core detail and explicitly enabled SDK Summary, match the attempt; keep SDK outcome unknown; retry has new attempt context and the same prepared identity; one durable effect and complete picture application |
 | Read routing and transfers | Ready picture reads send zero HTTP requests; explicit Observation/history reads use HTTP in both modes; default reads and repeated uploads report the observed source and byte category without buffering whole files |
 | Recovery and authorization | Revoked credentials stop all network work; complete local picture queries/subscriptions remain explicitly stale and authorization-required; changed credentials need authenticated discovery, with no write replay or recovery hot loop |
 | Server delay and cleanup | Separate writer wait from commit time, file publication from cleanup, and lost maintenance replies from verified process exit |

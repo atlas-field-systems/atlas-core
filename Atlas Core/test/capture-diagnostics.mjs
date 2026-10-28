@@ -1,11 +1,11 @@
 import Database from 'better-sqlite3';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { threadId } from 'node:worker_threads';
+import { mutableRoot } from './paths.mjs';
 
-const artifacts = fileURLToPath(new URL('../artifacts/', import.meta.url));
+const artifacts = mutableRoot;
 const output = join(artifacts, 'capture-failures');
 const maximumBytes = 32 * 1024 * 1024;
 let recorded = false;
