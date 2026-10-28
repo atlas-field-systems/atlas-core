@@ -477,7 +477,7 @@
       "id": "section-source-free-read",
       "schema_name": "StatusReadResult",
       "contract": "Atlas Protocol/entities.md#initial-states",
-      "raw_json": "{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"condition\":\"unknown\"},\"evidence\":null}",
+      "raw_json": "{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"condition\":\"unknown\"},\"evidence\":null,\"time_status\":{\"condition\":\"unknown\"}}",
       "expected": "accept",
       "rationale": "A source-free initial read value has explicit evidence null."
     },

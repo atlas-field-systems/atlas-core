@@ -6,7 +6,7 @@ export function runReviewFixes(p) {
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.1.0',
+      'Atlas-Protocol-Version': '0.2.0',
       Authorization: `Bearer ${'A'.repeat(43)}`,
       'Content-Type': 'application/json',
     });
@@ -218,7 +218,7 @@ export function runReviewFixes(p) {
     ['Atlas-Dataset-ID', null, 'missing'],
     ['Atlas-Dataset-ID', 'bad', 'invalid'],
     ['Atlas-Protocol-Version', null, 'missing'],
-    ['Atlas-Protocol-Version', '0.2.0', 'mismatch'],
+    ['Atlas-Protocol-Version', '0.1.0', 'mismatch'],
     ['Authorization', null, 'missing'],
     ['Authorization', 'Bearer private-invalid-secret', 'invalid'],
   ])

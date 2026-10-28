@@ -147,7 +147,7 @@ test('transfer cleanup closes a prepared download that the caller never starts',
   t.mock.method(prototype, 'createReadStream', function (...args) {
     handles.add(this); const stream = createReadStream.apply(this, args); sources.push(stream); return stream;
   });
-  const download = await transfers.download(descriptor.object_id, { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.1.0' });
+  const download = await transfers.download(descriptor.object_id, { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.2.0' });
   assert.equal(download.stream.readableDidRead, false);
   assert.ok(handles.size > 0, 'The download acquired a real file handle');
   await transfers.close();

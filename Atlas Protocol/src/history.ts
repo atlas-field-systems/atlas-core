@@ -10,7 +10,7 @@ import {
   Uuid,
   uniqueArray,
 } from './scalars.js';
-import { AssetOrigin, Constituent, PublisherOrigin } from './reports.js';
+import { AssetOrigin, Constituent, PublisherOrigin, TimeStatus } from './reports.js';
 
 export function orderedTimes(from: string, before: string, inclusive = false): boolean {
   try {
@@ -20,7 +20,7 @@ export function orderedTimes(from: string, before: string, inclusive = false): b
     return false;
   }
 }
-export const TimeStatus = z.enum(['known', 'unknown', 'uncertain']);
+export { TimeStatus } from './reports.js';
 const reading = {
   source_entity_id: Uuid,
   quantity: z.literal('position'),
@@ -113,7 +113,6 @@ export const Release = z.strictObject({ release_token: Opaque }).meta({ id: 'Rel
 export const Released = z.strictObject({ released: z.literal(true) }).meta({ id: 'Released' });
 export type HistoryReading = z.output<typeof HistoryReading>;
 export type HistoryPage = z.output<typeof HistoryPage>;
-export type TimeStatus = z.output<typeof TimeStatus>;
 export type HistoryFirst = z.output<typeof HistoryFirst>;
 export type Continuation = z.output<typeof Continuation>;
 export type HistoryQuery = z.output<typeof HistoryQuery>;

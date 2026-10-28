@@ -212,7 +212,7 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
         const responseHeaders = new Headers({ 'Atlas-Dataset-ID': ready.dataset, 'Atlas-Protocol-Version': PROTOCOL_VERSION });
         if (result.kind === 'reference') {
           const media = incoming.headers.get('Accept');
-          const document = media === 'text/html' ? '<!doctype html><html lang="en"><meta charset="utf-8"><title>Atlas Protocol</title><h1>Atlas Protocol 0.1.0</h1><p>The OpenAPI reference is available at this URL with Accept: application/vnd.oai.openapi+json.</p></html>' : result.document;
+          const document = media === 'text/html' ? '<!doctype html><html lang="en"><meta charset="utf-8"><title>Atlas Protocol</title><h1>Atlas Protocol 0.2.0</h1><p>The OpenAPI reference is available at this URL with Accept: application/vnd.oai.openapi+json.</p></html>' : result.document;
           const body = Buffer.from(document); responseHeaders.set('Content-Type', media ?? result.media);
           outgoing(() => bindings[name].response({ status: 200, headers: responseHeaders, body }, { request: input, datasetId: ready.dataset }));
           return reply.type(media ?? result.media).send(body);

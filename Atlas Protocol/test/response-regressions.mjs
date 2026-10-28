@@ -6,7 +6,7 @@ export function runResponseRegressions(p) {
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.1.0',
+      'Atlas-Protocol-Version': '0.2.0',
       'Content-Type': 'application/json',
     });
   const reply = (name, data, request, extra = {}) =>
@@ -30,14 +30,14 @@ export function runResponseRegressions(p) {
   const frame = (type, data) => ({
     type,
     dataset_id: s.id,
-    protocol_version: '0.1.0',
+    protocol_version: '0.2.0',
     request_id: s.requestId,
     data,
   });
   const batch = (geometry) => ({
     type: 'change_batch',
     dataset_id: s.id,
-    protocol_version: '0.1.0',
+    protocol_version: '0.2.0',
     data: {
       subscription_id: s.requestId,
       previous_cursor: 'before',
@@ -59,7 +59,13 @@ export function runResponseRegressions(p) {
     sequence: '1',
     section,
   });
-  const section = (name, value) => ({ ...inputSection(value), evidence: evidence(name) });
+  const section = (name, value) => ({
+    ...inputSection(value),
+    evidence: evidence(name),
+    time_status: Object.fromEntries(
+      (name === 'geometry' ? ['geometry'] : Object.keys(value)).map((key) => [key, 'known']),
+    ),
+  });
   const geometryReaders = {
     root: (geometry) => p.readJson(p.contract(p.Geometry), encode(geometry)),
     creation: (geometry) =>
@@ -450,6 +456,7 @@ export function runResponseRegressions(p) {
         classification: 'dated_measurement',
         observed_at: null,
         evidence: evidence('geometry'),
+        time_status: 'unknown',
         ...(state === 'error' ? { error: { code: 'missing' } } : {}),
       };
       reply(

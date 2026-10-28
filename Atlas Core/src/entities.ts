@@ -2,9 +2,9 @@ import type Database from 'better-sqlite3';
 import { z } from 'zod';
 import { caseFold } from 'unicode-case-folding';
 import { Asset, ContactChallenge, Geofeature, Observation, Track, Uuid, readSections } from '@atlas/protocol';
-import type { AssetReport, InputSection, ObservationReport, RequestOf, SectionName } from '@atlas/protocol';
+import type { AssetReport, ObservationReport, RequestOf } from '@atlas/protocol';
 import { credentialFacts, id, instant, next, now, zero } from './exact.js';
-import { Evidence, eligible, evidenceFor } from './evidence.js';
+import { Evidence, eligible } from './evidence.js';
 import { Refusal, refuse } from './fault.js';
 import type { Store, Transaction } from './database.js';
 import type { Identity } from './identity.js';
@@ -14,9 +14,6 @@ const ImageRow = z.object({ image: z.string() });
 const EntityRow = z.object({ kind: z.enum(['asset', 'observation', 'track', 'geofeature']), alive: z.number() });
 const ContactData = z.object({ challenge: ContactChallenge, deadline: z.number(), consumed: z.string().nullable() });
 type Entity = Asset | Observation | Track | Geofeature;
-function sourced<S extends z.ZodType>(schema: S, value: InputSection<SectionName>, report: AssetReport | ObservationReport, section: SectionName): z.output<S> {
-  return schema.parse({ ...value, evidence: evidenceFor(report, section) });
-}
 export class Entities {
   private readonly contact = new Map<Uuid, number>();
   constructor(private readonly store: Store, private readonly identity: Identity, readonly evidence: Evidence, private readonly temporary: Temporary) {
@@ -116,8 +113,8 @@ export class Entities {
     const asset: Asset = { dataset_id: this.store.dataset, id: request.asset_id, entity_type: 'asset', version: zero, edit_revision: zero,
       ...(request.alias === undefined ? {} : { alias: request.alias }), ...(request.description === undefined ? {} : { description: request.description }),
       type: request.type ?? { kind: null }, capabilities: request.capabilities ?? { commands: [] }, process_generation: request.process_generation,
-      status: { state: 'value', classification: 'state_until_changed', observed_at: null, evidence: null, value: { condition: 'unknown' } },
-      communications: { health: 'offline', capacity: { state: 'value', classification: 'state_until_changed', observed_at: null, evidence: null, value: { bandwidth_bps: null } } },
+      status: { state: 'value', classification: 'state_until_changed', observed_at: null, evidence: null, time_status: { condition: 'unknown' }, value: { condition: 'unknown' } },
+      communications: { health: 'offline', capacity: { state: 'value', classification: 'state_until_changed', observed_at: null, evidence: null, time_status: { bandwidth_bps: 'unknown' }, value: { bandwidth_bps: null } } },
       heartbeat: { last_contact_at: null }, task_queue: { requested_task_ids: [], revision: zero, confirmed: null },
       task_control: { revision: zero, requested: null, confirmed: null } };
     this.store.db.prepare('INSERT INTO entity_assets VALUES(?,?)').run(asset.id, JSON.stringify(asset));
@@ -160,14 +157,14 @@ export class Entities {
     this.evidence.admit(tx, report, 'asset');
     let changed = false;
     const s = report.sections;
-    if (s.status && eligible(asset.status, report)) { asset.status = sourced(readSections.status, s.status, report, 'status'); changed = true; }
-    if (s.communications && eligible(asset.communications.capacity, report)) { asset.communications.capacity = sourced(readSections.communications, s.communications, report, 'communications'); changed = true; }
-    if (s.telemetry && eligible(asset.telemetry, report)) { asset.telemetry = sourced(readSections.telemetry, s.telemetry, report, 'telemetry'); changed = true; }
-    if (s.attitude && eligible(asset.attitude, report)) { asset.attitude = sourced(readSections.attitude, s.attitude, report, 'attitude'); changed = true; }
-    if (s.power && eligible(asset.power, report)) { asset.power = sourced(readSections.power, s.power, report, 'power'); changed = true; }
-    if (s.camera && eligible(asset.camera, report)) { asset.camera = sourced(readSections.camera, s.camera, report, 'camera'); changed = true; }
-    if (s.camera_optics && eligible(asset.camera_optics, report)) { asset.camera_optics = sourced(readSections.camera_optics, s.camera_optics, report, 'camera_optics'); changed = true; }
-    if (s.gimbal && eligible(asset.gimbal, report)) { asset.gimbal = sourced(readSections.gimbal, s.gimbal, report, 'gimbal'); changed = true; }
+    if (s.status && eligible(asset.status, report)) { asset.status = this.evidence.sourced(readSections.status, s.status, report, 'status'); changed = true; }
+    if (s.communications && eligible(asset.communications.capacity, report)) { asset.communications.capacity = this.evidence.sourced(readSections.communications, s.communications, report, 'communications'); changed = true; }
+    if (s.telemetry && eligible(asset.telemetry, report)) { asset.telemetry = this.evidence.sourced(readSections.telemetry, s.telemetry, report, 'telemetry'); changed = true; }
+    if (s.attitude && eligible(asset.attitude, report)) { asset.attitude = this.evidence.sourced(readSections.attitude, s.attitude, report, 'attitude'); changed = true; }
+    if (s.power && eligible(asset.power, report)) { asset.power = this.evidence.sourced(readSections.power, s.power, report, 'power'); changed = true; }
+    if (s.camera && eligible(asset.camera, report)) { asset.camera = this.evidence.sourced(readSections.camera, s.camera, report, 'camera'); changed = true; }
+    if (s.camera_optics && eligible(asset.camera_optics, report)) { asset.camera_optics = this.evidence.sourced(readSections.camera_optics, s.camera_optics, report, 'camera_optics'); changed = true; }
+    if (s.gimbal && eligible(asset.gimbal, report)) { asset.gimbal = this.evidence.sourced(readSections.gimbal, s.gimbal, report, 'gimbal'); changed = true; }
     if (report.mode === 'current' && report.contact_proof !== undefined) {
       this.prove(tx, asset, report, report.contact_proof.challenge_id);
       changed = true;
@@ -269,7 +266,7 @@ export class Entities {
       ...(request.source_asset_id === undefined ? {} : { source_asset_id: request.source_asset_id }),
       ...(request.publisher_subject === undefined ? {} : { publisher_subject: request.publisher_subject }),
       ...(request.alias === undefined ? {} : { alias: request.alias }), ...(request.description === undefined ? {} : { description: request.description }),
-      type: { state: 'value', classification: 'state_until_changed', observed_at: null, evidence: null, value: { kind: null } } };
+      type: { state: 'value', classification: 'state_until_changed', observed_at: null, evidence: null, time_status: { kind: 'unknown' }, value: { kind: null } } };
     if (request.report) this.observationReport(tx, observation, request.report);
     const image = this.parseObservation(observation);
     const track = this.fuse(image);
@@ -292,10 +289,10 @@ export class Entities {
     this.evidence.admit(tx, report, 'observation');
     let changed = false;
     const s = report.sections;
-    if (s.type && eligible(observation.type, report)) { observation.type = sourced(readSections.type, s.type, report, 'type'); changed = true; }
-    if (s.telemetry && eligible(observation.telemetry, report)) { observation.telemetry = sourced(readSections.telemetry, s.telemetry, report, 'telemetry'); changed = true; }
-    if (s.attitude && eligible(observation.attitude, report)) { observation.attitude = sourced(readSections.attitude, s.attitude, report, 'attitude'); changed = true; }
-    if (s.geometry && eligible(observation.geometry, report)) { observation.geometry = sourced(readSections.geometry, s.geometry, report, 'geometry'); changed = true; }
+    if (s.type && eligible(observation.type, report)) { observation.type = this.evidence.sourced(readSections.type, s.type, report, 'type'); changed = true; }
+    if (s.telemetry && eligible(observation.telemetry, report)) { observation.telemetry = this.evidence.sourced(readSections.telemetry, s.telemetry, report, 'telemetry'); changed = true; }
+    if (s.attitude && eligible(observation.attitude, report)) { observation.attitude = this.evidence.sourced(readSections.attitude, s.attitude, report, 'attitude'); changed = true; }
+    if (s.geometry && eligible(observation.geometry, report)) { observation.geometry = this.evidence.sourced(readSections.geometry, s.geometry, report, 'geometry'); changed = true; }
     return changed;
   }
   reportObservation(tx: Transaction, request: RequestOf<'ReportObservation'>) {
