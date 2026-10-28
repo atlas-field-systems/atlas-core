@@ -150,6 +150,7 @@ export class Entities {
     }
     if (changed) { asset.version = next(asset.version); this.saveAsset(tx, asset); }
     if (authored || disposition === 'accepted') tx.remember('UpdateAsset', request.request_id, request);
+    else tx.rememberPrivate('UpdateAsset', request.request_id, request);
     return { asset, ...(disposition === undefined ? {} : { evidence_disposition: disposition }) };
   }
   private assetReport(tx: Transaction, asset: Asset, report: AssetReport): { disposition: 'accepted' | 'duplicate'; changed: boolean } {

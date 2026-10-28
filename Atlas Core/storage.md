@@ -22,6 +22,10 @@ Observation and Track. Unique associations and retry records prevent a second pa
 A retry distinguishes first execution, exact replay, conflicting facts, and an ended
 identity. Compare original submitted facts, not the resource's later edited state.
 Preserve Dataset-scoped records across Restart and clear them on Reset.
+An UpdateAsset wrapper around duplicate source evidence still binds its request ID
+to the original facts. Charge its private receipt before commit; storage refusal
+leaves that ID unbound. The receipt adds no picture or progress event, contact
+refresh, position, or activity. Source report identity remains independent.
 
 Bound the complete resulting resource images and combined batch before accepting
 growth. Leave room for later cancellation and terminal reports. Small individual
