@@ -245,7 +245,9 @@ function validTimeStatuses(result: {
         if (!Object.hasOwn(reserveStatuses, reserve.id)) return false;
         const leaves = quantityRecord.parse(reserveStatuses[reserve.id]);
         const overrides =
-          reserveTimes[reserve.id] === undefined ? {} : quantityRecord.parse(reserveTimes[reserve.id]);
+          reserveTimes[reserve.id] === undefined
+            ? {}
+            : quantityRecord.parse(reserveTimes[reserve.id]);
         const keys =
           reserve.kind === 'battery'
             ? ['remaining_percent', 'voltage_volts', 'current_amperes']
