@@ -38,6 +38,13 @@ export class Administration {
     createSecureContext({ cert: await readFile(input.certificate), key: await readFile(input.key) });
     await copyFile(input.certificate, join(this.root, 'setup', 'tls.pem'));
     await copyFile(input.key, join(this.root, 'setup', 'tls.key'));
+    for (const name of ['tls.pem', 'tls.key']) {
+      const file = await open(join(this.root, 'setup', name), 'r');
+      const failures: unknown[] = [];
+      try { await file.sync(); } catch (error) { failures.push(error); }
+      try { await file.close(); } catch (error) { failures.push(error); }
+      if (failures.length > 0) throw new AggregateError(failures, 'tls_flush_failed');
+    }
     await atomicJson(join(this.root, 'setup', 'settings.json'), settings);
     await atomicJson(join(this.root, 'setup', 'installation.json'), { format: 1, installation_id: id(), image });
     await atomicJson(join(this.root, 'software.json'), { image });

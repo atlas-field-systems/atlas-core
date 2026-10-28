@@ -113,6 +113,8 @@ HTTPS/WSS use normal certificate verification and explicit trusted origins, with
 Offline setup supplies local trust, preloaded images and reference data, and the first credential.
 Setup needs no cloud login. Credentials stay out of URLs and diagnostics. Operator and key
 rules remain in [Protocol identity](../Atlas%20Protocol/identity.md).
+Setup flushes both retained TLS files before recording the installation manifest.
+A file-flush or close failure stops setup and preserves the failure for repair.
 [Diagnostics](diagnostics.md#collection-and-lifetime) owns log and export lifetime.
 Await diagnostic writers before clearing logs. Unmanaged container or host logs must not escape Reset.
 
