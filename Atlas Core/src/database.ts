@@ -9,6 +9,9 @@ import type { Settings } from './settings.js';
 const Meta = z.strictObject({ value: z.string() });
 const Retry = z.strictObject({ facts: z.string(), cursor: z.string().nullable() });
 const LogRow = z.strictObject({ sequence: z.string(), previous: z.string(), message: z.string() });
+const ReplayBytes = z.string().regex(/^(0|[1-9][0-9]*)$/).transform(value => BigInt(value));
+const ReplayTotal = z.object({ bytes: z.bigint().nonnegative() });
+const OldestCommit = z.object({ sequence: z.string(), bytes: z.number().int().nonnegative(), at: z.number().int() });
 export type Authority = Readonly<{ keyId: Uuid; operatorId: Uuid | null }>;
 export class Transaction {
   readonly effects = new Map<string, Change>();
@@ -74,6 +77,8 @@ export class Store {
         this.setMeta('earliest', zero);
         if (establish) this.setMeta('establishment', canonical(establish));
       } else if (establish && (this.meta('dataset') !== establish.dataset || this.meta('establishment') !== canonical(establish))) throw new Error('establishment_conflict');
+      const total = ReplayTotal.parse(this.db.prepare('SELECT coalesce(sum(bytes),0) AS bytes FROM commit_log').safeIntegers().get());
+      this.setMeta('replay_bytes', total.bytes.toString());
     })();
     this.dataset = Uuid.parse(this.meta('dataset'));
   }
@@ -95,6 +100,7 @@ export class Store {
   resetMetadata(dataset: Uuid, action: Uuid, hard: boolean): void {
     this.db.exec(hard ? 'DELETE FROM retry; DELETE FROM commit_log' : "DELETE FROM retry WHERE scope NOT LIKE 'setup/%'; DELETE FROM commit_log");
     this.setMeta('dataset', dataset); this.setMeta('sequence', zero); this.setMeta('earliest', zero);
+    this.setMeta('replay_bytes', '0');
     this.db.prepare("DELETE FROM core_meta WHERE key='settings_revision'").run();
     this.setMeta('establishment', JSON.stringify({ dataset, actionId: action }));
   }
@@ -133,7 +139,7 @@ export class Store {
         this.db.prepare('INSERT INTO commit_log VALUES(?,?,?,?,?)').run(sequence.padStart(20, '0'), previous, Buffer.from(encoded).toString('utf8'), Date.now(), encoded.byteLength);
         this.setMeta('sequence', sequence);
         for (const retry of tx.retries) this.db.prepare('INSERT INTO retry VALUES(?,?,?,?)').run(retry.scope, retry.request, retry.facts, cursor);
-        this.prune();
+        this.prune(ReplayBytes.parse(this.meta('replay_bytes')) + BigInt(encoded.byteLength));
       }
       beforeCommit = performance.now();
       return { data, ...(cursor === undefined ? {} : { cursor }), execution: tx.dirty ? 'first' as const : tx.replayed ? 'replay' as const : 'read' as const };
@@ -144,18 +150,18 @@ export class Store {
     for (const action of committed) action();
     return result;
   }
-  private prune(): void {
-    const total = z.object({ bytes: z.number() }).parse(this.db.prepare('SELECT coalesce(sum(bytes),0) AS bytes FROM commit_log').get()).bytes;
-    let bytes = total;
+  private prune(bytes: bigint): void {
+    const limit = BigInt(this.settings.replayBytes), cutoff = Date.now() - this.settings.replayMilliseconds;
     while (true) {
       const row = this.db.prepare('SELECT sequence,bytes,at FROM commit_log ORDER BY sequence LIMIT 1').get();
       if (!row) break;
-      const r = z.object({ sequence: z.string(), bytes: z.number(), at: z.number() }).parse(row);
-      if (bytes <= this.settings.replayBytes && r.at >= Date.now() - this.settings.replayMilliseconds) break;
+      const r = OldestCommit.parse(row);
+      if (bytes <= limit && r.at >= cutoff) break;
       this.db.prepare('DELETE FROM commit_log WHERE sequence=?').run(r.sequence);
       this.setMeta('earliest', BigInt(r.sequence).toString());
-      bytes -= r.bytes;
+      bytes -= BigInt(r.bytes);
     }
+    this.setMeta('replay_bytes', bytes.toString());
   }
   *messages(from: string, through: string, max = 1000): Generator<ReplayMessage> {
     const start = this.parseCursor(from).padStart(20, '0');

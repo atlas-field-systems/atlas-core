@@ -14,7 +14,77 @@ import { digest } from '../dist/exact.js';
 import { currentWriter } from '../dist/ownership.js';
 import { DatabaseWorker } from '../dist/rpc.js';
 import { diskUsage } from '../dist/capacity.js';
+import { Store } from '../dist/database.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
+test('replay bytes and whole-commit boundaries survive rollback, restart and Reset', async t => {
+  const directory = await mkdtemp(join(root, 'artifacts', 'replay-accounting-'));
+  const path = join(directory, 'core.sqlite'), settings = { ...defaults };
+  let store = new Store(path, settings);
+  t.after(async () => { store.close(); await rm(directory, { recursive: true, force: true }); });
+  const baseline = store.cursor();
+  const changes = [uuid(), uuid()].map(resource_id => ({ kind: 'delete', resource_kind: 'geofeature', resource_id, version: '1' }));
+  const first = store.transact(null, tx => { for (const change of changes) tx.change(change); }).cursor;
+  const batch = { type: 'change_batch', data: { previous_cursor: baseline, commit_cursor: first, changes } };
+  assert.deepEqual([...store.messages(baseline, first)], [batch]);
+  const batchBytes = Buffer.byteLength(JSON.stringify(batch));
+  assert.equal(store.meta('replay_bytes'), String(batchBytes));
+  const progress = () => store.transact(null, tx => tx.remember('test', uuid(), {})).cursor;
+  const second = progress();
+  const message = { type: 'progress', data: { previous_cursor: first, through_cursor: second } };
+  const progressBytes = Buffer.byteLength(JSON.stringify(message));
+  settings.replayBytes = batchBytes + progressBytes;
+  assert.equal(store.meta('replay_bytes'), String(settings.replayBytes));
+  assert.deepEqual([...store.messages(baseline, second)], [batch, message]);
+  const before = { total: store.meta('replay_bytes'), earliest: store.earliest(), cursor: store.cursor() };
+  assert.throws(store.db.transaction(() => { progress(); throw new Error('abort after pruning'); }), /abort after pruning/);
+  assert.deepEqual({ total: store.meta('replay_bytes'), earliest: store.earliest(), cursor: store.cursor() }, before);
+  assert.deepEqual([...store.messages(baseline, second)], [batch, message]);
+  const third = progress();
+  assert.equal(store.earliest(), first, 'Prune the entire two-change commit');
+  assert.throws(() => [...store.messages(baseline, third)], error => error.code === 'cursor_expired');
+  assert.deepEqual([...store.messages(first, third)], [message, { type: 'progress', data: { previous_cursor: second, through_cursor: third } }]);
+  assert.equal(store.meta('replay_bytes'), String(2 * progressBytes));
+  store.close(); store = new Store(path, settings);
+  assert.equal(store.meta('replay_bytes'), String(2 * progressBytes));
+  assert.equal(store.earliest(), first);
+  // A previous binary can leave the derived total missing or stale. Rows remain authoritative.
+  for (const total of [undefined, '1']) {
+    if (total === undefined) store.db.prepare("DELETE FROM core_meta WHERE key='replay_bytes'").run();
+    else store.setMeta('replay_bytes', total);
+    store.close(); store = new Store(path, settings);
+    assert.equal(store.meta('replay_bytes'), String(2 * progressBytes));
+    assert.equal([...store.messages(first, third)].length, 2);
+  }
+  for (const hard of [false, true]) {
+    const dataset = uuid(), action = uuid(), cursor = store.cursor(), total = store.meta('replay_bytes');
+    assert.throws(store.db.transaction(() => { store.resetMetadata(dataset, action, hard); throw new Error('abort Reset'); }), /abort Reset/);
+    assert.equal(store.meta('replay_bytes'), total); assert.equal(store.cursor(), cursor);
+    store.db.transaction(() => store.resetMetadata(dataset, action, hard))();
+    assert.equal(store.meta('replay_bytes'), '0');
+    store.close(); store = new Store(path, settings);
+    assert.equal(store.dataset, dataset); assert.equal(store.sequence, '0');
+    assert.deepEqual([...store.messages(store.cursor(), store.cursor())], []);
+    progress(); assert.equal(store.meta('replay_bytes'), String(progressBytes));
+  }
+});
+test('replay age expiry and zero-byte retention remove complete commits with exact totals', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-28T00:00:00Z') });
+  const directory = await mkdtemp(join(root, 'artifacts', 'replay-expiry-'));
+  const settings = { ...defaults, replayMilliseconds: 1000 }, store = new Store(join(directory, 'core.sqlite'), settings);
+  t.after(async () => { store.close(); await rm(directory, { recursive: true, force: true }); });
+  const baseline = store.cursor(), progress = () => store.transact(null, tx => tx.remember('test', uuid(), {})).cursor;
+  const first = progress(), bytes = Buffer.byteLength(JSON.stringify([...store.messages(baseline, first)][0]));
+  t.mock.timers.tick(1000); progress();
+  assert.equal(store.earliest(), baseline); assert.equal(store.meta('replay_bytes'), String(2 * bytes));
+  t.mock.timers.tick(1); const third = progress();
+  assert.equal(store.earliest(), first); assert.equal(store.meta('replay_bytes'), String(2 * bytes));
+  assert.equal([...store.messages(first, third)].length, 2);
+  settings.replayBytes = 0;
+  const fourth = progress();
+  assert.equal(store.earliest(), fourth); assert.equal(store.meta('replay_bytes'), '0');
+  assert.deepEqual([...store.messages(fourth, fourth)], []);
+  assert.throws(() => [...store.messages(third, fourth)], error => error.code === 'cursor_expired');
+});
 test('upload descriptor admission preserves ordinary headroom when content adds no reservation', async t => {
   for (const contentBytes of [0, 7]) await t.test(`${contentBytes} content bytes already reserved`, async t => {
     const directory = await mkdtemp(join(root, 'artifacts', 'descriptor-admission-'));
