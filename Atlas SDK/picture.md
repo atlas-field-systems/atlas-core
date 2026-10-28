@@ -33,10 +33,22 @@ it does not enumerate existing resources. A supplied cursor replays then joins l
 updates without a gap. A slow subscriber whose history was pruned gets an explicit
 gap and stops receiving data until recovery.
 
-A full local query returns a coherent picture and its paired local cursor together.
-Local page tokens bind instance, Dataset, generation, and query. Rebuild invalidates
-them and affected local cursors. Ordinary Core tokens retain their own lifetime,
-not the picture's.
+A local query captures one complete picture boundary and its paired local cursor.
+Every page uses that frozen selection and ordering, including images later changed
+or deleted. Each page returns the same cursor and capture time, with current
+readiness status. Live commits keep advancing the picture independently.
+
+Retain immutable selected images for a finite configured monotonic lifetime. Charge
+all retained query data to the shared picture budget before allocating or copying;
+refuse a new query explicitly when it cannot fit. Release or expiry frees its data.
+Tokens bind instance, Dataset, generation, original query and captured boundary.
+Rebuild, Reset and SDK close invalidate them; authorization loss alone does not.
+An expired or invalid token fails explicitly. It never switches to a newer boundary
+or starts another query. Callers deliberately open a new query when needed.
+
+A frozen query does not pin journal retention. If its cursor is too old for a later
+subscription or changed-since read, report the normal gap. Ordinary Core tokens
+retain their own lifetime, independent of these local query tokens.
 
 During initial loading, emit status, not thousands of synthetic create events.
 Successful replacement establishes a new picture generation and journal baseline.
