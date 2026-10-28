@@ -243,7 +243,10 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
   });
   let tick: Promise<void> | undefined, summaryWork: Promise<void> | undefined;
   function backgroundFailed(error: unknown): void {
-    diagnostics.emit({ severity: 'ERROR', event: 'background_failure', component: 'runtime', ...faultFrames(error) });
+    diagnostics.emit({ severity: 'ERROR', event: 'background_failure', component: 'runtime', code: publicError(error, ready.dataset).body.error.code, ...faultFrames(error) });
+    if (error instanceof AggregateError) for (const cause of error.errors.slice(1, 3)) {
+      diagnostics.emit({ severity: 'ERROR', event: 'background_cleanup_failure', component: 'runtime', code: publicError(cause, ready.dataset).body.error.code, ...faultFrames(cause) });
+    }
   }
   const summary = setInterval(() => {
     if (summaryWork !== undefined || stopped) return;
@@ -278,9 +281,13 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
       if (stopped) return;
       await rpc.call('pressure', usage.bytes + settings.reserveBytes >= settings.storageBytes || usage.free < settings.freeDiskBytes, 128, true);
       if (stopped) return;
-      await rpc.call('tick', {}, 0, true);
-      if (stopped) return;
-      await transfers.reclaimDeleted();
+      const failures: unknown[] = [];
+      try { await rpc.call('tick', {}, 0, true); } catch (error) { failures.push(error); }
+      if (!stopped && rpc.available) {
+        try { await transfers.reclaimDeleted(); } catch (error) { failures.push(error); }
+      }
+      if (failures.length === 1) throw failures[0];
+      if (failures.length > 1) throw new AggregateError(failures, 'maintenance_failed');
     })();
     void tick.then(() => { tick = undefined; }, error => { tick = undefined; backgroundFailed(error); });
   }, 250);

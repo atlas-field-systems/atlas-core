@@ -4,6 +4,7 @@ import { fixture, registration, report, telemetry, root, secret } from './helper
 import { uuid } from './helpers.mjs';
 import { writeFile, rm, readdir, stat, statfs, readFile, mkdtemp, mkdir } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
+import { createHash } from 'node:crypto';
 import Database from 'better-sqlite3';
 import { defaults } from '../dist/settings.js';
 import { join } from 'node:path';
@@ -12,7 +13,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { storageUsage } from '../dist/server.js';
 import { digest } from '../dist/exact.js';
 import { currentWriter } from '../dist/ownership.js';
-import { DatabaseWorker } from '../dist/rpc.js';
+import { DatabaseWorker, QueuePressure } from '../dist/rpc.js';
 import { diskUsage } from '../dist/capacity.js';
 import { Store } from '../dist/database.js';
 import { Engine } from '../dist/engine.js';
@@ -173,7 +174,9 @@ test('contact expiry and restart obey the hard ceiling and can use required-effe
   async function fill(gap) { await rm(pressure, { force: true }); await writeFile(pressure, Buffer.alloc(settings.storageBytes - diskUsage(directory).bytes - gap)); }
   await fill(32768);
   await delay(15_100);
+  const checkpoints = engine.store.metrics.checkpoints;
   await assert.rejects(engine.tick(), error => error.code === 'storage_limit');
+  assert.ok(engine.store.metrics.checkpoints > checkpoints, 'Refused contact expiry must still checkpoint');
   assert.deepEqual(await call('GetAsset', { asset_id: asset.id }), healthy);
   assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
   await fill(262_144);
@@ -190,6 +193,47 @@ test('contact expiry and restart obey the hard ceiling and can use required-effe
   engine = new Engine(directory, settings);
   assert.equal((await call('GetAsset', { asset_id: asset.id })).communications.health, 'offline');
   assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
+});
+test('refused contact expiry still reclaims deleted Object files and then transitions without removing pressure', { timeout: 25_000 }, async t => {
+  const held = Promise.withResolvers(), resume = Promise.withResolvers(), failures = [], events = [];
+  const f = await fixture({ after: action => t.after(async () => { resume.resolve(); await action(); }) },
+    { storageBytes: 8 * 1_048_576, reserveBytes: 524_288, objectBytes: 2 * 1_048_576 });
+  const bytes = Buffer.alloc(1_048_576, 7), object = { request_id: uuid(), object_id: uuid(), byte_length: String(bytes.length),
+    sha256: createHash('sha256').update(bytes).digest('hex'), content_type: 'application/octet-stream', metadata: { associations: [] } };
+  ok(await f.upload(object, bytes));
+  const installed = join(f.directory, 'objects', 'installed'), [name] = await readdir(installed), file = join(installed, name);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const health = ok(await f.call('GetHealth'));
+  const challenge = ok(await f.call('BeginAssetContact', { allocation_context: health.allocation_context, request_id: uuid(), asset_id: asset.id, process_generation: asset.process_generation, mode: 'current' }));
+  const proof = { ...report(f.core.dataset, asset.id, { kind: 'asset_process', process_generation: asset.process_generation }, 1, {}),
+    generated_at: challenge.issued_at, contact_proof: { challenge_id: challenge.challenge_id } };
+  assert.equal(ok(await f.call('UpdateAsset', { request_id: uuid(), asset_id: asset.id, report: proof })).asset.communications.health, 'healthy');
+  const call = f.core.rpc.call, emit = f.core.diagnostics.emit;
+  let paused = false;
+  t.mock.method(f.core.rpc, 'call', async function(kind, ...args) {
+    if (kind === 'tick' && !paused) { paused = true; held.resolve(); await resume.promise; }
+    try { return await call.call(this, kind, ...args); }
+    catch (error) { if (kind === 'tick') failures.push(error); throw error; }
+  });
+  t.mock.method(f.core.diagnostics, 'emit', function(event) { events.push(event); emit.call(this, event); });
+  await held.promise;
+  ok(await f.call('DeleteObject', { request_id: uuid(), object_id: object.object_id }));
+  assert.equal((await stat(file)).size, bytes.length);
+  const pressure = join(f.directory, 'pressure.bin');
+  await writeFile(pressure, Buffer.alloc(f.settings.storageBytes - diskUsage(f.directory).bytes - 32768));
+  await delay(15_100);
+  resume.resolve();
+  const deadline = performance.now() + 5000;
+  while ((await readdir(installed)).length > 0 && performance.now() < deadline) await delay(25);
+  assert.ok(failures.some(error => error.code === 'storage_limit'), 'The real contact transition must be refused before reclamation');
+  assert.deepEqual(await readdir(installed), [], 'Maintenance must reclaim the deleted file despite refused contact expiry');
+  let current;
+  do { current = ok(await f.call('GetAsset', { asset_id: asset.id })); if (current.communications.health === 'degraded') break; await delay(25); }
+  while (performance.now() < deadline);
+  assert.equal(current.communications.health, 'degraded');
+  assert.ok(events.some(event => event.event === 'background_failure' && event.code === 'storage_limit'), 'Report the original contact refusal');
+  assert.ok((await stat(pressure)).size > 0, 'Object reclamation alone must free enough capacity');
+  assert.ok(diskUsage(f.directory).bytes <= f.settings.storageBytes);
 });
 test('upload descriptor admission preserves ordinary headroom when content adds no reservation', async t => {
   for (const contentBytes of [0, 7]) await t.test(`${contentBytes} content bytes already reserved`, async t => {
@@ -563,6 +607,67 @@ test('draining readiness is an authenticated 503 success and ordinary work stops
   const response = await f.call('GetReadiness'); assert.equal(response.status, 503); assert.deepEqual(response.json.data, { ready: false });
   assert.equal((await f.call('GetHealth')).json.data.healthy, false);
   assert.equal((await f.call('RegisterAsset', registration())).json.error.code, 'resource_limit');
+});
+test('diagnostic release retains ownership under worker pressure and restores logging and export admission', { timeout: 10_000 }, async t => {
+  const directory = await mkdtemp(join(root, 'artifacts', 'diagnostic-release-'));
+  const settings = { ...defaults, freeDiskBytes: 0, workerQueueCount: 4 };
+  const rpc = new DatabaseWorker(directory, settings);
+  await rpc.ready;
+  let saturate = true, attempts = 0;
+  const competing = [], owned = new Set();
+  const logs = join(directory, 'logs');
+  const diagnostic = new Diagnostics(logs, 65_536, 'INFO', async bytes => {
+    const reservation = uuid();
+    await rpc.call('reserve-diagnostics', { reservation, bytes }, 256);
+    owned.add(reservation);
+    return async () => {
+      attempts++;
+      if (saturate) {
+        await Promise.all(competing);
+        competing.push(Promise.allSettled(Array.from({ length: 4 }, () => rpc.call('inspect', {}, 0, true))));
+      }
+      await rpc.call('release-diagnostics', reservation, 128, true);
+      owned.delete(reservation);
+    };
+  });
+  t.after(async () => {
+    saturate = false;
+    try { await Promise.all(competing); await diagnostic.close(); }
+    finally { await rpc.close(); await rm(directory, { recursive: true, force: true }); }
+  });
+  for (let round = 0; round < 2; round++) {
+    saturate = true;
+    const before = diagnostic.inspect().sinkFailures, attempted = attempts;
+    diagnostic.emit({ severity: 'INFO', component: 'runtime', event: 'saturated_release', count: round });
+    const deadline = performance.now() + 2000;
+    while (diagnostic.inspect().sinkFailures === before && performance.now() < deadline) await delay(10);
+    assert.equal(diagnostic.inspect().sinkFailures, before + 1, 'Exhausted cleanup attempts remain visible');
+    for (const result of (await Promise.all(competing)).flat()) assert.equal(result.status, 'fulfilled', 'Competing operations occupy every live worker slot');
+    assert.ok(attempts - attempted <= 4, 'Cleanup retries are finite');
+    const settled = attempts;
+    await delay(50);
+    assert.equal(attempts, settled, 'No retry loop remains after the bounded attempts');
+    saturate = false;
+    const reservation = uuid();
+    await rpc.call('reserve-diagnostics', { reservation, bytes: settings.diagnosticBytes / 2 }, 256);
+    diagnostic.emit({ severity: 'INFO', component: 'runtime', event: 'logging_recovered', count: round });
+    const recovered = () => readFile(join(logs, 'events.0.jsonl'), 'utf8').then(text => text.split('\n').filter(Boolean).map(line => JSON.parse(line)).some(event => event.event === 'logging_recovered' && event.count === round));
+    while (!await recovered() && performance.now() < deadline) await delay(10);
+    assert.equal(await recovered(), true, 'Logging resumes alongside an admitted export without restarting the worker');
+    while (owned.size > 0 && performance.now() < deadline) await delay(10);
+    assert.equal(owned.size, 0, 'Every log release must be acknowledged before the next pressure wave');
+    await rpc.call('release-diagnostics', reservation, 128, true);
+  }
+  saturate = true;
+  diagnostic.emit({ severity: 'INFO', component: 'runtime', event: 'shutdown_release' });
+  await assert.rejects(diagnostic.close(), error => error instanceof QueuePressure);
+  assert.equal(rpc.available, true, 'The diagnostic owner must finish cleanup before closing its worker');
+  saturate = false;
+  await Promise.all(competing);
+  await diagnostic.close();
+  const reservations = [uuid(), uuid()];
+  for (const reservation of reservations) await rpc.call('reserve-diagnostics', { reservation, bytes: 1 }, 256);
+  for (const reservation of reservations) await rpc.call('release-diagnostics', reservation, 128, true);
 });
 test('diagnostic floods rotate within budget, expose loss and isolate a failed sink from requests', async t => {
   const f = await fixture(t);

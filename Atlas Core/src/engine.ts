@@ -198,9 +198,14 @@ export class Engine {
     this.admitStorage(65_536 + effects * 4 + tx.retainedBytes * 4, true);
   }
   async tick(): Promise<void> {
-    await this.reads.cleanup();
-    if (this.state === 'serving') this.entities.tick(tx => this.admitContact(tx));
-    this.store.checkpoint();
+    const failures: unknown[] = [];
+    try {
+      await this.reads.cleanup();
+      if (this.state === 'serving') this.entities.tick(tx => this.admitContact(tx));
+    } catch (error) { failures.push(error); }
+    try { this.store.checkpoint(); } catch (error) { failures.push(error); }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, 'maintenance_failed');
   }
   reserveDiagnostics(reservation: Uuid, bytes: number): void {
     if (this.diagnosticReservations.has(reservation) || this.diagnosticReservations.size >= 2) refuse('resource_limit');
