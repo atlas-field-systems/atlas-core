@@ -24,7 +24,7 @@ async function local(t, temporary = {}) {
   const directory = await mkdtemp(join(root, 'artifacts', 'capture-'));
   const engine = new Engine(directory, { ...defaults, freeDiskBytes: 0, temporary: { ...defaults.temporary, ...temporary } });
   const key = { api_key_id: uuid(), request_id: uuid(), secret: secret() }; engine.provision(key);
-  const context = { verifier: digest(key.secret), dataset: engine.store.dataset, protocol: '0.1.0' };
+  const context = { verifier: digest(key.secret), dataset: engine.store.dataset, protocol: '0.2.0' };
   const call = async (name, request = {}) => (await engine.execute({ name, request }, context)).body.data;
   t.after(async () => { await engine.close(); await rm(directory, { recursive: true, force: true }); });
   return { engine, directory, context, key, call };
@@ -626,7 +626,7 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
     await once(socket, 'open', { signal: AbortSignal.timeout(10000) });
     const control = async frame => {
       const response = once(socket, 'message', { signal: AbortSignal.timeout(10000) });
-      socket.send(writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.1.0' }), { binary: false });
+      socket.send(writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.2.0' }), { binary: false });
       const [bytes] = await response;
       return readWssServer(bytes, { datasetId: f.core.dataset, requestId: frame.request_id });
     };

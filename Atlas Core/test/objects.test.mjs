@@ -78,7 +78,7 @@ test('requests following early multipart refusals complete without a stale TLS c
   });
   const call = (method, path, body, contentType = 'application/json') => new Promise((resolve, reject) => {
     const request = httpsRequest(new URL(path, f.address), { method, agent, ca: f.ca, headers: {
-      Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.1.0',
+      Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.2.0',
       ...(body === undefined ? {} : { 'Content-Type': contentType, 'Content-Length': body.length }),
     } }, response => {
       const chunks = [];
@@ -115,7 +115,7 @@ test('revocation interrupts an idle multipart writer and releases its files and 
   ok(await f.call('CreateApiKey', key));
   const payload = Buffer.alloc(100_000, 7), input = descriptor(payload);
   const req = httpsRequest(new URL('/objects', f.address), { method: 'POST', ca: f.ca, headers: {
-    Authorization: `Bearer ${key.secret}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.1.0',
+    Authorization: `Bearer ${key.secret}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.2.0',
     'Content-Type': 'multipart/form-data; boundary=idle',
   } });
   t.after(() => req.destroy());
@@ -169,7 +169,7 @@ test('verified process exit reclaims owned attempts and captures while ambiguous
     child.stdout.on('data', bytes => { output += bytes; if (output.includes('\n')) resolve(JSON.parse(output).address); });
     child.once('exit', () => reject(new Error('child_not_ready')));
   });
-  function headers() { return { Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.1.0' }; }
+  function headers() { return { Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.2.0' }; }
   async function call(path, input) {
     const body = input === undefined ? undefined : Buffer.from(JSON.stringify(input));
     return new Promise((resolve, reject) => {

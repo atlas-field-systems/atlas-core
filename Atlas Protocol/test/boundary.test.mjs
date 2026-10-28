@@ -45,7 +45,7 @@ test('stock output tooling preserves the supported structural vocabulary', () =>
   assert.ok(map.propertyNames);
   const doc = createDocument({
     openapi: '3.1.0',
-    info: { title: 'Qualification', version: '0.1.0' },
+    info: { title: 'Qualification', version: '0.2.0' },
     paths: {
       '/qualification': {
         post: {

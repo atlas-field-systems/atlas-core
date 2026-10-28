@@ -9,7 +9,7 @@ export function runAdmissionRegressions(p) {
         !Object.hasOwn(p.exchanges, 'UnsubscribeChanges'),
       'Connection-owned subscription exposed over HTTP',
     );
-    const context = { dataset_id: s.id, protocol_version: '0.1.0', request_id: s.requestId };
+    const context = { dataset_id: s.id, protocol_version: '0.2.0', request_id: s.requestId };
     for (const [type, data] of [
       ['subscribe_changes', { subscription_id: s.requestId, from_cursor: 'cursor', ...s.limits }],
       ['unsubscribe_changes', { subscription_id: s.requestId }],
@@ -28,7 +28,7 @@ export function runAdmissionRegressions(p) {
       const frame = {
         type: 'subscribed',
         dataset_id: s.id,
-        protocol_version: '0.1.0',
+        protocol_version: '0.2.0',
         request_id: s.requestId,
         data: { subscription_id: s.requestId, handoff_cursor: 'cursor', limits },
       };
@@ -47,7 +47,7 @@ export function runAdmissionRegressions(p) {
       const frame = {
         type: 'authenticate',
         dataset_id: s.id,
-        protocol_version: '0.1.0',
+        protocol_version: '0.2.0',
         request_id: s.requestId,
         api_key: 'A'.repeat(43),
       };
@@ -56,7 +56,7 @@ export function runAdmissionRegressions(p) {
         enumerable: true,
         get() {
           reads++;
-          return key === 'protocol_version' ? '0.1.0' : s.id;
+          return key === 'protocol_version' ? '0.2.0' : s.id;
         },
       });
       refuses(() => p.writeWssClient(frame, { requestId: s.requestId }), 'invalid_value');
@@ -94,7 +94,7 @@ export function runAdmissionRegressions(p) {
     };
     const headers = new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.1.0',
+      'Atlas-Protocol-Version': '0.2.0',
       'Content-Type': 'application/json',
     });
     const result = p.readHttp(
@@ -120,7 +120,7 @@ export function runAdmissionRegressions(p) {
     const data = { items: images, next_page_token: null };
     const headers = new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.1.0',
+      'Atlas-Protocol-Version': '0.2.0',
       'Content-Type': 'application/json',
     });
     const reply = { status: 200, headers, body: encode({ dataset_id: s.id, data }) };

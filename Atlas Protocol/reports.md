@@ -60,8 +60,9 @@ Otherwise valid future-dated measurements are time-uncertain, without usable fre
 age. Null time is unknown; other accepted times are known. Retain this classification
 with the scoped reading through retries, carry-forward, fusion, and Restart.
 Elapsed time never promotes an uncertain reading to known. Source time stays unchanged.
-History exposes this retained classification as `time_status`; frozen views and new
-queries agree about the same reading. Clock-uncertainty metadata adds no offset calculation.
+Current Asset, Observation, and Track results expose per-quantity `time_status`
+under [report format](report-format.md). History exposes the same reading status;
+frozen views, new queries, and new clients agree. Clock-uncertainty metadata adds no offset calculation.
 
 Fresh contact requires accepted current-process evidence created after a Core
 challenge and received within its monotonic expiry. The [contact exchange](contact.md)

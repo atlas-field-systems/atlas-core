@@ -7,7 +7,7 @@ import { Opaque, Timestamp, Uuid, exchanges } from '@atlas/protocol';
 
 const Frames = z.array(z.object({ file: z.string().regex(/^[a-z-]+\.js$/), function: z.string().regex(/^[\w.$<> ]{1,80}$/), line: z.number().int().positive() })).max(8);
 const Event = z.strictObject({ at: Timestamp, severity: z.enum(['INFO', 'WARN', 'ERROR', 'DEBUG']), event: z.string().regex(/^[a-z_]{1,64}$/),
-  component: z.enum(['http', 'database', 'objects', 'synchronization', 'lifecycle', 'runtime']), release: z.literal('0.1.0'),
+  component: z.enum(['http', 'database', 'objects', 'synchronization', 'lifecycle', 'runtime']), release: z.literal('0.2.0'),
   dataset: Uuid.optional(), run: Uuid.optional(), request_id: Uuid.optional(), attempt_id: Uuid.optional(),
   route: z.enum(Object.values(exchanges).map(e => e.path)).optional(), code: z.string().regex(/^[a-z_]{1,64}$/).optional(),
   bytes: z.number().nonnegative().optional(), count: z.number().int().nonnegative().optional(), duration_ms: z.number().nonnegative().optional(),
@@ -59,7 +59,7 @@ export class Diagnostics {
       if (++this.debugCount > 100) { this.suppressed++; return; }
     }
     if (this.queued >= 1_048_576 - 8192) { this.dropped++; return; }
-    const event = Event.safeParse({ ...input, at: new Date().toISOString(), release: '0.1.0' });
+    const event = Event.safeParse({ ...input, at: new Date().toISOString(), release: '0.2.0' });
     if (!event.success) { this.dropped++; return; }
     const line = Buffer.from(JSON.stringify(event.data) + '\n');
     if (line.byteLength > 8192 || this.capacity < line.byteLength * 2) { this.dropped++; return; }
