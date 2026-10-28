@@ -138,7 +138,7 @@ export class Transfers {
     if (this.downloads > 0 || this.closing) return;
     const retired = z.array(z.object({ object: Uuid, path: z.string() })).max(32).parse(await this.rpc.call('retired-files', {}, 8192, true));
     for (const file of retired) {
-      if (this.downloads > 0) return;
+      if (this.downloads > 0 || this.closing) return;
       if (!/^installed\/[0-9a-f-]{36}-[0-9a-f-]{36}$/.test(file.path)) throw new Error('invalid_owned_file');
       await rm(join(this.directory, file.path), { force: true });
       await flushDirectory(join(this.directory, 'installed'));

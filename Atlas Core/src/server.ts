@@ -237,14 +237,20 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
     const connection = new ChangesConnection(socket, rpc, ready.dataset, ready.run, settings, diagnostics, () => connections.delete(connection));
     connections.add(connection);
   });
-  let tickBusy = false;
+  let tick: Promise<void> | undefined, summaryWork: Promise<void> | undefined;
+  function backgroundFailed(error: unknown): void {
+    diagnostics.emit({ severity: 'ERROR', event: 'background_failure', component: 'runtime', ...faultFrames(error) });
+  }
   const summary = setInterval(() => {
+    if (summaryWork !== undefined || stopped) return;
     for (const outcome of ['accepted', 'duplicate', 'rejected'] as const) {
       if (reports[outcome] > 0) diagnostics.emit({ severity: 'INFO', component: 'http', event: 'report_summary', outcome, count: reports[outcome] });
       reports[outcome] = 0;
     }
-    void enrollmentWarning().catch(() => {});
-    void rpc.call('inspect', {}, 4096, true).then(value => {
+    summaryWork = (async () => {
+      await enrollmentWarning();
+      if (stopped) return;
+      const value = await rpc.call('inspect', {}, 4096, true);
       const { metrics } = z.object({ metrics: z.object({ transactions: z.number(), commit_ms: z.number(), transaction_ms: z.number(), ipc_wait_ms: z.number(),
         wal_bytes: z.number(), checkpoint_ms: z.number(), contact_refreshes: z.number(), capture_builds: z.number(), capture_failures: z.number(), capture_releases: z.number(), capture_expiries: z.number(), captured_bytes: z.number() }) }).parse(value);
       diagnostics.emit({ severity: 'INFO', component: 'database', event: 'database_summary', count: metrics.transactions, duration_ms: metrics.commit_ms, transaction_ms: metrics.transaction_ms, writer_wait_ms: metrics.ipc_wait_ms });
@@ -256,28 +262,34 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
         diagnostics.emit({ severity: 'INFO', component: 'synchronization', event: 'capture_release_summary', count: metrics.capture_releases });
         diagnostics.emit({ severity: 'INFO', component: 'synchronization', event: 'capture_expiry_summary', count: metrics.capture_expiries });
       }
-    }).catch(() => {});
+    })();
+    void summaryWork.then(() => { summaryWork = undefined; }, error => { summaryWork = undefined; backgroundFailed(error); });
   }, 30_000);
   const timer = setInterval(() => {
-    if (tickBusy || stopped) return;
-    tickBusy = true;
-    void (async () => {
+    if (tick !== undefined || stopped) return;
+    tick = (async () => {
       await transfers.recheck();
-      if (!rpc.available) return;
+      if (stopped || !rpc.available) return;
       const usage = await storageUsage(options.accountingRoot ?? options.directory);
+      if (stopped) return;
       await rpc.call('pressure', usage.bytes + settings.reserveBytes >= settings.storageBytes || usage.free < settings.freeDiskBytes, 128, true);
+      if (stopped) return;
       await rpc.call('tick', {}, 0, true);
+      if (stopped) return;
       await transfers.reclaimDeleted();
-    })().catch(error => diagnostics.emit({ severity: 'ERROR', event: 'background_failure', component: 'runtime', ...faultFrames(error) })).finally(() => { tickBusy = false; });
+    })();
+    void tick.then(() => { tick = undefined; }, error => { tick = undefined; backgroundFailed(error); });
   }, 250);
   async function close(): Promise<void> {
     if (closing) return closing;
     stopped = true; clearInterval(timer); clearInterval(summary);
+    const maintenance = [tick, summaryWork];
     closing = (async () => {
       const failures: unknown[] = [];
       async function finish(action: () => Promise<unknown>): Promise<void> { try { await action(); } catch (error) { failures.push(error); } }
       if (rpc.available) await finish(() => rpc.call('drain', {}, 0, true));
       for (const connection of connections) connection.close();
+      for (const work of maintenance) if (work !== undefined) await finish(() => work);
       await finish(() => transfers.close());
       await finish(() => app.close());
       await finish(() => rpc.close());
