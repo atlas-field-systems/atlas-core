@@ -228,3 +228,19 @@ test('startup refuses legacy evidence without retained quantity status', async t
   try { assert.equal(retained.pragma('table_info(evidence_readings)').some(column => column.name === 'status'), false); }
   finally { retained.close(); }
 });
+
+test('incompatible database formats are refused before old evidence can be interpreted', async t => {
+  for (const format of ['1', '2']) {
+    const f = await fixture(t);
+    await f.core.close();
+    const db = new Database(join(f.directory, 'core.sqlite'));
+    try {
+      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '3');
+      db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
+    } finally { db.close(); }
+    await assert.rejects(f.restart(), /database_worker_failed/);
+    const retained = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+    try { assert.equal(retained.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, format); }
+    finally { retained.close(); }
+  }
+});
