@@ -75,6 +75,11 @@ Exact ready and failed retries bypass fresh storage admission. Maintenance prune
 expired receipts separately, so a refused allocation performs no cleanup writes.
 
 The worker owns checkpoint scheduling and observes WAL bytes and checkpoint progress.
+It keeps an exact replay-byte total in SQLite, updated with each append, whole-commit
+prune, and Reset in the same transaction. Rollback restores the total and log together.
+Startup reconstructs this derived total once from retained rows before serving,
+including stores last written by a version without the total. Ordinary commits
+inspect the oldest rows only until the byte and age bounds are satisfied.
 Start with ordinary automatic/PASSIVE checkpoints; qualify concurrent capture work.
 Long overlapping readers can prevent WAL reuse. `journal_size_limit` is not a hard
 active-WAL ceiling. Keep blocking truncation off ordinary request paths.
