@@ -66,6 +66,10 @@ Fresh capture admission covers receipt facts, ownership, bounded saved outcomes,
 and SQLite/WAL overhead before any insert. Metadata counts as disk use after commit;
 Reads keeps pending file and outcome headroom across waits until the builder ends.
 Durable file charges survive failed cleanup.
+Failed outcome writes never skip iterator return, connection closure, or owned-file
+cleanup. Maintenance reclaims expired receipts only after their builders finish,
+including builders that failed before acquiring a file. Original, bookkeeping,
+and cleanup failures remain visible together.
 Each batch admits its new bytes and metadata write before charging quotas or writing.
 Exact ready and failed retries bypass fresh storage admission. Maintenance prunes
 expired receipts separately, so a refused allocation performs no cleanup writes.

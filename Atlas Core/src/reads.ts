@@ -171,7 +171,7 @@ export class Reads {
       try {
         return this.store.db.transaction(() => this.temporary.reserve(kind, token, request, facts, receipt => {
           const metadataWriteBytes = (Buffer.byteLength(JSON.stringify(receipt)) + captureOutcomeBytes) * 16 + 65_536;
-          const ownershipAndOutcomeBytes = metadataWriteBytes * 3;
+          const ownershipAndOutcomeBytes = metadataWriteBytes * 4;
           admit(metadataWriteBytes + ownershipAndOutcomeBytes + initialCaptureBytes);
           this.pending.set(receipt.id, { metadata: ownershipAndOutcomeBytes, file: initialCaptureBytes, metadataWriteBytes });
           fresh = receipt.id;
@@ -245,29 +245,42 @@ export class Reads {
       this.store.metrics.capture_builds++; this.store.metrics.captured_bytes += actual;
     } catch (error) {
       this.store.metrics.capture_failures++;
-      const failure: z.infer<typeof FailedCapture> = error instanceof AggregateError
-        ? { failure: publicError(error.errors[0], this.store.dataset), cleanup_failure: publicError(error.errors[1], this.store.dataset) }
-        : { failure: publicError(error, this.store.dataset) };
-      const charged = this.temporary.peek(receipt.id) ?? receipt;
-      const failed = { ...charged, state: 'failed' as const, data: captureData(failure) };
-      this.temporary.set(failed);
-      pending.metadata = pending.metadataWriteBytes;
-      pending.file = 0;
       const failures: unknown[] = [];
+      const saveFailure = (cleanup?: unknown): Receipt => {
+        const failure: z.infer<typeof FailedCapture> = error instanceof AggregateError
+          ? { failure: publicError(error.errors[0], this.store.dataset), cleanup_failure: publicError(error.errors[1], this.store.dataset) }
+          : { failure: publicError(error, this.store.dataset) };
+        if (cleanup !== undefined) failure.cleanup_failure = publicError(cleanup, this.store.dataset);
+        const failed = { ...(this.temporary.peek(receipt.id) ?? receipt), state: 'failed' as const, data: captureData(failure) };
+        this.temporary.set(failed);
+        return failed;
+      };
+      let failed = receipt;
+      try { failed = saveFailure(); } catch (bookkeeping) { failures.push(bookkeeping); }
+      pending.file = 0;
       try { iterator?.return(undefined); } catch (cleanup) { failures.push(cleanup); }
       for (const database of [source, target]) {
-        try { if (database?.open) { if (database.inTransaction) database.exec('ROLLBACK'); database.close(); } }
+        if (!database?.open) continue;
+        try { if (database.inTransaction) database.exec('ROLLBACK'); }
+        catch (cleanup) { failures.push(cleanup); }
+        try { database.close(); }
         catch (cleanup) { failures.push(cleanup); }
       }
-      try { if (owned) await removeCapture(this.directory, receipt.id); }
-      catch (cleanup) { failures.push(cleanup); }
+      let removed = !owned;
+      if (source?.open || target?.open) failures.push(new Error('capture_close_unverified'));
+      else {
+        try { if (owned) await removeCapture(this.directory, receipt.id); removed = true; }
+        catch (cleanup) { failures.push(cleanup); }
+      }
+      if (removed) {
+        try { this.temporary.reclaimed(failed); this.files.delete(receipt.id); }
+        catch (bookkeeping) { failures.push(bookkeeping); }
+      }
       if (failures.length > 0) {
         const cleanup = failures.length === 1 ? failures[0] : new AggregateError(failures, 'capture_cleanup_failed');
-        this.temporary.set({ ...failed, data: captureData({ ...failure, cleanup_failure: publicError(cleanup, this.store.dataset) }) });
-        throw new AggregateError([error, cleanup], 'capture_cleanup_failed');
+        try { saveFailure(cleanup); } catch (bookkeeping) { failures.push(bookkeeping); }
+        throw new AggregateError([error, ...failures], 'capture_cleanup_failed');
       }
-      this.temporary.reclaimed(failed);
-      this.files.delete(receipt.id);
       throw error;
     } finally { this.pending.delete(receipt.id); }
   }
@@ -416,6 +429,7 @@ export class Reads {
       const receipt = this.temporary.peek(receiptId);
       if ((receipt === undefined || receipt.state === 'released' || receipt.deadline <= performance.now()) && !this.builds.has(receiptId)) await this.reclaim(receiptId, 'expiry');
     }
+    this.temporary.expire(new Set([...this.builds.keys(), ...this.pending.keys()]));
   }
   private historyForExpiry(): Receipt[] {
     return this.temporary.receipts('history').filter(receipt => (receipt.state === 'ready' || receipt.state === 'released') && this.files.has(receipt.id) && !this.builds.has(receipt.id));

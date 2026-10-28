@@ -188,7 +188,7 @@ export class Engine {
     Secret.parse(request.secret);
     this.store.transact(null, tx => this.identity.createKey(tx, request, null, recordActivity), () => this.admitStorage(Buffer.byteLength(JSON.stringify(request)) * 16 + 65_536));
   }
-  async tick(): Promise<void> { this.entities.tick(); await this.reads.cleanup(); this.temporary.expire(); this.store.checkpoint(); }
+  async tick(): Promise<void> { this.entities.tick(); await this.reads.cleanup(); this.store.checkpoint(); }
   async reserveStorage<T>(reserve: (admit: (bytes: number) => void) => T, produce: () => Promise<void> = async () => {}, release: () => void = () => {}): Promise<T> {
     const run = () => reserve(bytes => this.admitStorage(bytes));
     await produce();

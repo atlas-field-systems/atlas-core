@@ -49,8 +49,10 @@ export class Temporary {
     if (performance.now() >= context.deadline) refuse('allocation_expired');
     return context;
   }
-  expire(): void {
-    this.store.db.prepare("DELETE FROM temporary_receipts WHERE deadline<=? AND state<>'building' AND (kind='contact' OR (bytes=0 AND refs=0))").run(performance.now());
+  expire(building: ReadonlySet<Uuid>): void {
+    const active = [...building];
+    this.store.db.prepare(`DELETE FROM temporary_receipts WHERE deadline<=? AND (kind='contact' OR (bytes=0 AND refs=0))
+      ${active.length === 0 ? '' : `AND id NOT IN (${active.map(() => '?').join(',')})`}`).run(performance.now(), ...active);
   }
   reserve(kind: Receipt['kind'], token: string, request: string, facts: unknown, admit: (receipt: Receipt) => void = () => {}): { receipt: Receipt; fresh: boolean; expires: Timestamp } {
     const context = this.validateContext(token);
