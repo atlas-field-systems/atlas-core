@@ -1,13 +1,16 @@
 import { z } from 'zod';
 import type Database from 'better-sqlite3';
 import { HistoryReading, SectionEvidence } from '@atlas/protocol';
-import type { AssetReport, ObservationReport, Origin, ReadSection, SectionName } from '@atlas/protocol';
+import type { AssetReport, Continuation, HistoryQuery, ObservationReport, Origin, ReadSection, SectionName } from '@atlas/protocol';
 import { canonical, instant, now, timeKey } from './exact.js';
 import { refuse } from './fault.js';
 import type { Store, Transaction } from './database.js';
 
 const Facts = z.object({ facts: z.string() });
 const ReadingRow = z.object({ identity: z.string(), image: z.string() });
+type PositionSelection = Pick<Exclude<HistoryQuery, Continuation>, 'time_groups' | 'source_time_from' | 'source_time_before'>;
+const positionGroup = "CASE status WHEN 'known' THEN 0 ELSE 1 END";
+const positionTime = "CASE WHEN status='known' THEN time_key ELSE '' END";
 type Report = AssetReport | ObservationReport;
 export const originId = (origin: Origin): string => origin.kind === 'asset_process' ? origin.process_generation : origin.publisher_id;
 export function evidenceFor(report: Report, section: SectionName): SectionEvidence {
@@ -23,7 +26,9 @@ export class Evidence {
       CREATE TABLE IF NOT EXISTS evidence_sections(scope TEXT NOT NULL,section TEXT NOT NULL,sequence TEXT NOT NULL,report TEXT NOT NULL,PRIMARY KEY(scope,section,sequence)) STRICT;
       CREATE TABLE IF NOT EXISTS evidence_readings(identity TEXT PRIMARY KEY,facts TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS evidence_positions(identity TEXT PRIMARY KEY,entity TEXT NOT NULL,source_kind TEXT NOT NULL,time_key TEXT,status TEXT NOT NULL,image TEXT NOT NULL) STRICT;
-      CREATE INDEX IF NOT EXISTS positions_order ON evidence_positions(entity,status,time_key,identity);`);
+      DROP INDEX IF EXISTS positions_order;
+      CREATE INDEX IF NOT EXISTS positions_stream ON evidence_positions(entity,${positionGroup},${positionTime},identity);
+      CREATE INDEX IF NOT EXISTS positions_status_stream ON evidence_positions(entity,status,identity);`);
   }
   scope(report: Report): string { return `${report.entity_id}/${report.origin.kind}/${originId(report.origin)}`; }
   duplicate(report: Report): boolean {
@@ -69,11 +74,26 @@ export class Evidence {
         observed === null ? null : timeKey(observed), status, JSON.stringify(image));
     }
   }
-  *positions(entityId: string, source: Database.Database = this.store.db): Generator<{ identity: string; reading: HistoryReading }> {
-    for (const row of source.prepare(`SELECT identity,image FROM evidence_positions WHERE entity=?
-      ORDER BY CASE status WHEN 'known' THEN 0 ELSE 1 END,CASE WHEN status='known' THEN time_key ELSE '' END,identity`).iterate(entityId)) {
-      const value = ReadingRow.parse(row);
-      yield { identity: value.identity, reading: HistoryReading.parse(JSON.parse(value.image)) };
+  *positions(entityId: string, selection: PositionSelection = {}, source: Database.Database = this.store.db): Generator<{ identity: string; reading: HistoryReading }> {
+    const groups = [{ order: 0, statuses: ['known'] }, { order: 1, statuses: ['unknown', 'uncertain'] }] as const;
+    for (const group of groups) {
+      const statuses = group.statuses.filter(status => selection.time_groups === undefined || selection.time_groups.includes(status));
+      if (statuses.length === 0) continue;
+      const byStatus = group.order === 1 && statuses.length === 1;
+      const conditions = ['entity=?', `status IN (${statuses.map(() => '?').join(',')})`];
+      const bindings: (string | number)[] = [entityId, ...statuses];
+      if (!byStatus) { conditions.push(`${positionGroup}=?`); bindings.push(group.order); }
+      if (group.order === 0) {
+        for (const [bound, operator] of [[selection.source_time_from, '>='], [selection.source_time_before, '<']] as const) {
+          if (bound === undefined) continue;
+          conditions.push(`${positionTime}${operator}?`); bindings.push(timeKey(bound));
+        }
+      }
+      for (const row of source.prepare(`SELECT identity,image FROM evidence_positions WHERE ${conditions.join(' AND ')}
+        ORDER BY ${byStatus ? 'identity' : `${positionTime},identity`}`).iterate(...bindings)) {
+        const value = ReadingRow.parse(row);
+        yield { identity: value.identity, reading: HistoryReading.parse(JSON.parse(value.image)) };
+      }
     }
   }
   position(identity: string): HistoryReading {

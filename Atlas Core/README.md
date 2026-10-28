@@ -41,6 +41,7 @@ Pass original bounded UTF-8 to Protocol before ordinary JSON parsing. Use Protoc
 readers and writers; Fastify schemas do not become another contract definition.
 Disable input coercion, default insertion, field removal, and default request logging.
 Stream multipart Object content separately from its bounded JSON descriptor.
+The error handler closes connections with unread request bodies so clients retire them.
 
 The adapter authenticates requests and dispatches complete domain operations to
 the database worker. Domain modules own policy and durable effects. Recheck authority

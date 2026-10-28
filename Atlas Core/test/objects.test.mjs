@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { writeFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { request as httpsRequest } from 'node:https';
+import { Agent, request as httpsRequest } from 'node:https';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -67,6 +67,47 @@ test('digest and quota failures publish no partial metadata or surviving attempt
   const large = Buffer.alloc(2048); assert.equal((await f.upload(descriptor(large), large)).json.error.code, 'storage_limit');
   assert.deepEqual(await readdir(join(f.directory, 'objects', 'installed')), []);
   assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
+});
+test('requests following early multipart refusals complete without a stale TLS connection', { timeout: 20000 }, async t => {
+  const cleanups = [], f = await fixture({ after: cleanup => cleanups.push(cleanup) }, { objectBytes: 1048576 });
+  const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+  t.after(async () => {
+    agent.destroy();
+    f.core.app.server.closeAllConnections();
+    for (const cleanup of cleanups) await cleanup();
+  });
+  const call = (method, path, body, contentType = 'application/json') => new Promise((resolve, reject) => {
+    const request = httpsRequest(new URL(path, f.address), { method, agent, ca: f.ca, headers: {
+      Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.1.0',
+      ...(body === undefined ? {} : { 'Content-Type': contentType, 'Content-Length': body.length }),
+    } }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.on('error', reject);
+      response.on('end', () => {
+        try { resolve({ status: response.statusCode, headers: response.headers, json: JSON.parse(Buffer.concat(chunks).toString()) }); }
+        catch (error) { reject(error); }
+      });
+    });
+    request.setTimeout(5000, () => request.destroy(new Error('following_request_stalled')));
+    request.on('error', reject);
+    request.end(body);
+  });
+  ok(await call('GET', '/health'));
+  for (const reverse of [false, true]) {
+    const bytes = Buffer.alloc(2 * 1048576, 7), input = descriptor(bytes), boundary = 'refused-upload-boundary';
+    const description = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="descriptor"\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(input)}\r\n`);
+    const file = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="payload.bin"\r\nContent-Type: application/octet-stream\r\n\r\n`), bytes, Buffer.from('\r\n')]);
+    const body = Buffer.concat([...(reverse ? [file, description] : [description, file]), Buffer.from(`--${boundary}--\r\n`)]);
+    const refused = await call('POST', '/objects', body, `multipart/form-data; boundary=${boundary}`);
+    assert.equal(refused.status, 507);
+    assert.equal(refused.json.error.code, 'storage_limit');
+    t.diagnostic(JSON.stringify({ reverse, connection: refused.headers.connection }));
+    assert.equal(ok(await call('GET', '/health')).healthy, true);
+    assert.equal((await f.call('GetObject', { object_id: input.object_id })).status, 404);
+    assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
+    assert.deepEqual(await readdir(join(f.directory, 'objects', 'installed')), []);
+  }
 });
 test('revocation interrupts an idle multipart writer and releases its files and admission slot', async t => {
   const f = await fixture(t, { maxUploads: 1 });

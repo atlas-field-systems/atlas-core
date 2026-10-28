@@ -51,7 +51,7 @@ export class Engine {
       else if (!this.entities.known(association.id, association.kind)) refuse('entity_not_found');
     });
     this.tasks = new Tasks(this.store, this.entities, this.identity, this.temporary, (task, object, required) => this.objects.declare(task, object, required));
-    this.reads = new Reads(this.store, this.entities, this.identity, this.tasks, this.objects, this.temporary, join(directory, 'captures'), bytes => this.reserveStorage(admit => admit(bytes)));
+    this.reads = new Reads(this.store, this.entities, this.identity, this.tasks, this.objects, this.temporary, join(directory, 'captures'), reserve => this.reserveStorage(reserve));
     if (!maintenance) {
       for (const image of this.entities.picture(this.store.db)) writeJson(contract(Put, 'http_response'), Put.parse({ kind: 'put', resource_kind: image.entity_type, resource_id: image.id, version: image.version, image }), { maxBytes: settings.resourceImageBytes });
       if (this.store.maximumReplayBytes() > settings.limits.max_message_bytes - 4096) refuse('resource_limit');
@@ -188,7 +188,7 @@ export class Engine {
     Secret.parse(request.secret);
     this.store.transact(null, tx => this.identity.createKey(tx, request, null, recordActivity), () => this.admitStorage(Buffer.byteLength(JSON.stringify(request)) * 16 + 65_536));
   }
-  async tick(): Promise<void> { this.entities.tick(); await this.reads.cleanup(); this.temporary.expire(); this.store.checkpoint(); }
+  async tick(): Promise<void> { this.entities.tick(); await this.reads.cleanup(); this.store.checkpoint(); }
   async reserveStorage<T>(reserve: (admit: (bytes: number) => void) => T, produce: () => Promise<void> = async () => {}, release: () => void = () => {}): Promise<T> {
     const run = () => reserve(bytes => this.admitStorage(bytes));
     await produce();

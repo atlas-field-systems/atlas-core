@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { caseFold } from 'unicode-case-folding';
 import { Counter, HistoryPage, NegotiatedLimits, Put, ReplayPage, SnapshotPage, Timestamp, Uuid, exchanges } from '@atlas/protocol';
 import type { Continuation, HistoryQuery, RequestOf } from '@atlas/protocol';
-import { instant } from './exact.js';
 import { refuse } from './fault.js';
 import type { Store } from './database.js';
 import type { Entities } from './entities.js';
@@ -30,6 +29,14 @@ const Capture = z.discriminatedUnion('kind', [
 const Row = z.object({ data: z.string(), position: z.number() });
 const Membership = z.object({ identity: z.string(), tracks: z.array(Uuid) });
 const ReplayToken = z.object({ from: z.string(), boundary: z.string(), deadline: z.number(), limits: NegotiatedLimits });
+type CaptureReservation = { metadata: number; file: number; metadataWriteBytes: number };
+const captureOutcomeBytes = 4096;
+const initialCaptureBytes = 32768;
+function captureData(value: z.infer<typeof Capture> | z.infer<typeof FailedCapture>): string {
+  const data = JSON.stringify(value);
+  if (Buffer.byteLength(data) > captureOutcomeBytes) throw new Error('capture_outcome_limit');
+  return data;
+}
 const one = <T>(values: readonly T[] | undefined, value: T | undefined): boolean => values === undefined || value !== undefined && values.includes(value);
 const aliases = (values: readonly string[] | undefined, value: string | undefined): boolean => values === undefined || value !== undefined && values.some(v => caseFold(v) === caseFold(value));
 
@@ -37,9 +44,10 @@ export class Reads {
   private readonly files = new Map<Uuid, string>();
   private readonly builds = new Map<Uuid, Promise<void>>();
   private readonly reclamations = new Map<Uuid, Promise<void>>();
+  private readonly pending = new Map<Uuid, CaptureReservation>();
   constructor(private readonly store: Store, private readonly entities: Entities, private readonly identity: Identity,
     private readonly tasks: Tasks, private readonly objects: Objects, private readonly temporary: Temporary,
-    private readonly directory: string, private readonly reserve: (bytes: number) => Promise<void>) {}
+    private readonly directory: string, private readonly reserve: <T>(reservation: (admit: (bytes: number) => void) => T) => Promise<T>) {}
   private boundedPage<T, R>(items: T[], make: (shortened: boolean) => R, limits: NegotiatedLimits = this.store.settings.limits): R {
     return boundedPage(items, make, limits, this.store.dataset);
   }
@@ -147,6 +155,7 @@ export class Reads {
   private path(receiptId: Uuid): string { return join(this.directory, `${receiptId}.sqlite`); }
   get unwritten(): number {
     let bytes = 0;
+    for (const pending of this.pending.values()) bytes += pending.metadata + pending.file;
     for (const file of this.temporary.captureFiles()) {
       let written = 0;
       try { written = statSync(this.path(file.id)).size; }
@@ -155,22 +164,44 @@ export class Reads {
     }
     return bytes;
   }
-  private async build(receipt: Receipt, metadata: z.infer<typeof Capture>, rows: (source: Database.Database) => Generator<{ key: string; data: string } | null>, verifier: string): Promise<void> {
+  private async allocate(kind: 'snapshot' | 'history', token: string, request: string, facts: unknown, verifier: string) {
+    return this.reserve(admit => {
+      this.identity.authorize(verifier);
+      let fresh: Uuid | undefined;
+      try {
+        return this.store.db.transaction(() => this.temporary.reserve(kind, token, request, facts, receipt => {
+          const metadataWriteBytes = (Buffer.byteLength(JSON.stringify(receipt)) + captureOutcomeBytes) * 16 + 65_536;
+          const ownershipAndOutcomeBytes = metadataWriteBytes * 4;
+          admit(metadataWriteBytes + ownershipAndOutcomeBytes + initialCaptureBytes);
+          this.pending.set(receipt.id, { metadata: ownershipAndOutcomeBytes, file: initialCaptureBytes, metadataWriteBytes });
+          fresh = receipt.id;
+        }))();
+      } catch (error) {
+        if (fresh !== undefined) this.pending.delete(fresh);
+        throw error;
+      }
+    });
+  }
+  private async build(receipt: Receipt, metadata: z.infer<typeof Capture>, rows: (source: Database.Database) => Generator<{ key: string; data: string }>, verifier: string): Promise<void> {
     let source: Database.Database | undefined, target: Database.Database | undefined;
     let iterator: ReturnType<typeof rows> | undefined;
-    let count = 0, bytes = 32768;
+    let count = 0, bytes = initialCaptureBytes;
     let owned = false;
+    const pending = this.pending.get(receipt.id);
+    if (pending === undefined) throw new Error('capture_reservation_missing');
     const check = () => { this.identity.authorize(verifier); if (receipt.deadline <= performance.now()) refuse('allocation_expired'); };
     try {
       await ownedDirectory(this.directory);
       check();
       const owner = await currentWriter(); check();
-      this.temporary.ownFile(receipt, owner);
+      this.store.db.transaction(() => {
+        this.temporary.ownFile(receipt, owner);
+        this.temporary.charge(receipt, bytes, count);
+      })();
       owned = true;
       this.files.set(receipt.id, this.path(receipt.id));
-      this.temporary.charge(receipt, bytes, count);
-      await this.reserve(65_536);
-      check();
+      pending.metadata -= pending.metadataWriteBytes;
+      pending.file = 0;
       source = new Database(this.store.path, { readonly: true, fileMustExist: true });
       target = new Database(this.path(receipt.id));
       target.pragma('journal_mode = OFF'); target.pragma('synchronous = OFF'); target.pragma('cache_size = -2048');
@@ -191,15 +222,16 @@ export class Reads {
         while (scanned++ < 64 && added < 262_144 && performance.now() < until) {
           const row = iterator.next();
           if (row.done) { done = true; break; }
-          if (row.value === null) continue;
           added += Math.ceil((Buffer.byteLength(row.value.key) + Buffer.byteLength(row.value.data)) * 1.05) + 2048;
           batch.push(row.value);
         }
-        this.temporary.charge(receipt, bytes + added, count + batch.length);
-        bytes += added;
-        await this.reserve(65_536);
-        check();
-        write(batch, count); count += batch.length;
+        if (batch.length > 0) await this.reserve(admit => {
+          check();
+          admit(added + pending.metadataWriteBytes);
+          this.temporary.charge(receipt, bytes + added, count + batch.length);
+          bytes += added;
+          write(batch, count); count += batch.length;
+        });
         await setImmediate(); check();
       }
       iterator = undefined;
@@ -209,38 +241,53 @@ export class Reads {
       const actual = (await stat(this.path(receipt.id))).size;
       if (actual > bytes) refuse('resource_limit');
       check();
-      this.temporary.set({ ...receipt, state: 'ready', data: JSON.stringify(metadata), bytes: actual, refs: count });
+      this.temporary.set({ ...receipt, state: 'ready', data: captureData(metadata), bytes: actual, refs: count });
       this.store.metrics.capture_builds++; this.store.metrics.captured_bytes += actual;
     } catch (error) {
       this.store.metrics.capture_failures++;
-      const failure: z.infer<typeof FailedCapture> = error instanceof AggregateError
-        ? { failure: publicError(error.errors[0], this.store.dataset), cleanup_failure: publicError(error.errors[1], this.store.dataset) }
-        : { failure: publicError(error, this.store.dataset) };
-      const charged = this.temporary.peek(receipt.id) ?? receipt;
-      const failed = { ...charged, state: 'failed' as const, data: JSON.stringify(failure) };
-      this.temporary.set(failed);
       const failures: unknown[] = [];
+      const saveFailure = (cleanup?: unknown): Receipt => {
+        const failure: z.infer<typeof FailedCapture> = error instanceof AggregateError
+          ? { failure: publicError(error.errors[0], this.store.dataset), cleanup_failure: publicError(error.errors[1], this.store.dataset) }
+          : { failure: publicError(error, this.store.dataset) };
+        if (cleanup !== undefined) failure.cleanup_failure = publicError(cleanup, this.store.dataset);
+        const failed = { ...(this.temporary.peek(receipt.id) ?? receipt), state: 'failed' as const, data: captureData(failure) };
+        this.temporary.set(failed);
+        return failed;
+      };
+      let failed = receipt;
+      try { failed = saveFailure(); } catch (bookkeeping) { failures.push(bookkeeping); }
+      pending.file = 0;
       try { iterator?.return(undefined); } catch (cleanup) { failures.push(cleanup); }
       for (const database of [source, target]) {
-        try { if (database?.open) { if (database.inTransaction) database.exec('ROLLBACK'); database.close(); } }
+        if (!database?.open) continue;
+        try { if (database.inTransaction) database.exec('ROLLBACK'); }
+        catch (cleanup) { failures.push(cleanup); }
+        try { database.close(); }
         catch (cleanup) { failures.push(cleanup); }
       }
-      try { if (owned) await removeCapture(this.directory, receipt.id); }
-      catch (cleanup) { failures.push(cleanup); }
+      let removed = !owned;
+      if (source?.open || target?.open) failures.push(new Error('capture_close_unverified'));
+      else {
+        try { if (owned) await removeCapture(this.directory, receipt.id); removed = true; }
+        catch (cleanup) { failures.push(cleanup); }
+      }
+      if (removed) {
+        try { this.temporary.reclaimed(failed); this.files.delete(receipt.id); }
+        catch (bookkeeping) { failures.push(bookkeeping); }
+      }
       if (failures.length > 0) {
         const cleanup = failures.length === 1 ? failures[0] : new AggregateError(failures, 'capture_cleanup_failed');
-        this.temporary.set({ ...failed, data: JSON.stringify({ ...failure, cleanup_failure: publicError(cleanup, this.store.dataset) }) });
-        throw new AggregateError([error, cleanup], 'capture_cleanup_failed');
+        try { saveFailure(cleanup); } catch (bookkeeping) { failures.push(bookkeeping); }
+        throw new AggregateError([error, ...failures], 'capture_cleanup_failed');
       }
-      this.temporary.reclaimed(failed);
-      this.files.delete(receipt.id);
       throw error;
-    }
+    } finally { this.pending.delete(receipt.id); }
   }
   async snapshot(request: RequestOf<'ReadSnapshot'>, verifier: string, produce: () => Promise<void> = async () => {}): Promise<SnapshotPage> {
     if ('page_token' in request) { await produce(); this.identity.authorize(verifier); return this.snapshotPage(this.temporary.open(request.page_token, 'snapshot-page', CaptureToken)); }
     const limits = this.negotiate(request);
-    const reserved = this.store.db.transaction(() => this.temporary.reserve('snapshot', request.allocation_context, request.load_id, request))();
+    const reserved = await this.allocate('snapshot', request.allocation_context, request.load_id, request, verifier);
     const receipt = reserved.receipt;
     if (reserved.fresh) {
       const build = this.build(receipt, { kind: 'snapshot', baseline: '', expires: reserved.expires, load: request.load_id, size: request.page_size, limits }, source => this.picture(source), verifier);
@@ -288,17 +335,13 @@ export class Reads {
     if ('page_token' in request) { await produce(); this.identity.authorize(verifier); return this.historyPage(this.temporary.open(request.page_token, 'history-page', CaptureToken)); }
     const query = request;
     const selection = this.entities.sourceForHistory(kind, request.entity_id);
-    const reserved = this.store.db.transaction(() => this.temporary.reserve('history', request.allocation_context, request.query_id, { kind, ...request }))();
+    const reserved = await this.allocate('history', request.allocation_context, request.query_id, { kind, ...request }, verifier);
     const receipt = reserved.receipt;
     if (reserved.fresh) {
       const build = this.build(receipt, { kind: 'history', baseline: '', expires: reserved.expires, query: request.query_id, size: request.page_size ?? 100 }, source => {
         const evidence = this.entities.evidence;
         function* rows() {
-          for (const { identity, reading } of evidence.positions(selection.source, source)) {
-            if (query.time_groups !== undefined && !query.time_groups.includes(reading.time_status)) { yield null; continue; }
-            if (reading.time_status === 'known' && reading.observed_at !== null &&
-              (query.source_time_from !== undefined && instant(reading.observed_at) < instant(query.source_time_from) ||
-                query.source_time_before !== undefined && instant(reading.observed_at) >= instant(query.source_time_before))) { yield null; continue; }
+          for (const { identity } of evidence.positions(selection.source, query, source)) {
             yield { key: identity, data: JSON.stringify({ identity, tracks: selection.tracks }) };
           }
         }
@@ -386,6 +429,7 @@ export class Reads {
       const receipt = this.temporary.peek(receiptId);
       if ((receipt === undefined || receipt.state === 'released' || receipt.deadline <= performance.now()) && !this.builds.has(receiptId)) await this.reclaim(receiptId, 'expiry');
     }
+    this.temporary.expire(new Set([...this.builds.keys(), ...this.pending.keys()]));
   }
   private historyForExpiry(): Receipt[] {
     return this.temporary.receipts('history').filter(receipt => (receipt.state === 'ready' || receipt.state === 'released') && this.files.has(receipt.id) && !this.builds.has(receipt.id));

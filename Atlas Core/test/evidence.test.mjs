@@ -1,9 +1,41 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import Database from 'better-sqlite3';
+import { join } from 'node:path';
+import { defaults } from '../dist/settings.js';
 import { fixture, uuid, registration, report, telemetry } from './helpers.mjs';
 
 const ok = result => { assert.equal(result.status, 200, JSON.stringify(result.json)); return result.json.data; };
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
+test('Observation creation bounds the complete image and rolls back its pair, evidence and retry before correction', async t => {
+  const f = await fixture(t, { resourceImageBytes: 65536, limits: { ...defaults.limits, max_message_bytes: 212992 } });
+  const make = description => {
+    const observation = uuid(), publisher = uuid(), origin = { kind: 'publisher', publisher_id: publisher };
+    return { request_id: uuid(), observation_id: observation, publisher_id: publisher, description: { name: 'boundary', description },
+      report: report(f.core.dataset, observation, origin, 1, { geometry: { state: 'value', classification: 'state_until_changed', observed_at: null,
+        value: { type: 'LineString', coordinates: Array.from({ length: 1024 }, (_, i) => [1.123456789012345e-100 + i * 1e-115, -1.123456789012345e-100]) } } }) };
+  };
+  const small = make('\u0000'.repeat(2200)), pair = ok(await f.call('CreateObservation', small));
+  const imageBytes = Buffer.byteLength(JSON.stringify(pair.observation));
+  assert.ok(imageBytes > 65536 - 1024 && imageBytes <= 65536);
+  const withdraw = creation => ({ observation_id: creation.observation_id, publisher_id: creation.publisher_id,
+    report: report(f.core.dataset, creation.observation_id, { kind: 'publisher', publisher_id: creation.publisher_id }, 2,
+      { type: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null } }) });
+  assert.equal(ok(await f.call('ReportObservation', withdraw(small))).observation.type.state, 'withdrawn');
+  const database = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => database.close());
+  const counts = () => Object.fromEntries(['entity_identity', 'entity_observations', 'entity_tracks', 'evidence_reports', 'evidence_sections', 'evidence_readings', 'evidence_positions', 'retry', 'commit_log']
+    .map(table => [table, database.prepare(`SELECT count(*) AS n FROM ${table}`).get().n]));
+  const before = counts(), oversized = make('\u0000'.repeat(4096));
+  const rejected = await f.call('CreateObservation', oversized);
+  assert.equal(rejected.status, 429, 'The complete Observation must fit 65536 bytes before commit');
+  assert.equal(rejected.json.error.code, 'resource_limit');
+  assert.deepEqual(counts(), before);
+  assert.equal((await f.call('GetObservation', { observation_id: oversized.observation_id })).status, 404);
+  const corrected = ok(await f.call('CreateObservation', { ...oversized, description: { name: 'boundary', description: 'corrected' } }));
+  assert.equal(corrected.observation.id, oversized.observation_id);
+  assert.equal(ok(await f.call('ReportObservation', withdraw(oversized))).observation.type.state, 'withdrawn');
+});
 test('independent evidence admission, frozen history, exact times, structural retry and restart', async t => {
   const f = await fixture(t);
   const publisher = uuid(), observationId = uuid(), origin = { kind: 'publisher', publisher_id: publisher };
