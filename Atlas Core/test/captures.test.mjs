@@ -224,6 +224,58 @@ test('history selections stream the executed SQL without a native sorter or scan
   assert.ok(plans.flat().every(row => !/TEMP B-TREE/.test(row.detail)), JSON.stringify(plans));
   t.diagnostic(JSON.stringify([...new Set(plans.flat().map(row => row.detail))]));
 });
+test('single-status history selections seek past the other retained status', async t => {
+  const f = await local(t, { max_history_references_per_view: 1 });
+  const selections = [];
+  for (const [status, observed] of [['unknown', null], ['uncertain', '9999-12-31T23:59:59Z']]) {
+    const entity = uuid(), origin = { kind: 'publisher', publisher_id: uuid() };
+    await f.call('CreateObservation', { request_id: uuid(), observation_id: entity, publisher_id: origin.publisher_id,
+      report: report(f.engine.store.dataset, entity, origin, 1, { telemetry: telemetry(origin, 1, observed) }) });
+    const row = f.engine.store.db.prepare('SELECT * FROM evidence_positions WHERE entity=?').get(entity);
+    const image = JSON.parse(row.image), prefix = row.identity.slice(0, row.identity.lastIndexOf('/') + 1);
+    const insert = f.engine.store.db.prepare('INSERT INTO evidence_positions VALUES(?,?,?,?,?,?)');
+    f.engine.store.db.transaction(() => {
+      for (let i = 0; i < 8192; i++) {
+        const reading = `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+        image.source_evidence.reading_id = reading;
+        insert.run(prefix + reading, entity, row.source_kind, row.time_key, status, JSON.stringify(image));
+      }
+    })();
+    selections.push({ entity, status: status === 'unknown' ? 'uncertain' : 'unknown' });
+  }
+  const plans = [], prepare = Database.prototype.prepare;
+  Database.prototype.prepare = function (sql) {
+    const statement = Reflect.apply(prepare, this, [sql]);
+    if (!this.readonly || !/FROM evidence_positions\b/.test(sql)) return statement;
+    const iterate = statement.iterate.bind(statement), database = this;
+    statement.iterate = function* (...bindings) {
+      plans.push(Reflect.apply(prepare, database, [`EXPLAIN QUERY PLAN ${sql}`]).all(...bindings));
+      yield* iterate(...bindings);
+    };
+    return statement;
+  };
+  t.after(() => { Database.prototype.prepare = prepare; });
+  const health = await f.call('GetHealth');
+  for (const selection of selections) {
+    const page = await f.call('GetObservationMovementHistory', { entity_id: selection.entity, query_id: uuid(),
+      allocation_context: health.allocation_context, time_groups: [selection.status] });
+    assert.deepEqual(page.readings, []);
+    await f.call('ReleaseHistoryView', { release_token: page.release_token });
+  }
+  assert.equal(plans.length, 2);
+  assert.ok(plans.flat().every(row => row.detail.includes('entity=? AND status=?') && !row.detail.includes('TEMP B-TREE')), JSON.stringify(plans));
+});
+test('failed capture outcome writes release pending admission headroom', async t => {
+  const f = await local(t, { max_snapshot_bytes: '0' });
+  const health = await f.call('GetHealth');
+  f.engine.store.db.exec("CREATE TRIGGER reject_capture_outcome BEFORE UPDATE ON temporary_receipts WHEN NEW.state='failed' BEGIN SELECT RAISE(ABORT,'capture_outcome_write_failed'); END");
+  await assert.rejects(f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits }), /capture_outcome_write_failed/);
+  f.engine.store.db.exec('DROP TRIGGER reject_capture_outcome');
+  f.engine.settings.storageBytes = diskUsage(f.directory).bytes + f.engine.settings.reserveBytes + 131072;
+  const created = await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } });
+  assert.equal(created.geometry.type, 'Point');
+  assert.equal(f.engine.reads.unwritten, 0);
+});
 test('history expiry makes pages unavailable before unlink and shares reclamation with concurrent release', { timeout: 10000 }, async t => {
   const f = await local(t), { page, request } = await historyView(f);
   assert.ok(page.next_page_token);
