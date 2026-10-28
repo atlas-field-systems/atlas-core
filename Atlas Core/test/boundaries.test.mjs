@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION, exchanges, readHttp } from '@atlas/protocol';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, uuid, secret, registration } from './helpers.mjs';
@@ -156,4 +157,46 @@ test('ordinary key retries survive Reset and retained Asset credentials keep the
   assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${replacement.secret}` })).status, 401);
   assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${registered.secret}` })).status, 200);
   assert.deepEqual(ok(await f.call('CreateApiKey', creation)), key);
+});
+test('self-revocation commits before its validated 401 and exact retry reconciles after Restart', async t => {
+  const f = await fixture(t);
+  const credential = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+  ok(await f.call('CreateApiKey', credential));
+  const request = { request_id: uuid(), api_key_id: credential.api_key_id };
+  const denied = await f.call('RevokeApiKey', request, { Authorization: `Bearer ${credential.secret}` });
+  const parsed = readHttp(exchanges.RevokeApiKey, { status: denied.status, headers: new Headers(denied.headers), body: denied.bytes }, { datasetId: f.core.dataset, request });
+  assert.equal(parsed.kind, 'error'); assert.equal(parsed.body.error.code, 'unauthorized');
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${credential.secret}` })).status, 401);
+  const recovered = await f.call('RevokeApiKey', request);
+  assert.notEqual(ok(recovered).revoked_at, null);
+  assert.ok(recovered.json.commit_cursor);
+  await f.restart();
+  const retry = await f.call('RevokeApiKey', request);
+  assert.deepEqual(ok(retry), recovered.json.data);
+  assert.equal(retry.json.commit_cursor, recovered.json.commit_cursor);
+});
+test('a lost successful mutation followed by a denied retry retains its committed effect', async t => {
+  const f = await fixture(t);
+  const credential = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+  ok(await f.call('CreateApiKey', credential));
+  const input = { request_id: uuid(), operator_id: uuid(), name: 'Lost success' };
+  const bytes = Buffer.from(JSON.stringify(input));
+  await new Promise((resolve, reject) => {
+    const request = httpsRequest(new URL(exchanges.CreateOperator.path, f.address), { method: 'POST', ca: f.ca, headers: {
+      Authorization: `Bearer ${credential.secret}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': PROTOCOL_VERSION,
+      'Content-Type': 'application/json', 'Content-Length': bytes.length,
+    } }, response => { assert.equal(response.statusCode, 200); response.on('error', () => {}); response.destroy(); resolve(); });
+    request.on('error', reject); request.end(bytes);
+  });
+  ok(await f.call('RevokeApiKey', { request_id: uuid(), api_key_id: credential.api_key_id }));
+  const denied = await f.call('CreateOperator', input, { Authorization: `Bearer ${credential.secret}` });
+  const parsed = readHttp(exchanges.CreateOperator, { status: denied.status, headers: new Headers(denied.headers), body: denied.bytes }, { datasetId: f.core.dataset, request: input });
+  assert.equal(parsed.kind, 'error'); assert.equal(parsed.body.error.code, 'unauthorized');
+  assert.equal(ok(await f.call('GetOperator', { operator_id: input.operator_id })).name, input.name);
+  const recovered = await f.call('CreateOperator', input);
+  assert.equal(ok(recovered).operator_id, input.operator_id);
+  assert.ok(recovered.json.commit_cursor);
+  const repeated = await f.call('CreateOperator', input);
+  assert.equal(repeated.json.commit_cursor, recovered.json.commit_cursor);
+  assert.deepEqual(ok(repeated), recovered.json.data);
 });

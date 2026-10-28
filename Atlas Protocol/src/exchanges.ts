@@ -44,7 +44,15 @@ import {
 import { ObjectEdits, ObjectImage, UploadDescriptor } from './objects.js';
 import { Activity, ApiKey, Operator, ResourceUsage } from './administration.js';
 import { Continuation, HistoryPage, HistoryQuery, Release, Released } from './history.js';
-import { associatedQuery, filters, listQuery, page } from './queries.js';
+import {
+  associatedQuery,
+  filters,
+  listQuery,
+  page,
+  selected,
+  selectedAlias,
+  selectedPage,
+} from './queries.js';
 import { ReadChanges, ReadSnapshot, ReplayPage, SnapshotPage } from './synchronization.js';
 import { messageBudget } from './json.js';
 import type { Budget } from './json.js';
@@ -233,21 +241,32 @@ const ListResourcesExchange = post(
   '/messages/list_resources',
   listQuery(filters.resources),
   page(ResourceUsage, (value) => value.kind),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(request, data.items, (a, f) => selected(f?.kinds, a.kind)),
 );
 const ReadActivityExchange = post(
   'ReadActivity',
   '/messages/read_activity',
   listQuery(filters.activity),
   page(Activity, (value) => value.activity_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(request, data.items, (a, f) => selected(f?.categories, a.category)),
 );
 const ListApiKeysExchange = post(
   'ListApiKeys',
   '/messages/list_api_keys',
   listQuery(filters.api_keys),
   page(ApiKey, (value) => value.api_key_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(
+      request,
+      data.items,
+      (a, f) =>
+        selected(f?.ids, a.api_key_id) && selected(f?.operator_ids, a.operator_id ?? undefined),
+    ),
 );
 const CreateApiKeyExchange = committedPost(
   'CreateApiKey',
@@ -276,7 +295,9 @@ const ListOperatorsExchange = post(
   '/messages/list_operators',
   listQuery(filters.operators),
   page(Operator, (value) => value.operator_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(request, data.items, (a, f) => selected(f?.ids, a.operator_id)),
 );
 const GetOperatorExchange = post(
   'GetOperator',
@@ -334,7 +355,17 @@ const ListAssetsExchange = post(
   '/messages/list_assets',
   listQuery(filters.assets),
   page(Asset, (value) => value.id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(
+      request,
+      data.items,
+      (a, f) =>
+        selected(f?.ids, a.id) &&
+        selectedAlias(f?.aliases, a.alias) &&
+        selected(f?.kinds, a.type.kind) &&
+        selected(f?.health, a.communications.health),
+    ),
 );
 const GetAssetExchange = post(
   'GetAsset',
@@ -406,7 +437,15 @@ const GetAssetObjectsExchange = post(
   '/messages/get_asset_objects',
   associatedQuery({ asset_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    (request === undefined ||
+      'page_token' in request ||
+      data.items.every((item) =>
+        item.metadata.associations.some(
+          (association) => association.kind === 'asset' && association.id === request.asset_id,
+        ),
+      )),
 );
 const CreateObservationExchange = committedPost(
   'CreateObservation',
@@ -444,7 +483,19 @@ const ListObservationsExchange = post(
   '/messages/list_observations',
   listQuery(filters.observations),
   page(Observation, (value) => value.id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(
+      request,
+      data.items,
+      (a, f) =>
+        selected(f?.ids, a.id) &&
+        selectedAlias(f?.aliases, a.alias) &&
+        selected(f?.kinds, a.type.state === 'value' ? a.type.value.kind : undefined) &&
+        selected(f?.publisher_ids, a.publisher_id) &&
+        selected(f?.source_asset_ids, a.source_asset_id) &&
+        selected(f?.track_ids, a.track_id),
+    ),
 );
 const GetObservationExchange = post(
   'GetObservation',
@@ -474,14 +525,32 @@ const GetObservationObjectsExchange = post(
   '/messages/get_observation_objects',
   associatedQuery({ observation_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    (request === undefined ||
+      'page_token' in request ||
+      data.items.every((item) =>
+        item.metadata.associations.some(
+          (association) =>
+            association.kind === 'observation' && association.id === request.observation_id,
+        ),
+      )),
 );
 const ListTracksExchange = post(
   'ListTracks',
   '/messages/list_tracks',
   listQuery(filters.tracks),
   page(Track, (value) => value.id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(
+      request,
+      data.items,
+      (a, f) =>
+        selected(f?.ids, a.id) &&
+        selectedAlias(f?.aliases, a.alias) &&
+        selected(f?.kinds, a.type.state === 'value' ? a.type.value.kind : undefined),
+    ),
 );
 const GetTrackExchange = post(
   'GetTrack',
@@ -523,7 +592,12 @@ const GetTrackObservationsExchange = post(
     pageSize(request, data.items) &&
     (request === undefined ||
       'page_token' in request ||
-      data.items.every((item) => item.track_id === request.track_id)),
+      data.items.every(
+        (item) =>
+          item.track_id === request.track_id &&
+          selected(request.publisher_ids, item.publisher_id) &&
+          selected(request.source_asset_ids, item.source_asset_id),
+      )),
 );
 const GetTrackMovementHistoryExchange = post(
   'GetTrackMovementHistory',
@@ -537,7 +611,15 @@ const GetTrackObjectsExchange = post(
   '/messages/get_track_objects',
   associatedQuery({ track_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    (request === undefined ||
+      'page_token' in request ||
+      data.items.every((item) =>
+        item.metadata.associations.some(
+          (association) => association.kind === 'track' && association.id === request.track_id,
+        ),
+      )),
 );
 const CreateGeofeatureExchange = committedPost(
   'CreateGeofeature',
@@ -558,7 +640,16 @@ const ListGeofeaturesExchange = post(
   '/messages/list_geofeatures',
   listQuery(filters.geofeatures),
   page(Geofeature, (value) => value.id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(
+      request,
+      data.items,
+      (a, f) =>
+        selected(f?.ids, a.id) &&
+        selectedAlias(f?.aliases, a.alias) &&
+        selected(f?.kinds, a.type.kind),
+    ),
 );
 const GetGeofeatureExchange = post(
   'GetGeofeature',
@@ -606,7 +697,16 @@ const GetGeofeatureObjectsExchange = post(
   '/messages/get_geofeature_objects',
   associatedQuery({ geofeature_id: Uuid }),
   page(ObjectImage, (value) => value.object_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    (request === undefined ||
+      'page_token' in request ||
+      data.items.every((item) =>
+        item.metadata.associations.some(
+          (association) =>
+            association.kind === 'geofeature' && association.id === request.geofeature_id,
+        ),
+      )),
 );
 const CreateTaskExchange = committedPost(
   'CreateTask',
@@ -629,7 +729,20 @@ const ListTasksExchange = post(
   '/messages/list_tasks',
   listQuery(filters.tasks),
   page(Task, (value) => value.task_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(
+      request,
+      data.items,
+      (a, f) =>
+        selected(f?.ids, a.task_id) &&
+        selected(f?.asset_ids, a.asset_id) &&
+        selected(f?.commands, a.command) &&
+        selected(
+          f?.states,
+          a.cancellation_request_id === null ? a.execution_state : 'cancellation_requested',
+        ),
+    ),
 );
 const GetTaskExchange = post(
   'GetTask',
@@ -732,7 +845,13 @@ const ListObjectsExchange = post(
   '/messages/list_objects',
   listQuery(filters.objects),
   page(ObjectImage, (value) => value.object_id),
-  (request, { data }) => pageSize(request, data.items),
+  (request, { data }) =>
+    pageSize(request, data.items) &&
+    selectedPage(
+      request,
+      data.items,
+      (a, f) => selected(f?.ids, a.object_id) && selected(f?.content_types, a.content_type),
+    ),
 );
 const GetObjectExchange = post(
   'GetObject',

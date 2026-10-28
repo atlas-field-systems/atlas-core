@@ -31,7 +31,12 @@ OpenAPI JSON also passes strict JSON preflight. Stock reference validation belon
 to the build entry. No function opens a connection, buffers a file, or changes state.
 
 With a supplied first-page request, `readHttp` checks page size, attribution,
-history scope, synchronization negotiation, and the replay starting cursor.
+list filters, history scope/time selection, synchronization negotiation, and the
+replay starting cursor. Out-of-selection rows fail with `invalid_http`. Values
+within a filter are ORed; supplied filters are ANDed; an empty filter array matches
+nothing. Alias selection uses full Unicode case folding without normalization.
+This validates returned rows, not completeness of the result. SDK retains the
+original query for continuation checks; a token alone supplies no selection facts.
 Snapshot replies also enforce their declared limits against the complete raw
 HTTP envelope or WSS frame. Continuation ownership remains with Core and the caller.
 
