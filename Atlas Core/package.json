@@ -42,7 +42,7 @@
   "atlasBuild": {
     "protocol": {
       "version": "0.2.0",
-      "sha256": "cec0cb1bc41e57332635523a7d15ae62b639b1cab3ad26cbb1580843da3a998b"
+      "sha256": "a54001441b5080a6f0a4f19c5253334f759fbc5ab94f1e331fee7b5472c46b0a"
     },
     "sqlite": {
       "version": "3.53.4",
