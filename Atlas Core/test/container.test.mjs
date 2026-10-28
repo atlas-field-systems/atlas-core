@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, writeFile, readFile, rm, readdir, chmod } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, readdir, chmod, open, stat } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { request } from 'node:https';
 import { join } from 'node:path';
@@ -14,6 +14,7 @@ import { processIdentity, exited as writerExited } from '../dist/ownership.js';
 import { createContainer } from '../dist/docker.js';
 import { Administration } from '../dist/admin.js';
 import Database from 'better-sqlite3';
+import { diskUsage } from '../dist/capacity.js';
 const exec = promisify(execFile);
 test('real CLI and pinned container retain Restart, fence Reset, recover proof and require new Hard Reset setup', { timeout: 180000 }, async t => {
   const image = (await readFile(join(root, 'artifacts', 'image-id'), 'utf8')).trim();
@@ -133,6 +134,17 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   const exported = await readFile(join(base, 'diagnostics.jsonl'), 'utf8');
   assert.equal(JSON.parse(exported.split('\n')[0]).context.engine.version, '3.53.4');
   assert.ok(!exported.includes(apiKey)); assert.ok(!exported.includes(enrollment.secret));
+  const pressure = join(installation, 'data', 'export-pressure');
+  const filler = await open(pressure, 'wx');
+  try { await filler.truncate(settings.storageBytes - settings.reserveBytes - diskUsage(installation).bytes - 32768); }
+  finally { await filler.close(); }
+  const refusedExport = join(base, 'refused-export.jsonl');
+  assert.equal((await cli('export', '--out', refusedExport)).ok, false);
+  await assert.rejects(stat(refusedExport), { code: 'ENOENT' });
+  assert.equal((await api('/readiness')).body.data.ready, true);
+  assert.ok(diskUsage(installation).bytes <= settings.storageBytes);
+  await rm(pressure);
+  assert.equal((await cli('export', '--out', join(base, 'next-export.jsonl'))).ok, true);
   assert.equal((await cli('update', '--image', image)).code, 'destructive_confirmation_required');
   const updated = await cli('update', '--image', image, '--confirm-reset'); assert.equal(updated.ok, true, JSON.stringify(updated));
   assert.equal((await cli('start')).ok, true);

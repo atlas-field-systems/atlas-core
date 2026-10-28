@@ -69,6 +69,11 @@ launcher process retains another copy. Local commands send safe progress and fai
 output to the caller, without a retained stopped-state log or later import into Core.
 
 Normal logs use eight rotating files within half the configured diagnostic budget.
+The database worker reserves each log write and the potential export size against
+aggregate ordinary capacity before writing. Writers release reservations after their
+files close or writes finish. Refused log reservations drop events without rejecting
+domain work or readiness. Export refusal creates no output. An interrupted live export
+keeps its reservation until Restart; the installation lock prevents concurrent exports.
 The remaining half bounds a concurrent export. Their total is at most 256 MiB. Include
 transient buffers in [aggregate capacity](storage.md#retention-and-capacity). Target eight hours
 of default-detail history, including a four-hour mission; age is not a hard expiry.

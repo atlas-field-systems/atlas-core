@@ -58,7 +58,8 @@ Docker access and never edit live SQL. Containers disable logging and automatic 
 There is no persistent management service, takeover control, or automatic recovery.
 No detached cleanup worker runs after a command exits.
 Core stops scheduling maintenance and awaits active maintenance and summary work
-before closing transfers, HTTP, the database worker, and diagnostics. Shutdown
+before closing transfers and HTTP. Diagnostics drain before their database worker
+reservation owner closes. Shutdown
 retains maintenance failures alongside cleanup failures. File reclamation completes
 its durable bookkeeping before the worker closes; Stop still verifies process exit.
 Failed Start attempts shutdown and writer-exit verification even when recording

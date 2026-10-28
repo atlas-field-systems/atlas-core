@@ -13,6 +13,7 @@ import { defaults, Settings } from './settings.js';
 import { id, zero } from './exact.js';
 import { retainedEvent } from './diagnostics.js';
 import { createSecureContext } from 'node:tls';
+import { diskUsage, hasCapacity } from './capacity.js';
 
 export class Administration {
   constructor(readonly root: string) {}
@@ -310,7 +311,8 @@ export class Administration {
   async export(path: string): Promise<{ bytes: number; partial: boolean }> {
     const manifest = await this.manifest(), settings = await this.settings();
     const writer = await this.writer();
-    const context = writer && (await inspectContainer(writer, manifest.installation_id)).State.Running
+    const running = writer !== undefined && (await inspectContainer(writer, manifest.installation_id)).State.Running;
+    const context = running
       ? await maintenance(this.root, { operation: 'export' }) : { marker: await this.offline('inspect-marker') };
     const logs = join(this.root, 'data', 'logs');
     const files = (await readdir(logs).catch(error => { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return []; throw error; })).filter(file => /^events\.[0-7]\.jsonl$/.test(file)).sort().reverse();
@@ -318,36 +320,48 @@ export class Administration {
     for (const file of files) retained += (await stat(join(logs, file))).size;
     const budget = settings.saved.diagnosticBytes - Math.max(retained, Math.ceil(settings.saved.diagnosticBytes / 2));
     if (budget < 16_384) throw new Error('storage_limit');
-    const output = await open(path, 'wx', 0o600);
-    let bytes = 0, partial = false, events = 0, omitted = 0;
+    const reservation = id();
+    if (running) await maintenance(this.root, { operation: 'reserve-export', reservation, bytes: budget });
+    else if (!hasCapacity(diskUsage(this.root), settings.saved, budget)) throw new Error('storage_limit');
+    let primary: unknown;
     try {
-      const line = JSON.stringify({ format: 1, release: '0.3.0', image: manifest.image, context,
-        configuration: { severity: settings.saved.diagnosticLevel, max_bytes: settings.saved.diagnosticBytes }, gaps: 'diagnostics_may_be_incomplete' }) + '\n';
-      await output.writeFile(line); bytes = Buffer.byteLength(line);
-      for (const file of files) {
-        let pending = Buffer.alloc(0), oversized = false;
-        for await (const chunk of createReadStream(join(logs, file), { highWaterMark: 8192 })) {
-          if (!Buffer.isBuffer(chunk)) throw new Error('export_read_failed');
-          let from = 0;
-          while (from < chunk.byteLength) {
-            const end = chunk.indexOf(10, from), until = end < 0 ? chunk.byteLength : end;
-            if (pending.byteLength + until - from > 8192) { oversized = true; pending = Buffer.alloc(0); }
-            if (!oversized) pending = Buffer.concat([pending, chunk.subarray(from, until)]);
-            if (end < 0) break;
-            let line: string | undefined;
-            if (!oversized) { try { line = retainedEvent(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(pending))); } catch { line = undefined; } }
-            if (line === undefined || bytes + Buffer.byteLength(line) > budget - 4096) { partial = true; omitted++; }
-            else { await output.writeFile(line); bytes += Buffer.byteLength(line); events++; }
-            pending = Buffer.alloc(0); oversized = false; from = end + 1;
+      const output = await open(path, 'wx', 0o600);
+      let bytes = 0, partial = false, events = 0, omitted = 0;
+      try {
+        const line = JSON.stringify({ format: 1, release: '0.3.0', image: manifest.image, context,
+          configuration: { severity: settings.saved.diagnosticLevel, max_bytes: settings.saved.diagnosticBytes }, gaps: 'diagnostics_may_be_incomplete' }) + '\n';
+        await output.writeFile(line); bytes = Buffer.byteLength(line);
+        for (const file of files) {
+          let pending = Buffer.alloc(0), oversized = false;
+          for await (const chunk of createReadStream(join(logs, file), { highWaterMark: 8192 })) {
+            if (!Buffer.isBuffer(chunk)) throw new Error('export_read_failed');
+            let from = 0;
+            while (from < chunk.byteLength) {
+              const end = chunk.indexOf(10, from), until = end < 0 ? chunk.byteLength : end;
+              if (pending.byteLength + until - from > 8192) { oversized = true; pending = Buffer.alloc(0); }
+              if (!oversized) pending = Buffer.concat([pending, chunk.subarray(from, until)]);
+              if (end < 0) break;
+              let line: string | undefined;
+              if (!oversized) { try { line = retainedEvent(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(pending))); } catch { line = undefined; } }
+              if (line === undefined || bytes + Buffer.byteLength(line) > budget - 4096) { partial = true; omitted++; }
+              else { await output.writeFile(line); bytes += Buffer.byteLength(line); events++; }
+              pending = Buffer.alloc(0); oversized = false; from = end + 1;
+            }
           }
+          if (pending.byteLength > 0 || oversized) { partial = true; omitted++; }
         }
-        if (pending.byteLength > 0 || oversized) { partial = true; omitted++; }
+        const trailer = JSON.stringify({ partial, included_events: events, omitted_events: omitted }) + '\n';
+        await output.writeFile(trailer); bytes += Buffer.byteLength(trailer);
+        await output.sync();
+      } finally { await output.close(); }
+      await flushDirectory(join(path, '..'));
+      return { bytes, partial };
+    } catch (error) { primary = error; throw error; }
+    finally {
+      if (running) {
+        try { await maintenance(this.root, { operation: 'release-export', reservation }); }
+        catch (error) { throw new AggregateError(primary === undefined ? [error] : [primary, error], 'export_release_failed'); }
       }
-      const trailer = JSON.stringify({ partial, included_events: events, omitted_events: omitted }) + '\n';
-      await output.writeFile(trailer); bytes += Buffer.byteLength(trailer);
-      await output.sync();
-    } finally { await output.close(); }
-    await flushDirectory(join(path, '..'));
-    return { bytes, partial };
+    }
   }
 }

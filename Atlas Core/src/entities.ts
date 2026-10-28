@@ -358,26 +358,26 @@ export class Entities {
     tx.remember('DeleteGeofeature', request.request_id, request);
     return { deleted: true };
   }
-  restartContact(): void {
+  restartContact(admit: (tx: Transaction) => void): void {
     let after = '';
     while (true) {
       const batch = this.assets(after, 16);
       for (const image of batch) {
         if (image.communications.health !== 'offline' || image.heartbeat.last_contact_at !== null) {
           image.communications.health = 'offline'; image.heartbeat.last_contact_at = null;
-          image.version = next(image.version); this.store.transact(null, tx => this.saveAsset(tx, image, true));
+          image.version = next(image.version); this.store.transact(null, tx => this.saveAsset(tx, image, true), admit);
         }
         after = image.id;
       }
       if (batch.length < 16) break;
     }
   }
-  tick(): void {
+  tick(admit: (tx: Transaction) => void): void {
     for (const [assetId, at] of this.contact) {
       const elapsed = performance.now() - at;
       const health = elapsed < 15_000 ? 'healthy' : elapsed < 60_000 ? 'degraded' : 'offline';
       const asset = this.asset(assetId);
-      if (health !== asset.communications.health) this.store.transact(null, tx => { asset.communications.health = health; asset.version = next(asset.version); this.saveAsset(tx, asset, true); });
+      if (health !== asset.communications.health) this.store.transact(null, tx => { asset.communications.health = health; asset.version = next(asset.version); this.saveAsset(tx, asset, true); }, admit);
       if (health === 'offline') this.contact.delete(assetId);
     }
   }
