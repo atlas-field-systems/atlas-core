@@ -149,6 +149,7 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
       duration_ms: Math.max(0, performance.now() - (starts.get(request) ?? performance.now())), count: reply.statusCode });
   });
   app.setErrorHandler(async (error, request, reply) => {
+    if (!request.raw.readableEnded) reply.header('Connection', 'close');
     if (!rpc.available) { await reply.code(503).send(); return; }
     let fault: unknown = error;
     if (error instanceof Error && 'code' in error && typeof error.code === 'string') {
