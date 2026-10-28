@@ -269,12 +269,88 @@ test('failed capture outcome writes release pending admission headroom', async t
   const f = await local(t, { max_snapshot_bytes: '0' });
   const health = await f.call('GetHealth');
   f.engine.store.db.exec("CREATE TRIGGER reject_capture_outcome BEFORE UPDATE ON temporary_receipts WHEN NEW.state='failed' BEGIN SELECT RAISE(ABORT,'capture_outcome_write_failed'); END");
-  await assert.rejects(f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits }), /capture_outcome_write_failed/);
+  await assert.rejects(f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits }),
+    error => error instanceof AggregateError && error.errors[0].code === 'resource_limit' && error.errors.some(cause => cause.message === 'capture_outcome_write_failed'));
   f.engine.store.db.exec('DROP TRIGGER reject_capture_outcome');
   f.engine.settings.storageBytes = diskUsage(f.directory).bytes + f.engine.settings.reserveBytes + 131072;
   const created = await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } });
   assert.equal(created.geometry.type, 'Point');
   assert.equal(f.engine.reads.unwritten, 0);
+});
+test('failed capture bookkeeping cannot strand default snapshot slots after expiry', async t => {
+  const f = await local(t);
+  const health = await f.call('GetHealth');
+  const directory = join(f.directory, 'captures');
+  await writeFile(directory, 'blocked directory');
+  f.engine.store.db.exec("CREATE TRIGGER reject_failed_capture BEFORE UPDATE ON temporary_receipts WHEN NEW.state='failed' BEGIN SELECT RAISE(ABORT,'capture_failure_write_rejected'); END");
+  for (let i = 0; i < defaults.temporary.max_snapshot_captures_per_key; i++) {
+    await assert.rejects(f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits }));
+  }
+  assert.equal(f.engine.temporary.receipts('snapshot').length, 2);
+  assert.deepEqual(f.engine.temporary.captureFiles(), []);
+  await rm(directory);
+  f.engine.store.db.exec('DROP TRIGGER reject_failed_capture');
+  const expired = performance.now() + 60_001;
+  t.mock.method(performance, 'now', () => expired);
+  try {
+    await f.engine.tick();
+    const fresh = await f.call('GetHealth');
+    const page = await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: fresh.allocation_context, page_size: 1, ...limits });
+    assert.equal(f.engine.temporary.receipts('snapshot').length, 1);
+    await f.call('ReleaseSnapshot', { release_token: page.release_token });
+  } finally { t.mock.restoreAll(); }
+});
+test('failure receipt rejection still closes capture databases and removes the file', async t => {
+  const f = await local(t);
+  await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } });
+  const health = await f.call('GetHealth'), opened = new Set();
+  const exec = Database.prototype.exec;
+  t.mock.method(Database.prototype, 'exec', function (sql) {
+    const result = Reflect.apply(exec, this, [sql]);
+    if (this.name.startsWith(join(f.directory, 'captures') + '/') && sql.startsWith('CREATE TABLE items')) {
+      opened.add(this);
+      Reflect.apply(exec, this, ["CREATE TRIGGER reject_capture_row BEFORE INSERT ON items BEGIN SELECT RAISE(ABORT,'capture_row_write_rejected'); END"]);
+    } else if (this.readonly && this.name === f.engine.store.path && sql === 'BEGIN') opened.add(this);
+    return result;
+  });
+  t.after(() => { for (const database of opened) if (database.open) { if (database.inTransaction) database.exec('ROLLBACK'); database.close(); } });
+  f.engine.store.db.exec("CREATE TRIGGER reject_failed_capture BEFORE UPDATE ON temporary_receipts WHEN NEW.state='failed' BEGIN SELECT RAISE(ABORT,'capture_failure_write_rejected'); END");
+  const error = await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits }).catch(error => error);
+  f.engine.store.db.exec('DROP TRIGGER reject_failed_capture');
+  t.mock.restoreAll();
+  assert.equal(opened.size, 2);
+  assert.ok([...opened].every(database => !database.open), 'Both real SQLite connections must close despite the failed failure-receipt write');
+  assert.deepEqual(await readdir(join(f.directory, 'captures')), []);
+  assert.ok(error instanceof AggregateError);
+  const messages = value => value instanceof AggregateError ? value.errors.flatMap(messages) : [value.message];
+  assert.ok(messages(error).includes('capture_row_write_rejected'));
+  assert.ok(messages(error).includes('capture_failure_write_rejected'));
+  await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [1, 1] } });
+  const checkpoint = f.engine.store.db.pragma('wal_checkpoint(PASSIVE)')[0];
+  assert.equal(checkpoint.checkpointed, checkpoint.log);
+});
+test('maintenance protects an expired capture until its builder finishes', async t => {
+  const f = await local(t), health = await f.call('GetHealth');
+  const entered = Promise.withResolvers(), resume = Promise.withResolvers();
+  const reserve = f.engine.reserveStorage.bind(f.engine);
+  let first = true;
+  f.engine.reserveStorage = async reservation => {
+    const result = await reserve(reservation);
+    if (first) { first = false; entered.resolve(); await resume.promise; }
+    return result;
+  };
+  const pending = f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits }).catch(error => error);
+  await entered.promise;
+  const receipt = f.engine.temporary.receipts('snapshot')[0], expired = performance.now() + 60_001;
+  t.mock.method(performance, 'now', () => expired);
+  try {
+    await f.engine.tick();
+    assert.equal(f.engine.temporary.peek(receipt.id).state, 'building');
+  } finally { resume.resolve(); }
+  assert.equal((await pending).code, 'allocation_expired');
+  await f.engine.tick();
+  t.mock.restoreAll();
+  assert.equal(f.engine.temporary.peek(receipt.id), undefined);
 });
 test('history expiry makes pages unavailable before unlink and shares reclamation with concurrent release', { timeout: 10000 }, async t => {
   const f = await local(t), { page, request } = await historyView(f);
@@ -610,5 +686,5 @@ test('release persists successful reclamation before revocation refuses its resp
   assert.equal(receipt.state, 'released'); assert.equal(receipt.bytes, 0); assert.equal(receipt.refs, 0);
   assert.deepEqual(f.engine.temporary.captureFiles(), []);
   f.engine.store.db.prepare('UPDATE temporary_receipts SET deadline=0 WHERE id=?').run(snapshot.capture_id);
-  f.engine.temporary.expire(); assert.equal(f.engine.temporary.peek(snapshot.capture_id), undefined);
+  await f.engine.reads.cleanup(); assert.equal(f.engine.temporary.peek(snapshot.capture_id), undefined);
 });
