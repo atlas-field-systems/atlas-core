@@ -22,8 +22,7 @@ import { Refusal } from '../dist/fault.js';
 import { exchanges, PROTOCOL_VERSION } from '@atlas/protocol';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 test('assigned retries stay read-only at the ceiling and new reads admit bounded cleanup', async t => {
-  await mkdir(join(root, 'artifacts'), { recursive: true });
-  const directory = await mkdtemp(join(root, 'artifacts', 'assigned-cleanup-'));
+  const directory = await mkdtemp(join(mutableRoot, 'assigned-cleanup-'));
   const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 64 * 1024 * 1024, objectBytes: 16 * 1024 * 1024, reserveBytes: 1024 * 1024 };
   const engine = new Engine(directory, settings);
   t.after(async () => { await engine.close(); await rm(directory, { recursive: true, force: true }); });
@@ -58,7 +57,7 @@ test('assigned retries stay read-only at the ceiling and new reads admit bounded
   assert.equal(engine.store.cursor(), cursor);
 });
 test('replay bytes and whole-commit boundaries survive rollback, restart and Reset', async t => {
-  const directory = await mkdtemp(join(root, 'artifacts', 'replay-accounting-'));
+  const directory = await mkdtemp(join(mutableRoot, 'replay-accounting-'));
   const path = join(directory, 'core.sqlite'), settings = { ...defaults };
   let store = new Store(path, settings);
   t.after(async () => { store.close(); await rm(directory, { recursive: true, force: true }); });
@@ -110,7 +109,7 @@ test('replay bytes and whole-commit boundaries survive rollback, restart and Res
 });
 test('replay age expiry and zero-byte retention remove complete commits with exact totals', async t => {
   t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-28T00:00:00Z') });
-  const directory = await mkdtemp(join(root, 'artifacts', 'replay-expiry-'));
+  const directory = await mkdtemp(join(mutableRoot, 'replay-expiry-'));
   const settings = { ...defaults, replayMilliseconds: 1000 }, store = new Store(join(directory, 'core.sqlite'), settings);
   t.after(async () => { store.close(); await rm(directory, { recursive: true, force: true }); });
   const baseline = store.cursor(), progress = () => store.transact(null, tx => tx.remember('test', uuid(), {})).cursor;
