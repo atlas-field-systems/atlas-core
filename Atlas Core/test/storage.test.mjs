@@ -17,6 +17,7 @@ import { DatabaseWorker, QueuePressure } from '../dist/rpc.js';
 import { diskUsage } from '../dist/capacity.js';
 import { Store } from '../dist/database.js';
 import { Engine } from '../dist/engine.js';
+import { Refusal } from '../dist/fault.js';
 import { exchanges, PROTOCOL_VERSION } from '@atlas/protocol';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 test('assigned retries stay read-only at the ceiling and new reads admit bounded cleanup', async t => {
@@ -193,6 +194,22 @@ test('contact expiry and restart obey the hard ceiling and can use required-effe
   engine = new Engine(directory, settings);
   assert.equal((await call('GetAsset', { asset_id: asset.id })).communications.health, 'offline');
   assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
+});
+test('maintenance reports contact, checkpoint and reclamation failures from the same pass', async t => {
+  const f = await fixture(t), events = [];
+  const call = f.core.rpc.call;
+  t.mock.method(f.core.rpc, 'call', async function(kind, ...args) {
+    if (kind === 'tick') throw new AggregateError([new Refusal('storage_limit'), new Refusal('integrity_fault')], 'worker_cleanup_failed');
+    if (kind === 'retired-files') throw new Refusal('resource_limit');
+    return call.call(this, kind, ...args);
+  });
+  t.mock.method(f.core.diagnostics, 'emit', event => { events.push(event); });
+  const deadline = performance.now() + 3000;
+  while (!events.some(event => event.event === 'background_failure') && performance.now() < deadline) await delay(10);
+  assert.deepEqual(events.filter(event => event.event.startsWith('background_')).map(event => [event.event, event.code]), [
+    ['background_failure', 'storage_limit'], ['background_cleanup_failure', 'integrity_fault'], ['background_cleanup_failure', 'resource_limit'],
+  ]);
+  t.mock.restoreAll();
 });
 test('refused contact expiry still reclaims deleted Object files and then transitions without removing pressure', { timeout: 25_000 }, async t => {
   const held = Promise.withResolvers(), resume = Promise.withResolvers(), failures = [], events = [];
