@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 import { z } from 'zod';
-import { AssignedTasks, Counter, Task, Uuid } from '@atlas/protocol';
+import { AssignedTasks, Counter, ExecutionSummary, Task, Uuid } from '@atlas/protocol';
 import type { Asset, ExecutionEvidence, ExecutionPayload, RequestOf } from '@atlas/protocol';
 import { canonical, digest, instant, next, now, zero } from './exact.js';
 import { refuse } from './fault.js';
@@ -86,7 +86,7 @@ export class Tasks {
     const sequence = next(old === undefined ? zero : z.object({ sequence: Counter }).parse(old).sequence);
     this.store.db.prepare('INSERT INTO task_submission VALUES(?,?) ON CONFLICT(asset) DO UPDATE SET sequence=excluded.sequence').run(asset.id, sequence);
     const task = Task.parse({ ...request, dataset_id: this.store.dataset, version: zero, accepted_at: accepted,
-      submission_sequence: sequence, execution_state: 'pending', cancellation_request_id: null, result_declarations: [] });
+      submission_sequence: sequence, execution_state: 'pending', execution_summary: null, cancellation_request_id: null, result_declarations: [] });
     this.store.db.prepare('INSERT INTO task_images VALUES(?,?,?,?)').run(task.task_id, task.asset_id, JSON.stringify(task), feature);
     let control = null;
     if (task.command === 'move_to') {
@@ -176,6 +176,12 @@ export class Tasks {
     if (isTerminal || newer) {
       if (task.command === 'move_to' && before.started !== 0 && payload.event === 'cancellation_refused' && payload.state === 'pending') refuse('invalid_request');
       task.execution_state = payload.state;
+      task.execution_summary = ExecutionSummary.parse({ origin: evidence.origin, report_id: evidence.report_id, sequence: evidence.sequence,
+        generated_at: evidence.generated_at, event: payload.event, state: payload.state,
+        ...('reason' in payload ? { reason: payload.reason } : {}),
+        ...('cancellation_request_id' in payload ? { cancellation_request_id: payload.cancellation_request_id } : {}),
+        ...(payload.message === undefined ? {} : { message: payload.message }),
+        ...('geometry_revision' in payload ? { geometry_revision: payload.geometry_revision } : {}) });
       this.store.db.prepare('UPDATE task_internal SET generation=?,sequence=? WHERE id=?').run(evidence.origin.process_generation, evidence.sequence, task.task_id);
     }
     if (isTerminal) this.store.db.prepare('INSERT INTO task_terminal VALUES(?,?)').run(task.task_id, canonical(payload));
@@ -196,7 +202,7 @@ export class Tasks {
     }
     if (queueChanged) asset.task_queue.revision = next(asset.task_queue.revision);
     if (queueChanged || controlChanged) { asset.version = next(asset.version); this.entities.saveAsset(tx, asset, true); }
-    if (oldState !== task.execution_state || oldCancel !== task.cancellation_request_id) {
+    if (isTerminal || newer || oldState !== task.execution_state || oldCancel !== task.cancellation_request_id) {
       task.version = next(task.version); this.save(tx, task, true);
       this.identity.activity(tx, 'task', terminal(task) ? 'Task terminated' : 'Task execution updated');
     }

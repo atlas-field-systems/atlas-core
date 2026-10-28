@@ -37,6 +37,50 @@ export const ResultDeclarations = z
     (values) => new Set(values.map((value) => value.object_id)).size === values.length,
     'Duplicate declaration',
   );
+const executionMessage = text(1024).exactOptional();
+const executionReason = text(64, true);
+const geometryRevision = { geometry_revision: Counter.exactOptional() };
+const summaryFields = {
+  origin: AssetOrigin,
+  report_id: NewId,
+  sequence: Sequence,
+  generated_at: Time,
+  message: executionMessage,
+  ...geometryRevision,
+};
+const ExecutionSummaryDefinition = z
+  .union([
+    z.strictObject({
+      ...summaryFields,
+      event: z.literal('state'),
+      state: z.enum(['acknowledged', 'in_progress', 'paused', 'completed']),
+    }),
+    z.strictObject({
+      ...summaryFields,
+      event: z.literal('state'),
+      state: z.literal('failed'),
+      reason: executionReason,
+    }),
+    z.strictObject({
+      ...summaryFields,
+      event: z.literal('state'),
+      state: z.literal('cancelled'),
+      cancellation_request_id: NewId,
+    }),
+    z.strictObject({
+      ...summaryFields,
+      event: z.literal('cancellation_refused'),
+      state: NonterminalState,
+      cancellation_request_id: NewId,
+      reason: executionReason,
+    }),
+  ])
+  .meta({ id: 'ExecutionSummary' });
+type ExecutionSummaryDefinitionSchema = typeof ExecutionSummaryDefinition;
+export interface ExecutionSummarySchema extends ExecutionSummaryDefinitionSchema {}
+export const ExecutionSummary: ExecutionSummarySchema = ExecutionSummaryDefinition;
+export type ExecutionSummary = z.output<typeof ExecutionSummary>;
+
 const taskFields = {
   dataset_id: Uuid,
   task_id: Uuid,
@@ -46,6 +90,7 @@ const taskFields = {
   accepted_at: Timestamp,
   submission_sequence: Sequence,
   result_declarations: ResultDeclarations,
+  execution_summary: ExecutionSummary.nullable(),
 };
 function taskVariants<S extends z.ZodRawShape>(command: S) {
   return z.union([
@@ -79,6 +124,15 @@ const TaskDefinition = z
       return false;
     }
   }, 'Resume expiry outside admission interval')
+  .refine(
+    (value) =>
+      value.execution_summary === null
+        ? value.execution_state === 'pending'
+        : value.execution_summary.state === value.execution_state &&
+          (value.execution_summary.geometry_revision === undefined ||
+            (value.command === 'move_to' && value.inputs.target.kind === 'geofeature')),
+    'Execution summary differs',
+  )
   .meta({ id: 'Task' });
 const TaskQueueDefinition = z
   .strictObject({
@@ -136,8 +190,7 @@ type TaskControlDefinitionSchema = typeof TaskControlDefinition;
 export interface TaskControlSchema extends TaskControlDefinitionSchema {}
 export const TaskControl: TaskControlSchema = TaskControlDefinition;
 
-const executionFields = { task_id: Uuid, message: text(1024).exactOptional() };
-const geometryRevision = { geometry_revision: Counter.exactOptional() };
+const executionFields = { task_id: Uuid, message: executionMessage };
 const controlEffect = { control_revision: Counter, applied_at: Timestamp };
 const resumeEffect = z
   .strictObject({
@@ -171,7 +224,7 @@ const ExecutionPayloadDefinition = z
       ...geometryRevision,
       event: z.literal('state'),
       state: z.literal('failed'),
-      reason: text(64, true),
+      reason: executionReason,
     }),
     z.strictObject({
       ...executionFields,
@@ -200,7 +253,7 @@ const ExecutionPayloadDefinition = z
       event: z.literal('cancellation_refused'),
       state: NonterminalState,
       cancellation_request_id: NewId,
-      reason: text(64, true),
+      reason: executionReason,
     }),
   ])
   .meta({ id: 'ExecutionPayload' });

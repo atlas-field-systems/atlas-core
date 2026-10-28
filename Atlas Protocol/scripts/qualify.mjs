@@ -92,9 +92,9 @@ const task = Task.parse(${JSON.stringify(task)});
 if (task.execution_state === 'completed' || task.execution_state === 'failed' || task.execution_state === 'cancelled') { const cleared: null = task.cancellation_request_id; void cleared; }
 const readBody: Extract<ResponseOf<'GetTask'>, {kind:'success'}>['body'] = {dataset_id:Uuid.parse(${JSON.stringify(id)}), data:task};
 void readBody;
-const committedResponse = readHttp(exchanges.CreateTask, { status:200, headers:new Headers({'Atlas-Dataset-ID':${JSON.stringify(id)}, 'Atlas-Protocol-Version':'0.2.0', 'Content-Type':'application/json'}), body:new TextEncoder().encode(JSON.stringify({dataset_id:${JSON.stringify(id)}, data:task, commit_cursor:'cursor'})) });
+const committedResponse = readHttp(exchanges.CreateTask, { status:200, headers:new Headers({'Atlas-Dataset-ID':${JSON.stringify(id)}, 'Atlas-Protocol-Version':'0.3.0', 'Content-Type':'application/json'}), body:new TextEncoder().encode(JSON.stringify({dataset_id:${JSON.stringify(id)}, data:task, commit_cursor:'cursor'})) });
 if (committedResponse.kind === 'success') { const cursor:string = committedResponse.body.commit_cursor; void cursor; }
-const response = readHttp(exchanges.GetTask, { status: 200, headers: new Headers({ 'Atlas-Dataset-ID': ${JSON.stringify(id)}, 'Atlas-Protocol-Version': '0.2.0', 'Content-Type': 'application/json' }), body: new TextEncoder().encode(JSON.stringify({dataset_id:${JSON.stringify(id)}, data:task})) });
+const response = readHttp(exchanges.GetTask, { status: 200, headers: new Headers({ 'Atlas-Dataset-ID': ${JSON.stringify(id)}, 'Atlas-Protocol-Version': '0.3.0', 'Content-Type': 'application/json' }), body: new TextEncoder().encode(JSON.stringify({dataset_id:${JSON.stringify(id)}, data:task})) });
 if (response.kind === 'success' && response.body.data.command === 'move_to') response.body.data.inputs.target.kind;
 NewId.parse(${JSON.stringify(id)});
 `,

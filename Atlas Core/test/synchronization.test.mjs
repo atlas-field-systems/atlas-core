@@ -18,8 +18,8 @@ async function socket(f, credential = f.apiKey) {
     const initial = found(); if (initial) return initial;
     return new Promise((resolve, reject) => { const timer = setTimeout(() => { waiters.delete(check); reject(new Error('Required WSS event was not delivered')); }, 10000); const check = () => { const value = found(); if (value) { clearTimeout(timer); waiters.delete(check); resolve(value); } }; waiters.add(check); });
   };
-  const send = (type, data) => ws.send(JSON.stringify({ type, dataset_id: f.core.dataset, protocol_version: '0.2.0', request_id: uuid(), data }));
-  ws.send(JSON.stringify({ type: 'authenticate', request_id: uuid(), dataset_id: f.core.dataset, protocol_version: '0.2.0', api_key: credential }));
+  const send = (type, data) => ws.send(JSON.stringify({ type, dataset_id: f.core.dataset, protocol_version: '0.3.0', request_id: uuid(), data }));
+  ws.send(JSON.stringify({ type: 'authenticate', request_id: uuid(), dataset_id: f.core.dataset, protocol_version: '0.3.0', api_key: credential }));
   await take(frame => frame.type === 'authenticated');
   return { ws, take, send, messages };
 }

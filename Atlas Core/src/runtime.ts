@@ -100,7 +100,7 @@ try {
 } catch (error) {
   let cleanup: unknown;
   if (close) { try { await close(); } catch (failure) { cleanup = failure; } }
-  process.stdout.write(JSON.stringify({ failed: true, code: 'runtime_failed', severity: 'ERROR', component: 'runtime', event: 'runtime_failed', at: new Date().toISOString(), release: '0.2.0',
+  process.stdout.write(JSON.stringify({ failed: true, code: 'runtime_failed', severity: 'ERROR', component: 'runtime', event: 'runtime_failed', at: new Date().toISOString(), release: '0.3.0',
     ...faultFrames(error), ...(cleanup === undefined ? {} : { cleanup_failure: 'shutdown_failed' }) }) + '\n');
   process.exitCode = 1;
 }

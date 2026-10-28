@@ -62,6 +62,7 @@ export {
 export type { InputSection, ReadSection } from './reports.js';
 export {
   ExecutionState,
+  ExecutionSummary,
   NonterminalState,
   ResultDeclaration,
   ResultDeclarations,

@@ -27,7 +27,7 @@ export async function fixture(t, overrides = {}) {
     const body = data === undefined ? undefined : Buffer.isBuffer(data) ? data : Buffer.from(JSON.stringify(data));
     return new Promise((resolve, reject) => {
       const req = httpsRequest(new URL(path, address), { method, ca, headers: Object.fromEntries(Object.entries({
-        Authorization: `Bearer ${apiKey}`, 'Atlas-Dataset-ID': core.dataset, 'Atlas-Protocol-Version': '0.2.0',
+        Authorization: `Bearer ${apiKey}`, 'Atlas-Dataset-ID': core.dataset, 'Atlas-Protocol-Version': '0.3.0',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json', 'Content-Length': body.byteLength }), ...additional,
       }).filter(([, value]) => value !== undefined && value !== null)) }, res => {
         const chunks = [];
