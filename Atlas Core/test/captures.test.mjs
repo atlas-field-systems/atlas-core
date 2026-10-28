@@ -10,7 +10,7 @@ import WebSocket from 'ws';
 import { once } from 'node:events';
 import { readWssServer, writeWssClient, exchanges } from '@atlas/protocol';
 import { join } from 'node:path';
-import { setImmediate as yieldToLoop } from 'node:timers/promises';
+import { setImmediate as yieldToLoop, setTimeout as delay } from 'node:timers/promises';
 import { Engine } from '../dist/engine.js';
 import { Reads } from '../dist/reads.js';
 import { defaults } from '../dist/settings.js';
@@ -638,7 +638,7 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
     };
   }
   const failures = [];
-  f.core.rpc.worker.on('message', message => { if (message.type === 'refusal') failures.push(message); });
+  f.core.rpc.worker.on('message', message => { if (message.type === 'refusal' && message.causes !== undefined) failures.push(message); });
   const initial = await snapshot();
   assert.equal(initial.code, 'storage_limit'); assert.equal('details' in initial, false);
   const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
@@ -661,7 +661,12 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
   }
   assert.equal(failures.length, 2);
   assert.ok(!JSON.stringify(failures).includes(f.directory)); assert.ok(!JSON.stringify(failures).includes(f.apiKey));
-  await rm(broken, { recursive: true }); await rm(pressure); await f.core.close();
+  const dropDeadline = performance.now() + 2000;
+  while (f.core.diagnostics.inspect().dropped === 0 && performance.now() < dropDeadline) await delay(10);
+  assert.ok(f.core.diagnostics.inspect().dropped > 0, 'Optional diagnostics drop when the installation is full');
+  await rm(broken, { recursive: true }); await rm(pressure);
+  for (let i = 0; i < 2; i++) assert.equal((await snapshot()).code, 'storage_limit');
+  await f.core.close();
   let logs = '';
   for (const name of await readdir(join(f.directory, 'logs'))) logs += await readFile(join(f.directory, 'logs', name), 'utf8');
   const events = logs.trim().split('\n').map(line => JSON.parse(line));

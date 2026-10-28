@@ -14,6 +14,8 @@ export const MaintenanceRequest = z.discriminatedUnion('operation', [
   z.strictObject({ operation: z.literal('settings-save'), expected_revision: Counter, candidate: Settings }),
   z.strictObject({ operation: z.literal('provision'), request: z.unknown() }),
   z.strictObject({ operation: z.literal('export') }),
+  z.strictObject({ operation: z.literal('reserve-export'), reservation: Uuid, bytes: z.number().int().nonnegative().max(134_217_728) }),
+  z.strictObject({ operation: z.literal('release-export'), reservation: Uuid }),
   z.strictObject({ operation: z.literal('enrollment-inspect') }),
   z.strictObject({ operation: z.literal('open-enroll'), dataset: Uuid, request: exchanges.RegisterAsset.request.schema }),
   z.strictObject({ operation: z.literal('enrollment-revoke'), binding: Uuid, key: Uuid, confirm: z.literal(true) }),
