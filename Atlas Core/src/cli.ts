@@ -61,12 +61,12 @@ try {
     }
   };
   const result = command === 'inspect' || command === 'settings' && args[0] === 'show' || command === 'enrollment' && args[0] === 'inspect' ? await perform() : await installationLock(root, perform);
-  process.stdout.write(JSON.stringify({ at: new Date().toISOString(), severity: 'INFO', event: 'command_completed', component: 'lifecycle', release: '0.1.0', ok: true, data: result }) + '\n');
+  process.stdout.write(JSON.stringify({ at: new Date().toISOString(), severity: 'INFO', event: 'command_completed', component: 'lifecycle', release: '0.2.0', ok: true, data: result }) + '\n');
 } catch (error) {
   const safe = z.enum(['invalid_arguments', 'management_busy', 'destructive_confirmation_required', 'recovery_required', 'repair_required', 'settings_revision_changed', 'writer_exit_unverified', 'already_setup', 'start_failed', 'docker_unavailable', 'docker_failed', 'maintenance_unavailable', 'setup_required', 'storage_limit', 'offline_operation_failed', 'incompatible_format']);
   const code = safe.safeParse(error instanceof Error ? error.message : undefined);
   const classify = (value: unknown) => { const parsed = safe.safeParse(value instanceof Error ? value.message : undefined); return parsed.success ? parsed.data : 'management_failed'; };
-  process.stdout.write(JSON.stringify({ at: new Date().toISOString(), severity: 'ERROR', event: 'command_failed', component: 'lifecycle', release: '0.1.0', ok: false, code: code.success ? code.data : 'management_failed', ...faultFrames(error),
+  process.stdout.write(JSON.stringify({ at: new Date().toISOString(), severity: 'ERROR', event: 'command_failed', component: 'lifecycle', release: '0.2.0', ok: false, code: code.success ? code.data : 'management_failed', ...faultFrames(error),
     ...(error instanceof AggregateError ? { primary_failure: classify(error.errors[0]), cleanup_failure: classify(error.errors[1]), failures: error.errors.slice(0, 8).map(classify) } : {}) }) + '\n');
   process.exitCode = 1;
 }

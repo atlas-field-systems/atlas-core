@@ -71,6 +71,8 @@ const evidenceFields = {
 export const SectionEvidence = z
   .strictObject({ ...evidenceFields, section: SectionName })
   .meta({ id: 'SectionEvidence' });
+export const TimeStatus = z.enum(['known', 'unknown', 'uncertain']);
+export type TimeStatus = z.output<typeof TimeStatus>;
 const metadata = {
   classification: z.enum(['state_until_changed', 'dated_measurement']),
   observed_at: Time,
@@ -112,11 +114,16 @@ function readResult<
   const K extends z.output<typeof SectionName>,
   V extends z.ZodType,
   T extends z.ZodType,
->(section: K, value: V, times: T, initial?: z.ZodType) {
+  S extends z.ZodType,
+>(section: K, value: V, times: T, statuses: S, initial?: z.ZodType) {
   const evidence = SectionEvidence.extend({ section: z.literal(section) });
   return z.discriminatedUnion('state', [
     valueResult(value, times)
-      .safeExtend({ evidence: evidence.nullable() })
+      .safeExtend({ evidence: evidence.nullable(), time_status: statuses })
+      .refine(
+        (result) => 'time_status' in result && validTimeStatuses(result),
+        'Invalid quantity time status',
+      )
       .refine(
         (result) =>
           result.evidence !== null ||
@@ -128,8 +135,12 @@ function readResult<
             result.source_times === undefined),
         'Invalid source-free value',
       ),
-    z.strictObject({ ...errorFields, evidence }),
-    z.strictObject({ ...withdrawnFields, evidence }),
+    z
+      .strictObject({ ...errorFields, evidence, time_status: TimeStatus })
+      .refine(validTimeStatuses, 'Invalid time status'),
+    z
+      .strictObject({ ...withdrawnFields, evidence, time_status: TimeStatus })
+      .refine(validTimeStatuses, 'Invalid time status'),
   ]);
 }
 const statusTimes = z.strictObject({ condition: Time.exactOptional() });
@@ -160,6 +171,100 @@ const opticsTimes = z.strictObject({
 });
 const typeTimes = z.strictObject({ kind: Time.exactOptional() });
 const geometryTimes = z.strictObject({ geometry: Time.exactOptional() });
+
+const statusStatuses = z.strictObject({ condition: TimeStatus });
+const capacityStatuses = z.strictObject({ bandwidth_bps: TimeStatus });
+const telemetryStatuses = z.strictObject({
+  position: TimeStatus,
+  altitude: TimeStatus,
+  ground_speed: TimeStatus,
+  airspeed: TimeStatus.exactOptional(),
+});
+const attitudeStatuses = z.strictObject({
+  heading: TimeStatus,
+  pitch: TimeStatus,
+  roll: TimeStatus,
+});
+const gimbalStatuses = z.strictObject({ bearing: TimeStatus, elevation: TimeStatus });
+const cameraStatuses = z.strictObject({
+  zoom_ratio: TimeStatus,
+  recording: TimeStatus.exactOptional(),
+  capturing: TimeStatus.exactOptional(),
+});
+const opticsStatuses = z.strictObject({ horizontal_fov: TimeStatus, vertical_fov: TimeStatus });
+const typeStatuses = z.strictObject({ kind: TimeStatus });
+const geometryStatuses = z.strictObject({ geometry: TimeStatus });
+const powerStatuses = z.strictObject({
+  external_power: TimeStatus,
+  reserves: z
+    .record(
+      Uuid,
+      z.strictObject({
+        remaining_percent: TimeStatus,
+        voltage_volts: TimeStatus.exactOptional(),
+        current_amperes: TimeStatus.exactOptional(),
+      }),
+    )
+    .refine((value) => Object.keys(value).length <= 16, 'Reserve status limit')
+    .meta({ maxProperties: 16 }),
+});
+
+const quantityRecord = z.record(z.string(), z.unknown());
+function validTimeStatuses(result: {
+  state: string;
+  observed_at: string | null;
+  time_status: unknown;
+  value?: unknown;
+  source_times?: unknown;
+}): boolean {
+  const matches = (status: unknown, time: unknown) => (status === 'unknown') === (time === null);
+  if (result.state !== 'value') return matches(result.time_status, result.observed_at);
+  const statuses = quantityRecord.parse(result.time_status);
+  const times = result.source_times === undefined ? {} : quantityRecord.parse(result.source_times);
+  const value = quantityRecord.parse(result.value);
+  const required = Object.keys(value).filter((key) => key !== 'explanation');
+  if ('geometry' in statuses)
+    return matches(
+      statuses.geometry,
+      times.geometry === undefined ? result.observed_at : times.geometry,
+    );
+  if (
+    required.length !== Object.keys(statuses).length ||
+    !required.every((key) => Object.hasOwn(statuses, key))
+  )
+    return false;
+  return Object.entries(statuses).every(([key, status]) => {
+    if (key !== 'reserves')
+      return matches(status, times[key] === undefined ? result.observed_at : times[key]);
+    const reserves = Power.parse(value).reserves;
+    const reserveStatuses = quantityRecord.parse(status);
+    const reserveTimes = times.reserves === undefined ? {} : quantityRecord.parse(times.reserves);
+    return (
+      Object.keys(reserveStatuses).length === reserves.length &&
+      reserves.every((reserve) => {
+        if (!Object.hasOwn(reserveStatuses, reserve.id)) return false;
+        const leaves = quantityRecord.parse(reserveStatuses[reserve.id]);
+        const overrides =
+          reserveTimes[reserve.id] === undefined ? {} : quantityRecord.parse(reserveTimes[reserve.id]);
+        const keys =
+          reserve.kind === 'battery'
+            ? ['remaining_percent', 'voltage_volts', 'current_amperes']
+            : ['remaining_percent'];
+        return (
+          Object.keys(leaves).length === keys.length &&
+          keys.every(
+            (quantity) =>
+              Object.hasOwn(leaves, quantity) &&
+              matches(
+                leaves[quantity],
+                overrides[quantity] === undefined ? result.observed_at : overrides[quantity],
+              ),
+          )
+        );
+      })
+    );
+  });
+}
 
 function powerTimesValid(result: {
   state: string;
@@ -246,47 +351,61 @@ const readSectionsDefinition = {
     'status',
     Status,
     statusTimes,
+    statusStatuses,
     Status.refine((value) => value.condition === 'unknown' && value.explanation === undefined),
   ).meta({ id: 'StatusRead' }),
   communications: readResult(
     'communications',
     Capacity,
     capacityTimes,
+    capacityStatuses,
     Capacity.refine((value) => value.bandwidth_bps === null),
   ).meta({ id: 'CapacityRead' }),
   telemetry: z
     .discriminatedUnion('state', [
       valueResult(Telemetry, telemetryTimes).safeExtend({
         constituents: Constituents,
+        time_status: telemetryStatuses,
         evidence: SectionEvidence.extend({ section: z.literal('telemetry') }),
       }),
       z.strictObject({
         ...errorFields,
+        time_status: TimeStatus,
         evidence: SectionEvidence.extend({ section: z.literal('telemetry') }),
       }),
       z.strictObject({
         ...withdrawnFields,
+        time_status: TimeStatus,
         evidence: SectionEvidence.extend({ section: z.literal('telemetry') }),
       }),
     ])
     .refine(telemetryKeys, 'Constituent keys differ')
+    .refine(
+      (result) => 'time_status' in result && validTimeStatuses(result),
+      'Invalid quantity time status',
+    )
     .meta({ id: 'TelemetryRead' }),
-  attitude: readResult('attitude', Attitude, attitudeTimes).meta({ id: 'AttitudeRead' }),
-  power: readResult('power', Power, PowerTimes)
+  attitude: readResult('attitude', Attitude, attitudeTimes, attitudeStatuses).meta({
+    id: 'AttitudeRead',
+  }),
+  power: readResult('power', Power, PowerTimes, powerStatuses)
     .refine(powerTimesValid, 'Invalid reserve times')
     .meta({ id: 'PowerRead' }),
-  camera: readResult('camera', Camera, cameraTimes).meta({ id: 'CameraRead' }),
-  camera_optics: readResult('camera_optics', CameraOptics, opticsTimes).meta({
+  camera: readResult('camera', Camera, cameraTimes, cameraStatuses).meta({ id: 'CameraRead' }),
+  camera_optics: readResult('camera_optics', CameraOptics, opticsTimes, opticsStatuses).meta({
     id: 'CameraOpticsRead',
   }),
-  gimbal: readResult('gimbal', Gimbal, gimbalTimes).meta({ id: 'GimbalRead' }),
+  gimbal: readResult('gimbal', Gimbal, gimbalTimes, gimbalStatuses).meta({ id: 'GimbalRead' }),
   type: readResult(
     'type',
     SubjectType,
     typeTimes,
+    typeStatuses,
     SubjectType.refine((value) => value.kind === null),
   ).meta({ id: 'SubjectTypeRead' }),
-  geometry: readResult('geometry', Geometry, geometryTimes).meta({ id: 'GeometryRead' }),
+  geometry: readResult('geometry', Geometry, geometryTimes, geometryStatuses).meta({
+    id: 'GeometryRead',
+  }),
 };
 type StatusReadDefinitionSchema = typeof readSectionsDefinition.status;
 export interface StatusReadSchema extends StatusReadDefinitionSchema {}

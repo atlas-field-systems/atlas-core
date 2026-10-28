@@ -42,7 +42,18 @@ Every read result adds read-only `evidence`, exactly
 `{dataset_id, entity_id, origin, report_id, sequence, section}`, referencing its
 accepted source report. `section` is the section's wire name. Source-free initial
 values alone use `evidence: null`. Track copies retain the original Observation
-reference. Input results forbid this read-only field.
+reference. Input results forbid read-only fields.
+
+Every read result also adds Core-assigned `time_status`. A value has an object
+with one `known`, `unknown`, or `uncertain` leaf for every supplied quantity in
+`source_times`' vocabulary, including quantities using the default `observed_at`.
+Geometry uses `geometry`. Power includes `external_power` and `reserves`, keyed
+by every reserve ID with its applicable quantity leaves. Optional quantities
+have a status exactly when present in the value. Error and withdrawn results use
+one status string for `observed_at`. Source-free initial quantities are `unknown`.
+A status is `unknown` exactly when its effective source time is null. Core retains
+first-admission status under the [time rule](reports.md#time-and-contact).
+Publishers cannot supply or override it; invalid or incomplete metadata is refused.
 
 Each constituent is exactly `{origin, reading_id}`.
 The ID is a source-assigned UUID with immutable reading facts.

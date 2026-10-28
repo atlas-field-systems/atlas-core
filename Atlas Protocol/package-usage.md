@@ -1,6 +1,6 @@
 # Use the Protocol package
 
-Install @atlas/protocol 0.1.0 from its packed artifact. The runtime entry has no
+Install @atlas/protocol 0.2.0 from its packed artifact. The runtime entry has no
 Node storage dependencies. The build-only `@atlas/protocol/reference` entry owns
 stock OpenAPI export. [Qualification](qualification.md) builds and packs both.
 

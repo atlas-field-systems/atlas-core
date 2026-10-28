@@ -148,3 +148,83 @@ test('Unicode Entity identity, tombstones and continued publisher evidence after
   const result = ok(await f.call('ReportObservation', { observation_id: entity, publisher_id: publisher, report: report(f.core.dataset, entity, { kind: 'publisher', publisher_id: publisher }, 1, { type: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null } }) }));
   assert.equal(result.track.id, pair.track.id); assert.equal(result.track.type.state, 'withdrawn');
 });
+test('current time status survives wall-clock passage, carry-forward, new clients, fusion and Restart', async t => {
+  const f = await fixture(t);
+  const registered = registration();
+  const asset = ok(await f.call('RegisterAsset', registered)).asset;
+  const assetOrigin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const publisher = { kind: 'publisher', publisher_id: uuid() }, observationId = uuid();
+  const future = new Date(Date.now() + 5000).toISOString();
+  const past = '2026-10-21T12:00:00.000000001Z';
+  const make = origin => ({ ...telemetry(origin, 51, future), source_times: { altitude: null, airspeed: past },
+    value: { position: { latitude: 51, longitude: -1 }, altitude: null, ground_speed: 7, airspeed: 4 },
+    constituents: { ...telemetry(origin, 51).constituents, airspeed: { origin, reading_id: uuid() } } });
+  const assetTelemetry = make(assetOrigin), observationTelemetry = make(publisher), reserve = uuid();
+  const power = { state: 'value', classification: 'dated_measurement', observed_at: future,
+    value: { external_power: false, reserves: [{ id: reserve, kind: 'battery', remaining_percent: 50, voltage_volts: 12, current_amperes: null }] },
+    source_times: { external_power: past, reserves: { [reserve]: { voltage_volts: past, current_amperes: null } } } };
+  const assetReport = report(f.core.dataset, asset.id, assetOrigin, 1, { telemetry: assetTelemetry, power });
+  const request = { request_id: uuid(), asset_id: asset.id, report: assetReport };
+  const expected = { position: 'uncertain', altitude: 'unknown', ground_speed: 'uncertain', airspeed: 'known' };
+  assert.deepEqual(ok(await f.call('UpdateAsset', request)).asset.telemetry.time_status, expected);
+  const observationReport = report(f.core.dataset, observationId, publisher, 1, { telemetry: observationTelemetry,
+    attitude: { state: 'error', classification: 'dated_measurement', observed_at: future, error: { code: 'offline' } } });
+  const creation = { request_id: uuid(), observation_id: observationId, publisher_id: publisher.publisher_id, report: observationReport };
+  const pair = ok(await f.call('CreateObservation', creation));
+  assert.deepEqual(pair.track.telemetry.time_status, expected);
+  assert.equal(pair.observation.attitude.time_status, 'uncertain');
+  await new Promise(resolve => setTimeout(resolve, Math.max(0, Date.parse(future) - Date.now() + 20)));
+  assert.ok(Date.now() > Date.parse(future), 'The original future time has actually passed');
+  const check = image => {
+    assert.deepEqual(image.telemetry.time_status, expected);
+    assert.equal(image.telemetry.observed_at, future);
+    assert.deepEqual(image.telemetry.source_times, { altitude: null, airspeed: past });
+  };
+  check(ok(await f.call('UpdateAsset', request)).asset);
+  check(ok(await f.call('CreateObservation', creation)).observation);
+  const carried = { ...assetTelemetry, observed_at: past,
+    source_times: { ...assetTelemetry.source_times, position: future, ground_speed: future } };
+  const updated = ok(await f.call('UpdateAsset', { request_id: uuid(), asset_id: asset.id,
+    report: report(f.core.dataset, asset.id, assetOrigin, 2, { telemetry: carried }) })).asset;
+  assert.deepEqual(updated.telemetry.time_status, expected);
+  assert.deepEqual(updated.telemetry.constituents, assetTelemetry.constituents);
+  assert.deepEqual(updated.power.time_status, { external_power: 'known', reserves: { [reserve]: {
+    remaining_percent: 'uncertain', voltage_volts: 'known', current_amperes: 'unknown' } } });
+  check(ok(await f.call('ReportObservation', { observation_id: observationId, publisher_id: publisher.publisher_id,
+    report: report(f.core.dataset, observationId, publisher, 2, { telemetry: observationTelemetry }) })).track);
+  const newKey = registration();
+  ok(await f.call('CreateApiKey', { request_id: uuid(), api_key_id: newKey.api_key_id, secret: newKey.secret }));
+  const credentials = { Authorization: `Bearer ${newKey.secret}` };
+  for (const restart of [false, true]) {
+    if (restart) await f.restart();
+    const readAsset = ok(await f.call('GetAsset', { asset_id: asset.id }, credentials));
+    assert.deepEqual(readAsset.telemetry.time_status, expected);
+    assert.deepEqual(readAsset.power.time_status, updated.power.time_status);
+    const readObservation = ok(await f.call('GetObservation', { observation_id: observationId }, credentials));
+    check(readObservation);
+    assert.equal(readObservation.attitude.time_status, 'uncertain');
+    check(ok(await f.call('GetTrack', { track_id: pair.track.id }, credentials)));
+    const health = ok(await f.call('GetHealth', {}, credentials));
+    const snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }, credentials));
+    const images = snapshot.items.map(item => item.image);
+    assert.deepEqual(images.find(image => image.id === asset.id).telemetry.time_status, expected);
+    check(images.find(image => image.id === pair.track.id));
+    const history = ok(await f.call('GetAssetMovementHistory', { entity_id: asset.id, query_id: uuid(), allocation_context: health.allocation_context }, credentials));
+    assert.equal(history.readings.length, 1);
+    assert.equal(history.readings[0].time_status, 'uncertain');
+    assert.equal(history.readings[0].observed_at, future);
+    ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token }, credentials));
+    ok(await f.call('ReleaseHistoryView', { release_token: history.release_token }, credentials));
+  }
+});
+test('startup refuses legacy evidence without retained quantity status', async t => {
+  const f = await fixture(t);
+  await f.core.close();
+  const db = new Database(join(f.directory, 'core.sqlite'));
+  try { db.exec('ALTER TABLE evidence_readings DROP COLUMN status'); }
+  finally { db.close(); }
+  await assert.rejects(f.restart(), /database_worker_failed/);
+  const retained = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  try { assert.equal(retained.pragma('table_info(evidence_readings)').some(column => column.name === 'status'), false); }
+  finally { retained.close(); }
+});

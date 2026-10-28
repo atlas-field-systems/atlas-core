@@ -10,7 +10,7 @@ export function runIdentityRegressions(p) {
         status: 200,
         headers: new Headers({
           'Atlas-Dataset-ID': data.dataset_id ?? s.id,
-          'Atlas-Protocol-Version': '0.1.0',
+          'Atlas-Protocol-Version': '0.2.0',
           'Content-Type': 'application/json',
         }),
         body: encode({ dataset_id: data.dataset_id ?? s.id, data, commit_cursor: 'cursor' }),
@@ -22,7 +22,7 @@ export function runIdentityRegressions(p) {
       encode({
         type: 'change_batch',
         dataset_id: image.dataset_id,
-        protocol_version: '0.1.0',
+        protocol_version: '0.2.0',
         data: {
           subscription_id: s.requestId,
           previous_cursor: 'before',
@@ -93,6 +93,15 @@ export function runIdentityRegressions(p) {
     classification: 'state_until_changed',
     observed_at: null,
     evidence,
+    time_status:
+      state === 'value'
+        ? Object.fromEntries(
+            (evidence.section === 'geometry' ? ['geometry'] : Object.keys(value)).map((key) => [
+              key,
+              'unknown',
+            ]),
+          )
+        : 'unknown',
     ...(state === 'value' ? { value } : state === 'error' ? { error: { code: 'sensor' } } : {}),
   });
   const publisher = { kind: 'publisher', publisher_id: s.processId };
