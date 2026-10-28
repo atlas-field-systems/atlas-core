@@ -1,3 +1,4 @@
+import { mutableRoot } from './paths.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, execFileSync, spawn } from 'node:child_process';
@@ -19,7 +20,7 @@ const exec = promisify(execFile);
 test('real CLI and pinned container retain Restart, fence Reset, recover proof and require new Hard Reset setup', { timeout: 180000 }, async t => {
   const image = (await readFile(join(root, 'artifacts', 'image-id'), 'utf8')).trim();
   assert.match(image, /^sha256:[0-9a-f]{64}$/);
-  const base = await mkdtemp(join(root, 'artifacts', 'container-'));
+  const base = await mkdtemp(join(mutableRoot, 'container-'));
   const installation = join(base, 'installation');
   const cert = join(base, 'tls.pem'), key = join(base, 'tls.key'), credentials = join(base, 'credential.json');
   const apiKey = secret();

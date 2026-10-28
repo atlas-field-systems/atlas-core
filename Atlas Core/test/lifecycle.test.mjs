@@ -1,3 +1,4 @@
+import { mutableRoot } from './paths.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
@@ -35,8 +36,7 @@ test('update compatibility inspects retained SQLite without opening an Engine or
   }
 });
 test('installation mutation lock excludes contenders after dead and ownerless commands', async t => {
-  await mkdir(join(root, 'artifacts'), { recursive: true });
-  const directory = await mkdtemp(join(root, 'artifacts', 'locks-'));
+  const directory = await mkdtemp(join(mutableRoot, 'locks-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const ended = { ...await processIdentity(), start: '0' };
   for (let round = 0; round < 20; round++) {
@@ -188,8 +188,7 @@ test('Stop retains a completed download handle cleanup failure and records it', 
 });
 
 for (const cleanupFails of [false, true]) test(`failed Core initialization awaits worker cleanup${cleanupFails ? ' and retains both failures' : ''}`, async t => {
-  await mkdir(join(root, 'artifacts'), { recursive: true });
-  const directory = await mkdtemp(join(root, 'artifacts', 'failed-start-'));
+  const directory = await mkdtemp(join(mutableRoot, 'failed-start-'));
   const call = DatabaseWorker.prototype.call, closeWorker = DatabaseWorker.prototype.close;
   let rpc;
   t.after(async () => { if (rpc?.worker.threadId !== -1 && rpc) await closeWorker.call(rpc); await rm(directory, { recursive: true, force: true }); });
