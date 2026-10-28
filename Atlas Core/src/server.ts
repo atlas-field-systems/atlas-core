@@ -243,9 +243,16 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
   });
   let tick: Promise<void> | undefined, summaryWork: Promise<void> | undefined;
   function backgroundFailed(error: unknown): void {
-    diagnostics.emit({ severity: 'ERROR', event: 'background_failure', component: 'runtime', code: publicError(error, ready.dataset).body.error.code, ...faultFrames(error) });
-    if (error instanceof AggregateError) for (const cause of error.errors.slice(1, 3)) {
-      diagnostics.emit({ severity: 'ERROR', event: 'background_cleanup_failure', component: 'runtime', code: publicError(cause, ready.dataset).body.error.code, ...faultFrames(cause) });
+    const causes: unknown[] = [];
+    function collect(cause: unknown, depth: number): void {
+      if (causes.length === 3) return;
+      if (cause instanceof AggregateError && cause.errors.length > 0 && depth < 8) {
+        for (const nested of cause.errors.slice(0, 3)) collect(nested, depth + 1);
+      } else causes.push(cause);
+    }
+    collect(error, 0);
+    for (const [index, cause] of causes.entries()) {
+      diagnostics.emit({ severity: 'ERROR', event: index === 0 ? 'background_failure' : 'background_cleanup_failure', component: 'runtime', code: publicError(cause, ready.dataset).body.error.code, ...faultFrames(cause) });
     }
   }
   const summary = setInterval(() => {
