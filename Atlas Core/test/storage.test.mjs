@@ -123,6 +123,74 @@ test('replay age expiry and zero-byte retention remove complete commits with exa
   assert.deepEqual([...store.messages(fourth, fourth)], []);
   assert.throws(() => [...store.messages(third, fourth)], error => error.code === 'cursor_expired');
 });
+test('optional log growth stops before aggregate headroom while reads and cancellation remain usable', async t => {
+  const f = await fixture(t, { storageBytes: 4 * 1_048_576, reserveBytes: 262_144, objectBytes: 1_048_576, diagnosticBytes: 4 * 1_048_576 });
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'pause', scheduling: 'immediate', inputs: {} }));
+  await f.core.rpc.call('tick', {}, 0, true);
+  const pressure = join(f.directory, 'pressure.bin');
+  await writeFile(pressure, Buffer.alloc(f.settings.storageBytes - f.settings.reserveBytes - diskUsage(f.directory).bytes - 2048));
+  const dropped = f.core.diagnostics.inspect().dropped;
+  for (let i = 0; i < 60; i++) assert.equal(ok(await f.call('GetReadiness')).ready, true);
+  await f.core.diagnostics.close();
+  assert.ok(diskUsage(f.directory).bytes <= f.settings.storageBytes - f.settings.reserveBytes);
+  assert.ok(f.core.diagnostics.inspect().dropped > dropped);
+  assert.equal(ok(await f.call('RequestTaskCancellation', { request_id: uuid(), task_id: task.task_id })).execution_state, 'pending');
+  assert.ok(diskUsage(f.directory).bytes <= f.settings.storageBytes);
+});
+test('an unwritten diagnostic reservation prevents competing growth and releases only after writing', async t => {
+  const f = await fixture(t, { storageBytes: 8 * 1_048_576, reserveBytes: 1_048_576, objectBytes: 1_048_576, diagnosticBytes: 4 * 1_048_576 });
+  await f.core.diagnostics.close();
+  await f.core.rpc.call('tick', {}, 0, true);
+  const pressure = join(f.directory, 'pressure.bin'), bytes = 262_144, reservation = uuid();
+  await writeFile(pressure, Buffer.alloc(f.settings.storageBytes - f.settings.reserveBytes - diskUsage(f.directory).bytes - bytes - 32768));
+  await f.core.rpc.call('reserve-diagnostics', { reservation, bytes }, 256);
+  assert.equal((await f.call('RegisterAsset', registration())).json.error.code, 'storage_limit');
+  await writeFile(join(f.directory, 'export.jsonl'), Buffer.alloc(bytes));
+  await f.core.rpc.call('release-diagnostics', reservation, 128, true);
+  assert.equal((await f.call('RegisterAsset', registration())).json.error.code, 'storage_limit');
+  assert.ok(diskUsage(f.directory).bytes <= f.settings.storageBytes - f.settings.reserveBytes);
+  await rm(join(f.directory, 'export.jsonl'));
+  ok(await f.call('RegisterAsset', registration()));
+});
+test('contact expiry and restart obey the hard ceiling and can use required-effect headroom', { timeout: 30_000 }, async t => {
+  const directory = await mkdtemp(join(root, 'artifacts', 'contact-admission-'));
+  const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 8 * 1_048_576, objectBytes: 1_048_576, reserveBytes: 1_048_576 };
+  let engine = new Engine(directory, settings);
+  t.after(async () => { await engine?.close(); await rm(directory, { recursive: true, force: true }); });
+  const credential = secret();
+  engine.provision({ request_id: uuid(), api_key_id: uuid(), secret: credential });
+  const context = { verifier: digest(credential), dataset: engine.store.dataset, protocol: PROTOCOL_VERSION };
+  const call = async (name, request = {}) => (await engine.execute({ name, request }, context)).body.data;
+  const asset = (await call('RegisterAsset', registration())).asset;
+  const health = await call('GetHealth');
+  const challenge = await call('BeginAssetContact', { allocation_context: health.allocation_context, request_id: uuid(), asset_id: asset.id, process_generation: asset.process_generation, mode: 'current' });
+  const proof = { ...report(engine.store.dataset, asset.id, { kind: 'asset_process', process_generation: asset.process_generation }, 1, {}), generated_at: challenge.issued_at, contact_proof: { challenge_id: challenge.challenge_id } };
+  const healthy = (await call('UpdateAsset', { request_id: uuid(), asset_id: asset.id, report: proof })).asset;
+  assert.equal(healthy.communications.health, 'healthy');
+  engine.store.db.pragma('wal_checkpoint(TRUNCATE)');
+  const pressure = join(directory, 'pressure.bin');
+  async function fill(gap) { await rm(pressure, { force: true }); await writeFile(pressure, Buffer.alloc(settings.storageBytes - diskUsage(directory).bytes - gap)); }
+  await fill(32768);
+  await delay(15_100);
+  await assert.rejects(engine.tick(), error => error.code === 'storage_limit');
+  assert.deepEqual(await call('GetAsset', { asset_id: asset.id }), healthy);
+  assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
+  await fill(262_144);
+  await engine.tick();
+  const degraded = await call('GetAsset', { asset_id: asset.id });
+  assert.equal(degraded.communications.health, 'degraded');
+  await engine.close(); engine = undefined;
+  await fill(32768);
+  assert.throws(() => new Engine(directory, settings), error => error.code === 'storage_limit');
+  const reader = new Database(join(directory, 'core.sqlite'), { readonly: true });
+  try { assert.deepEqual(JSON.parse(reader.prepare('SELECT image FROM entity_assets WHERE id=?').get(asset.id).image), degraded); }
+  finally { reader.close(); }
+  await fill(262_144);
+  engine = new Engine(directory, settings);
+  assert.equal((await call('GetAsset', { asset_id: asset.id })).communications.health, 'offline');
+  assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
+});
 test('upload descriptor admission preserves ordinary headroom when content adds no reservation', async t => {
   for (const contentBytes of [0, 7]) await t.test(`${contentBytes} content bytes already reserved`, async t => {
     const directory = await mkdtemp(join(root, 'artifacts', 'descriptor-admission-'));
@@ -499,7 +567,11 @@ test('draining readiness is an authenticated 503 success and ordinary work stops
 test('diagnostic floods rotate within budget, expose loss and isolate a failed sink from requests', async t => {
   const f = await fixture(t);
   const directory = join(f.directory, 'bounded-diagnostics');
-  const diagnostic = new Diagnostics(directory, 65_536, 'DEBUG');
+  const diagnostic = new Diagnostics(directory, 65_536, 'DEBUG', async bytes => {
+    const reservation = uuid();
+    await f.core.rpc.call('reserve-diagnostics', { reservation, bytes }, 256);
+    return async () => { await f.core.rpc.call('release-diagnostics', reservation, 128, true); };
+  });
   const sentinel = 'secret-and-private-payload.bin';
   for (let i = 0; i < 10_000; i++) diagnostic.emit({ severity: 'WARN', component: 'runtime', event: 'pressure_test', count: i });
   diagnostic.emit({ severity: 'ERROR', component: 'runtime', event: 'safe_fault', ...faultFrames(new Error(sentinel)) });

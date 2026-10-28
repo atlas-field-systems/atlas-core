@@ -48,7 +48,8 @@ export class Diagnostics {
   dropped = 0;
   suppressed = 0;
   failed = 0;
-  constructor(private readonly directory: string, private readonly capacity: number, private readonly level: Diagnostic['severity']) {}
+  constructor(private readonly directory: string, private readonly capacity: number, private readonly level: Diagnostic['severity'],
+    private readonly reserve: (bytes: number) => Promise<() => Promise<void>>) {}
   emit(input: Diagnostic): void {
     if (this.closed) return;
     const levels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
@@ -88,7 +89,17 @@ export class Diagnostics {
         }
         this.file = await open(join(this.directory, 'events.0.jsonl'), 'a', 0o600); this.size = 0;
       }
-      await this.file.write(line); this.size += line.byteLength;
+      let release: () => Promise<void>;
+      try { release = await this.reserve(line.byteLength); }
+      catch { this.dropped++; continue; }
+      try {
+        let offset = 0;
+        while (offset < line.byteLength) {
+          const { bytesWritten } = await this.file.write(line, offset);
+          if (bytesWritten === 0) throw new Error('diagnostic_write_incomplete');
+          offset += bytesWritten; this.size += bytesWritten;
+        }
+      } finally { await release(); }
     }
   }
   async close(): Promise<void> { this.closed = true; await this.writing; if (this.file) { await this.file.sync(); await this.file.close(); this.file = undefined; } }

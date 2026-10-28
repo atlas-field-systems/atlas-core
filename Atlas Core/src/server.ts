@@ -63,10 +63,14 @@ export async function createCore(options: ServerOptions) {
 }
 async function initializeCore(options: ServerOptions, cleanup: (() => Promise<void>)[]) {
   const settings = Settings.parse(options.settings ?? defaults);
-  const diagnostics = new Diagnostics(join(options.directory, 'logs'), settings.diagnosticBytes, settings.diagnosticLevel);
-  cleanup.push(() => diagnostics.close());
+  const diagnostics = new Diagnostics(join(options.directory, 'logs'), settings.diagnosticBytes, settings.diagnosticLevel, async bytes => {
+    const reservation = id();
+    await rpc.call('reserve-diagnostics', { reservation, bytes }, 256);
+    return async () => { await rpc.call('release-diagnostics', reservation, 128, true); };
+  });
   const rpc = new DatabaseWorker(options.directory, settings, undefined, options.accountingRoot, () => diagnostics.emit({ severity: 'ERROR', component: 'database', event: 'worker_failed', evidence: 'unavailable' }));
   cleanup.push(() => rpc.close());
+  cleanup.push(() => diagnostics.close());
   const ready = await rpc.ready;
   async function enrollmentWarning(): Promise<void> {
     const enrollment = z.object({ enabled: z.boolean(), bindings: z.array(z.unknown()).max(128) }).parse(await rpc.call('enrollment-inspect', {}, 65536, true));
@@ -292,9 +296,9 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
       for (const work of maintenance) if (work !== undefined) await finish(() => work);
       await finish(() => transfers.close());
       await finish(() => app.close());
-      await finish(() => rpc.close());
-      diagnostics.emit({ severity: failures.length === 0 ? 'INFO' : 'ERROR', component: 'lifecycle', event: failures.length === 0 ? 'core_stopped' : 'core_stop_failed', dataset: ready.dataset, run: ready.run });
+      diagnostics.emit({ severity: failures.length === 0 ? 'INFO' : 'ERROR', component: 'lifecycle', event: failures.length === 0 ? 'core_stopping' : 'core_stop_failed', dataset: ready.dataset, run: ready.run });
       await finish(() => diagnostics.close());
+      await finish(() => rpc.close());
       if (failures.length > 0) throw new AggregateError(failures, 'core_shutdown_failed');
     })();
     return closing;
