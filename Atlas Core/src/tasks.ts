@@ -30,6 +30,7 @@ export class Tasks {
       CREATE TABLE IF NOT EXISTS task_adoption(asset TEXT PRIMARY KEY,generation TEXT NOT NULL,sequence TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS task_instructions(read_id TEXT PRIMARY KEY,facts TEXT NOT NULL,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS task_terminal(id TEXT PRIMARY KEY,payload TEXT NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS task_cancellation_retries(request TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS task_instruction_lifetime(read_id TEXT PRIMARY KEY,run TEXT NOT NULL,deadline REAL NOT NULL) STRICT;`);
   }
   get(taskId: Uuid): Task {
@@ -90,7 +91,10 @@ export class Tasks {
   }
   cancel(tx: Transaction, request: RequestOf<'RequestTaskCancellation'>): Task {
     const task = this.get(request.task_id);
-    if (tx.retry('RequestTaskCancellation', request.request_id, request)) return task;
+    if (tx.retry('RequestTaskCancellation', request.request_id, request)) {
+      const row = Image.parse(this.store.db.prepare('SELECT image FROM task_cancellation_retries WHERE request=?').get(request.request_id));
+      return Task.parse(JSON.parse(row.image));
+    }
     if (!terminal(task)) {
       if (task.cancellation_request_id !== null) refuse('cancellation_pending');
       task.cancellation_request_id = request.request_id;
@@ -104,6 +108,9 @@ export class Tasks {
       }
       this.identity.activity(tx, 'task', 'Cancellation requested');
     }
+    const image = JSON.stringify(task);
+    tx.retainedBytes += Buffer.byteLength(image);
+    this.store.db.prepare('INSERT INTO task_cancellation_retries VALUES(?,?)').run(request.request_id, image);
     tx.remember('RequestTaskCancellation', request.request_id, request);
     return task;
   }
@@ -317,6 +324,6 @@ export class Tasks {
     for (const row of source.prepare('SELECT image FROM task_images ORDER BY id').iterate()) yield Task.parse(JSON.parse(Image.parse(row).image));
   }
   clearDataset(): void {
-    this.store.db.exec('DELETE FROM task_images; DELETE FROM task_internal; DELETE FROM task_submission; DELETE FROM task_evidence; DELETE FROM task_adoption; DELETE FROM task_instructions; DELETE FROM task_instruction_lifetime; DELETE FROM task_terminal');
+    this.store.db.exec('DELETE FROM task_images; DELETE FROM task_internal; DELETE FROM task_submission; DELETE FROM task_evidence; DELETE FROM task_adoption; DELETE FROM task_instructions; DELETE FROM task_instruction_lifetime; DELETE FROM task_terminal; DELETE FROM task_cancellation_retries');
   }
 }

@@ -15,11 +15,13 @@ import type { Context } from './engine.js';
 import type { DatabaseWorker } from './rpc.js';
 import type { Settings } from './settings.js';
 import type { Diagnostics } from './diagnostics.js';
+import { faultFrames } from './diagnostics.js';
 
 export class Transfers {
   private uploads = 0;
   private downloads = 0;
   private closing = false;
+  private cleanupFailure: AggregateError | undefined;
   private readonly active = new Set<Promise<unknown>>();
   private readonly streams = new Set<Readable>();
   private readonly receivers = new Map<FastifyRequest, { context: Context; stream?: Readable }>();
@@ -74,6 +76,7 @@ export class Transfers {
               if (bytes + raw.byteLength > this.settings.limits.max_request_bytes) refuse('payload_too_large');
               bytes += raw.byteLength; chunks.push(raw);
             }
+            if (part.file.truncated) refuse('payload_too_large');
             descriptor = parse(Buffer.concat(chunks, bytes));
             if (descriptor.byte_length !== String(length) && seenFile) refuse('invalid_request');
             await this.rpc.call('describe-upload', { context, attempt: attemptId, descriptor }, bytes + 1024);
@@ -143,35 +146,58 @@ export class Transfers {
       this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_reclaimed', count: 1 });
     }
   }
-  async download(objectId: Uuid, context: Context): Promise<{ image: ObjectImage; stream: Readable }> {
+  download(objectId: Uuid, context: Context): Promise<{ image: ObjectImage; stream: Readable }> {
+    return this.track(this.prepareDownload(objectId, context));
+  }
+  private checkDownload(): void { if (this.closing) refuse('resource_limit'); }
+  private downloadCleanupFailed(errors: readonly unknown[]): AggregateError {
+    const failure = new AggregateError(errors, 'download_cleanup_failed');
+    this.cleanupFailure ??= failure;
+    this.diagnostics.emit({ severity: 'ERROR', component: 'objects', event: 'download_cleanup_failed', ...faultFrames(errors.at(-1)) });
+    return failure;
+  }
+  private async prepareDownload(objectId: Uuid, context: Context): Promise<{ image: ObjectImage; stream: Readable }> {
     if (this.closing || this.downloads >= this.settings.maxDownloads) refuse('resource_limit');
     this.downloads++;
     let file: FileHandle | undefined;
     try {
       const metadata = z.object({ image: ObjectImage, path: z.string() }).parse(await this.rpc.call('file', { context, object: objectId }, 512));
+      this.checkDownload();
       if (!/^installed\/[0-9a-f-]{36}-[0-9a-f-]{36}$/.test(metadata.path)) refuse('integrity_fault');
       file = await open(join(this.directory, metadata.path), 'r');
+      this.checkDownload();
       const info = await file.stat();
+      this.checkDownload();
       if (!info.isFile() || String(info.size) !== metadata.image.byte_length) refuse('integrity_fault');
       const hash = createHash('sha256');
       const scan = file.createReadStream({ autoClose: false, start: 0 });
       this.streams.add(scan);
-      try { for await (const chunk of scan) { await this.authorize(context); hash.update(chunk); } }
+      try { for await (const chunk of scan) { await this.authorize(context); this.checkDownload(); hash.update(chunk); } }
       finally { this.streams.delete(scan); }
       if (hash.digest('hex') !== metadata.image.sha256) refuse('integrity_fault');
       await this.authorize(context);
+      this.checkDownload();
       await this.rpc.call('integrity', { object: objectId, fault: false }, 128);
-      const content = file.createReadStream({ autoClose: true, start: 0 });
+      this.checkDownload();
+      const handle = file;
+      const content = handle.createReadStream({ autoClose: false, start: 0 });
+      content.on('error', error => this.diagnostics.emit({ severity: 'ERROR', component: 'objects', event: 'content_stream_failed', ...faultFrames(error) }));
       file = undefined;
       const authorize = () => this.authorize(context);
       async function* bytes() { try { for await (const chunk of content) { await authorize(); yield chunk; } } finally { content.destroy(); } }
       const stream = Readable.from(bytes()); this.streams.add(stream);
-      const finished = new Promise<void>(resolve => stream.once('close', () => { this.streams.delete(stream); this.downloads--; resolve(); }));
+      const finished = new Promise<void>((resolve, reject) => stream.once('close', () => {
+        content.destroy();
+        void handle.close().then(resolve, error => reject(this.downloadCleanupFailed([error])));
+      })).finally(() => { this.streams.delete(stream); this.downloads--; });
       this.track(finished);
       return { image: metadata.image, stream };
     } catch (error) {
       this.downloads--;
-      if (file) await file.close();
+      if (file) {
+        try { await file.close(); }
+        catch (cleanup) { throw this.downloadCleanupFailed([error, cleanup]); }
+      }
       if (error instanceof Refusal && error.code === 'integrity_fault' || error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         await this.rpc.call('integrity', { object: objectId, fault: true }, 128);
         refuse('integrity_fault');
@@ -184,5 +210,6 @@ export class Transfers {
     for (const [request, receiver] of this.receivers) { receiver.stream?.destroy(); request.raw.destroy(); }
     for (const stream of this.streams) stream.destroy();
     await Promise.allSettled(this.active);
+    if (this.cleanupFailure !== undefined) throw this.cleanupFailure;
   }
 }

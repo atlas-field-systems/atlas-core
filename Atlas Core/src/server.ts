@@ -52,9 +52,21 @@ export async function storageUsage(directory: string): Promise<{ bytes: number; 
   return { bytes, free: Number(disk.bavail * disk.bsize) };
 }
 export async function createCore(options: ServerOptions) {
+  const cleanup: (() => Promise<void>)[] = [];
+  try { return await initializeCore(options, cleanup); }
+  catch (error) {
+    const failures: unknown[] = [error];
+    for (const close of cleanup.reverse()) { try { await close(); } catch (failure) { failures.push(failure); } }
+    if (failures.length > 1) throw new AggregateError(failures, 'core_initialization_failed');
+    throw error;
+  }
+}
+async function initializeCore(options: ServerOptions, cleanup: (() => Promise<void>)[]) {
   const settings = Settings.parse(options.settings ?? defaults);
   const diagnostics = new Diagnostics(join(options.directory, 'logs'), settings.diagnosticBytes, settings.diagnosticLevel);
+  cleanup.push(() => diagnostics.close());
   const rpc = new DatabaseWorker(options.directory, settings, undefined, options.accountingRoot, () => diagnostics.emit({ severity: 'ERROR', component: 'database', event: 'worker_failed', evidence: 'unavailable' }));
+  cleanup.push(() => rpc.close());
   const ready = await rpc.ready;
   async function enrollmentWarning(): Promise<void> {
     const enrollment = z.object({ enabled: z.boolean(), bindings: z.array(z.unknown()).max(128) }).parse(await rpc.call('enrollment-inspect', {}, 65536, true));
@@ -63,6 +75,7 @@ export async function createCore(options: ServerOptions) {
   await enrollmentWarning();
   const exitedLaunches = new Set(options.exitedLaunches ?? []);
   const transfers = new Transfers(rpc, join(options.directory, 'objects'), settings, diagnostics, exitedLaunches);
+  cleanup.push(() => transfers.close());
   await transfers.initialize();
   const captures = z.array(CaptureFile).max(4096).parse(await rpc.call('capture-files', {}, 1024, true));
   const captureDirectory = await ownedDirectory(join(options.directory, 'captures'));
@@ -79,11 +92,12 @@ export async function createCore(options: ServerOptions) {
     requestIdHeader: false, genReqId: () => id(), bodyLimit: settings.limits.max_request_bytes,
     requestTimeout: 0, connectionTimeout: 60_000, maxRequestsPerSocket: 1000,
     ajv: { customOptions: { coerceTypes: false, useDefaults: false, removeAdditional: false } } });
+  cleanup.push(() => app.close());
   app.server.maxConnections = 256;
   app.removeContentTypeParser('application/json');
   app.addContentTypeParser('application/json', { parseAs: 'buffer', bodyLimit: settings.limits.max_request_bytes }, (_request, body, done) => done(null, body));
   await app.register(multipart, { attachFieldsToBody: false, isPartAFile: () => true,
-    limits: { files: 2, fields: 0, parts: 2, fileSize: settings.limits.max_object_bytes, fieldNameSize: 64, headerPairs: 32 } });
+    limits: { files: 2, fields: 0, parts: 2, fileSize: Math.max(settings.limits.max_object_bytes, settings.limits.max_request_bytes), fieldNameSize: 64, headerPairs: 32 } });
   await app.register(websocket, { options: { maxPayload: settings.limits.max_control_bytes, perMessageDeflate: false, clientTracking: true } });
   const contexts = new WeakMap<FastifyRequest, Context>();
   const counted = new WeakSet<FastifyRequest>();

@@ -204,3 +204,25 @@ test('geometry work shortens complete list, snapshot and replay pages without sk
   while (true) { for (const message of replay.messages) if (message.type === 'change_batch') changes.push(...message.data.changes.map(change => change.resource_id)); if (replay.next_page_token === null) break; replay = ok(await f.call('ReadChanges', { page_token: replay.next_page_token })); }
   assert.deepEqual(changes.sort(), ids.sort());
 });
+test('list admission refuses queries whose complete continuation exceeds the request budget', { timeout: 30000 }, async t => {
+  const { defaults } = await import('../dist/settings.js');
+  for (const max_request_bytes of [defaults.limits.max_request_bytes, 65536]) await t.test(String(max_request_bytes), async t => {
+    const f = await fixture(t, { limits: { ...defaults.limits, max_request_bytes } });
+    const count = max_request_bytes === defaults.limits.max_request_bytes ? 1000 : 80;
+    const aliases = Array.from({ length: count }, (_, i) => '\0'.repeat(124) + i.toString(36).padStart(4, '0'));
+    const ids = Array.from({ length: count }, uuid);
+    for (let i = 0; i < 2; i++) ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: ids[i], alias: aliases[i], geometry: { type: 'Point', coordinates: [i, i] } }));
+    const query = { page_size: 1, filters: { aliases, ids } };
+    assert.ok(Buffer.byteLength(JSON.stringify(query)) < max_request_bytes, 'The initial query must fit the effective HTTP budget');
+    const response = await f.call('ListGeofeatures', query);
+    assert.equal(response.status, 429, JSON.stringify({ status: response.status, tokenBytes: response.json?.data?.next_page_token?.length }));
+    assert.equal(response.json.error.code, 'resource_limit');
+    const complete = ok(await f.call('ListGeofeatures', { filters: query.filters }));
+    assert.deepEqual(complete.items.map(item => item.id).sort(), ids.slice(0, 2).sort());
+    assert.equal(complete.next_page_token, null);
+    const smaller = ok(await f.call('ListGeofeatures', { page_size: 1, filters: { aliases: aliases.slice(0, 2), ids: ids.slice(0, 2) } }));
+    const continued = ok(await f.call('ListGeofeatures', { page_token: smaller.next_page_token }));
+    assert.deepEqual([...smaller.items, ...continued.items].map(item => item.id).sort(), ids.slice(0, 2).sort());
+    assert.equal(continued.next_page_token, null);
+  });
+});

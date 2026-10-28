@@ -13,7 +13,38 @@ import { storageUsage } from '../dist/server.js';
 import { digest } from '../dist/exact.js';
 import { currentWriter } from '../dist/ownership.js';
 import { DatabaseWorker } from '../dist/rpc.js';
+import { diskUsage } from '../dist/capacity.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
+test('upload descriptor admission preserves ordinary headroom when content adds no reservation', async t => {
+  for (const contentBytes of [0, 7]) await t.test(`${contentBytes} content bytes already reserved`, async t => {
+    const directory = await mkdtemp(join(root, 'artifacts', 'descriptor-admission-'));
+    const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 32 * 1_048_576, objectBytes: 16 * 1_048_576, reserveBytes: 1_048_576 };
+    const rpc = new DatabaseWorker(directory, settings, undefined, directory);
+    t.after(async () => { await rpc.close(); await rm(directory, { recursive: true, force: true }); });
+    const { dataset } = await rpc.ready, credential = secret();
+    await rpc.call('provision', { request_id: uuid(), api_key_id: uuid(), secret: credential }, 1024, true);
+    const context = { verifier: digest(credential), dataset, protocol: '0.1.0' }, attempt = uuid();
+    const owner = await currentWriter();
+    await rpc.call('prepare-upload', { context, attempt, owner }, 1024);
+    if (contentBytes > 0) await rpc.call('reserve-upload', { context, attempt, bytes: contentBytes, written: 0 }, 512);
+    const before = await rpc.call('attempt', attempt, 128);
+    const descriptor = { request_id: uuid(), object_id: uuid(), byte_length: String(contentBytes), sha256: 'a'.repeat(64),
+      content_type: 'application/octet-stream', metadata: { associations: [], description: '\u0000'.repeat(4096) } };
+    const headroom = 4096, pressure = join(directory, 'pressure.bin');
+    await writeFile(pressure, Buffer.alloc(settings.storageBytes - settings.reserveBytes - diskUsage(directory).bytes - contentBytes - headroom));
+    const usage = diskUsage(directory).bytes;
+    await assert.rejects(rpc.call('describe-upload', { context, attempt, descriptor }, 32_768), error => error.code === 'storage_limit');
+    assert.deepEqual(await rpc.call('attempt', attempt, 128), before, 'A refusal must preserve the attempt and its original reservations');
+    assert.ok(diskUsage(directory).bytes - usage <= headroom, 'Descriptor admission must not consume reserved control capacity');
+    await rm(pressure);
+    await rpc.call('describe-upload', { context, attempt, descriptor }, 32_768);
+    const accepted = await rpc.call('attempt', attempt, 128);
+    assert.deepEqual(JSON.parse(accepted.descriptor), descriptor);
+    assert.equal(accepted.bytes, contentBytes);
+    await rpc.call('abandon', attempt, 128); await rpc.call('reclaim', attempt, 128);
+    assert.equal((await rpc.call('attempt', attempt, 128)).bytes, 0);
+  });
+});
 test('Object quota refusal preserves history with ample storage and with aggregate pressure', async t => {
   for (const kind of ['prepare-upload', 'describe-upload', 'reserve-upload']) for (const pressure of [false, true]) await t.test(`${kind}, pressure=${pressure}`, async t => {
     const MiB = 1_048_576;
@@ -194,7 +225,9 @@ test('upload reservations released by one acknowledgment retain aggregate headro
       assert.equal(medium.type, 'reply');
       for (;;) {
         const call = send('authorize', { context, discovery: false });
-        const reply = await Promise.race([call.response, delay(50).then(() => undefined)]);
+        const barrier = await send('authorize', { context, discovery: false }, true).response;
+        assert.equal(barrier.type, 'reply');
+        const reply = held.get(call.id);
         if (reply === undefined) return { medium, waiting: call };
         assert.equal(reply.type, 'reply');
       }
