@@ -16,7 +16,6 @@ const Internal = z.object({ started: z.number(), generation: Uuid.nullable(), se
 const { tasks: _tasks, next_page_token: _next, ...assignedFields } = AssignedTasks.shape;
 const AssignedContext = z.strictObject(assignedFields);
 const Instructions = z.object({ facts: z.string(), image: z.string() });
-const LegacyInstructions = Instructions.extend({ read_id: Uuid });
 const InstructionDigest = z.string().regex(/^[0-9a-f]{64}$/);
 const InstructionReceipt = z.object({ facts: InstructionDigest, proof: InstructionDigest.nullable() });
 type ResumeObservation = Pick<z.infer<typeof AssignedContext>, 'asset_id' | 'process_generation' | 'read_id' | 'core_run_id' | 'captured_at' | 'instructions_valid_until'> &
@@ -45,23 +44,6 @@ export class Tasks {
       CREATE TABLE IF NOT EXISTS task_instruction_lifetime(read_id TEXT PRIMARY KEY,run TEXT NOT NULL,deadline REAL NOT NULL) STRICT;
       CREATE INDEX IF NOT EXISTS task_instruction_deadline ON task_instruction_lifetime(deadline);
       CREATE TABLE IF NOT EXISTS task_instruction_receipts(read_id TEXT PRIMARY KEY,facts TEXT NOT NULL,proof TEXT) STRICT;`);
-    store.db.transaction(() => {
-      if (store.meta('format') === '1') {
-        let after = '';
-        const read = store.db.prepare('SELECT read_id,facts,image FROM task_instructions WHERE read_id>? ORDER BY read_id LIMIT 1');
-        while (true) {
-          const row = read.get(after);
-          if (row === undefined) break;
-          const old = LegacyInstructions.parse(row);
-          const context = AssignedContext.parse(JSON.parse(old.image));
-          if (context.read_id !== old.read_id) throw new Error('instruction_identity_mismatch');
-          this.rememberInstructions(context, old.facts);
-          after = old.read_id;
-        }
-      }
-      store.db.exec('DELETE FROM task_instructions; DELETE FROM task_instruction_lifetime');
-      store.setMeta('format', '2');
-    })();
   }
   private rememberInstructions(context: z.infer<typeof AssignedContext>, facts: string): number {
     const request = digest(facts), observed = resumeObservation(context);
@@ -305,9 +287,6 @@ export class Tasks {
     return { asset, evidence_disposition: 'accepted' as const };
   }
   assigned(tx: Transaction, request: RequestOf<'GetAssignedTasks'>): AssignedTasks {
-    const cutoff = performance.now();
-    this.store.db.prepare('DELETE FROM task_instructions WHERE read_id IN (SELECT read_id FROM task_instruction_lifetime WHERE deadline<=?)').run(cutoff);
-    this.store.db.prepare('DELETE FROM task_instruction_lifetime WHERE deadline<=?').run(cutoff);
     let context: z.infer<typeof AssignedContext>;
     let after = '', size: number, deadline: number;
     if ('page_token' in request) {
@@ -329,6 +308,15 @@ export class Tasks {
         if (lifetime.run !== this.store.run || lifetime.deadline <= performance.now()) refuse('allocation_expired');
         deadline = lifetime.deadline;
       } else {
+        const expired = z.array(z.object({ read_id: Uuid, bytes: z.number().int().nonnegative() })).max(16).parse(
+          this.store.db.prepare(`SELECT i.read_id,length(CAST(i.image AS BLOB))+length(CAST(i.facts AS BLOB)) AS bytes
+            FROM task_instruction_lifetime l JOIN task_instructions i USING(read_id)
+            WHERE l.run<>? OR l.deadline<=? ORDER BY l.deadline LIMIT 16`).all(this.store.run, performance.now()));
+        for (const old of expired) {
+          tx.retainedBytes += 8192 + old.bytes;
+          this.store.db.prepare('DELETE FROM task_instructions WHERE read_id=?').run(old.read_id);
+          this.store.db.prepare('DELETE FROM task_instruction_lifetime WHERE read_id=?').run(old.read_id);
+        }
         const captured = now();
         context = { asset_id: asset.id, process_generation: asset.process_generation, read_id: request.read_id,
           core_run_id: this.store.run, captured_at: captured, instructions_valid_until: AssignedTasks.shape.instructions_valid_until.parse(new Date(Date.parse(captured) + 10_000).toISOString()),
