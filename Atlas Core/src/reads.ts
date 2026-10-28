@@ -31,6 +31,7 @@ const Membership = z.object({ identity: z.string(), tracks: z.array(Uuid) });
 const ReplayToken = z.object({ from: z.string(), boundary: z.string(), deadline: z.number(), limits: NegotiatedLimits });
 type CaptureReservation = { metadata: number; file: number; metadataWriteBytes: number };
 const captureOutcomeBytes = 4096;
+const initialCaptureBytes = 32768;
 function captureData(value: z.infer<typeof Capture> | z.infer<typeof FailedCapture>): string {
   const data = JSON.stringify(value);
   if (Buffer.byteLength(data) > captureOutcomeBytes) throw new Error('capture_outcome_limit');
@@ -171,8 +172,8 @@ export class Reads {
         return this.store.db.transaction(() => this.temporary.reserve(kind, token, request, facts, receipt => {
           const metadataWriteBytes = (Buffer.byteLength(JSON.stringify(receipt)) + captureOutcomeBytes) * 16 + 65_536;
           const ownershipAndOutcomeBytes = metadataWriteBytes * 3;
-          admit(metadataWriteBytes + ownershipAndOutcomeBytes + 32768);
-          this.pending.set(receipt.id, { metadata: ownershipAndOutcomeBytes, file: 32768, metadataWriteBytes });
+          admit(metadataWriteBytes + ownershipAndOutcomeBytes + initialCaptureBytes);
+          this.pending.set(receipt.id, { metadata: ownershipAndOutcomeBytes, file: initialCaptureBytes, metadataWriteBytes });
           fresh = receipt.id;
         }))();
       } catch (error) {
@@ -184,7 +185,7 @@ export class Reads {
   private async build(receipt: Receipt, metadata: z.infer<typeof Capture>, rows: (source: Database.Database) => Generator<{ key: string; data: string }>, verifier: string): Promise<void> {
     let source: Database.Database | undefined, target: Database.Database | undefined;
     let iterator: ReturnType<typeof rows> | undefined;
-    let count = 0, bytes = 32768;
+    let count = 0, bytes = initialCaptureBytes;
     let owned = false;
     const pending = this.pending.get(receipt.id);
     if (pending === undefined) throw new Error('capture_reservation_missing');
@@ -241,7 +242,6 @@ export class Reads {
       if (actual > bytes) refuse('resource_limit');
       check();
       this.temporary.set({ ...receipt, state: 'ready', data: captureData(metadata), bytes: actual, refs: count });
-      this.pending.delete(receipt.id);
       this.store.metrics.capture_builds++; this.store.metrics.captured_bytes += actual;
     } catch (error) {
       this.store.metrics.capture_failures++;
@@ -252,7 +252,7 @@ export class Reads {
       const failed = { ...charged, state: 'failed' as const, data: captureData(failure) };
       this.temporary.set(failed);
       pending.metadata = pending.metadataWriteBytes;
-      if (!owned) pending.file = 0;
+      pending.file = 0;
       const failures: unknown[] = [];
       try { iterator?.return(undefined); } catch (cleanup) { failures.push(cleanup); }
       for (const database of [source, target]) {
@@ -264,14 +264,12 @@ export class Reads {
       if (failures.length > 0) {
         const cleanup = failures.length === 1 ? failures[0] : new AggregateError(failures, 'capture_cleanup_failed');
         this.temporary.set({ ...failed, data: captureData({ ...failure, cleanup_failure: publicError(cleanup, this.store.dataset) }) });
-        this.pending.delete(receipt.id);
         throw new AggregateError([error, cleanup], 'capture_cleanup_failed');
       }
       this.temporary.reclaimed(failed);
       this.files.delete(receipt.id);
-      this.pending.delete(receipt.id);
       throw error;
-    }
+    } finally { this.pending.delete(receipt.id); }
   }
   async snapshot(request: RequestOf<'ReadSnapshot'>, verifier: string, produce: () => Promise<void> = async () => {}): Promise<SnapshotPage> {
     if ('page_token' in request) { await produce(); this.identity.authorize(verifier); return this.snapshotPage(this.temporary.open(request.page_token, 'snapshot-page', CaptureToken)); }

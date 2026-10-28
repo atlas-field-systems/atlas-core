@@ -64,7 +64,8 @@ temporary files, captures, WAL, indexes, and unreclaimed files to aggregate budg
 
 Fresh capture admission covers receipt facts, ownership, bounded saved outcomes,
 and SQLite/WAL overhead before any insert. Metadata counts as disk use after commit;
-Reads keeps pending file and outcome headroom across waits until persisted.
+Reads keeps pending file and outcome headroom across waits until the builder ends.
+Durable file charges survive failed cleanup.
 Each batch admits its new bytes and metadata write before charging quotas or writing.
 Exact ready and failed retries bypass fresh storage admission. Maintenance prunes
 expired receipts separately, so a refused allocation performs no cleanup writes.

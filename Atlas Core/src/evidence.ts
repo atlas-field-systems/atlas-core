@@ -27,7 +27,8 @@ export class Evidence {
       CREATE TABLE IF NOT EXISTS evidence_readings(identity TEXT PRIMARY KEY,facts TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS evidence_positions(identity TEXT PRIMARY KEY,entity TEXT NOT NULL,source_kind TEXT NOT NULL,time_key TEXT,status TEXT NOT NULL,image TEXT NOT NULL) STRICT;
       DROP INDEX IF EXISTS positions_order;
-      CREATE INDEX IF NOT EXISTS positions_stream ON evidence_positions(entity,${positionGroup},${positionTime},identity);`);
+      CREATE INDEX IF NOT EXISTS positions_stream ON evidence_positions(entity,${positionGroup},${positionTime},identity);
+      CREATE INDEX IF NOT EXISTS positions_status_stream ON evidence_positions(entity,status,identity);`);
   }
   scope(report: Report): string { return `${report.entity_id}/${report.origin.kind}/${originId(report.origin)}`; }
   duplicate(report: Report): boolean {
@@ -78,8 +79,10 @@ export class Evidence {
     for (const group of groups) {
       const statuses = group.statuses.filter(status => selection.time_groups === undefined || selection.time_groups.includes(status));
       if (statuses.length === 0) continue;
-      const conditions = ['entity=?', `${positionGroup}=?`, `status IN (${statuses.map(() => '?').join(',')})`];
-      const bindings: (string | number)[] = [entityId, group.order, ...statuses];
+      const byStatus = group.order === 1 && statuses.length === 1;
+      const conditions = ['entity=?', `status IN (${statuses.map(() => '?').join(',')})`];
+      const bindings: (string | number)[] = [entityId, ...statuses];
+      if (!byStatus) { conditions.push(`${positionGroup}=?`); bindings.push(group.order); }
       if (group.order === 0) {
         for (const [bound, operator] of [[selection.source_time_from, '>='], [selection.source_time_before, '<']] as const) {
           if (bound === undefined) continue;
@@ -87,7 +90,7 @@ export class Evidence {
         }
       }
       for (const row of source.prepare(`SELECT identity,image FROM evidence_positions WHERE ${conditions.join(' AND ')}
-        ORDER BY ${positionTime},identity`).iterate(...bindings)) {
+        ORDER BY ${byStatus ? 'identity' : `${positionTime},identity`}`).iterate(...bindings)) {
         const value = ReadingRow.parse(row);
         yield { identity: value.identity, reading: HistoryReading.parse(JSON.parse(value.image)) };
       }
