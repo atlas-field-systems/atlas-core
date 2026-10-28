@@ -176,7 +176,7 @@ export class Engine {
       case 'GetAssignedTasks': return tasks.assigned(tx, operation.request);
       case 'SetTaskOrder': return tasks.order(tx, operation.request);
       case 'ConfirmTaskOrder': return tasks.confirm(tx, operation.request);
-      case 'UploadObject': if (context.attempt === undefined) refuse('invalid_request'); return objects.publish(tx, context.attempt);
+      case 'UploadObject': return context.attempt === undefined ? objects.recover(tx, operation.request) : objects.publish(tx, context.attempt);
       case 'ListObjects': return reads.objectList(operation.request);
       case 'GetObject': return objects.get(operation.request.object_id);
       case 'EditObject': return objects.edit(tx, operation.request);
