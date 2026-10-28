@@ -7,10 +7,13 @@ rules and ten-second instruction validity. This page owns Core's private retenti
 ## Live retries and ended identities
 
 Tasks retains the original request and queue/control context for a 60-second read
-lifetime. Successful assigned reads reclaim expired contexts and lifetime rows in
-their transaction. Restart discards all full contexts. Idle storage may retain the
-last polling window until the next successful read or Restart; polling cannot
-accumulate full contexts from earlier windows. No additional timer is needed.
+lifetime. Each newly allocated read reclaims at most 16 expired contexts and their
+lifetime rows in its admitted transaction. Charge the removed bytes and per-row
+SQLite work as well as the new context, because deletion can grow the WAL before
+checkpointing. Refusal rolls reclamation back. Exact retries and continuations do
+no reclamation writes. Restart ends every live context; later admitted reads reclaim
+those contexts with the same bound. Idle storage may retain its last polling window
+until later admitted reads. No timer is needed.
 
 Each successful first-page read keeps a Dataset-scoped receipt until Reset. Its
 SHA-256 digest binds the original canonical request, including omitted page size.
@@ -37,9 +40,7 @@ adds 360,000 identity-field bytes per hour without Resume. Queue length affects
 only the live context. Aggregate capacity still bounds admissions; choose polling
 cadence with this retained cost in mind.
 
-On first opening private format 1, Tasks derives receipts from the retained original
-facts, discards full contexts, and marks format 2 in one transaction. Failure leaves
-the original contexts and format intact. This compaction preserves evidence and
-ended identities; older Core binaries reject format 2 rather than resurrect reads.
-Subsequent Restart needs no conversion. This is a specific private representation
-upgrade, not a general operational-data migration facility.
+Private format 2 stores these receipts. Older Core binaries reject it. Format 1
+requires the explicit Reset already required for updates; startup refuses it without
+converting or deleting evidence. There is no operational-data migration. Restart
+of a compatible Dataset retains every receipt and does no context-cleanup writes.
