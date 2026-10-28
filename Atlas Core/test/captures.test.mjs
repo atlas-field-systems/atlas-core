@@ -1,3 +1,4 @@
+import { mutableRoot } from './paths.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile, readdir, readFile } from 'node:fs/promises';
@@ -21,7 +22,7 @@ import { root, uuid, secret, report, telemetry, fixture } from './helpers.mjs';
 
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 async function local(t, temporary = {}) {
-  const directory = await mkdtemp(join(root, 'artifacts', 'capture-'));
+  const directory = await mkdtemp(join(mutableRoot, 'capture-'));
   const engine = new Engine(directory, { ...defaults, freeDiskBytes: 0, temporary: { ...defaults.temporary, ...temporary } });
   const key = { api_key_id: uuid(), request_id: uuid(), secret: secret() }; engine.provision(key);
   const context = { verifier: digest(key.secret), dataset: engine.store.dataset, protocol: '0.3.0' };

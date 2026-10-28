@@ -26,6 +26,9 @@ Docker access uses `sudo -n docker`. The image argument is an immutable `sha256:
 from `artifacts/image-id`, never a tag. Setup supplies a valid TLS certificate and private key
 and a mode-0600 credential JSON file containing `api_key_id`, `request_id`, and `secret`.
 The secret is a 32-byte random base64url value. Commands never print that secret.
+Local JSON records are limited to 64 KiB before parsing. Readers consume at most
+one extra byte to detect excess, then close the input and return `record_limit`.
+The limit applies while reading, including when the input continues producing data.
 
 | Command | Required options or result |
 | --- | --- |
@@ -110,6 +113,8 @@ HTTPS/WSS use normal certificate verification and explicit trusted origins, with
 Offline setup supplies local trust, preloaded images and reference data, and the first credential.
 Setup needs no cloud login. Credentials stay out of URLs and diagnostics. Operator and key
 rules remain in [Protocol identity](../Atlas%20Protocol/identity.md).
+Setup flushes both retained TLS files before recording the installation manifest.
+A file-flush or close failure stops setup and preserves the failure for repair.
 [Diagnostics](diagnostics.md#collection-and-lifetime) owns log and export lifetime.
 Await diagnostic writers before clearing logs. Unmanaged container or host logs must not escape Reset.
 

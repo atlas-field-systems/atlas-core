@@ -72,16 +72,26 @@ export class Objects {
   get unwritten(): number {
     return z.object({ bytes: z.number() }).parse(this.store.db.prepare("SELECT coalesce(sum(a.bytes-coalesce(p.written,0)),0) AS bytes FROM object_attempts a LEFT JOIN object_progress p ON p.attempt=a.id WHERE a.state IN ('active','installed')").get()).bytes;
   }
+  retry(tx: Transaction, request: UploadDescriptor): ObjectImage | undefined {
+    if (this.ended(request.object_id)) refuse('identity_conflict');
+    if (tx.retry('UploadObject', request.request_id, request)) return this.get(request.object_id);
+    if (this.store.db.prepare('SELECT id FROM object_images WHERE id=?').get(request.object_id)) refuse('identity_conflict');
+    return undefined;
+  }
+  recover(tx: Transaction, request: UploadDescriptor): ObjectImage {
+    const image = this.retry(tx, request);
+    if (image === undefined) refuse('identity_conflict');
+    return image;
+  }
   publish(tx: Transaction, attemptId: Uuid): ObjectImage {
     const attempt = this.attempt(attemptId);
     if (attempt.state !== 'installed') refuse('integrity_fault');
     const request = UploadDescriptor.parse(JSON.parse(attempt.descriptor));
-    if (this.ended(request.object_id)) refuse('identity_conflict');
-    if (tx.retry('UploadObject', request.request_id, request)) {
+    const previous = this.retry(tx, request);
+    if (previous !== undefined) {
       this.store.db.prepare("UPDATE object_attempts SET state='abandoned' WHERE id=?").run(attempt.id);
-      return this.get(request.object_id);
+      return previous;
     }
-    if (this.store.db.prepare('SELECT id FROM object_images WHERE id=?').get(request.object_id)) refuse('identity_conflict');
     for (const association of request.metadata.associations) this.reference(association);
     const image: ObjectImage = { dataset_id: this.store.dataset, object_id: request.object_id, version: zero, edit_revision: zero, created_at: now(),
       byte_length: request.byte_length, sha256: request.sha256, content_type: request.content_type, metadata: request.metadata };
