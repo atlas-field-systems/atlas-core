@@ -80,7 +80,7 @@ test('a lost response retains the commit and concurrent structural retries creat
   const body = Buffer.from(JSON.stringify(input));
   await new Promise((resolve, reject) => {
     const request = httpsRequest(new URL('/messages/register_asset', f.address), { method: 'POST', ca: f.ca, headers: {
-      Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.2.0', 'Content-Type': 'application/json', 'Content-Length': body.length,
+      Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.3.0', 'Content-Type': 'application/json', 'Content-Length': body.length,
     } }, response => { assert.equal(response.statusCode, 200); response.on('error', () => {}); response.destroy(); resolve(); });
     request.on('error', reject); request.end(body);
   });

@@ -131,7 +131,7 @@ test('upload descriptor admission preserves ordinary headroom when content adds 
     t.after(async () => { await rpc.close(); await rm(directory, { recursive: true, force: true }); });
     const { dataset } = await rpc.ready, credential = secret();
     await rpc.call('provision', { request_id: uuid(), api_key_id: uuid(), secret: credential }, 1024, true);
-    const context = { verifier: digest(credential), dataset, protocol: '0.2.0' }, attempt = uuid();
+    const context = { verifier: digest(credential), dataset, protocol: '0.3.0' }, attempt = uuid();
     const owner = await currentWriter();
     await rpc.call('prepare-upload', { context, attempt, owner }, 1024);
     if (contentBytes > 0) await rpc.call('reserve-upload', { context, attempt, bytes: contentBytes, written: 0 }, 512);
@@ -163,7 +163,7 @@ test('Object quota refusal preserves history with ample storage and with aggrega
     t.after(async () => { await rpc.close(); await rm(directory, { recursive: true, force: true }); });
     const { dataset } = await rpc.ready, credential = secret();
     await rpc.call('provision', { request_id: uuid(), api_key_id: uuid(), secret: credential }, 1024, true);
-    const context = { verifier: digest(credential), dataset, protocol: '0.2.0' };
+    const context = { verifier: digest(credential), dataset, protocol: '0.3.0' };
     const call = async (name, request = {}) => {
       const response = await rpc.exchange(name, request, context, 1024);
       assert.equal(response.kind, 'success', JSON.stringify(response)); return response.body.data;
@@ -229,7 +229,7 @@ test('worker commits through a parent stall and bounds unacknowledged pages with
   ack(await send('provision', { request_id: uuid(), api_key_id: apiKey, secret: credential }, true).response);
   const administrator = secret();
   ack(await send('provision', { request_id: uuid(), api_key_id: uuid(), secret: administrator }, true).response);
-  const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.2.0' };
+  const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.3.0' };
   const exchange = (name, request, reserved = false) => send('exchange', { operation: { name, request }, context }, reserved);
   const writes = Array.from({ length: 32 }, () => exchange('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(),
     geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }));
@@ -309,7 +309,7 @@ test('upload reservations released by one acknowledgment retain aggregate headro
     const state = await started, credential = secret(), key = uuid(), administrator = secret();
     assert.equal((await consume(send('provision', { request_id: uuid(), api_key_id: key, secret: credential }, true))).type, 'reply');
     assert.equal((await consume(send('provision', { request_id: uuid(), api_key_id: uuid(), secret: administrator }, true))).type, 'reply');
-    const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.2.0' };
+    const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.3.0' };
     const exchange = (name, request, reserved = false) => send('exchange', { operation: { name, request }, context }, reserved);
     for (let i = 0; i < 3; i++) assert.equal((await consume(exchange('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(),
       geometry: { type: 'Point', coordinates: [0, 0] }, description: { name: 'Retained', description: 'x'.repeat(4096) } }))).type, 'reply');
@@ -471,7 +471,7 @@ test('tiny HTTP requests coexist and required exchanges fit the reserved IPC cap
   const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'pause', scheduling: 'immediate', inputs: {} }));
   const reads = await Promise.all(Array.from({ length: 32 }, () => f.call('ListAssets', {})));
   for (const response of reads) assert.equal(ok(response).items[0].id, asset.id);
-  const context = { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.2.0' };
+  const context = { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.3.0' };
   const pending = [];
   for (let i = 0; i < 15; i++) pending.push(f.core.rpc.exchange('ListAssets', {}, context, 1_048_576).catch(error => error));
   const outcome = f.core.rpc.exchange('RequestTaskCancellation', { task_id: task.task_id, request_id: uuid() }, context, 4096);

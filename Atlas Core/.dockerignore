@@ -2,5 +2,5 @@ node_modules
 dist
 test
 artifacts/*
-!artifacts/atlas-protocol-0.2.0.tgz
+!artifacts/atlas-protocol-0.3.0.tgz
 !artifacts/npm-11.19.0.tgz

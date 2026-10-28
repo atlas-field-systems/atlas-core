@@ -72,7 +72,7 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   async function api(path, body, credential = apiKey) {
     return new Promise((resolve, reject) => { const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
       const req = request({ hostname: '127.0.0.1', port, path, method: body === undefined ? 'GET' : 'POST', ca,
-        headers: { Authorization: `Bearer ${credential}`, ...(dataset ? { 'Atlas-Dataset-ID': dataset, 'Atlas-Protocol-Version': '0.2.0' } : {}), ...(bytes ? { 'Content-Type': 'application/json', 'Content-Length': bytes.length } : {}) } }, response => { const chunks = []; response.on('data', chunk => chunks.push(chunk)); response.on('end', () => resolve({ status: response.statusCode, body: JSON.parse(Buffer.concat(chunks).toString()) })); });
+        headers: { Authorization: `Bearer ${credential}`, ...(dataset ? { 'Atlas-Dataset-ID': dataset, 'Atlas-Protocol-Version': '0.3.0' } : {}), ...(bytes ? { 'Content-Type': 'application/json', 'Content-Length': bytes.length } : {}) } }, response => { const chunks = []; response.on('data', chunk => chunks.push(chunk)); response.on('end', () => resolve({ status: response.statusCode, body: JSON.parse(Buffer.concat(chunks).toString()) })); });
       req.on('error', reject); req.end(bytes);
     });
   }

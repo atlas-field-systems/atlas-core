@@ -321,7 +321,7 @@ export class Administration {
     const output = await open(path, 'wx', 0o600);
     let bytes = 0, partial = false, events = 0, omitted = 0;
     try {
-      const line = JSON.stringify({ format: 1, release: '0.2.0', image: manifest.image, context,
+      const line = JSON.stringify({ format: 1, release: '0.3.0', image: manifest.image, context,
         configuration: { severity: settings.saved.diagnosticLevel, max_bytes: settings.saved.diagnosticBytes }, gaps: 'diagnostics_may_be_incomplete' }) + '\n';
       await output.writeFile(line); bytes = Buffer.byteLength(line);
       for (const file of files) {

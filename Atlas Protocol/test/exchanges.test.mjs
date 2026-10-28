@@ -8,14 +8,14 @@ const encode = (value) => new TextEncoder().encode(JSON.stringify(value));
 const requestHeaders = () =>
   new Headers({
     'Atlas-Dataset-ID': s.id,
-    'Atlas-Protocol-Version': '0.2.0',
+    'Atlas-Protocol-Version': '0.3.0',
     Authorization: `Bearer ${'A'.repeat(43)}`,
     'Content-Type': 'application/json',
   });
 const responseHeaders = () =>
   new Headers({
     'Atlas-Dataset-ID': s.id,
-    'Atlas-Protocol-Version': '0.2.0',
+    'Atlas-Protocol-Version': '0.3.0',
     'Atlas-Request-ID': s.requestId,
     'Content-Type': 'application/json',
   });
@@ -242,7 +242,7 @@ test('Power time maps enforce closure, actual membership, kind restrictions and 
 });
 
 test('complete WSS authentication, controls, replies, replay, changes and errors', () => {
-  const context = { dataset_id: s.id, protocol_version: '0.2.0' };
+  const context = { dataset_id: s.id, protocol_version: '0.3.0' };
   const control = (type, data) => ({ type, ...context, request_id: s.requestId, data });
   const event = (type, data) => ({ type, ...context, data });
   const frames = [

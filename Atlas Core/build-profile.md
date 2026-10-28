@@ -52,13 +52,14 @@ Image builds and manifest generation still require the clean release checkout.
 ## Contract compatibility
 
 The required current-result timing metadata changes the strict wire contract.
-Core and Protocol therefore use 0.2.0, even though 0.1.0 has no product release tag.
-Clients declaring 0.1.0 are refused. SDK must target the same exact version when
+Timing metadata introduced 0.2.0; the required Task execution summary introduces
+0.3.0. Neither reuses an older strict contract version. No product release tag
+exists for 0.1.0. Clients declaring either older version are refused. SDK must target the same exact version when
 implemented. Existing 0.1.0 operational data lacks retained non-position status;
 startup refuses its evidence format rather than inventing admission facts. Use a
-fresh installation for 0.2.0 with private database format 3. Formats 1 and 2 are
-refused; older Core builds refuse format 3 before reading its incompatible images.
-Operational-data migration remains outside this release.
+fresh installation for 0.3.0 with private database format 4. Formats 1, 2 and 3
+are refused before interpreting incompatible images. Older Core builds refuse
+format 4. Operational-data migration remains outside this release.
 
 ## Shared schema profile
 
