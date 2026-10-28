@@ -30,6 +30,7 @@ still use their own authority, transaction, and failure rules.
 
 Qualify startup, draining, worker failure, storage admission pressure, and a damaged
 Object through real endpoints. Check retained reads and reserved control behavior,
-not just the probe booleans. No Core runtime is qualified yet.
+not just the probe booleans. `npm test` covers these Core paths; it does not
+establish sustained workload or power-loss qualification.
 
 [Next: fusion](fusion.md)

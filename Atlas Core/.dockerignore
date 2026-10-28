@@ -1,0 +1,6 @@
+node_modules
+dist
+test
+artifacts/*
+!artifacts/atlas-protocol-0.1.0.tgz
+!artifacts/npm-11.19.0.tgz

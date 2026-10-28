@@ -3,9 +3,10 @@
 **Atlas coordinates field systems: observe what exists, ask Assets to do work,
 and retain what they report.**
 
-Atlas Protocol includes an executable browser-safe TypeScript package. Core and
-SDK remain design contracts; this repository supplies no running Atlas server,
-SDK workflows, or qualified deployment.
+Atlas Protocol supplies the browser-safe TypeScript contract. Atlas Core implements
+the initial HTTPS/WSS server, durable worker, local lifecycle commands, and container.
+SDK remains a design contract. Functional checks are separate from the unrun
+sustained-workload and power-loss qualification.
 
 ## Three layers, one contract
 

@@ -79,7 +79,9 @@ never retained source evidence.
 
 Reserve headroom for required commits and failure reporting. Object quota alone
 does not bound aggregate disk use. Refuse admission honestly; never silently evict
-protected facts. Storage accounting remains a qualification gate.
+protected facts. After permit or expiry waits, recheck authority and the current
+byte delta, inspect capacity, and record the reservation in one synchronous step.
+Storage accounting remains a qualification gate.
 
 ## History and activity
 

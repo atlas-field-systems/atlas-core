@@ -1,7 +1,10 @@
 # Workload and retained-Dataset qualification
 
 **These are qualification inputs and acceptance requirements, not measured results.**
-This documentation-only baseline has run none of the runtime cases below.
+`npm run fixture:retention` is a bounded functional fixture, separate from the
+unrun sustained and capacity cases below. It defaults to 20 Assets, 200 reporting
+Observations, 20 inactive lifetimes, and five rounds. It checks retained IDs,
+220 Observations/Tracks, fixed picture pages and sampled history after Restart.
 
 ## Selected baseline targets
 

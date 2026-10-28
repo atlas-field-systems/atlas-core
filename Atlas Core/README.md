@@ -13,9 +13,8 @@ Core runs in a Docker container on Linux. Explicit local TypeScript commands
 control its lifecycle and settings. Protocol remains independent of these choices.
 
 Operators and independent integrations connect over adequate IP using the SDK or
-public HTTP API with credentials. Gateway software and constrained-radio transport
-are separate projects. The operator UI is a separate Atlas project; closing it
-does not stop Core. The [operating environment](../operating-environment.md) assumes
+public HTTP API with credentials. Gateway software, constrained-radio transport, and the operator UI are separate
+projects. Closing the UI does not stop Core. The [operating environment](../operating-environment.md) assumes
 host internet access while allowing interruptions on field links. Local Core work
 does not require a cloud service.
 
@@ -57,13 +56,32 @@ under the [schema profile](../Atlas%20Protocol/schema-profile.md).
 Core validates requests independently of SDK, and SDK validates responses before
 exposing typed values. Node-specific storage, private SQL, and filesystem types stay inside Core.
 
-Authorization, Task rules, transactions, file publication, recovery, and SDK workflows
-remain ordinary handwritten code. No custom schema compiler, blanket generated
-client/server layer, or generated database accessor is required. Use supported
-libraries and qualify schema/export equivalence before selecting exact versions.
-The [build profile](build-profile.md) requires exact locks and reproducible exports.
+Authorization, Tasks, transactions, file publication, recovery, and SDK workflows
+remain ordinary handwritten code. Use supported libraries without a custom schema
+compiler, blanket generated client/server layer, or generated database accessors.
+The [build profile](build-profile.md) records exact locks and reproducible exports.
 Protocol supplies its package, dependency lock, and qualification commands.
-Core and SDK have no implementation or qualified runtime yet.
+Core implements all 66 initial exchanges. SDK workflows remain unimplemented.
+
+## Build and run
+
+Use Node 24.22.1 and npm 11.19.0. From this directory:
+
+```sh
+npm run protocol:prepare
+npm ci --include=dev
+npm run verify:inputs
+npm test
+npm run build:prepare
+npm run image:build
+npm run test:container
+npm run fixture:retention
+```
+
+The entry points are `dist/runtime.js` in the container and `dist/cli.js` locally.
+Use [local commands](lifecycle.md#commands) for setup and operation. Tests create fresh
+owned installations under ignored `artifacts/`; they never use an existing installation.
+See [qualification](qualification.md) for the limits of the evidence.
 
 ## Scope
 

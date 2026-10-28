@@ -1,0 +1,12 @@
+import { writeFile, mkdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
+const output = fileURLToPath(new URL('../artifacts/', import.meta.url));
+const root = fileURLToPath(new URL('..', import.meta.url));
+const run = () => execFileSync(process.execPath, ['--input-type=module', '-e', "import {exportReference} from '@atlas/protocol/reference'; process.stdout.write(exportReference());"], { cwd: root, maxBuffer: 16_777_216 });
+const first = run(), second = run();
+assert.deepEqual(first, second, 'Clean stock exports must be byte-identical');
+await mkdir(output, { recursive: true });
+await writeFile(new URL('../artifacts/openapi.json', import.meta.url), first);
+console.log('Two clean stock OpenAPI exports are byte-identical');
