@@ -14,6 +14,10 @@ Updates require an explicit Reset between missions. There is no operational-data
 migration or backup/restore. Hard Reset keeps software and unrelated host resources.
 Installation-format conversion must be deliberate and preserve identity, revocation,
 and credentials. Incompatible retained formats never authorize an automatic wipe.
+Before recording update intent, the target image checks the retained database
+format through a read-only one-shot. An incompatible format returns
+`incompatible_format` without changing data, credentials, or installation setup.
+Use a fresh installation for that release; Reset does not convert old formats.
 
 ## Commands
 
@@ -69,6 +73,9 @@ Before destructive work, flush a bounded action outside cleared storage: action 
 old and intended Dataset, immutable writers, phases, and safe primary and cleanup failures.
 Use owned paths, atomic replacement, and file and directory flushes. Stop and verify every
 writer before deletion. Unverified exit blocks cleanup.
+Update recovery repeats the target image's compatibility check before cleanup,
+including intents written by older commands. Refusal leaves the action pending.
+If an older command already deleted files, recovery cannot restore those files.
 
 Clear operational data, logs, and activity. Core atomically establishes the intended
 Dataset and action marker, then the command flushes independent matching proof before

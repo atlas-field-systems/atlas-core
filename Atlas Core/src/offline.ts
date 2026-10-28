@@ -5,16 +5,31 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { Uuid, exchanges } from '@atlas/protocol';
 import { Engine } from './engine.js';
+import { databaseFormat } from './database.js';
 import { Marker } from './installation.js';
 import { Settings } from './settings.js';
 
 const request = z.discriminatedUnion('mode', [
   z.object({ mode: z.literal('inspect-marker'), directory: z.string() }),
+  z.object({ mode: z.literal('check-update'), directory: z.string() }),
   z.object({ mode: z.literal('establish'), directory: z.string(), settings: Settings, dataset: Uuid, action: Uuid, hard: z.boolean() }),
   z.object({ mode: z.literal('provision'), directory: z.string(), settings: Settings, request: exchanges.CreateApiKey.request.schema }),
 ]).parse(workerData);
 try {
-  if (request.mode === 'inspect-marker') {
+  if (request.mode === 'check-update') {
+    const path = join(request.directory, 'core.sqlite');
+    if (!existsSync(path) || statSync(path).size === 0) parentPort?.postMessage({ compatible: true });
+    else {
+      const db = new Database(path, { readonly: true, fileMustExist: true });
+      let compatible: boolean;
+      try {
+        const row = db.prepare("SELECT value FROM core_meta WHERE key='format'").get();
+        const format = row === undefined ? undefined : z.object({ value: z.string() }).parse(row).value;
+        compatible = format === databaseFormat;
+      } finally { db.close(); }
+      parentPort?.postMessage({ compatible });
+    }
+  } else if (request.mode === 'inspect-marker') {
     const path = join(request.directory, 'core.sqlite');
     if (!existsSync(path)) parentPort?.postMessage({ exists: false, dataset: null, marker: null });
     else {

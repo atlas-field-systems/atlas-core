@@ -13,6 +13,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { processIdentity, exited as writerExited } from '../dist/ownership.js';
 import { createContainer } from '../dist/docker.js';
 import { Administration } from '../dist/admin.js';
+import Database from 'better-sqlite3';
 const exec = promisify(execFile);
 test('real CLI and pinned container retain Restart, fence Reset, recover proof and require new Hard Reset setup', { timeout: 180000 }, async t => {
   const image = (await readFile(join(root, 'artifacts', 'image-id'), 'utf8')).trim();
@@ -160,6 +161,48 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   assert.equal((await api('/health')).status, 401);
   assert.equal((await api('/health', undefined, newKey)).status, 200);
   const stopped = await cli('stop'); assert.equal(stopped.ok, true, JSON.stringify(stopped));
+  await t.test('incompatible update and pending recovery preserve retained data and setup', async () => {
+    const path = join(installation, 'data', 'core.sqlite');
+    const db = new Database(path);
+    let oldDataset;
+    try {
+      oldDataset = db.prepare("SELECT value FROM core_meta WHERE key='dataset'").get().value;
+      db.prepare("UPDATE core_meta SET value='1' WHERE key='format'").run();
+    } finally { db.close(); }
+    const retained = ['data/core.sqlite', 'setup/installation.json', 'setup/settings.json', 'setup/tls.pem', 'setup/tls.key', 'software.json', 'control/writer.json'];
+    for (const directory of ['objects', 'logs', 'captures']) {
+      const file = `data/${directory}/retained`;
+      await mkdir(join(installation, 'data', directory), { recursive: true });
+      await writeFile(join(installation, file), `retained ${directory}`);
+      retained.push(file);
+    }
+    const snapshot = () => Promise.all(retained.map(file => readFile(join(installation, file)).catch(error => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    })));
+    const before = await snapshot();
+    const refused = await cli('update', '--image', image, '--confirm-reset');
+    assert.equal(refused.code, 'incompatible_format', JSON.stringify(refused));
+    await assert.rejects(readFile(join(installation, 'recovery', 'action.json')), { code: 'ENOENT' });
+    await assert.rejects(readFile(join(installation, 'recovery', 'proof.json')), { code: 'ENOENT' });
+    assert.deepEqual(await snapshot(), before);
+    const writer = JSON.parse(await readFile(join(installation, 'control', 'writer.json')));
+    const manifest = JSON.parse(await readFile(join(installation, 'setup', 'installation.json')));
+    for (const phase of ['intent', 'stopped', 'cleaned']) {
+      if (phase === 'cleaned') await rm(join(installation, 'data', 'objects', 'retained'));
+      const expected = phase === 'cleaned' ? before.map((bytes, index) => retained[index] === 'data/objects/retained' ? null : bytes) : before;
+      const action = { format: 1, action_id: uuid(), installation_id: manifest.installation_id, kind: 'update', old_dataset: oldDataset,
+        intended_dataset: uuid(), writer, image, phase, primary_failure: null, cleanup_failure: null };
+      await writeFile(join(installation, 'recovery', 'action.json'), JSON.stringify(action));
+      const refusedRecovery = await cli('recover');
+      assert.equal(refusedRecovery.code, 'incompatible_format', JSON.stringify(refusedRecovery));
+      const pending = JSON.parse(await readFile(join(installation, 'recovery', 'action.json')));
+      assert.equal(pending.phase, phase);
+      assert.equal(pending.primary_failure, 'incompatible_format');
+      await assert.rejects(readFile(join(installation, 'recovery', 'proof.json')), { code: 'ENOENT' });
+      assert.deepEqual(await snapshot(), expected, `Recovery in ${phase} must refuse before cleanup and cannot restore missing files`);
+    }
+  });
   for (const denyExitProof of [false, true]) {
     await t.test(`failed Start stops its writer when settings writes fail${denyExitProof ? ' and retains the exit-proof failure' : ''}`, async () => {
       assert.notEqual(process.getuid(), 0, 'The filesystem failure regression requires an unprivileged user');

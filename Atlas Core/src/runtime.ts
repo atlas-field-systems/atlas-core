@@ -26,9 +26,10 @@ try {
     const chunks: Buffer[] = []; let bytes = 0;
     for await (const raw of process.stdin) { if (!Buffer.isBuffer(raw) || (bytes += raw.byteLength) > 65_536) throw new Error('input_limit'); chunks.push(raw); }
     const raw: unknown = chunks.length === 0 ? {} : JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    const settings = mode === 'inspect-marker' ? undefined : (await readJsonFile(join(root, 'setup', 'settings.json'), SavedSettings)).saved;
+    const readonly = mode === 'inspect-marker' || mode === 'check-update';
+    const settings = readonly ? undefined : (await readJsonFile(join(root, 'setup', 'settings.json'), SavedSettings)).saved;
     const data = z.record(z.string(), z.unknown()).parse(raw);
-    const value = await offline({ ...data, mode, directory: join(root, 'data'), ...(mode === 'inspect-marker' ? {} : { settings }) });
+    const value = await offline({ ...data, mode, directory: join(root, 'data'), ...(readonly ? {} : { settings }) });
     process.stdout.write(JSON.stringify(value) + '\n');
   } else {
     const manifest = await readJsonFile(join(root, 'setup', 'installation.json'), Manifest);
