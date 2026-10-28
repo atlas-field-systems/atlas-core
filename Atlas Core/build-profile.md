@@ -56,7 +56,9 @@ Core and Protocol therefore use 0.2.0, even though 0.1.0 has no product release 
 Clients declaring 0.1.0 are refused. SDK must target the same exact version when
 implemented. Existing 0.1.0 operational data lacks retained non-position status;
 startup refuses its evidence format rather than inventing admission facts. Use a
-fresh installation for 0.2.0. Operational-data migration remains outside this release.
+fresh installation for 0.2.0 with private database format 3. Formats 1 and 2 are
+refused; older Core builds refuse format 3 before reading its incompatible images.
+Operational-data migration remains outside this release.
 
 ## Shared schema profile
 
