@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { writeFile, readdir, stat, rm } from 'node:fs/promises';
+import { writeFile, readdir, stat, rm, readFile } from 'node:fs/promises';
+import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { Agent, request as httpsRequest } from 'node:https';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -48,6 +49,71 @@ for (const failBookkeeping of [false, true]) test(`shutdown awaits active reclam
   else { await closing; assert.equal(recorded, true); }
   await assert.rejects(stat(file), { code: 'ENOENT' });
   assert.equal(f.core.rpc.worker.threadId, -1);
+});
+for (const reverse of [false, true]) test(`full-quota upload recovery verifies all bytes with descriptor last=${reverse}`, async t => {
+  const f = await fixture(t, { objectBytes: 1024 });
+  const bytes = Buffer.alloc(1024, 7), input = descriptor(bytes);
+  const first = await f.upload(input, bytes); ok(first);
+  const installed = join(f.directory, 'objects', 'installed');
+  const names = await readdir(installed);
+  await f.restart();
+  const retried = await f.upload(input, bytes, reverse);
+  assert.deepEqual(retried.json, first.json);
+  assert.equal((await f.upload(input, Buffer.alloc(1024, 8), reverse)).status, 400);
+  assert.equal((await f.upload(input, bytes.subarray(1), reverse)).status, 400);
+  assert.equal((await f.upload({ ...input, metadata: { associations: [], name: 'changed' } }, bytes, reverse)).json.error.code, 'identity_conflict');
+  assert.equal((await f.upload(input, bytes, reverse, { 'Atlas-Dataset-ID': uuid() })).json.error.code, 'dataset_mismatch');
+  assert.deepEqual(await readdir(installed), names);
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
+  assert.deepEqual(await readFile(join(installed, names[0])), bytes);
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  try {
+    assert.deepEqual(db.prepare("SELECT count(*) AS count, sum(bytes) AS bytes FROM object_attempts WHERE state<>'reclaimed'").get(), { count: 1, bytes: 1024 });
+    assert.equal(db.prepare('SELECT count(*) AS count FROM object_images').get().count, 1);
+  } finally { db.close(); }
+  ok(await f.call('DeleteObject', { request_id: uuid(), object_id: input.object_id }));
+  assert.equal((await f.upload(input, bytes, reverse)).json.error.code, 'identity_conflict');
+});
+for (const change of ['deletion', 'revocation']) test(`verified upload recovery rechecks ${change} after receipt lookup`, { timeout: 20_000 }, async t => {
+  const held = Promise.withResolvers(), release = Promise.withResolvers();
+  const f = await fixture({ after: action => t.after(async () => { release.resolve(); await action(); }) }, { objectBytes: 1024 });
+  const bytes = Buffer.alloc(1024, 3), input = descriptor(bytes); ok(await f.upload(input, bytes));
+  const original = f.core.rpc.call;
+  t.mock.method(f.core.rpc, 'call', async function(kind, ...args) {
+    const result = await original.call(this, kind, ...args);
+    if (kind === 'upload-retry' && result === true) { held.resolve(); await release.promise; }
+    return result;
+  });
+  const retry = f.upload(input, bytes);
+  await held.promise;
+  if (change === 'deletion') ok(await f.call('DeleteObject', { request_id: uuid(), object_id: input.object_id }));
+  else {
+    const keys = ok(await f.call('ListApiKeys')).items;
+    assert.equal((await f.call('RevokeApiKey', { request_id: uuid(), api_key_id: keys[0].api_key_id })).status, 401);
+  }
+  release.resolve();
+  const response = await retry;
+  assert.equal(response.json.error.code, change === 'deletion' ? 'identity_conflict' : 'unauthorized');
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
+});
+test('concurrent first uploads still reserve separate capacity until a receipt commits', { timeout: 20_000 }, async t => {
+  const held = Promise.withResolvers(), release = Promise.withResolvers();
+  const f = await fixture({ after: action => t.after(async () => { release.resolve(); await action(); }) }, { objectBytes: 1024 });
+  const bytes = Buffer.alloc(1024, 4), input = descriptor(bytes);
+  const original = f.core.rpc.call;
+  let first = true;
+  t.mock.method(f.core.rpc, 'call', async function(kind, ...args) {
+    const result = await original.call(this, kind, ...args);
+    if (kind === 'prepare-upload' && first) { first = false; held.resolve(); await release.promise; }
+    return result;
+  });
+  const pending = f.upload(input, bytes); await held.promise;
+  assert.equal((await f.upload(input, bytes)).json.error.code, 'storage_limit');
+  release.resolve();
+  const accepted = await pending; ok(accepted);
+  assert.deepEqual((await f.upload(input, bytes)).json, accepted.json);
+  assert.equal((await readdir(join(f.directory, 'objects', 'installed'))).length, 1);
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
 });
 test('startup reclaims escaped abandoned upload descriptors across bounded worker response pages', async t => {
   const f = await fixture(t, { resourceImageBytes: 65536, maxUploads: 64, limits: { ...defaults.limits, max_message_bytes: 212992 } }); await f.core.close();

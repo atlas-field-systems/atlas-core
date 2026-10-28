@@ -49,7 +49,7 @@ function finishResponse(id: number, bytes: number): void {
   replies.set(id, charge(bytes)); usedResponseBytes -= permit - charge(bytes); admitResponses();
 }
 const smallReplies = new Set(['authorize', 'provision', 'open-enroll', 'enrollment-revoke', 'tick', 'describe-upload', 'reserve-upload', 'upload-written',
-  'file-reclaimed', 'installed', 'abandon', 'reclaim', 'capture-removed', 'integrity', 'subscribe', 'drain', 'pressure', 'applied-settings', 'close', 'reserve-diagnostics', 'release-diagnostics']);
+  'file-reclaimed', 'installed', 'abandon', 'reclaim', 'capture-removed', 'integrity', 'subscribe', 'drain', 'pressure', 'applied-settings', 'close', 'reserve-diagnostics', 'release-diagnostics', 'upload-retry']);
 const preparesAfterWait = new Set(['exchange', 'close', 'tick', 'open-enroll', 'prepare-upload', 'describe-upload', 'reserve-upload']);
 async function execute(raw: unknown): Promise<void> {
   const message = Message.parse(raw);
@@ -96,6 +96,11 @@ async function execute(raw: unknown): Promise<void> {
         engine.store.transact(null, tx => engine.identity.revokeOpen(tx, data.binding, data.key)); result = { revoked: true }; break;
       }
       case 'tick': await engine.tick(); result = {}; break;
+      case 'upload-retry': {
+        const data = z.strictObject({ context: Context, descriptor: UploadDescriptor }).parse(message.data);
+        const authority = engine.authorize(data.context);
+        result = engine.store.transact(authority, tx => engine.objects.retry(tx, data.descriptor) !== undefined).data; break;
+      }
       case 'reserve-diagnostics': {
         const data = z.strictObject({ reservation: Uuid, bytes: z.number().int().nonnegative().max(134_217_728) }).parse(message.data);
         engine.reserveDiagnostics(data.reservation, data.bytes); result = {}; break;

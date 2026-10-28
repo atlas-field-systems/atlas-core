@@ -59,12 +59,18 @@ export class Transfers {
     this.receivers.set(request, receiver);
     const attemptId = id();
     let attempt: Attempt | undefined, file: FileHandle | undefined, primary: unknown;
+    const checkOpen = () => { if (this.closing) refuse('resource_limit'); };
+    const discard = async () => {
+      if (file !== undefined) { await file.close(); file = undefined; }
+      if (attempt !== undefined) { await this.cleanup(attemptId); attempt = undefined; }
+    };
     try {
       if (this.owner === undefined) throw new Error('transfer_not_initialized');
-      attempt = Attempt.parse(await this.rpc.call('prepare-upload', { context, attempt: attemptId, owner: this.owner }, 1024));
-      let descriptor: UploadDescriptor | undefined, seenFile = false, length = 0;
+      let descriptor: UploadDescriptor | undefined, seenFile = false, length = 0, replay = false;
+      let deferred: Refusal | undefined;
       const hash = createHash('sha256');
       for await (const part of request.parts()) {
+        checkOpen();
         if (part.type !== 'file' || part.encoding !== '7bit' && part.encoding !== 'binary' && part.encoding !== '8bit') refuse('invalid_request');
         this.streams.add(part.file);
         receiver.stream = part.file;
@@ -79,25 +85,62 @@ export class Transfers {
             if (part.file.truncated) refuse('payload_too_large');
             descriptor = parse(Buffer.concat(chunks, bytes));
             if (descriptor.byte_length !== String(length) && seenFile) refuse('invalid_request');
-            await this.rpc.call('describe-upload', { context, attempt: attemptId, descriptor }, bytes + 1024);
+            replay = z.boolean().parse(await this.rpc.call('upload-retry', { context, descriptor }, bytes + 1024));
+            checkOpen();
+            if (replay) await discard();
+            else {
+              if (deferred !== undefined) throw deferred;
+              if (attempt === undefined) attempt = Attempt.parse(await this.rpc.call('prepare-upload', { context, attempt: attemptId, owner: this.owner, descriptor }, bytes + 1024));
+              else await this.rpc.call('describe-upload', { context, attempt: attemptId, descriptor }, bytes + 1024);
+              checkOpen();
+            }
           } else if (part.fieldname === 'file' && !seenFile) {
             seenFile = true;
-            file = await open(join(this.directory, attempt.staging), 'wx', 0o600);
+            if (descriptor === undefined) {
+              try { attempt = Attempt.parse(await this.rpc.call('prepare-upload', { context, attempt: attemptId, owner: this.owner }, 1024)); }
+              catch (error) { if (!(error instanceof Refusal) || error.code !== 'storage_limit') throw error; deferred = error; }
+              checkOpen();
+            }
             for await (const raw of part.file) {
+              checkOpen();
               if (!Buffer.isBuffer(raw)) refuse('invalid_request');
               if (length + raw.byteLength > this.settings.limits.max_object_bytes || descriptor !== undefined && BigInt(length + raw.byteLength) > BigInt(descriptor.byte_length)) refuse('payload_too_large');
-              await this.rpc.call('reserve-upload', { context, attempt: attemptId, bytes: length + raw.byteLength, written: length }, 512);
-              let offset = 0;
-              while (offset < raw.byteLength) { const write = await file.write(raw, offset); if (write.bytesWritten === 0) throw new Error('file_write_incomplete'); offset += write.bytesWritten; }
+              if (!replay && deferred === undefined) {
+                try { await this.rpc.call('reserve-upload', { context, attempt: attemptId, bytes: length + raw.byteLength, written: length }, 512); }
+                catch (error) {
+                  if (descriptor !== undefined || !(error instanceof Refusal) || error.code !== 'storage_limit') throw error;
+                  deferred = error; await discard();
+                }
+                checkOpen();
+              }
+              if (replay || deferred !== undefined) { await this.authorize(context); checkOpen(); }
+              else {
+                if (attempt === undefined) throw new Error('missing_upload_attempt');
+                file ??= await open(join(this.directory, attempt.staging), 'wx', 0o600);
+                checkOpen();
+                let offset = 0;
+                while (offset < raw.byteLength) { const write = await file.write(raw, offset); if (write.bytesWritten === 0) throw new Error('file_write_incomplete'); offset += write.bytesWritten; checkOpen(); }
+              }
               hash.update(raw); length += raw.byteLength;
             }
             if (part.file.truncated) refuse('payload_too_large');
-            await this.rpc.call('upload-written', { attempt: attemptId, written: length }, 256);
+            if (!replay && deferred === undefined) {
+              if (attempt === undefined) throw new Error('missing_upload_attempt');
+              file ??= await open(join(this.directory, attempt.staging), 'wx', 0o600);
+              await this.rpc.call('upload-written', { attempt: attemptId, written: length }, 256);
+              checkOpen();
+            }
           } else refuse('invalid_request');
         } finally { delete receiver.stream; this.streams.delete(part.file); if (!part.file.readableEnded) part.file.destroy(); }
       }
-      if (!seenFile || descriptor === undefined || file === undefined || String(length) !== descriptor.byte_length || hash.digest('hex') !== descriptor.sha256) refuse('invalid_request');
+      if (!seenFile || descriptor === undefined || String(length) !== descriptor.byte_length || hash.digest('hex') !== descriptor.sha256) refuse('invalid_request');
       this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_verified', bytes: length });
+      if (replay) {
+        const response = await this.rpc.exchangeDetailed('UploadObject', descriptor, context, Buffer.byteLength(JSON.stringify(descriptor)));
+        this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_published', bytes: length, outcome: response.execution });
+        return { ...response, request: descriptor };
+      }
+      if (attempt === undefined || file === undefined) throw new Error('missing_upload_attempt');
       await file.sync(); await file.close(); file = undefined;
       this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_flushed', bytes: length });
       await link(join(this.directory, attempt.staging), join(this.directory, attempt.installed));

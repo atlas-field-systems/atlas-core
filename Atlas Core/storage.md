@@ -59,6 +59,14 @@ parent directory. Then take a short transaction, recheck current authority and
 Dataset, and commit ready metadata, retry result, and public change together.
 Only then acknowledge publication.
 
+Once a descriptor matches a committed upload receipt, retry verifies the entire
+incoming stream by bounded count and SHA-256 without another content reservation.
+It rechecks authority, Dataset, original facts, and deletion in the final transaction.
+When the file precedes its descriptor, normal staging can stop at a capacity refusal;
+Core finishes hashing and succeeds only if the later descriptor proves a committed
+exact retry. Otherwise it returns the refusal and reclaims the attempt. Concurrent
+first uploads still need separate staging and admission until one commits.
+
 Staging and installed paths share a local filesystem with supported flush semantics.
 Database durability and actual power-loss qualification follow the [worker contract](database.md#driver-and-durability).
 
