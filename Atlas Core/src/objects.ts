@@ -31,29 +31,34 @@ export class Objects {
     if (this.ended(object)) refuse('identity_conflict');
     if (required) this.store.db.prepare('INSERT INTO object_holds VALUES(?,?) ON CONFLICT DO NOTHING').run(task, object);
   }
-  prepare(descriptor: UploadDescriptor | undefined, attemptId: Uuid, owner: WriterIdentity, keyId: Uuid): Attempt {
+  prepare(descriptor: UploadDescriptor | undefined, attemptId: Uuid, owner: WriterIdentity, keyId: Uuid, admit: (bytes: number) => void): Attempt {
     if (descriptor !== undefined && this.ended(descriptor.object_id)) refuse('identity_conflict');
     for (const association of descriptor?.metadata.associations ?? []) this.reference(association);
     const totals = this.usage();
     if (totals.bytes + Number(descriptor?.byte_length ?? 0) > this.store.settings.objectBytes) refuse('storage_limit');
     if (totals.uploads >= this.store.settings.maxUploads) refuse('resource_limit');
+    admit(Number(descriptor?.byte_length ?? 0) + 32768);
     const attempt: Attempt = { id: attemptId, object_id: descriptor?.object_id ?? attemptId, descriptor: canonical(descriptor ?? {}), owner: canonical(owner), state: 'active',
       staging: `staging/${this.store.run}-${attemptId}`, installed: `installed/${this.store.run}-${attemptId}`, bytes: Number(descriptor?.byte_length ?? 0), key_id: keyId };
     this.store.db.prepare('INSERT INTO object_attempts VALUES(@id,@object_id,@descriptor,@owner,@state,@staging,@installed,@bytes,@key_id)').run(attempt);
     return attempt;
   }
-  reserve(attemptId: Uuid, bytes: number): void {
+  reserve(attemptId: Uuid, bytes: number, admit: (bytes: number) => void): void {
     const attempt = this.attempt(attemptId);
     if (attempt.state !== 'active') refuse('integrity_fault');
-    if (bytes <= attempt.bytes) return;
-    if (bytes > this.store.settings.limits.max_object_bytes) refuse('payload_too_large');
-    if (this.usage().bytes + bytes - attempt.bytes > this.store.settings.objectBytes) refuse('storage_limit');
+    const added = Math.max(0, bytes - attempt.bytes);
+    if (added > 0) {
+      if (bytes > this.store.settings.limits.max_object_bytes) refuse('payload_too_large');
+      if (this.usage().bytes + added > this.store.settings.objectBytes) refuse('storage_limit');
+    }
+    admit(added);
+    if (added === 0) return;
     this.store.db.prepare('UPDATE object_attempts SET bytes=? WHERE id=?').run(bytes, attemptId);
   }
-  describe(attemptId: Uuid, descriptor: UploadDescriptor): void {
+  describe(attemptId: Uuid, descriptor: UploadDescriptor, admit: (bytes: number) => void): void {
     if (this.ended(descriptor.object_id)) refuse('identity_conflict');
     for (const association of descriptor.metadata.associations) this.reference(association);
-    this.reserve(attemptId, Number(descriptor.byte_length));
+    this.reserve(attemptId, Number(descriptor.byte_length), admit);
     this.store.db.prepare('UPDATE object_attempts SET descriptor=?,object_id=? WHERE id=?').run(canonical(descriptor), descriptor.object_id, attemptId);
   }
   progress(attemptId: Uuid, written: number): void {

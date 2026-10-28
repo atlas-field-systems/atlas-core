@@ -93,6 +93,41 @@ test('concurrent WSS subscriptions drain multi-commit handoff and live backlog w
     })), expired]);
   } finally { clearTimeout(failedDeadline); }
 });
+test('unsubscribe ends delivery while polling awaits the worker', { timeout: 30000 }, async t => {
+  for (const boundary of ['authorization', 'empty handoff']) await t.test(boundary, async t => {
+    const f = await fixture(t);
+    const health = ok(await f.call('GetHealth'));
+    const snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }));
+    ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token }));
+    if (boundary === 'authorization') ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } }));
+    const client = await socket(f); t.after(() => client.ws.terminate());
+    const paused = Promise.withResolvers(), resume = Promise.withResolvers();
+    const call = f.core.rpc.call.bind(f.core.rpc);
+    let authorizingBatch = false, held = false;
+    // Keep real worker results, but let unsubscribe cross the in-flight polling wait.
+    f.core.rpc.call = async (...args) => {
+      const result = await call(...args);
+      const pause = !held && (boundary === 'empty handoff' ? args[0] === 'feed' : args[0] === 'authorize' && authorizingBatch);
+      if (args[0] === 'feed') authorizingBatch = true;
+      if (pause) { held = true; paused.resolve(); await resume.promise; }
+      return result;
+    };
+    try {
+      const subscription_id = uuid();
+      client.send('subscribe_changes', { subscription_id, from_cursor: snapshot.baseline_cursor, ...limits });
+      await client.take(frame => frame.type === 'subscribed');
+      await paused.promise;
+      client.send('unsubscribe_changes', { subscription_id });
+      assert.equal((await client.take(frame => frame.type === 'unsubscribed')).data.subscription_id, subscription_id);
+      resume.resolve();
+      client.send('read_changes', { from_cursor: snapshot.baseline_cursor, ...limits });
+      const next = await client.take(frame => ['change_batch', 'progress', 'handoff_complete', 'gap', 'error', 'read_changes_result'].includes(frame.type));
+      assert.equal(next.type, 'read_changes_result', 'No subscription events may follow its unsubscribe acknowledgment');
+      client.send('unsubscribe_changes', { subscription_id });
+      await client.take(frame => frame.type === 'unsubscribed');
+    } finally { resume.resolve(); f.core.rpc.call = call; }
+  });
+});
 test('finite allocations retain charged receipts after release and never resurrect captures', async t => {
   const f = await fixture(t, { temporary: { ...((await import('../dist/settings.js')).defaults.temporary), max_allocation_receipts: 2 } });
   const health = ok(await f.call('GetHealth'));

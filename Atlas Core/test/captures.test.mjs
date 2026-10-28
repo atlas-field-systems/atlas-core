@@ -13,6 +13,7 @@ import { Reads } from '../dist/reads.js';
 import { defaults } from '../dist/settings.js';
 import { digest } from '../dist/exact.js';
 import { publicError, Refusal } from '../dist/fault.js';
+import { diskUsage } from '../dist/capacity.js';
 import { root, uuid, secret, report, telemetry, fixture } from './helpers.mjs';
 
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
@@ -34,6 +35,108 @@ async function building(engine, kind) {
     await yieldToLoop();
   }
 }
+async function historyView(f) {
+  const observation = uuid(), publisher = uuid(), origin = { kind: 'publisher', publisher_id: publisher };
+  await f.call('CreateObservation', { request_id: uuid(), observation_id: observation, publisher_id: publisher });
+  for (let i = 1; i <= 2; i++) await f.call('ReportObservation', { observation_id: observation, publisher_id: publisher,
+    report: report(f.engine.store.dataset, observation, origin, i, { telemetry: telemetry(origin, i) }) });
+  const health = await f.call('GetHealth');
+  const request = { query_id: uuid(), entity_id: observation, allocation_context: health.allocation_context, page_size: 1 };
+  return { request, page: await f.call('GetObservationMovementHistory', request) };
+}
+test('history expiry makes pages unavailable before unlink and shares reclamation with concurrent release', { timeout: 10000 }, async t => {
+  const f = await local(t), { page, request } = await historyView(f);
+  assert.ok(page.next_page_token);
+  let watcher;
+  const duringUnlink = new Promise(resolve => {
+    watcher = watch(join(f.directory, 'captures'), (event, file) => {
+      if (event !== 'rename' || file !== `${page.view_id}.sqlite`) return;
+      watcher.close();
+      resolve(Promise.allSettled([
+        f.call('GetObservationMovementHistory', { page_token: page.next_page_token }),
+        f.call('ReleaseHistoryView', { release_token: page.release_token }),
+      ]));
+    });
+  });
+  t.after(() => watcher.close());
+  const [expiries, [continuation, release]] = await Promise.all([
+    Promise.allSettled([f.engine.reads.expireHistory(), f.engine.reads.expireHistory()]), duringUnlink,
+  ]);
+  for (const result of [...expiries, release]) assert.equal(result.status, 'fulfilled', String(result.reason));
+  assert.equal(continuation.status, 'rejected'); assert.equal(continuation.reason.code, 'allocation_expired');
+  await assert.rejects(f.call('GetObservationMovementHistory', request), error => error.code === 'allocation_expired');
+  assert.deepEqual(f.engine.temporary.captureFiles(), []);
+  assert.deepEqual(await readdir(join(f.directory, 'captures')), []);
+  assert.equal(f.engine.store.metrics.capture_expiries + f.engine.store.metrics.capture_releases, 1);
+  const fresh = await f.call('GetObservationMovementHistory', { ...request, query_id: uuid(), page_size: 100 });
+  assert.equal(fresh.readings.length, 2, 'Expiry must preserve the retained source positions');
+});
+test('failed pressure expiry retains charges, refuses pages, and can retry cleanup before its deadline', async t => {
+  const f = await local(t), { page, request } = await historyView(f);
+  const before = f.engine.temporary.peek(page.view_id), storageBytes = f.engine.settings.storageBytes;
+  const blocked = join(f.directory, 'captures', `${page.view_id}.sqlite-shm`);
+  await mkdir(blocked);
+  f.engine.settings.storageBytes = diskUsage(f.directory).bytes + f.engine.settings.reserveBytes + 65536 - 4096;
+  const reserve = () => f.engine.reserveStorage(admit => admit(65536));
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await assert.rejects(reserve(), error => error instanceof AggregateError && error.errors[0].code === 'storage_limit' &&
+      publicError(error.errors[1], f.engine.store.dataset).body.error.code === 'integrity_fault');
+    const charged = f.engine.temporary.peek(page.view_id);
+    assert.equal(charged.state, 'released'); assert.equal(charged.bytes, before.bytes); assert.equal(charged.refs, before.refs);
+    assert.equal(f.engine.temporary.captureFiles()[0].bytes, before.bytes);
+  }
+  assert.equal((await readdir(join(f.directory, 'captures'))).includes(`${page.view_id}.sqlite`), false);
+  await assert.rejects(f.call('GetObservationMovementHistory', { page_token: page.next_page_token }), error => error.code === 'allocation_expired');
+  await assert.rejects(f.call('GetObservationMovementHistory', request), error => error.code === 'allocation_expired');
+  await assert.rejects(f.call('ReleaseHistoryView', { release_token: page.release_token }), error => publicError(error, f.engine.store.dataset).status === 500);
+  await assert.rejects(f.engine.reads.cleanup(), error => publicError(error, f.engine.store.dataset).status === 500);
+  assert.ok(f.engine.temporary.peek(page.view_id).bytes > 0, 'Failed release and cleanup must keep their charge');
+  await rm(blocked, { recursive: true });
+  await Promise.all([f.engine.reads.expireHistory(), f.engine.reads.cleanup(), f.call('ReleaseHistoryView', { release_token: page.release_token })]);
+  assert.equal(f.engine.temporary.peek(page.view_id).bytes, 0);
+  assert.equal(f.engine.temporary.peek(page.view_id).refs, 0);
+  assert.deepEqual(f.engine.temporary.captureFiles(), []);
+  assert.equal(f.engine.store.metrics.capture_expiries + f.engine.store.metrics.capture_releases, 1);
+  f.engine.settings.storageBytes = storageBytes;
+  assert.equal((await f.call('GetObservationMovementHistory', { ...request, query_id: uuid(), page_size: 100 })).readings.length, 2);
+});
+test('aggregate admission preserves history when reclaiming it cannot admit the request', async t => {
+  for (const operation of ['reservation', 'write']) await t.test(operation, async t => {
+    const f = await local(t), { page, request } = await historyView(f);
+    const receipt = f.engine.temporary.peek(page.view_id);
+    f.engine.settings.storageBytes = diskUsage(f.directory).bytes + f.engine.settings.reserveBytes;
+    const pending = operation === 'reservation' ? f.engine.reserveStorage(admit => admit(65536))
+      : f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } });
+    await assert.rejects(pending, error => error.code === 'storage_limit');
+    assert.deepEqual(f.engine.temporary.peek(page.view_id), receipt);
+    assert.equal((await f.call('GetObservationMovementHistory', request)).view_id, page.view_id);
+    assert.equal((await f.call('GetObservationMovementHistory', { page_token: page.next_page_token })).readings.length, 1);
+    assert.equal(f.engine.store.metrics.capture_expiries, 0);
+  });
+});
+test('malformed capability signatures return allocation_expired over HTTP and valid tokens still work', async t => {
+  const f = await fixture(t);
+  const ok = response => { assert.equal(response.status, 200, JSON.stringify(response.json)); return response.json.data; };
+  for (let i = 0; i < 2; i++) ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [i, i] } }));
+  const health = ok(await f.call('GetHealth'));
+  const request = { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits };
+  const snapshot = ok(await f.call('ReadSnapshot', request));
+  for (const signature of ['é'.repeat(43), '😀'.repeat(21) + 'a', 'a'.repeat(43), 'a']) {
+    const malformed = `x.${signature}`;
+    for (const [name, data] of [
+      ['ReadSnapshot', { ...request, load_id: uuid(), allocation_context: malformed }],
+      ['ReadSnapshot', { page_token: malformed }],
+      ['ReleaseSnapshot', { release_token: malformed }],
+    ]) {
+      const response = await f.call(name, data);
+      assert.equal(response.status, 410, JSON.stringify(response.json)); assert.equal(response.json.error.code, 'allocation_expired');
+    }
+  }
+  assert.equal(ok(await f.call('ReadSnapshot', request)).capture_id, snapshot.capture_id);
+  const continued = ok(await f.call('ReadSnapshot', { page_token: snapshot.next_page_token }));
+  assert.equal(continued.items.length, 1); assert.notEqual(continued.items[0].resource_id, snapshot.items[0].resource_id);
+  assert.equal(ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token })).released, true);
+});
 test('retained picture and history captures keep a fixed source view while writes continue', { timeout: 120000 }, async t => {
   const f = await local(t);
   const expected = new Set();

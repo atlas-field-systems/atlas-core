@@ -4,6 +4,7 @@ import { fixture, uuid, secret, registration } from './helpers.mjs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { request as httpsRequest } from 'node:https';
+import { Worker } from 'node:worker_threads';
 
 const ok = result => { assert.equal(result.status, 200, JSON.stringify(result.json)); return result.json.data; };
 test('original bytes, actual context and ignored diagnostic header defects', async t => {
@@ -87,4 +88,72 @@ test('a lost response retains the commit and concurrent structural retries creat
   assert.equal(ok(results[0]).asset.id, input.asset_id); assert.equal(ok(results[1]).asset.id, input.asset_id);
   assert.equal(results[0].json.commit_cursor, results[1].json.commit_cursor);
   assert.deepEqual(ok(await f.call('ListAssets')).items.map(asset => asset.id), [input.asset_id]);
+});
+test('ordinary key retries cannot be reused for Asset registration', async t => {
+  const f = await fixture(t);
+  const input = registration('Credential context');
+  const creation = { request_id: input.request_id, api_key_id: input.api_key_id, secret: input.secret };
+  const first = await f.call('CreateApiKey', creation);
+  const key = ok(first);
+  const retry = await f.call('CreateApiKey', creation);
+  assert.deepEqual(ok(retry), key); assert.equal(retry.json.commit_cursor, first.json.commit_cursor);
+
+  const reused = await f.call('RegisterAsset', input);
+  assert.equal(reused.status, 409); assert.equal(reused.json.error.code, 'identity_conflict');
+  assert.equal((await f.call('GetAsset', { asset_id: input.asset_id })).json.error.code, 'asset_not_found');
+  assert.deepEqual(ok(await f.call('ListAssets')).items, []);
+  assert.deepEqual(ok(await f.call('CreateApiKey', creation)), key);
+
+  const fresh = { ...input, request_id: uuid(), api_key_id: uuid(), secret: secret() };
+  const enrolled = await f.call('RegisterAsset', fresh);
+  const asset = ok(enrolled).asset;
+  const edited = ok(await f.call('UpdateAsset', { request_id: uuid(), asset_id: asset.id, expected_edit_revision: asset.edit_revision, alias: 'Edited credential context' })).asset;
+  const registrationRetry = await f.call('RegisterAsset', fresh);
+  assert.deepEqual(ok(registrationRetry).asset, edited);
+  assert.equal(registrationRetry.json.commit_cursor, enrolled.json.commit_cursor);
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${fresh.secret}` })).status, 200);
+  ok(await f.call('DeleteAsset', { request_id: uuid(), asset_id: fresh.asset_id }));
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${fresh.secret}` })).status, 401);
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${creation.secret}` })).status, 200);
+  assert.equal((await f.call('RegisterAsset', fresh)).json.error.code, 'asset_not_found');
+});
+test('Asset registration keys cannot replay as ordinary key creation', async t => {
+  const f = await fixture(t);
+  const input = registration();
+  const registered = ok(await f.call('RegisterAsset', input));
+  const reused = await f.call('CreateApiKey', { request_id: input.request_id, api_key_id: input.api_key_id, secret: input.secret });
+  assert.equal(reused.status, 409); assert.equal(reused.json.error.code, 'identity_conflict');
+  assert.deepEqual(ok(await f.call('RegisterAsset', input)), registered);
+});
+test('ordinary key retries survive Reset and retained Asset credentials keep their context', async t => {
+  const f = await fixture(t);
+  const creation = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+  const key = ok(await f.call('CreateApiKey', creation));
+  const registered = registration();
+  ok(await f.call('RegisterAsset', registered));
+  await f.core.close();
+  const dataset = uuid();
+  const established = await new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('../dist/offline.js', import.meta.url), { workerData: {
+      mode: 'establish', directory: f.directory, settings: f.settings, dataset, action: uuid(), hard: false,
+    } });
+    let result;
+    worker.on('message', value => { result = value; });
+    worker.once('error', reject);
+    worker.once('exit', code => code === 0 ? resolve(result) : reject(new Error('offline_failed')));
+  });
+  assert.equal(established.established, true);
+  await f.restart();
+  assert.equal(f.core.dataset, dataset);
+  assert.deepEqual(ok(await f.call('CreateApiKey', creation)), key);
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${registered.secret}` })).status, 200);
+  const reused = await f.call('CreateApiKey', { request_id: registered.request_id, api_key_id: registered.api_key_id, secret: registered.secret });
+  assert.equal(reused.status, 409); assert.equal(reused.json.error.code, 'identity_conflict');
+  assert.equal((await f.call('RegisterAsset', registered)).json.error.code, 'identity_conflict');
+  const replacement = { ...registration(), asset_id: registered.asset_id };
+  ok(await f.call('RegisterAsset', replacement));
+  ok(await f.call('DeleteAsset', { request_id: uuid(), asset_id: replacement.asset_id }));
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${replacement.secret}` })).status, 401);
+  assert.equal((await f.call('GetHealth', {}, { Authorization: `Bearer ${registered.secret}` })).status, 200);
+  assert.deepEqual(ok(await f.call('CreateApiKey', creation)), key);
 });

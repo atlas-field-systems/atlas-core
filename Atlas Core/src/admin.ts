@@ -161,7 +161,9 @@ export class Administration {
       const applied = { revision: settings.revision, value: settings.saved };
       await atomicJson(join(this.root, 'setup', 'settings.json'), { ...settings, effective: applied, last_working: applied, apply_failure: null });
     } catch (error) {
-      await atomicJson(join(this.root, 'setup', 'settings.json'), { ...settings, apply_failure: 'start_failed' });
+      const failures: unknown[] = [error];
+      try { await atomicJson(join(this.root, 'setup', 'settings.json'), { ...settings, apply_failure: 'start_failed' }); }
+      catch (bookkeeping) { failures.push(bookkeeping); }
       try {
         if ((await inspectContainer(writer, manifest.installation_id)).State.Running) await docker(['kill', '--signal=TERM', writer.container]);
         const deadline = Date.now() + 10_000;
@@ -169,8 +171,10 @@ export class Administration {
           if (Date.now() >= deadline) throw new Error('writer_exit_unverified');
           await setTimeout(250);
         }
-        await this.verifyExit(writer, manifest.installation_id);
-      } catch (cleanup) { throw new AggregateError([error, cleanup], 'start_cleanup_failed'); }
+      } catch (shutdown) { failures.push(shutdown); }
+      try { await this.verifyExit(writer, manifest.installation_id); }
+      catch (cleanup) { failures.push(cleanup); }
+      if (failures.length > 1) throw new AggregateError(failures, 'start_cleanup_failed');
       throw error;
     }
   }

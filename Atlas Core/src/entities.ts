@@ -163,7 +163,6 @@ export class Entities {
     if (s.camera_optics && eligible(asset.camera_optics, report)) { asset.camera_optics = sourced(readSections.camera_optics, s.camera_optics, report, 'camera_optics'); changed = true; }
     if (s.gimbal && eligible(asset.gimbal, report)) { asset.gimbal = sourced(readSections.gimbal, s.gimbal, report, 'gimbal'); changed = true; }
     if (report.mode === 'current' && report.contact_proof !== undefined) {
-      if (!changed && Object.keys(s).length > 0) refuse('challenge_context_mismatch');
       this.prove(tx, asset, report, report.contact_proof.challenge_id);
       changed = true;
     }

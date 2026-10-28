@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, readdir, chmod } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { request } from 'node:https';
 import { join } from 'node:path';
@@ -12,6 +12,7 @@ import { installationLock } from '../dist/installation.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { processIdentity, exited as writerExited } from '../dist/ownership.js';
 import { createContainer } from '../dist/docker.js';
+import { Administration } from '../dist/admin.js';
 const exec = promisify(execFile);
 test('real CLI and pinned container retain Restart, fence Reset, recover proof and require new Hard Reset setup', { timeout: 180000 }, async t => {
   const image = (await readFile(join(root, 'artifacts', 'image-id'), 'utf8')).trim();
@@ -26,8 +27,9 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   const settings = { ...defaults, port, freeDiskBytes: 0 };
   const settingsFile = join(base, 'settings.json'); await writeFile(settingsFile, JSON.stringify(settings));
   const installationIds = new Set();
-  async function cli(...args) {
-    try { return JSON.parse((await exec(process.execPath, [join(root, 'dist', 'cli.js'), ...args, '--installation', installation], { cwd: root, maxBuffer: 131072, timeout: 90000 })).stdout); }
+  function cli(...args) { return cliAt(installation, ...args); }
+  async function cliAt(directory, ...args) {
+    try { return JSON.parse((await exec(process.execPath, [join(root, 'dist', 'cli.js'), ...args, '--installation', directory], { cwd: root, maxBuffer: 131072, timeout: 90000 })).stdout); }
     catch (error) { if (error.stdout) return JSON.parse(error.stdout); throw error; }
   }
   t.after(async () => {
@@ -157,4 +159,63 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   const startedAgain = await cli('start'); assert.equal(startedAgain.ok, true, JSON.stringify(startedAgain));
   assert.equal((await api('/health')).status, 401);
   assert.equal((await api('/health', undefined, newKey)).status, 200);
+  const stopped = await cli('stop'); assert.equal(stopped.ok, true, JSON.stringify(stopped));
+  for (const denyExitProof of [false, true]) {
+    await t.test(`failed Start stops its writer when settings writes fail${denyExitProof ? ' and retains the exit-proof failure' : ''}`, async () => {
+      assert.notEqual(process.getuid(), 0, 'The filesystem failure regression requires an unprivileged user');
+      const failedInstallation = join(base, denyExitProof ? 'failed-start-and-proof' : 'failed-start');
+      const setup = await cliAt(failedInstallation, 'setup', '--image', image, '--certificate', cert, '--key', key, '--credential-file', credentials, '--settings', settingsFile);
+      assert.equal(setup.ok, true, JSON.stringify(setup));
+      const setupDirectory = join(failedInstallation, 'setup'), exitsDirectory = join(failedInstallation, 'control', 'exits');
+      const manifest = JSON.parse(await readFile(join(setupDirectory, 'installation.json')));
+      installationIds.add(manifest.installation_id);
+      assert.deepEqual(await readdir(exitsDirectory), []);
+      const settingsBefore = await readFile(join(setupDirectory, 'settings.json'), 'utf8');
+      await chmod(setupDirectory, 0o500);
+      try {
+        if (denyExitProof) await chmod(exitsDirectory, 0o500);
+        if (denyExitProof) {
+          const failed = await cliAt(failedInstallation, 'start');
+          assert.equal(failed.ok, false);
+          assert.equal(failed.code, 'management_failed');
+          assert.equal(failed.primary_failure, 'management_failed');
+          assert.equal(failed.cleanup_failure, 'management_failed');
+          assert.deepEqual(failed.failures, ['management_failed', 'management_failed', 'management_failed']);
+          assert.ok(!JSON.stringify(failed).includes(failedInstallation));
+          assert.ok(!JSON.stringify(failed).includes(newKey));
+        } else {
+          let failure;
+          try { await installationLock(failedInstallation, () => new Administration(failedInstallation).start()); }
+          catch (error) { failure = error; }
+          assert.ok(failure instanceof AggregateError, `Start must retain both settings write errors: ${failure}`);
+          assert.equal(failure.message, 'start_cleanup_failed');
+          assert.equal(failure.errors.length, 2);
+          for (const error of failure.errors) {
+            assert.equal(error.code, 'EACCES');
+            assert.equal(error.syscall, 'open');
+            assert.ok(error.path.startsWith(join(setupDirectory, 'settings.json.')));
+          }
+          assert.notEqual(failure.errors[0], failure.errors[1]);
+        }
+        assert.equal(await readFile(join(setupDirectory, 'settings.json'), 'utf8'), settingsBefore);
+        const writer = JSON.parse(await readFile(join(failedInstallation, 'control', 'writer.json'), 'utf8'));
+        const [state] = JSON.parse((await exec('sudo', ['-n', 'docker', 'inspect', writer.container], { cwd: root })).stdout);
+        assert.equal(state.State.Running, false, 'The command must stop the live container before returning');
+        assert.equal(state.State.ExitCode, 0, 'The runtime must complete a graceful shutdown');
+        assert.ok(writer.host, 'Startup must have captured the live writer identity');
+        assert.equal(await writerExited(writer.host), true);
+        const proofPath = join(exitsDirectory, `${writer.container}.json`);
+        if (denyExitProof) {
+          await assert.rejects(readFile(proofPath), { code: 'ENOENT' });
+        } else {
+          assert.deepEqual(JSON.parse(await readFile(proofPath)), {
+            container: writer.container, launch: writer.launch, installation: manifest.installation_id,
+          });
+        }
+      } finally {
+        await chmod(setupDirectory, 0o700);
+        await chmod(exitsDirectory, 0o700);
+      }
+    });
+  }
 });

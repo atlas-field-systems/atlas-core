@@ -12,7 +12,56 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { storageUsage } from '../dist/server.js';
 import { digest } from '../dist/exact.js';
 import { currentWriter } from '../dist/ownership.js';
+import { DatabaseWorker } from '../dist/rpc.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
+test('Object quota refusal preserves history with ample storage and with aggregate pressure', async t => {
+  for (const kind of ['prepare-upload', 'describe-upload', 'reserve-upload']) for (const pressure of [false, true]) await t.test(`${kind}, pressure=${pressure}`, async t => {
+    const MiB = 1_048_576;
+    const directory = await mkdtemp(join(root, 'artifacts', 'quota-history-')), captures = join(directory, 'captures');
+    await mkdir(captures);
+    const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 32 * MiB, objectBytes: MiB, reserveBytes: MiB };
+    const rpc = new DatabaseWorker(directory, settings, undefined, captures);
+    t.after(async () => { await rpc.close(); await rm(directory, { recursive: true, force: true }); });
+    const { dataset } = await rpc.ready, credential = secret();
+    await rpc.call('provision', { request_id: uuid(), api_key_id: uuid(), secret: credential }, 1024, true);
+    const context = { verifier: digest(credential), dataset, protocol: '0.1.0' };
+    const call = async (name, request = {}) => {
+      const response = await rpc.exchange(name, request, context, 1024);
+      assert.equal(response.kind, 'success', JSON.stringify(response)); return response.body.data;
+    };
+    const asset = (await call('RegisterAsset', registration())).asset;
+    const health = await call('GetHealth');
+    const request = { query_id: uuid(), entity_id: asset.id, allocation_context: health.allocation_context };
+    const history = await call('GetAssetMovementHistory', request);
+    const attempt = uuid(), owner = await currentWriter();
+    const descriptor = { request_id: uuid(), object_id: uuid(), byte_length: String(2 * MiB), sha256: 'a'.repeat(64),
+      content_type: 'application/octet-stream', metadata: { associations: [] } };
+    if (kind !== 'prepare-upload') await rpc.call('prepare-upload', { context, attempt, owner }, 1024);
+    const db = new Database(join(directory, 'core.sqlite'), { readonly: true });
+    t.after(() => db.close());
+    const receipt = () => db.prepare('SELECT state,bytes,refs FROM temporary_receipts WHERE id=?').get(history.view_id);
+    const before = receipt(); assert.ok(before.bytes > 8192);
+    const file = join(captures, 'pressure.bin');
+    if (pressure) {
+      const admission = 2 * MiB + (kind === 'prepare-upload' ? 32768 : 0);
+      await writeFile(file, Buffer.alloc(settings.storageBytes - settings.reserveBytes - before.bytes - admission + 4096));
+      const pressured = await storageUsage(captures);
+      const shortage = pressured.bytes + admission + settings.reserveBytes - settings.storageBytes;
+      assert.ok(shortage > 0 && shortage < before.bytes, 'Aggregate admission alone could succeed by expiring history');
+    }
+    const data = kind === 'prepare-upload' ? { context, attempt, owner, descriptor }
+      : kind === 'describe-upload' ? { context, attempt, descriptor } : { context, attempt, bytes: 2 * MiB, written: 0 };
+    await assert.rejects(rpc.call(kind, data, 1024), error => error.code === 'storage_limit');
+    assert.deepEqual(receipt(), before, 'An Object quota failure must not invalidate or reclaim the history view');
+    assert.equal((await stat(join(captures, `${history.view_id}.sqlite`))).size, before.bytes);
+    assert.equal((await call('GetAssetMovementHistory', request)).view_id, history.view_id);
+    if (pressure) await rm(file);
+    if (kind !== 'prepare-upload') {
+      assert.equal((await rpc.call('attempt', attempt, 128)).bytes, 0);
+      await rpc.call('abandon', attempt, 128); await rpc.call('reclaim', attempt, 128);
+    }
+  });
+});
 test('worker commits through a parent stall and bounds unacknowledged pages with required headroom', { timeout: 20000 }, async t => {
   const directory = await mkdtemp(join(root, 'artifacts', 'reply-permits-'));
   const settings = { ...defaults, freeDiskBytes: 0, workerQueueCount: 40, workerQueueBytes: 1_048_576,

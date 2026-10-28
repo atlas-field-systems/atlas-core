@@ -23,8 +23,8 @@ test('startup reclaims escaped abandoned upload descriptors across bounded worke
     for (let i = 0; i < 65; i++) {
       const input = descriptor(Buffer.from('partial'));
       input.metadata.description = '"'.repeat(4096);
-      const attempt = engine.store.db.transaction(() => engine.objects.prepare(input, uuid(), owner, authority.keyId))();
-      engine.objects.reserve(attempt.id, 7); engine.objects.abandon(attempt.id);
+      const attempt = await engine.reserveStorage(admit => engine.store.db.transaction(() => engine.objects.prepare(input, uuid(), owner, authority.keyId, admit))());
+      await engine.reserveStorage(admit => engine.objects.reserve(attempt.id, 7, admit)); engine.objects.abandon(attempt.id);
       await writeFile(join(f.directory, 'objects', attempt.staging), 'partial');
     }
   } finally { await engine.close(); }

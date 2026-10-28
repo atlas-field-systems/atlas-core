@@ -73,7 +73,12 @@ export class Identity {
   }
   createKey(tx: Transaction, request: RequestOf<'CreateApiKey'>, assetId: Uuid | null = null, recordActivity = true): ApiKey {
     const facts = credentialFacts(request);
-    if (tx.retry('setup/CreateApiKey', request.request_id, facts)) return this.key(request.api_key_id);
+    if (tx.retry('setup/CreateApiKey', request.request_id, facts)) {
+      const row = KeyRow.parse(this.store.db.prepare('SELECT image,verifier,asset_id FROM identity_keys WHERE id=?').get(request.api_key_id));
+      // Setup retries outlive Reset, but cannot change a credential's original binding.
+      if (row.asset_id !== assetId) refuse('identity_conflict');
+      return ApiKey.parse(JSON.parse(row.image));
+    }
     if (request.operator_id !== undefined) {
       const row = this.store.db.prepare('SELECT deleted FROM identity_operators WHERE id=?').get(request.operator_id);
       if (row === undefined) refuse('operator_not_found');
