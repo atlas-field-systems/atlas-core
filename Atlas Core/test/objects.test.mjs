@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { writeFile, readdir } from 'node:fs/promises';
+import { writeFile, readdir, stat, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Agent, request as httpsRequest } from 'node:https';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -14,6 +14,41 @@ import { digest } from '../dist/exact.js';
 import { defaults } from '../dist/settings.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 const descriptor = bytes => ({ request_id: uuid(), object_id: uuid(), byte_length: String(bytes.byteLength), sha256: createHash('sha256').update(bytes).digest('hex'), content_type: 'application/octet-stream', metadata: { associations: [] } });
+for (const failBookkeeping of [false, true]) test(`shutdown awaits active reclamation and preserves failure=${failBookkeeping}`, { timeout: 15_000 }, async t => {
+  const f = await fixture({ after() {} });
+  const held = Promise.withResolvers(), release = Promise.withResolvers();
+  t.after(async () => { release.resolve(); await f.core.close().catch(() => {}); await rm(f.directory, { recursive: true, force: true }); });
+  const bytes = Buffer.from('retired content'), input = descriptor(bytes);
+  ok(await f.upload(input, bytes));
+  const files = join(f.directory, 'objects', 'installed');
+  const file = join(files, (await readdir(files))[0]);
+  const original = f.core.rpc.call;
+  const failure = new Error('reclamation_bookkeeping_failed');
+  let recorded = false;
+  t.mock.method(f.core.rpc, 'call', async function(kind, ...args) {
+    if (kind === 'file-reclaimed') {
+      assert.equal(this.available, true, 'Reclamation still owns a live worker');
+      if (failBookkeeping) throw failure;
+    }
+    const result = await original.call(this, kind, ...args);
+    if (kind === 'file-reclaimed') recorded = true;
+    if (kind === 'retired-files' && result.some(row => row.object === input.object_id)) { held.resolve(); await release.promise; }
+    return result;
+  });
+  ok(await f.call('DeleteObject', { object_id: input.object_id, request_id: uuid() }));
+  await held.promise;
+  let settled = false;
+  const closing = f.core.close();
+  void closing.then(() => { settled = true; }, () => { settled = true; });
+  await delay(100);
+  assert.equal(settled, false, 'Shutdown must await the active timer body');
+  assert.equal((await stat(file)).size, bytes.length);
+  release.resolve();
+  if (failBookkeeping) await assert.rejects(closing, error => error instanceof AggregateError && error.errors.includes(failure));
+  else { await closing; assert.equal(recorded, true); }
+  await assert.rejects(stat(file), { code: 'ENOENT' });
+  assert.equal(f.core.rpc.worker.threadId, -1);
+});
 test('startup reclaims escaped abandoned upload descriptors across bounded worker response pages', async t => {
   const f = await fixture(t, { resourceImageBytes: 65536, maxUploads: 64, limits: { ...defaults.limits, max_message_bytes: 212992 } }); await f.core.close();
   const engine = new Engine(f.directory, f.settings);
