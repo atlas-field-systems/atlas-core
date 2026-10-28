@@ -626,7 +626,7 @@ test('draining readiness is an authenticated 503 success and ordinary work stops
   assert.equal((await f.call('RegisterAsset', registration())).json.error.code, 'resource_limit');
 });
 test('diagnostic release retains ownership under worker pressure and restores logging and export admission', { timeout: 10_000 }, async t => {
-  const directory = await mkdtemp(join(root, 'artifacts', 'diagnostic-release-'));
+  const directory = await mkdtemp(join(mutableRoot, 'diagnostic-release-'));
   const settings = { ...defaults, freeDiskBytes: 0, workerQueueCount: 4 };
   const rpc = new DatabaseWorker(directory, settings);
   await rpc.ready;
