@@ -6,6 +6,7 @@ import { canonical, id, next, now, zero } from './exact.js';
 import { refuse } from './fault.js';
 import type { Settings } from './settings.js';
 
+export const databaseFormat = '2';
 const Meta = z.strictObject({ value: z.string() });
 const Retry = z.strictObject({ facts: z.string(), cursor: z.string().nullable() });
 const LogRow = z.strictObject({ sequence: z.string(), previous: z.string(), message: z.string() });
@@ -68,9 +69,9 @@ export class Store {
       CREATE TABLE IF NOT EXISTS retry(scope TEXT NOT NULL,request TEXT NOT NULL,facts TEXT NOT NULL,cursor TEXT,PRIMARY KEY(scope,request)) STRICT;
       CREATE TABLE IF NOT EXISTS commit_log(sequence TEXT PRIMARY KEY,previous TEXT NOT NULL,message TEXT NOT NULL,at INTEGER NOT NULL,bytes INTEGER NOT NULL) STRICT;`);
     const format = this.meta('format');
-    if (format !== undefined && format !== '2') throw new Error('incompatible_format');
+    if (format !== undefined && format !== databaseFormat) throw new Error('incompatible_format');
     this.db.transaction(() => {
-      this.setMeta('format', '2');
+      this.setMeta('format', databaseFormat);
       if (this.meta('dataset') === undefined) {
         this.setMeta('dataset', establish?.dataset ?? id());
         this.setMeta('sequence', zero);

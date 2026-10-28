@@ -83,9 +83,9 @@ export class Administration {
     if (found !== '' && found !== writer.container) throw new Error('writer_identity_mismatch');
     return found !== '';
   }
-  private async offline(mode: 'inspect-marker' | 'establish' | 'provision', input: unknown = {}, image?: string) {
+  private async offline(mode: 'inspect-marker' | 'check-update' | 'establish' | 'provision', input: unknown = {}, image?: string) {
     const manifest = await this.manifest();
-    if (mode === 'inspect-marker') {
+    if (mode === 'inspect-marker' || mode === 'check-update') {
       const container = await createContainer(this.root, manifest.installation_id, image ?? manifest.image, mode);
       let primary: unknown;
       try {
@@ -110,6 +110,10 @@ export class Administration {
     await this.removeStopped(container, manifest.installation_id);
     const value: unknown = JSON.parse(output);
     return value;
+  }
+  private async checkUpdate(image: string): Promise<void> {
+    const result = z.strictObject({ compatible: z.boolean() }).parse(await this.offline('check-update', {}, image));
+    if (!result.compatible) throw new Error('incompatible_format');
   }
   async inspect(): Promise<unknown> {
     const manifest = await this.manifest().catch(error => {
@@ -199,12 +203,14 @@ export class Administration {
   async destructive(kind: ActionRecord['kind'], image?: string): Promise<void> {
     await this.requireComplete();
     const manifest = await this.manifest(), writer = await this.writer();
+    const target = kind === 'update' ? ImageId.parse(image) : manifest.image;
+    if (kind === 'update') await this.checkUpdate(target);
     let old: Uuid | null = null;
     if (writer && (await inspectContainer(writer, manifest.installation_id)).State.Running) {
       const context = z.object({ dataset: Uuid }).parse(await maintenance(this.root, { operation: 'inspect' })); old = context.dataset;
     } else old = Marker.parse(await this.offline('inspect-marker')).dataset;
     const action: ActionRecord = { format: 1, action_id: id(), installation_id: manifest.installation_id, kind, old_dataset: old, intended_dataset: id(),
-      writer: await this.writer() ?? null, image: kind === 'update' ? ImageId.parse(image) : manifest.image, phase: 'intent', primary_failure: null, cleanup_failure: null };
+      writer: await this.writer() ?? null, image: target, phase: 'intent', primary_failure: null, cleanup_failure: null };
     await atomicJson(join(this.root, 'recovery', 'action.json'), action);
     await rm(join(this.root, 'recovery', 'proof.json'), { force: true }); await flushDirectory(join(this.root, 'recovery'));
     await this.recover();
@@ -215,6 +221,7 @@ export class Administration {
     const manifest = await this.manifest();
     if (manifest.installation_id !== action.installation_id) throw new Error('repair_required');
     try {
+      if (action.kind === 'update') await this.checkUpdate(action.image);
       const writer = await this.writer();
       if (writer) {
         const running = await this.containerExists(writer) && (await inspectContainer(writer, manifest.installation_id)).State.Running;
@@ -255,7 +262,8 @@ export class Administration {
       action.phase = 'complete'; action.primary_failure = null; action.cleanup_failure = null;
       await atomicJson(join(this.root, 'recovery', 'action.json'), action);
     } catch (error) {
-      action.primary_failure = error instanceof Error && error.message === 'writer_exit_unverified' ? 'writer_exit_unverified' : 'repair_required';
+      action.primary_failure = error instanceof Error && error.message === 'writer_exit_unverified' ? 'writer_exit_unverified'
+        : error instanceof Error && error.message === 'incompatible_format' ? 'incompatible_format' : 'repair_required';
       try { await atomicJson(join(this.root, 'recovery', 'action.json'), action); }
       catch { action.cleanup_failure = 'cleanup_failed'; throw new AggregateError([error, new Error('cleanup_failed')], 'recovery_failed'); }
       throw error;

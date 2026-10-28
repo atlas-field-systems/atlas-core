@@ -3,6 +3,8 @@
 **One bounded Node.js worker owns Core's SQLite connections, transactions, and
 checkpoints.** HTTP and WSS handling stay on the server thread. Domain modules
 keep their private SQL and run complete stateful operations through this owner.
+The same supported-format constant gates ordinary Store opening and the target
+image's read-only update check. That check opens no Engine or writable connection.
 
 ## Operations and shutdown
 

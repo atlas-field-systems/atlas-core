@@ -31,10 +31,11 @@ export async function verifyWriterExit(writer: ContainerWriter, installation: st
 }
 export async function createContainer(root: string, installation: string, image: string, mode: string, port?: number): Promise<ContainerWriter> {
   const launch = id();
+  const readonly = mode === 'inspect-marker' || mode === 'check-update';
   const args = ['create', '--restart=no', '--log-driver=none', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--ulimit', 'core=0:0', '--pids-limit=128', '--memory=8g', '--cpus=4', '--network=bridge',
     '--label', `atlas.installation=${installation}`, '--label', `atlas.launch=${launch}`, '--label', `atlas.mode=${mode}`, '--env', `ATLAS_LAUNCH_ID=${launch}`, '--user', `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`,
     '--mount', `type=bind,source=${join(root, 'data')},target=/atlas/data`, '--mount', `type=bind,source=${join(root, 'setup')},target=/atlas/setup,readonly`,
-    '--mount', `type=bind,source=${join(root, 'control')},target=/atlas/control${mode === 'inspect-marker' ? ',readonly' : ''}`, '--mount', `type=bind,source=${join(root, 'recovery')},target=/atlas/recovery,readonly`, '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m'];
+    '--mount', `type=bind,source=${join(root, 'control')},target=/atlas/control${readonly ? ',readonly' : ''}`, '--mount', `type=bind,source=${join(root, 'recovery')},target=/atlas/recovery,readonly`, '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m'];
   if (port !== undefined) args.push('--publish', `${port}:${port}`);
   if (mode !== 'serve') args.push('--interactive');
   args.push(image, 'node', '--disable-warning=ExperimentalWarning', '--disable-warning=DeprecationWarning', 'dist/runtime.js', mode, '/atlas');

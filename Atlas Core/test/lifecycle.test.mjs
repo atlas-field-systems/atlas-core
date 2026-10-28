@@ -16,7 +16,24 @@ import { DatabaseWorker } from '../dist/rpc.js';
 import { Transfers } from '../dist/transfers.js';
 import { defaults } from '../dist/settings.js';
 import { digest } from '../dist/exact.js';
+import Database from 'better-sqlite3';
 const run = data => new Promise((resolve, reject) => { const worker = new Worker(new URL('../dist/offline.js', import.meta.url), { workerData: data }); let value; worker.on('message', result => { value = result; }); worker.once('error', reject); worker.once('exit', code => code === 0 ? resolve(value) : reject(new Error('offline_failed'))); });
+test('update compatibility inspects retained SQLite without opening an Engine or changing data', async t => {
+  const f = await fixture(t);
+  assert.deepEqual(await run({ mode: 'check-update', directory: f.directory }), { compatible: true });
+  await f.core.close();
+  const path = join(f.directory, 'core.sqlite');
+  for (const format of ['1', null]) {
+    const db = new Database(path);
+    try {
+      if (format === null) db.prepare("DELETE FROM core_meta WHERE key='format'").run();
+      else db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
+    } finally { db.close(); }
+    const before = await readFile(path);
+    assert.deepEqual(await run({ mode: 'check-update', directory: f.directory }), { compatible: false });
+    assert.deepEqual(await readFile(path), before, 'Refusal must leave all retained database bytes unchanged');
+  }
+});
 test('installation mutation lock excludes contenders after dead and ownerless commands', async t => {
   await mkdir(join(root, 'artifacts'), { recursive: true });
   const directory = await mkdtemp(join(root, 'artifacts', 'locks-'));

@@ -20,7 +20,7 @@ export type ContainerWriter = z.infer<typeof ContainerWriter>;
 export const Action = z.strictObject({ format: z.literal(1), action_id: Uuid, installation_id: Uuid,
   kind: z.enum(['reset', 'hard-reset', 'update']), old_dataset: Uuid.nullable(), intended_dataset: Uuid,
   writer: ContainerWriter.nullable(), image: ImageId, phase: z.enum(['intent', 'stopped', 'cleaned', 'established', 'complete']),
-  primary_failure: z.enum(['writer_exit_unverified', 'docker_failed', 'cleanup_failed', 'repair_required']).nullable(),
+  primary_failure: z.enum(['writer_exit_unverified', 'docker_failed', 'cleanup_failed', 'repair_required', 'incompatible_format']).nullable(),
   cleanup_failure: z.enum(['writer_exit_unverified', 'docker_failed', 'cleanup_failed', 'repair_required']).nullable() });
 export type Action = z.infer<typeof Action>;
 export const Proof = z.strictObject({ action_id: Uuid, dataset: Uuid, installation_id: Uuid });
