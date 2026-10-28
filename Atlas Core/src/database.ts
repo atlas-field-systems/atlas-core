@@ -38,6 +38,11 @@ export class Transaction {
     this.retries.push({ scope, request, facts: canonical(facts) });
     this.dirty = true;
   }
+  rememberPrivate(scope: string, request: string, facts: unknown): void {
+    const encoded = canonical(facts);
+    this.retainedBytes += Buffer.byteLength(scope) + Buffer.byteLength(request) + Buffer.byteLength(encoded);
+    this.store.db.prepare('INSERT INTO retry VALUES(?,?,?,NULL)').run(scope, request, encoded);
+  }
 }
 export class Store {
   readonly db: Database.Database;

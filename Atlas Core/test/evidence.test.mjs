@@ -2,11 +2,51 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
 import { join } from 'node:path';
+import { writeFile, rm } from 'node:fs/promises';
+import { storageUsage } from '../dist/server.js';
 import { defaults } from '../dist/settings.js';
 import { fixture, uuid, registration, report, telemetry } from './helpers.mjs';
 
 const ok = result => { assert.equal(result.status, 200, JSON.stringify(result.json)); return result.json.data; };
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
+test('duplicate Asset wrappers bind original facts privately across Restart and storage refusal', async t => {
+  const f = await fixture(t, { storageBytes: 32 * 1024 * 1024, objectBytes: 16 * 1024 * 1024, reserveBytes: 1024 * 1024 });
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const origin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const firstRequest = { asset_id: asset.id, request_id: uuid(), report: report(f.core.dataset, asset.id, origin, 1, { telemetry: telemetry(origin, 10) }) };
+  const first = await f.call('UpdateAsset', firstRequest), accepted = ok(first).asset;
+  assert.equal(first.json.data.evidence_disposition, 'accepted');
+  const duplicateRequest = { ...firstRequest, request_id: uuid() };
+  const duplicate = await f.call('UpdateAsset', duplicateRequest);
+  assert.equal(ok(duplicate).evidence_disposition, 'duplicate');
+  assert.equal(duplicate.json.commit_cursor, undefined);
+  for (const restart of [false, true]) {
+    if (restart) await f.restart();
+    const changed = await f.call('UpdateAsset', { ...duplicateRequest, alias: 'reused-identity', expected_edit_revision: '0' });
+    assert.equal(changed.status, 409); assert.equal(changed.json.error.code, 'identity_conflict');
+    const retry = await f.call('UpdateAsset', duplicateRequest);
+    assert.equal(ok(retry).evidence_disposition, 'duplicate');
+    assert.equal(retry.json.commit_cursor, undefined);
+    assert.deepEqual(retry.json.data.asset, accepted);
+    assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })), accepted);
+    assert.deepEqual(ok(await f.call('ReadChanges', { from_cursor: first.json.commit_cursor, ...limits })).messages, []);
+  }
+  const pressure = join(f.directory, 'pressure.bin');
+  const usage = await storageUsage(f.directory);
+  await writeFile(pressure, Buffer.alloc(f.settings.storageBytes - f.settings.reserveBytes - usage.bytes - 32768));
+  assert.equal(ok(await f.call('UpdateAsset', duplicateRequest)).evidence_disposition, 'duplicate');
+  const refusedRequest = { ...firstRequest, request_id: uuid() };
+  assert.equal((await f.call('UpdateAsset', refusedRequest)).json.error?.code, 'storage_limit');
+  await rm(pressure);
+  const edited = await f.call('UpdateAsset', { ...refusedRequest, alias: 'after-refusal', expected_edit_revision: '0' });
+  assert.equal(ok(edited).asset.alias, 'after-refusal', 'A refused private receipt must roll back');
+  assert.equal(ok(await f.call('UpdateAsset', firstRequest)).evidence_disposition, 'duplicate');
+  const health = ok(await f.call('GetHealth'));
+  const history = ok(await f.call('GetAssetMovementHistory', { query_id: uuid(), entity_id: asset.id, allocation_context: health.allocation_context }));
+  assert.equal(history.readings.length, 1);
+  assert.equal(history.readings[0].value.latitude, 10);
+  ok(await f.call('ReleaseHistoryView', { release_token: history.release_token }));
+});
 test('Observation creation bounds the complete image and rolls back its pair, evidence and retry before correction', async t => {
   const f = await fixture(t, { resourceImageBytes: 65536, limits: { ...defaults.limits, max_message_bytes: 212992 } });
   const make = description => {
