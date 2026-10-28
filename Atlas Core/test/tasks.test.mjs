@@ -1,7 +1,80 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import Database from 'better-sqlite3';
+import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+import { Engine } from '../dist/engine.js';
 import { fixture, uuid, registration } from './helpers.mjs';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
+test('ended assigned polls reclaim full contexts and retain compact identity protection until Reset', async t => {
+  const f = await fixture(t), asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const requests = [], snapshots = [];
+  for (const queued of [0, 20]) {
+    for (let i = 0; i < queued; i++) ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id,
+      command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: i, longitude: 0 } } } }));
+    for (let i = 0; i < 8; i++) {
+      const request = { asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid(), page_size: 2 };
+      const read = ok(await f.call('GetAssignedTasks', request));
+      assert.equal(read.task_queue.requested_task_ids.length, queued);
+      assert.deepEqual(ok(await f.call('GetAssignedTasks', request)), read);
+      if (read.next_page_token) {
+        const page = ok(await f.call('GetAssignedTasks', { page_token: read.next_page_token }));
+        assert.deepEqual(page.task_queue, read.task_queue); assert.equal(page.captured_at, read.captured_at);
+      }
+      requests.push(request);
+    }
+    await f.restart();
+    const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+    try {
+      assert.equal(db.prepare('SELECT count(*) AS count FROM task_instructions').get().count, 0);
+      assert.equal(db.prepare('SELECT count(*) AS count FROM task_instruction_lifetime').get().count, 0);
+      const retained = db.prepare('SELECT count(*) AS count, sum(length(read_id)+length(facts)+coalesce(length(proof),0)) AS bytes, count(proof) AS proofs FROM task_instruction_receipts').get();
+      assert.equal(retained.count, requests.length); assert.equal(retained.bytes, 100 * requests.length); assert.equal(retained.proofs, 0);
+      snapshots.push({ queued, ...retained });
+    } finally { db.close(); }
+    for (const request of requests) {
+      assert.equal((await f.call('GetAssignedTasks', request)).json.error.code, 'allocation_expired');
+      assert.equal((await f.call('GetAssignedTasks', { ...request, page_size: 3 })).json.error.code, 'identity_conflict');
+    }
+  }
+  t.diagnostic(JSON.stringify(snapshots));
+  await f.core.close();
+  const engine = new Engine(f.directory, f.settings);
+  try {
+    engine.establish(uuid(), uuid(), false);
+    assert.equal(engine.store.db.prepare('SELECT count(*) AS count FROM task_instruction_receipts').get().count, 0);
+  } finally { await engine.close(); }
+});
+test('format 1 compaction preserves original read identity and delayed Resume evidence atomically', async t => {
+  const f = await fixture(t), asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const resume = ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'resume', scheduling: 'immediate', inputs: {}, expires_at: new Date(Date.now() + 59000).toISOString() }));
+  const [earlier, later] = [uuid(), uuid()].sort();
+  const request = { asset_id: asset.id, process_generation: asset.process_generation, read_id: later };
+  ok(await f.call('GetAssignedTasks', { ...request, read_id: earlier }));
+  const read = ok(await f.call('GetAssignedTasks', request));
+  await f.core.close();
+  const db = new Database(join(f.directory, 'core.sqlite'));
+  try {
+    db.exec('DROP TABLE IF EXISTS task_instruction_receipts');
+    db.prepare("UPDATE core_meta SET value='1' WHERE key='format'").run();
+    const original = db.prepare('SELECT image FROM task_instructions WHERE read_id=?').get(read.read_id).image;
+    db.prepare('UPDATE task_instructions SET image=? WHERE read_id=?').run('{}', read.read_id);
+    await assert.rejects(f.restart());
+    assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '1');
+    assert.equal(db.prepare('SELECT count(*) AS count FROM task_instructions').get().count, 2);
+    assert.equal(db.prepare('SELECT count(*) AS count FROM task_instruction_receipts').get().count, 0, 'A later malformed context rolls back earlier converted receipts');
+    db.prepare('UPDATE task_instructions SET image=? WHERE read_id=?').run(original, read.read_id);
+  } finally { db.close(); }
+  await f.restart();
+  assert.equal((await f.call('GetAssignedTasks', request)).json.error.code, 'allocation_expired');
+  assert.equal((await f.call('GetAssignedTasks', { ...request, page_size: 100 })).json.error.code, 'identity_conflict', 'Omitted page size stays distinct from an explicit default');
+  const completed = ok(await f.call('ReportTaskExecution', { evidence: { dataset_id: f.core.dataset, asset_id: asset.id,
+    origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null,
+    payload: { task_id: resume.task_id, event: 'state', state: 'completed', control_revision: read.task_control.revision, queue_state: 'running',
+      applied_at: read.captured_at, read_id: read.read_id, core_run_id: read.core_run_id, captured_at: read.captured_at,
+      instructions_valid_until: read.instructions_valid_until, queue_revision: read.task_queue.revision } } }));
+  assert.equal(completed.task.execution_state, 'completed');
+});
 for (const pendingSecondCancellation of [false, true]) {
   test(`cancellation retries recover refused intent with ${pendingSecondCancellation ? 'a later cancellation pending' : 'no cancellation pending'} across Restart`, async t => {
     const f = await fixture(t);
@@ -122,19 +195,37 @@ test('pending cancellation refusal cannot restore a started Move To to an absent
   ok(await f.call('ReportTaskExecution', { evidence: { ...refusal, payload: { ...refusal.payload, state: 'in_progress' } } }));
   current = ok(await f.call('GetTask', { task_id: task.task_id })); assert.equal(current.execution_state, 'in_progress'); assert.equal(current.cancellation_request_id, null);
 });
-test('delayed proven Resume survives Restart while its old instructions cannot satisfy new read rounds', async t => {
+test('delayed proven Resume survives page expiry and Restart while old reads cannot become fresh', { timeout: 90000 }, async t => {
   const f = await fixture(t); const asset = ok(await f.call('RegisterAsset', registration())).asset;
-  const resume = ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'resume', scheduling: 'immediate', inputs: {}, expires_at: new Date(Date.now() + 59000).toISOString() }));
+  ok(await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } }));
+  const created = await f.call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'resume', scheduling: 'immediate', inputs: {}, expires_at: new Date(Date.now() + 59000).toISOString() });
+  const resume = ok(created);
   const request = { asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid(), page_size: 1 };
   const read = ok(await f.call('GetAssignedTasks', request));
+  assert.ok(read.next_page_token);
+  assert.equal(ok(await f.call('GetAssignedTasks', { page_token: read.next_page_token })).next_page_token, null);
   const evidence = { dataset_id: f.core.dataset, asset_id: asset.id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, report_id: uuid(), sequence: '1', generated_at: null,
-    payload: { task_id: resume.task_id, event: 'state', state: 'completed', control_revision: read.task_control.revision, queue_state: 'running', applied_at: read.captured_at, read_id: read.read_id, core_run_id: read.core_run_id, captured_at: read.captured_at, instructions_valid_until: read.instructions_valid_until, queue_revision: read.task_queue.revision } };
+    payload: { task_id: resume.task_id, event: 'state', state: 'completed', control_revision: read.task_control.revision, queue_state: 'running', applied_at: new Date().toISOString(), read_id: read.read_id, core_run_id: read.core_run_id, captured_at: read.captured_at, instructions_valid_until: read.instructions_valid_until, queue_revision: read.task_queue.revision } };
+  await delay(61000);
+  assert.equal((await f.call('GetAssignedTasks', request)).json.error.code, 'allocation_expired');
+  assert.equal((await f.call('GetAssignedTasks', { page_token: read.next_page_token })).json.error.code, 'allocation_expired');
+  const afterExpiry = ok(await f.call('GetAssignedTasks', { ...request, read_id: uuid() }));
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  try {
+    assert.equal(db.prepare('SELECT count(*) AS count FROM task_instructions WHERE read_id=?').get(read.read_id).count, 0);
+    assert.equal(db.prepare('SELECT count(*) AS count FROM task_instruction_lifetime WHERE read_id=?').get(read.read_id).count, 0);
+  } finally { db.close(); }
+  assert.equal(afterExpiry.core_run_id, read.core_run_id);
   await f.restart();
   assert.equal((await f.call('GetAssignedTasks', request)).json.error.code, 'allocation_expired');
   const fresh = ok(await f.call('GetAssignedTasks', { ...request, read_id: uuid() }));
   assert.notEqual(fresh.core_run_id, read.core_run_id); assert.notEqual(fresh.read_id, read.read_id);
-  const forged = { ...evidence, payload: { ...evidence.payload, read_id: fresh.read_id } };
-  assert.equal((await f.call('ReportTaskExecution', { evidence: forged })).json.error.code, 'control_not_confirmed');
+  assert.deepEqual(ok(await f.call('ReadChanges', { from_cursor: created.json.commit_cursor, max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 })).messages, []);
+  for (const changed of [{ read_id: fresh.read_id }, { core_run_id: fresh.core_run_id }, { queue_revision: String(BigInt(read.task_queue.revision) + 1n) }, { control_revision: '2' },
+    { captured_at: new Date(Date.parse(read.captured_at) - 1).toISOString() }, { instructions_valid_until: new Date(Date.parse(read.instructions_valid_until) - 1).toISOString() }]) {
+    const forged = { ...evidence, payload: { ...evidence.payload, ...changed } };
+    assert.equal((await f.call('ReportTaskExecution', { evidence: forged })).json.error.code, 'control_not_confirmed');
+  }
   assert.equal(ok(await f.call('ReportTaskExecution', { evidence })).task.execution_state, 'completed');
   assert.equal(ok(await f.call('GetAsset', { asset_id: asset.id })).task_control.confirmed.queue_state, 'running');
 });

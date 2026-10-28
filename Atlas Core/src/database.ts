@@ -68,9 +68,9 @@ export class Store {
       CREATE TABLE IF NOT EXISTS retry(scope TEXT NOT NULL,request TEXT NOT NULL,facts TEXT NOT NULL,cursor TEXT,PRIMARY KEY(scope,request)) STRICT;
       CREATE TABLE IF NOT EXISTS commit_log(sequence TEXT PRIMARY KEY,previous TEXT NOT NULL,message TEXT NOT NULL,at INTEGER NOT NULL,bytes INTEGER NOT NULL) STRICT;`);
     const format = this.meta('format');
-    if (format !== undefined && format !== '1') throw new Error('incompatible_format');
+    if (format !== undefined && format !== '1' && format !== '2') throw new Error('incompatible_format');
     this.db.transaction(() => {
-      this.setMeta('format', '1');
+      this.setMeta('format', format ?? '1');
       if (this.meta('dataset') === undefined) {
         this.setMeta('dataset', establish?.dataset ?? id());
         this.setMeta('sequence', zero);

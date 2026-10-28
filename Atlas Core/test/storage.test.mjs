@@ -415,7 +415,8 @@ test('all Task evidence preserves ordinary headroom, exact retries bypass new ad
   assert.equal((await f.call('ReportTaskExecution', { evidence: evidence(2, { task_id: task.task_id, event: 'state', state: 'in_progress' }) })).json.error.code, 'storage_limit');
   assert.equal((await f.call('ReportTaskResults', { evidence: evidence(2, { task_id: task.task_id, declarations: [{ object_id: uuid(), required: false }] }) })).json.error.code, 'storage_limit');
   assert.equal((await f.call('ConfirmTaskOrder', { evidence: evidence(2, { queue_revision: '0' }) })).json.error.code, 'storage_limit');
-  assert.equal((await f.call('GetAssignedTasks', { ...assigned, read_id: uuid() })).json.error.code, 'storage_limit');
+  const refusedAssigned = { ...assigned, read_id: uuid() };
+  assert.equal((await f.call('GetAssignedTasks', refusedAssigned)).json.error.code, 'storage_limit');
   const terminal = { evidence: evidence(2, { task_id: task.task_id, event: 'state', state: 'failed', reason: 'cannot_execute' }) };
   assert.equal(ok(await f.call('ReportTaskExecution', terminal)).task.execution_state, 'failed');
   await fill(true);
@@ -423,6 +424,8 @@ test('all Task evidence preserves ordinary headroom, exact retries bypass new ad
   assert.equal(ok(await f.call('ReportTaskExecution', terminal)).evidence_disposition, 'duplicate');
   await rm(pressure);
   assert.equal((await f.call('ReportTaskExecution', { evidence: evidence(3, terminal.evidence.payload) })).status, 200);
+  assert.equal(ok(await f.call('GetAssignedTasks', { ...refusedAssigned, page_size: 20 })).read_id, refusedAssigned.read_id,
+    'Refused assigned reads must roll back both the live context and durable identity receipt');
 });
 test('tiny HTTP requests coexist and required exchanges fit the reserved IPC capacity', async t => {
   const f = await fixture(t);
