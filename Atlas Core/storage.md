@@ -72,7 +72,8 @@ erase evidence.
 ## Retention and capacity
 
 Object holds, accepted report identities, immutable positions, and terminal
-work accumulate until Reset. Bounded replay is not a bound on the entire Dataset.
+work accumulate until Reset, as do compact [assigned-read receipts](task-reads.md).
+Bounded replay is not a bound on the entire Dataset.
 Observations, Tracks, and their historical associations are retained records with
 no individual delete or automatic eviction. Inactivity does not release their storage.
 Charge uploads, active downloads awaiting reclamation, logs, database and indexes,

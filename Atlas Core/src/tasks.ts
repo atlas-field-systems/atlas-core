@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { z } from 'zod';
 import { AssignedTasks, Counter, Task, Uuid } from '@atlas/protocol';
 import type { Asset, ExecutionEvidence, ExecutionPayload, RequestOf } from '@atlas/protocol';
-import { canonical, instant, next, now, zero } from './exact.js';
+import { canonical, digest, instant, next, now, zero } from './exact.js';
 import { refuse } from './fault.js';
 import type { Store, Transaction } from './database.js';
 import type { Entities } from './entities.js';
@@ -16,6 +16,17 @@ const Internal = z.object({ started: z.number(), generation: Uuid.nullable(), se
 const { tasks: _tasks, next_page_token: _next, ...assignedFields } = AssignedTasks.shape;
 const AssignedContext = z.strictObject(assignedFields);
 const Instructions = z.object({ facts: z.string(), image: z.string() });
+const LegacyInstructions = Instructions.extend({ read_id: Uuid });
+const InstructionDigest = z.string().regex(/^[0-9a-f]{64}$/);
+const InstructionReceipt = z.object({ facts: InstructionDigest, proof: InstructionDigest.nullable() });
+type ResumeObservation = Pick<z.infer<typeof AssignedContext>, 'asset_id' | 'process_generation' | 'read_id' | 'core_run_id' | 'captured_at' | 'instructions_valid_until'> &
+  Pick<Extract<ExecutionPayload, { read_id: Uuid }>, 'queue_revision' | 'control_revision' | 'task_id'>;
+function resumeObservation(context: z.infer<typeof AssignedContext>): ResumeObservation | null {
+  if (context.task_control.requested?.command !== 'resume') return null;
+  return { asset_id: context.asset_id, process_generation: context.process_generation, read_id: context.read_id,
+    core_run_id: context.core_run_id, captured_at: context.captured_at, instructions_valid_until: context.instructions_valid_until,
+    queue_revision: context.task_queue.revision, control_revision: context.task_control.revision, task_id: context.task_control.requested.task_id };
+}
 const AssignedToken = z.object({ context: AssignedContext, after: z.string(), size: z.number().int(), deadline: z.number() });
 const terminal = (task: Task): boolean => ['completed', 'failed', 'cancelled'].includes(task.execution_state);
 type StreamEvidence = ExecutionEvidence | RequestOf<'ReportTaskResults'>['evidence'] | RequestOf<'ConfirmTaskOrder'>['evidence'];
@@ -31,7 +42,32 @@ export class Tasks {
       CREATE TABLE IF NOT EXISTS task_instructions(read_id TEXT PRIMARY KEY,facts TEXT NOT NULL,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS task_terminal(id TEXT PRIMARY KEY,payload TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS task_cancellation_retries(request TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
-      CREATE TABLE IF NOT EXISTS task_instruction_lifetime(read_id TEXT PRIMARY KEY,run TEXT NOT NULL,deadline REAL NOT NULL) STRICT;`);
+      CREATE TABLE IF NOT EXISTS task_instruction_lifetime(read_id TEXT PRIMARY KEY,run TEXT NOT NULL,deadline REAL NOT NULL) STRICT;
+      CREATE INDEX IF NOT EXISTS task_instruction_deadline ON task_instruction_lifetime(deadline);
+      CREATE TABLE IF NOT EXISTS task_instruction_receipts(read_id TEXT PRIMARY KEY,facts TEXT NOT NULL,proof TEXT) STRICT;`);
+    store.db.transaction(() => {
+      if (store.meta('format') === '1') {
+        let after = '';
+        const read = store.db.prepare('SELECT read_id,facts,image FROM task_instructions WHERE read_id>? ORDER BY read_id LIMIT 1');
+        while (true) {
+          const row = read.get(after);
+          if (row === undefined) break;
+          const old = LegacyInstructions.parse(row);
+          const context = AssignedContext.parse(JSON.parse(old.image));
+          if (context.read_id !== old.read_id) throw new Error('instruction_identity_mismatch');
+          this.rememberInstructions(context, old.facts);
+          after = old.read_id;
+        }
+      }
+      store.db.exec('DELETE FROM task_instructions; DELETE FROM task_instruction_lifetime');
+      store.setMeta('format', '2');
+    })();
+  }
+  private rememberInstructions(context: z.infer<typeof AssignedContext>, facts: string): number {
+    const request = digest(facts), observed = resumeObservation(context);
+    const proof = observed === null ? null : digest(canonical(observed));
+    this.store.db.prepare('INSERT INTO task_instruction_receipts VALUES(?,?,?)').run(context.read_id, request, proof);
+    return Buffer.byteLength(context.read_id) + request.length + (proof?.length ?? 0);
   }
   get(taskId: Uuid): Task {
     const row = this.store.db.prepare('SELECT image FROM task_images WHERE id=?').get(taskId);
@@ -194,12 +230,12 @@ export class Tasks {
     if (!('control_revision' in payload) || payload.control_revision !== control || payload.queue_state !== (task.command === 'pause' ? 'paused' : 'running')) refuse('control_not_confirmed');
     if (task.command === 'resume') {
       if (!('read_id' in payload) || instant(payload.applied_at) >= instant(task.expires_at)) refuse('control_not_confirmed');
-      const row = this.store.db.prepare('SELECT facts,image FROM task_instructions WHERE read_id=?').get(payload.read_id);
+      const row = this.store.db.prepare('SELECT facts,proof FROM task_instruction_receipts WHERE read_id=?').get(payload.read_id);
       if (!row) refuse('control_not_confirmed');
-      const observed = AssignedContext.parse(JSON.parse(Instructions.parse(row).image));
-      if (observed.asset_id !== task.asset_id || observed.process_generation !== generation || observed.read_id !== payload.read_id || observed.core_run_id !== payload.core_run_id ||
-        observed.captured_at !== payload.captured_at || observed.instructions_valid_until !== payload.instructions_valid_until ||
-        observed.task_queue.revision !== payload.queue_revision || observed.task_control.revision !== control || observed.task_control.requested?.task_id !== task.task_id) refuse('control_not_confirmed');
+      const observed: ResumeObservation = { asset_id: task.asset_id, process_generation: generation, read_id: payload.read_id,
+        core_run_id: payload.core_run_id, captured_at: payload.captured_at, instructions_valid_until: payload.instructions_valid_until,
+        queue_revision: payload.queue_revision, control_revision: payload.control_revision, task_id: task.task_id };
+      if (InstructionReceipt.parse(row).proof !== digest(canonical(observed))) refuse('control_not_confirmed');
     }
   }
   results(tx: Transaction, request: RequestOf<'ReportTaskResults'>) {
@@ -269,6 +305,9 @@ export class Tasks {
     return { asset, evidence_disposition: 'accepted' as const };
   }
   assigned(tx: Transaction, request: RequestOf<'GetAssignedTasks'>): AssignedTasks {
+    const cutoff = performance.now();
+    this.store.db.prepare('DELETE FROM task_instructions WHERE read_id IN (SELECT read_id FROM task_instruction_lifetime WHERE deadline<=?)').run(cutoff);
+    this.store.db.prepare('DELETE FROM task_instruction_lifetime WHERE deadline<=?').run(cutoff);
     let context: z.infer<typeof AssignedContext>;
     let after = '', size: number, deadline: number;
     if ('page_token' in request) {
@@ -279,11 +318,13 @@ export class Tasks {
       const asset = this.entities.asset(request.asset_id);
       if (asset.process_generation !== request.process_generation) refuse('generation_mismatch');
       size = request.page_size ?? 100; deadline = performance.now() + 60_000;
-      const old = this.store.db.prepare('SELECT facts,image FROM task_instructions WHERE read_id=?').get(request.read_id);
+      const facts = canonical(request);
+      const old = this.store.db.prepare('SELECT facts,proof FROM task_instruction_receipts WHERE read_id=?').get(request.read_id);
       if (old) {
-        const found = Instructions.parse(old);
-        if (found.facts !== canonical(request)) refuse('identity_conflict');
-        context = AssignedContext.parse(JSON.parse(found.image));
+        if (InstructionReceipt.parse(old).facts !== digest(facts)) refuse('identity_conflict');
+        const live = this.store.db.prepare('SELECT facts,image FROM task_instructions WHERE read_id=?').get(request.read_id);
+        if (!live) refuse('allocation_expired');
+        context = AssignedContext.parse(JSON.parse(Instructions.parse(live).image));
         const lifetime = z.object({ run: Uuid, deadline: z.number() }).parse(this.store.db.prepare('SELECT run,deadline FROM task_instruction_lifetime WHERE read_id=?').get(request.read_id));
         if (lifetime.run !== this.store.run || lifetime.deadline <= performance.now()) refuse('allocation_expired');
         deadline = lifetime.deadline;
@@ -292,8 +333,9 @@ export class Tasks {
         context = { asset_id: asset.id, process_generation: asset.process_generation, read_id: request.read_id,
           core_run_id: this.store.run, captured_at: captured, instructions_valid_until: AssignedTasks.shape.instructions_valid_until.parse(new Date(Date.parse(captured) + 10_000).toISOString()),
           task_queue: asset.task_queue, task_control: asset.task_control };
-        tx.retainedBytes = Buffer.byteLength(JSON.stringify(context));
-        this.store.db.prepare('INSERT INTO task_instructions VALUES(?,?,?)').run(request.read_id, canonical(request), JSON.stringify(context));
+        const image = JSON.stringify(context);
+        tx.retainedBytes += this.rememberInstructions(context, facts) + Buffer.byteLength(image) + Buffer.byteLength(facts);
+        this.store.db.prepare('INSERT INTO task_instructions VALUES(?,?,?)').run(request.read_id, facts, image);
         this.store.db.prepare('INSERT INTO task_instruction_lifetime VALUES(?,?,?)').run(request.read_id, this.store.run, deadline);
       }
     }
@@ -324,6 +366,6 @@ export class Tasks {
     for (const row of source.prepare('SELECT image FROM task_images ORDER BY id').iterate()) yield Task.parse(JSON.parse(Image.parse(row).image));
   }
   clearDataset(): void {
-    this.store.db.exec('DELETE FROM task_images; DELETE FROM task_internal; DELETE FROM task_submission; DELETE FROM task_evidence; DELETE FROM task_adoption; DELETE FROM task_instructions; DELETE FROM task_instruction_lifetime; DELETE FROM task_terminal; DELETE FROM task_cancellation_retries');
+    this.store.db.exec('DELETE FROM task_images; DELETE FROM task_internal; DELETE FROM task_submission; DELETE FROM task_evidence; DELETE FROM task_adoption; DELETE FROM task_instructions; DELETE FROM task_instruction_lifetime; DELETE FROM task_instruction_receipts; DELETE FROM task_terminal; DELETE FROM task_cancellation_retries');
   }
 }
