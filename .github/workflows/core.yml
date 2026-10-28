@@ -18,13 +18,13 @@ jobs:
     name: Core build and tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      ATLAS_TEST_ROOT: ${{ runner.temp }}/atlas-core
     defaults:
       run:
         working-directory: Atlas Core
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Set external test root
+        run: echo "ATLAS_TEST_ROOT=$RUNNER_TEMP/atlas-core" >> "$GITHUB_ENV"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 24.22.1
