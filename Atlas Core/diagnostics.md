@@ -71,7 +71,10 @@ output to the caller, without a retained stopped-state log or later import into 
 Normal logs use eight rotating files within half the configured diagnostic budget.
 The database worker reserves each log write and the potential export size against
 aggregate ordinary capacity before writing. Writers release reservations after their
-files close or writes finish. Refused log reservations drop events without rejecting
+files close or writes finish. A refused release remains owned, with bounded retries
+under worker queue pressure and another attempt before later writes or shutdown.
+Shutdown reports any unresolved release while the worker is still owned.
+Refused log reservations drop events without rejecting
 domain work or readiness. Export refusal creates no output. An interrupted live export
 keeps its reservation until Restart; the installation lock prevents concurrent exports.
 The remaining half bounds a concurrent export. Their total is at most 256 MiB. Include

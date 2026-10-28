@@ -13,8 +13,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { processIdentity, exited as writerExited } from '../dist/ownership.js';
 import { createContainer } from '../dist/docker.js';
 import { Administration } from '../dist/admin.js';
-import Database from 'better-sqlite3';
 import { diskUsage } from '../dist/capacity.js';
+import Database from 'better-sqlite3';
 const exec = promisify(execFile);
 test('real CLI and pinned container retain Restart, fence Reset, recover proof and require new Hard Reset setup', { timeout: 180000 }, async t => {
   const image = (await readFile(join(root, 'artifacts', 'image-id'), 'utf8')).trim();

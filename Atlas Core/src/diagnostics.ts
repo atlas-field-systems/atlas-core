@@ -2,8 +2,10 @@ import { open, mkdir, rename, rm } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { Opaque, Timestamp, Uuid, exchanges } from '@atlas/protocol';
+import { QueuePressure } from './rpc.js';
 
 const Frames = z.array(z.object({ file: z.string().regex(/^[a-z-]+\.js$/), function: z.string().regex(/^[\w.$<> ]{1,80}$/), line: z.number().int().positive() })).max(8);
 const Event = z.strictObject({ at: Timestamp, severity: z.enum(['INFO', 'WARN', 'ERROR', 'DEBUG']), event: z.string().regex(/^[a-z_]{1,64}$/),
@@ -41,6 +43,7 @@ export class Diagnostics {
   private queued = 0;
   private file: FileHandle | undefined;
   private writing: Promise<void> | undefined;
+  private release: (() => Promise<void>) | undefined;
   private size = 0;
   private closed = false;
   private debugWindow = 0;
@@ -73,6 +76,7 @@ export class Diagnostics {
       .finally(() => { this.writing = undefined; if (this.queue.length > 0) this.start(); });
   }
   private async drain(): Promise<void> {
+    await this.releaseReservation();
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
     const maximum = Math.max(1, Math.floor(this.capacity / 16));
     while (this.queue.length > 0) {
@@ -89,8 +93,7 @@ export class Diagnostics {
         }
         this.file = await open(join(this.directory, 'events.0.jsonl'), 'a', 0o600); this.size = 0;
       }
-      let release: () => Promise<void>;
-      try { release = await this.reserve(line.byteLength); }
+      try { this.release = await this.reserve(line.byteLength); }
       catch { this.dropped++; continue; }
       try {
         let offset = 0;
@@ -99,9 +102,34 @@ export class Diagnostics {
           if (bytesWritten === 0) throw new Error('diagnostic_write_incomplete');
           offset += bytesWritten; this.size += bytesWritten;
         }
-      } finally { await release(); }
+      } catch (error) {
+        try { await this.releaseReservation(); }
+        catch (cleanup) { throw new AggregateError([error, cleanup], 'diagnostic_write_cleanup_failed'); }
+        throw error;
+      }
+      await this.releaseReservation();
     }
   }
-  async close(): Promise<void> { this.closed = true; await this.writing; if (this.file) { await this.file.sync(); await this.file.close(); this.file = undefined; } }
+  private async releaseReservation(): Promise<void> {
+    for (let attempt = 0; this.release !== undefined; attempt++) {
+      try { await this.release(); this.release = undefined; }
+      catch (error) {
+        if (!(error instanceof QueuePressure) || attempt >= 3) throw error;
+        await delay(25 * 2 ** attempt);
+      }
+    }
+  }
+  async close(): Promise<void> {
+    this.closed = true;
+    await this.writing;
+    const failures: unknown[] = [];
+    try { await this.releaseReservation(); } catch (error) { failures.push(error); }
+    if (this.file) {
+      try { await this.file.sync(); } catch (error) { failures.push(error); }
+      try { await this.file.close(); this.file = undefined; } catch (error) { failures.push(error); }
+    }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, 'diagnostic_cleanup_failed');
+  }
   inspect() { return { queuedBytes: this.queued, dropped: this.dropped, suppressed: this.suppressed, sinkFailures: this.failed }; }
 }

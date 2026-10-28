@@ -91,7 +91,8 @@ even without new binary bytes. Metadata then counts as actual disk use; unwritte
 binary bytes stay reserved until written.
 Contact expiry and restart transitions use required-effect admission before commit.
 If the hard ceiling prevents a transition, retain the prior image and report failure;
-startup cannot serve until restart contact transitions succeed.
+checkpointing and deleted Object reclamation still run so later expiry can succeed.
+Startup cannot serve until restart contact transitions succeed.
 
 ## History and activity
 
