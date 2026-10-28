@@ -40,7 +40,7 @@ adds 360,000 identity-field bytes per hour without Resume. Queue length affects
 only the live context. Aggregate capacity still bounds admissions; choose polling
 cadence with this retained cost in mind.
 
-Private format 2 stores these receipts. Older Core binaries reject it. Format 1
-requires the explicit Reset already required for updates; startup refuses it without
-converting or deleting evidence. There is no operational-data migration. Restart
-of a compatible Dataset retains every receipt and does no context-cleanup writes.
+The [build profile](build-profile.md) owns compatible private storage formats.
+Store refuses incompatible data before Tasks reads its contexts. Within a
+compatible Dataset, Restart retains every receipt and does no cleanup writes.
+Tasks never changes the storage format or reconstructs missing evidence.
