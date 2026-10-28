@@ -84,6 +84,8 @@ try {
         }
         case 'provision': await core.rpc.call('provision', request.request, 65_536, true); return { provisioned: true };
         case 'export': return { dataset: core.dataset, run: core.run, diagnostics: core.diagnostics.inspect(), engine: await core.rpc.call('inspect', {}, 0, true) };
+        case 'reserve-export': return core.rpc.call('reserve-diagnostics', { reservation: request.reservation, bytes: request.bytes }, 256);
+        case 'release-export': return core.rpc.call('release-diagnostics', request.reservation, 128, true);
         case 'enrollment-inspect': return core.rpc.call('enrollment-inspect', {}, 65536, true);
         case 'open-enroll': return core.rpc.call('open-enroll', { dataset: request.dataset, request: request.request }, 65536, true);
         case 'enrollment-revoke': return core.rpc.call('enrollment-revoke', request, 1024, true);

@@ -89,6 +89,10 @@ byte delta, inspect capacity, and record the reservation in one synchronous step
 Upload descriptors and bounded SQLite/WAL overhead pass admission before persistence,
 even without new binary bytes. Metadata then counts as actual disk use; unwritten
 binary bytes stay reserved until written.
+Contact expiry and restart transitions use required-effect admission before commit.
+If the hard ceiling prevents a transition, retain the prior image and report failure;
+checkpointing and deleted Object reclamation still run so later expiry can succeed.
+Startup cannot serve until restart contact transitions succeed.
 
 ## History and activity
 
