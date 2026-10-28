@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { caseFoldEquals } from 'unicode-case-folding';
 import { Alias, Opaque, ordered, PageSize, text, Uuid, uniqueArray } from './scalars.js';
 import { ContentType } from './objects.js';
 import { GeofeatureKind, Health, SubjectKind } from './components.js';
@@ -61,4 +62,24 @@ export function page<S extends z.ZodType>(item: S, identity: (value: z.output<S>
       .refine((values) => ordered(values, identity), 'List identity or order differs'),
     next_page_token: Opaque.nullable(),
   });
+}
+
+export const selected = <T>(values: readonly T[] | undefined, value: T | undefined): boolean =>
+  values === undefined || (value !== undefined && values.includes(value));
+export const selectedAlias = (
+  values: readonly string[] | undefined,
+  value: string | undefined,
+): boolean =>
+  values === undefined ||
+  (value !== undefined && values.some((alias) => caseFoldEquals(alias, value)));
+export function selectedPage<Q extends { filters?: unknown }, T>(
+  request: Q | z.output<typeof Continuation> | undefined,
+  items: readonly T[],
+  matches: (item: T, filters: Q['filters']) => boolean,
+): boolean {
+  return (
+    request === undefined ||
+    'page_token' in request ||
+    items.every((item) => matches(item, request.filters))
+  );
 }
