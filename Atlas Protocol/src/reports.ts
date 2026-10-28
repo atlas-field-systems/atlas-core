@@ -236,7 +236,9 @@ function validTimeStatuses(result: {
   return Object.entries(statuses).every(([key, status]) => {
     if (key !== 'reserves')
       return matches(status, times[key] === undefined ? result.observed_at : times[key]);
-    const reserves = Power.parse(value).reserves;
+    const power = Power.safeParse(value);
+    if (!power.success) return false;
+    const reserves = power.data.reserves;
     const reserveStatuses = quantityRecord.parse(status);
     const reserveTimes = times.reserves === undefined ? {} : quantityRecord.parse(times.reserves);
     return (

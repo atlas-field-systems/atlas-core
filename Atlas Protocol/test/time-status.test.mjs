@@ -6,6 +6,10 @@ import {
   readHttp,
   readSections,
   inputSections,
+  ProtocolError,
+  contract,
+  readJson,
+  writeJson,
 } from '../dist/index.js';
 import * as s from './samples.mjs';
 
@@ -117,6 +121,39 @@ test('nested Power and section failures preserve complete time metadata', () => 
     },
   };
   assert.equal(readSections.power.safeParse(power).success, true);
+  for (const malformed of [
+    { ...power.value, reserves: [...power.value.reserves, ...power.value.reserves] },
+    { ...power.value, reserves: [{ ...power.value.reserves[0], remaining_percent: 101 }] },
+  ]) {
+    const invalid = { ...power, value: malformed };
+    assert.equal(readSections.power.safeParse(invalid).success, false);
+    const definition = contract(readSections.power, 'http_response');
+    const bytes = new TextEncoder().encode(JSON.stringify(invalid));
+    for (const validate of [
+      () => readJson(definition, bytes),
+      () => writeJson(definition, invalid),
+      () =>
+        readHttp(
+          exchanges.GetAsset,
+          {
+            status: 200,
+            headers: new Headers({
+              'Content-Type': 'application/json',
+              'Atlas-Dataset-ID': s.id,
+              'Atlas-Protocol-Version': PROTOCOL_VERSION,
+            }),
+            body: new TextEncoder().encode(
+              JSON.stringify({ dataset_id: s.id, data: { ...s.asset, power: invalid } }),
+            ),
+          },
+          { datasetId: s.id, request: { asset_id: s.assetId } },
+        ),
+    ])
+      assert.throws(
+        validate,
+        (error) => error instanceof ProtocolError && error.code === 'invalid_value',
+      );
+  }
   for (const edit of [
     (value) => {
       delete value.time_status.reserves[s.id].voltage_volts;
