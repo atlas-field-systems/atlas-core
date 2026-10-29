@@ -49,3 +49,12 @@ Use the [Protocol package](Atlas%20Protocol/package-usage.md) for runtime schema
 inferred types, exact boundary validation, and stock OpenAPI export. Its
 [qualification commands](Atlas%20Protocol/qualification.md) check the built artifact.
 Core and SDK must still qualify their own consuming workflows and durable behavior.
+
+## Related repositories
+
+[Atlas-Modernization](https://github.com/the-Drunken-coder/Atlas-Modernization)
+contains the earlier monorepo implementation.
+[atlas-core-experiments](https://github.com/atlas-field-systems/atlas-core-experiments)
+retains a documentation-only design experiment. Their API, SDK, storage, deployment,
+and test claims apply to their own revisions; they do not establish this Core's
+behavior or qualification. Use the three layer guides above for the active contract.

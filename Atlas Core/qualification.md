@@ -103,6 +103,17 @@ recovery acceptance. Pressure results do not establish supported retained worklo
 The bounded `npm run fixture:retention` does not qualify the sustained workload.
 Neither tuning nor capacity failure permits weaker retention or atomicity.
 
+## Retained investigation evidence
+
+[Issue #17](https://github.com/atlas-field-systems/atlas-core/issues/17) records why
+whole-installation isolation is required. Its
+[unchanged evidence archive](https://github.com/atlas-field-systems/atlas-core/releases/download/issue-17-evidence-20261027/atlas-issue17-solution-evidence.zip)
+contains the preserved failures, independent replays, original sources, and isolation
+controls at `8be94eda49e11e3f459feb1ee76124e8d0b70ce5`. The
+[download manifest](qualification-evidence.json) pins its size, SHA-256, and source.
+The precise outside file-replacement actor remains unidentified. These historical
+results do not qualify a later revision or replace the workflows above.
+
 ## Report honestly
 
 Record revision, actual commands, inputs, environment, and passed/failed/unrun checks.

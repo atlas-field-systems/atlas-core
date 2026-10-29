@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "purpose": "Stable downloads and provenance for the retained issue #17 investigation; not a product release or a current test result.",
+  "reviewed_source_commit": "8be94eda49e11e3f459feb1ee76124e8d0b70ce5",
+  "issue_url": "https://github.com/atlas-field-systems/atlas-core/issues/17",
+  "investigation_url": "https://github.com/atlas-field-systems/atlas-core/issues/17#issuecomment-6449323791",
+  "release_url": "https://github.com/atlas-field-systems/atlas-core/releases/tag/issue-17-evidence-20261027",
+  "artifacts": [
+    {
+      "filename": "ARCHIVE_README.txt",
+      "bytes": 16863,
+      "sha256": "6c8f82c12b37dbe16ae396c2eca9cbb1692ca690e4f769e0a8b79ccfd6d409fa",
+      "download_url": "https://github.com/atlas-field-systems/atlas-core/releases/download/issue-17-evidence-20261027/ARCHIVE_README.txt"
+    },
+    {
+      "filename": "atlas-issue17-solution-evidence.zip",
+      "bytes": 49088411,
+      "sha256": "106576fe42ef28566cf201761dc397012360400e54796eeaecc3e3208ef50d16",
+      "download_url": "https://github.com/atlas-field-systems/atlas-core/releases/download/issue-17-evidence-20261027/atlas-issue17-solution-evidence.zip"
+    },
+    {
+      "filename": "SHA256SUMS",
+      "bytes": 102,
+      "sha256": "4da01c4c3cd2b1e04637b2865c749bfb667ffbd5d99ce0130a18a65507312525",
+      "download_url": "https://github.com/atlas-field-systems/atlas-core/releases/download/issue-17-evidence-20261027/SHA256SUMS"
+    }
+  ],
+  "archive_contents": [
+    "Original supplied evidence unchanged",
+    "Pre-cleanup main database, WAL and SHM captures and both main-file versions",
+    "Disposable replay scripts and results",
+    "Syscall traces and per-file staging records",
+    "Exact executed sources and control runs",
+    "Original unchanged suite and isolated-cleanup output",
+    "run-isolated-qualification.sh",
+    "SHA256SUMS covering 662 retained files"
+  ],
+  "classification": "Historical synthetic-test investigation. The hold was lifted with whole-installation isolation retained. The exact outside actor is unidentified.",
+  "verification_for_this_document_update": {
+    "date": "2026-10-29",
+    "archive_bytes_verified": true,
+    "archive_sha256_verified": true,
+    "internal_manifest_entries_verified": 662,
+    "zip_crc_verified": true,
+    "runtime_tests_rerun": false
+  },
+  "limits": [
+    "Moving an inconsistent main/WAL pair does not repair it.",
+    "Keep the whole mutable installation and live output outside file restoration/replacement tooling.",
+    "Historical qualification is revision-specific and does not establish sustained workload or physical power-loss durability."
+  ]
+}
