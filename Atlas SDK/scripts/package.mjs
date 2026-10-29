@@ -1,19 +1,20 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const workspace = fileURLToPath(new URL('../../', import.meta.url));
+const workspace = await realpath(new URL('../../', import.meta.url));
 const parent = resolve(process.env.ATLAS_TEST_ROOT ?? tmpdir());
+await mkdir(parent, { recursive: true });
+const location = relative(workspace, await realpath(parent));
 assert.ok(
-  !parent.startsWith(workspace) && parent !== workspace.slice(0, -1),
+  location === '..' || location.startsWith(`..${sep}`) || isAbsolute(location),
   'Use an external ATLAS_TEST_ROOT',
 );
-await mkdir(parent, { recursive: true });
 const consumer = await mkdtemp(join(parent, 'sdk-consumer-'));
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 assert.ok(process.env.npm_execpath, 'Run through npm');

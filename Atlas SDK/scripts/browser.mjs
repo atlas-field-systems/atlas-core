@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
-import { join, relative, resolve, isAbsolute } from 'node:path';
+import { join, relative, resolve, isAbsolute, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -11,7 +11,10 @@ const workspace = await realpath(new URL('../../', import.meta.url));
 const parent = resolve(process.env.ATLAS_TEST_ROOT ?? tmpdir());
 await mkdir(parent, { recursive: true });
 const location = relative(workspace, await realpath(parent));
-assert.ok(location.startsWith('../') || isAbsolute(location), 'Use an external ATLAS_TEST_ROOT');
+assert.ok(
+  location === '..' || location.startsWith(`..${sep}`) || isAbsolute(location),
+  'Use an external ATLAS_TEST_ROOT',
+);
 const directory = await mkdtemp(join(parent, 'sdk-browser-'));
 console.log(`Browser qualification evidence: ${directory}`);
 const consumer = join(directory, 'consumer');

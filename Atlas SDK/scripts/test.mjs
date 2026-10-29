@@ -1,14 +1,14 @@
-import { mkdtemp, mkdir, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, realpath, rm } from 'node:fs/promises';
 import { spawn, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
-const workspace = fileURLToPath(new URL('../../', import.meta.url));
+const workspace = await realpath(new URL('../../', import.meta.url));
 const parent = resolve(process.env.ATLAS_TEST_ROOT ?? tmpdir());
-if (parent === workspace.slice(0, -1) || parent.startsWith(workspace))
-  throw new Error('Use an external ATLAS_TEST_ROOT');
 await mkdir(parent, { recursive: true });
+const location = relative(workspace, await realpath(parent));
+if (location !== '..' && !location.startsWith(`..${sep}`) && !isAbsolute(location))
+  throw new Error('Use an external ATLAS_TEST_ROOT');
 const root = await mkdtemp(join(parent, 'sdk-'));
 const certificate = join(root, 'test-ca.pem');
 const key = join(root, 'test-ca.key');
