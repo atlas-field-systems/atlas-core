@@ -4,6 +4,54 @@ import { exchanges } from '@atlas/protocol';
 import { fixture, uuid, registration, task, barrier } from './harness.mjs';
 import { owners, success, sent, reading, telemetry } from './remote-helpers.mjs';
 
+test('closing unallocated history and contact handles releases their capacity without HTTP', async (t) => {
+  const f = await fixture(t);
+  const { remote, http } = await owners(t, f, {}, { handles: 1 });
+  const asset = registration();
+  sent(await http.assets.register(asset).send());
+  const before = f.traffic.length;
+  for (let i = 0; i < 3; i++) {
+    const view = remote.history.asset({ entity_id: asset.asset_id, query_id: uuid() });
+    assert.equal((await view.next({ signal: AbortSignal.abort() })).code, 'cancelled');
+    assert.deepEqual(await view.close(), { kind: 'abandoned', evidence: 'unallocated' });
+    const contact = remote.contact({
+      asset_id: asset.asset_id,
+      process_generation: asset.process_generation,
+      mode: 'current',
+      request_id: uuid(),
+    });
+    assert.deepEqual(await contact.close(), { kind: 'abandoned', evidence: 'unallocated' });
+  }
+  assert.equal(f.traffic.length, before);
+});
+
+test('a health context acquired during close creates no remote allocation or retained handle', async (t) => {
+  const f = await fixture(t);
+  const { remote, http } = await owners(t, f, {}, { handles: 1 });
+  const asset = registration();
+  sent(await http.assets.register(asset).send());
+  const view = remote.history.asset({ entity_id: asset.asset_id, query_id: uuid() });
+  const captured = barrier(),
+    release = barrier();
+  f.once('/health', async ({ forward }) => {
+    captured.resolve();
+    await release.promise;
+    forward();
+  });
+  const pending = view.next();
+  await captured.promise;
+  const closing = view.close();
+  release.resolve();
+  assert.equal((await pending).code, 'closed');
+  assert.deepEqual(await closing, { kind: 'abandoned', evidence: 'unallocated' });
+  assert.equal(
+    f.traffic.filter((entry) => entry.path === '/messages/get_asset_movement_history').length,
+    0,
+  );
+  const replacement = remote.history.asset({ entity_id: asset.asset_id, query_id: uuid() });
+  assert.deepEqual(await replacement.close(), { kind: 'abandoned', evidence: 'unallocated' });
+});
+
 async function observation(t, f) {
   const owned = await owners(t, f);
   const publisher_id = uuid(),

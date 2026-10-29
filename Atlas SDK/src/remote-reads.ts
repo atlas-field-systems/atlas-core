@@ -232,6 +232,19 @@ export function createRemoteReads(
       endOwner() {
         if (evidence !== 'acknowledged') evidence = 'owner-ended';
       },
+      started<T>(attempt: Attempt<T>): Attempt<T> {
+        const previous = evidence;
+        if (previous === 'unallocated') evidence = 'unacknowledged';
+        void attempt.settled.then((result) => {
+          if (
+            result.kind === 'not_sent' &&
+            previous === 'unallocated' &&
+            evidence === 'unacknowledged'
+          )
+            evidence = 'unallocated';
+        });
+        return attempt;
+      },
       async allocate(): Promise<WaitResult<ResponseOf<'GetHealth'>> | undefined> {
         if (allocation) return undefined;
         const sentAt = performance.now();
@@ -259,7 +272,6 @@ export function createRemoteReads(
           earliestExpiry: sentAt + 60_000,
           latestExpiry: receivedAt + 60_000,
         });
-        evidence = 'unacknowledged';
         return undefined;
       },
     };
@@ -384,12 +396,14 @@ export function createRemoteReads(
                 token === undefined
                   ? original
                   : submission(binding, { page_token: token }, session.requestBudget);
-              const running = session.start(binding, request, {
-                datasetId: allocation.datasetId,
-                coreRunId: allocation.coreRunId,
-                selection: original.facts,
-                ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
-              });
+              const running = owner.started(
+                session.start(binding, request, {
+                  datasetId: allocation.datasetId,
+                  coreRunId: allocation.coreRunId,
+                  selection: original.facts,
+                  ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+                }),
+              );
               const checked = running.settled.then((result) => {
                 if (
                   result.kind === 'response' &&
@@ -470,6 +484,7 @@ export function createRemoteReads(
           abandoned = true;
           if (active) await active;
           if (context && owner.invalid() === undefined) return release(options, true);
+          if (owner.evidence === 'unallocated') forget(key, reservation);
           return { kind: 'abandoned', evidence: owner.evidence };
         },
       });
@@ -732,11 +747,13 @@ export function createRemoteReads(
               { ...facts, allocation_context: allocation.allocationContext },
               session.requestBudget,
             );
-            const attempt = session.start(exchanges.BeginAssetContact, original, {
-              datasetId: allocation.datasetId,
-              coreRunId: allocation.coreRunId,
-              ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
-            });
+            const attempt = owner.started(
+              session.start(exchanges.BeginAssetContact, original, {
+                datasetId: allocation.datasetId,
+                coreRunId: allocation.coreRunId,
+                ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+              }),
+            );
             const checked = attempt.settled.then((result) => {
               if (
                 result.kind === 'response' &&
@@ -778,6 +795,7 @@ export function createRemoteReads(
       async close(): Promise<RemoteAbandonment> {
         closed = true;
         if (pending) await pending;
+        if (owner.evidence === 'unallocated') forget(key, reservation);
         return { kind: 'abandoned', evidence: owner.evidence };
       },
     });

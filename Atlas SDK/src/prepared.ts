@@ -64,12 +64,7 @@ export class Operations {
       if (session.state.kind === 'closed') throw new SdkError('closed');
       if (datasetId === null) throw new SdkError('not_connected');
       const remaining = session.maxPreparedBytes - this.#bytes;
-      const budget = {
-        ...session.requestBudget,
-        maxBytes: Math.min(session.requestBudget.maxBytes, Math.floor(remaining / 8)),
-      };
-      if (budget.maxBytes < 1) throw new SdkError('capacity');
-      const validated = submission(binding, input, budget);
+      const validated = submission(binding, input, session.requestBudget);
       const identity = policy.identity(validated.facts);
       const key = JSON.stringify([datasetId, binding.operationId, identity]);
       let cell = this.#cells.get(key);

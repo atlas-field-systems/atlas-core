@@ -122,7 +122,10 @@ export class Session {
   readonly #requestBudget: Budget;
   readonly #responseBudget: Budget;
   readonly #maximum: number;
-  readonly #active = new Map<string, AbortController>();
+  readonly #active = new Map<
+    string,
+    Readonly<{ controller: AbortController; mutation: boolean }>
+  >();
   readonly #jobs = new Set<Promise<unknown>>();
   #accepted: Accepted | undefined;
   readonly #rejectedCredentials = new Set<string>();
@@ -297,8 +300,9 @@ export class Session {
       release,
     });
   }
-  #stop(reason: LocalCode): void {
-    for (const controller of this.#active.values()) controller.abort(new SdkError(reason));
+  #stop(reason: LocalCode, preserveMutations = false): void {
+    for (const { controller, mutation } of this.#active.values())
+      if (!preserveMutations || !mutation) controller.abort(new SdkError(reason));
   }
   #blocked(reason: LocalCode): void {
     this.#recovery++;
@@ -310,7 +314,7 @@ export class Session {
       datasetId: this.datasetId,
       reason,
     });
-    this.#stop(reason);
+    this.#stop(reason, reason === 'dataset_invalidated');
   }
   #rememberRejected(credential: string): void {
     if (this.#rejectedCredentials.size < 64) this.#rejectedCredentials.add(credential);
@@ -329,10 +333,10 @@ export class Session {
     this.#stop('authorization_required');
   }
 
-  #admit(id: string, timeout?: number) {
+  #admit(id: string, timeout?: number, mutation = false) {
     if (this.#active.size >= this.#maximum) throw new SdkError('capacity');
     const controller = new AbortController();
-    this.#active.set(id, controller);
+    this.#active.set(id, { controller, mutation });
     const timer =
       timeout === undefined
         ? undefined
@@ -454,7 +458,11 @@ export class Session {
         throw new SdkError('superseded');
       const generation = this.#generation;
       lease = {
-        ...this.#admit(id, limit(options.timeoutMs, this.timeoutMs, 120_000)),
+        ...this.#admit(
+          id,
+          limit(options.timeoutMs, this.timeoutMs, 120_000),
+          options.mutation !== undefined,
+        ),
         attemptId: id,
         credential: accepted.credential,
         datasetId: accepted.datasetId,
@@ -475,7 +483,13 @@ export class Session {
         let result: AttemptResult<T>;
         const started = performance.now();
         try {
-          result = await run(lease);
+          result = lease.current()
+            ? await run(lease)
+            : {
+                kind: 'not_sent',
+                code: lease.signal.aborted ? failureCode(lease.signal.reason) : 'superseded',
+                attemptId: id,
+              };
         } catch (error) {
           result = failed(error, lease, {
             attemptId: id,
@@ -617,7 +631,11 @@ export class Session {
     const denied = (code: LocalCode) =>
       ({ kind: 'not_sent', code, attemptId: id }) satisfies AttemptResult<never>;
     if (this.#state.kind === 'closed') return denied('closed');
-    if (!recover && this.#state.kind === 'authorization-required')
+    if (
+      !recover &&
+      (this.#state.kind === 'authorization-required' ||
+        (this.#accepted !== undefined && this.#rejectedCredentials.has(this.#accepted.credential)))
+    )
       return denied('authorization_required');
     if (this.#active.size >= this.#maximum || this.#pendingProviders >= this.#maximum)
       return denied('capacity');
@@ -694,7 +712,7 @@ export class Session {
       if (result.kind === 'response' && result.response.kind === 'success') {
         const { dataset_id: datasetId, data: health } = result.response.body;
         if (this.#expectedDataset !== undefined && datasetId !== this.#expectedDataset) {
-          this.#blocked('dataset_invalidated');
+          if (!recover) this.#blocked('dataset_invalidated');
           return {
             kind: 'failed',
             code: 'dataset_invalidated',
@@ -707,7 +725,11 @@ export class Session {
           this.#accepted.datasetId !== datasetId ||
           this.#accepted.health.core_run_id !== health.core_run_id;
         if (changed) {
-          this.#stop('superseded');
+          // An original-Dataset write may still deliver its committed reply.
+          this.#stop(
+            'superseded',
+            this.#accepted !== undefined && this.#accepted.datasetId !== datasetId,
+          );
           this.#generation++;
         }
         if (this.#accepted && this.#accepted.datasetId !== datasetId) this.#datasetEpoch++;
@@ -721,21 +743,16 @@ export class Session {
         result.response.kind === 'error' &&
         result.response.body.error.code === 'unauthorized'
       ) {
-        this.#rememberRejected(credential);
-        this.#generation++;
-        this.#transition({
-          kind: 'authorization-required',
-          generation: this.#generation,
-          datasetId: this.datasetId,
-          reason: 'authorization_required',
-        });
-        this.#stop('authorization_required');
+        if (this.#accepted === undefined || credential === this.#accepted.credential)
+          this.rejectAuthority(generation);
       } else if (this.#state.kind !== 'ready' && this.#state.kind !== 'authorization-required') {
-        this.#blocked(result.kind === 'response' ? 'protocol_mismatch' : result.code);
+        this.#blocked(result.kind === 'response' ? 'not_connected' : result.code);
       } else if (result.kind === 'response' && result.response.kind === 'error') {
         this.observeAuthority(generation, result.response.body.error.code);
       } else if (
         result.kind === 'failed' &&
+        !recover &&
+        this.#state.kind !== 'authorization-required' &&
         !['network', 'deadline', 'cancelled'].includes(result.code)
       ) {
         this.#blocked(result.code);
