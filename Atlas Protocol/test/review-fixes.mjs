@@ -6,7 +6,7 @@ export function runReviewFixes(p) {
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.1.0',
+      'Atlas-Protocol-Version': '0.3.0',
       Authorization: `Bearer ${'A'.repeat(43)}`,
       'Content-Type': 'application/json',
     });
@@ -37,7 +37,23 @@ export function runReviewFixes(p) {
   });
   for (const state of ['completed', 'failed', 'cancelled'])
     check(`terminal ${state} cancellation retains the outcome without a new effect`, () => {
-      const task = { ...s.task, execution_state: state };
+      const task = {
+        ...s.task,
+        execution_state: state,
+        execution_summary: {
+          origin: s.origin,
+          report_id: s.requestId,
+          sequence: '1',
+          generated_at: null,
+          event: 'state',
+          state,
+          ...(state === 'failed'
+            ? { reason: 'unsupported' }
+            : state === 'cancelled'
+              ? { cancellation_request_id: s.requestId }
+              : {}),
+        },
+      };
       assert(cancel(task, false).body.data.execution_state === state, 'Terminal outcome changed');
     });
   check('revocation response proves the key is revoked', () => {
@@ -218,7 +234,7 @@ export function runReviewFixes(p) {
     ['Atlas-Dataset-ID', null, 'missing'],
     ['Atlas-Dataset-ID', 'bad', 'invalid'],
     ['Atlas-Protocol-Version', null, 'missing'],
-    ['Atlas-Protocol-Version', '0.2.0', 'mismatch'],
+    ['Atlas-Protocol-Version', '0.1.0', 'mismatch'],
     ['Authorization', null, 'missing'],
     ['Authorization', 'Bearer private-invalid-secret', 'invalid'],
   ])

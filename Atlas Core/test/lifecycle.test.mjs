@@ -1,14 +1,16 @@
+import { mutableRoot } from './paths.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Worker } from 'node:worker_threads';
 import { fixture, uuid, registration } from './helpers.mjs';
-import { installationLock, recoveryDecision } from '../dist/installation.js';
+import { installationLock, recoveryDecision, readJsonFile } from '../dist/installation.js';
+import { z } from 'zod';
 import { processIdentity } from '../dist/ownership.js';
 import { mkdtemp, mkdir, open, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root } from './helpers.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
 import { createHash } from 'node:crypto';
 import { createCore } from '../dist/server.js';
@@ -16,10 +18,55 @@ import { DatabaseWorker } from '../dist/rpc.js';
 import { Transfers } from '../dist/transfers.js';
 import { defaults } from '../dist/settings.js';
 import { digest } from '../dist/exact.js';
+import Database from 'better-sqlite3';
 const run = data => new Promise((resolve, reject) => { const worker = new Worker(new URL('../dist/offline.js', import.meta.url), { workerData: data }); let value; worker.on('message', result => { value = result; }); worker.once('error', reject); worker.once('exit', code => code === 0 ? resolve(value) : reject(new Error('offline_failed'))); });
+test('local JSON reads enforce the byte limit before an input reaches EOF', { timeout: 10000 }, async t => {
+  const directory = await mkdtemp(join(mutableRoot, 'local-record-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const schema = z.strictObject({ value: z.string() }), value = { value: 'é' };
+  const bytes = Buffer.from(JSON.stringify(value));
+  const record = join(directory, 'record.json');
+  await writeFile(record, Buffer.concat([bytes, Buffer.alloc(65536 - bytes.length, 32)]));
+  assert.deepEqual(await readJsonFile(record, schema), value);
+  await writeFile(record, Buffer.alloc(65537, 32));
+  await assert.rejects(readJsonFile(record, schema), /record_limit/);
+  assert.throws(() => execFileSync(process.execPath, [join(root, 'dist', 'cli.js'), 'settings', 'save',
+    '--installation', join(directory, 'installation'), '--expected-revision', '0', '--file', record],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), error => {
+    assert.equal(error.status, 1);
+    assert.equal(JSON.parse(error.stdout).code, 'record_limit');
+    return true;
+  });
+  const fifo = join(directory, 'record.pipe');
+  execFileSync('mkfifo', [fifo]);
+  const reading = readJsonFile(fifo, schema).then(() => 'accepted', error => error.message);
+  const writer = await open(fifo, 'w');
+  let outcome;
+  try {
+    await writer.writeFile(Buffer.alloc(65537, 32));
+    outcome = await Promise.race([reading, delay(1500).then(() => 'waiting_for_eof')]);
+  } finally { await writer.close(); }
+  await reading;
+  assert.equal(outcome, 'record_limit', 'Oversized input must be refused while its writer is still open');
+});
+test('update compatibility inspects retained SQLite without opening an Engine or changing data', async t => {
+  const f = await fixture(t);
+  assert.deepEqual(await run({ mode: 'check-update', directory: f.directory }), { compatible: true });
+  await f.core.close();
+  const path = join(f.directory, 'core.sqlite');
+  for (const format of ['1', null]) {
+    const db = new Database(path);
+    try {
+      if (format === null) db.prepare("DELETE FROM core_meta WHERE key='format'").run();
+      else db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
+    } finally { db.close(); }
+    const before = await readFile(path);
+    assert.deepEqual(await run({ mode: 'check-update', directory: f.directory }), { compatible: false });
+    assert.deepEqual(await readFile(path), before, 'Refusal must leave all retained database bytes unchanged');
+  }
+});
 test('installation mutation lock excludes contenders after dead and ownerless commands', async t => {
-  await mkdir(join(root, 'artifacts'), { recursive: true });
-  const directory = await mkdtemp(join(root, 'artifacts', 'locks-'));
+  const directory = await mkdtemp(join(mutableRoot, 'locks-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const ended = { ...await processIdentity(), start: '0' };
   for (let round = 0; round < 20; round++) {
@@ -130,7 +177,7 @@ test('transfer cleanup closes a prepared download that the caller never starts',
   t.mock.method(prototype, 'createReadStream', function (...args) {
     handles.add(this); const stream = createReadStream.apply(this, args); sources.push(stream); return stream;
   });
-  const download = await transfers.download(descriptor.object_id, { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.1.0' });
+  const download = await transfers.download(descriptor.object_id, { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.3.0' });
   assert.equal(download.stream.readableDidRead, false);
   assert.ok(handles.size > 0, 'The download acquired a real file handle');
   await transfers.close();
@@ -171,8 +218,7 @@ test('Stop retains a completed download handle cleanup failure and records it', 
 });
 
 for (const cleanupFails of [false, true]) test(`failed Core initialization awaits worker cleanup${cleanupFails ? ' and retains both failures' : ''}`, async t => {
-  await mkdir(join(root, 'artifacts'), { recursive: true });
-  const directory = await mkdtemp(join(root, 'artifacts', 'failed-start-'));
+  const directory = await mkdtemp(join(mutableRoot, 'failed-start-'));
   const call = DatabaseWorker.prototype.call, closeWorker = DatabaseWorker.prototype.close;
   let rpc;
   t.after(async () => { if (rpc?.worker.threadId !== -1 && rpc) await closeWorker.call(rpc); await rm(directory, { recursive: true, force: true }); });

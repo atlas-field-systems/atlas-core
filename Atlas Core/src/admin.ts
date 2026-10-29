@@ -13,6 +13,7 @@ import { defaults, Settings } from './settings.js';
 import { id, zero } from './exact.js';
 import { retainedEvent } from './diagnostics.js';
 import { createSecureContext } from 'node:tls';
+import { diskUsage, hasCapacity } from './capacity.js';
 
 export class Administration {
   constructor(readonly root: string) {}
@@ -37,6 +38,13 @@ export class Administration {
     createSecureContext({ cert: await readFile(input.certificate), key: await readFile(input.key) });
     await copyFile(input.certificate, join(this.root, 'setup', 'tls.pem'));
     await copyFile(input.key, join(this.root, 'setup', 'tls.key'));
+    for (const name of ['tls.pem', 'tls.key']) {
+      const file = await open(join(this.root, 'setup', name), 'r');
+      const failures: unknown[] = [];
+      try { await file.sync(); } catch (error) { failures.push(error); }
+      try { await file.close(); } catch (error) { failures.push(error); }
+      if (failures.length > 0) throw new AggregateError(failures, 'tls_flush_failed');
+    }
     await atomicJson(join(this.root, 'setup', 'settings.json'), settings);
     await atomicJson(join(this.root, 'setup', 'installation.json'), { format: 1, installation_id: id(), image });
     await atomicJson(join(this.root, 'software.json'), { image });
@@ -83,9 +91,9 @@ export class Administration {
     if (found !== '' && found !== writer.container) throw new Error('writer_identity_mismatch');
     return found !== '';
   }
-  private async offline(mode: 'inspect-marker' | 'establish' | 'provision', input: unknown = {}, image?: string) {
+  private async offline(mode: 'inspect-marker' | 'check-update' | 'establish' | 'provision', input: unknown = {}, image?: string) {
     const manifest = await this.manifest();
-    if (mode === 'inspect-marker') {
+    if (mode === 'inspect-marker' || mode === 'check-update') {
       const container = await createContainer(this.root, manifest.installation_id, image ?? manifest.image, mode);
       let primary: unknown;
       try {
@@ -110,6 +118,10 @@ export class Administration {
     await this.removeStopped(container, manifest.installation_id);
     const value: unknown = JSON.parse(output);
     return value;
+  }
+  private async checkUpdate(image: string): Promise<void> {
+    const result = z.strictObject({ compatible: z.boolean() }).parse(await this.offline('check-update', {}, image));
+    if (!result.compatible) throw new Error('incompatible_format');
   }
   async inspect(): Promise<unknown> {
     const manifest = await this.manifest().catch(error => {
@@ -199,12 +211,14 @@ export class Administration {
   async destructive(kind: ActionRecord['kind'], image?: string): Promise<void> {
     await this.requireComplete();
     const manifest = await this.manifest(), writer = await this.writer();
+    const target = kind === 'update' ? ImageId.parse(image) : manifest.image;
+    if (kind === 'update') await this.checkUpdate(target);
     let old: Uuid | null = null;
     if (writer && (await inspectContainer(writer, manifest.installation_id)).State.Running) {
       const context = z.object({ dataset: Uuid }).parse(await maintenance(this.root, { operation: 'inspect' })); old = context.dataset;
     } else old = Marker.parse(await this.offline('inspect-marker')).dataset;
     const action: ActionRecord = { format: 1, action_id: id(), installation_id: manifest.installation_id, kind, old_dataset: old, intended_dataset: id(),
-      writer: await this.writer() ?? null, image: kind === 'update' ? ImageId.parse(image) : manifest.image, phase: 'intent', primary_failure: null, cleanup_failure: null };
+      writer: await this.writer() ?? null, image: target, phase: 'intent', primary_failure: null, cleanup_failure: null };
     await atomicJson(join(this.root, 'recovery', 'action.json'), action);
     await rm(join(this.root, 'recovery', 'proof.json'), { force: true }); await flushDirectory(join(this.root, 'recovery'));
     await this.recover();
@@ -215,6 +229,7 @@ export class Administration {
     const manifest = await this.manifest();
     if (manifest.installation_id !== action.installation_id) throw new Error('repair_required');
     try {
+      if (action.kind === 'update') await this.checkUpdate(action.image);
       const writer = await this.writer();
       if (writer) {
         const running = await this.containerExists(writer) && (await inspectContainer(writer, manifest.installation_id)).State.Running;
@@ -255,7 +270,8 @@ export class Administration {
       action.phase = 'complete'; action.primary_failure = null; action.cleanup_failure = null;
       await atomicJson(join(this.root, 'recovery', 'action.json'), action);
     } catch (error) {
-      action.primary_failure = error instanceof Error && error.message === 'writer_exit_unverified' ? 'writer_exit_unverified' : 'repair_required';
+      action.primary_failure = error instanceof Error && error.message === 'writer_exit_unverified' ? 'writer_exit_unverified'
+        : error instanceof Error && error.message === 'incompatible_format' ? 'incompatible_format' : 'repair_required';
       try { await atomicJson(join(this.root, 'recovery', 'action.json'), action); }
       catch { action.cleanup_failure = 'cleanup_failed'; throw new AggregateError([error, new Error('cleanup_failed')], 'recovery_failed'); }
       throw error;
@@ -302,7 +318,8 @@ export class Administration {
   async export(path: string): Promise<{ bytes: number; partial: boolean }> {
     const manifest = await this.manifest(), settings = await this.settings();
     const writer = await this.writer();
-    const context = writer && (await inspectContainer(writer, manifest.installation_id)).State.Running
+    const running = writer !== undefined && (await inspectContainer(writer, manifest.installation_id)).State.Running;
+    const context = running
       ? await maintenance(this.root, { operation: 'export' }) : { marker: await this.offline('inspect-marker') };
     const logs = join(this.root, 'data', 'logs');
     const files = (await readdir(logs).catch(error => { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return []; throw error; })).filter(file => /^events\.[0-7]\.jsonl$/.test(file)).sort().reverse();
@@ -310,36 +327,48 @@ export class Administration {
     for (const file of files) retained += (await stat(join(logs, file))).size;
     const budget = settings.saved.diagnosticBytes - Math.max(retained, Math.ceil(settings.saved.diagnosticBytes / 2));
     if (budget < 16_384) throw new Error('storage_limit');
-    const output = await open(path, 'wx', 0o600);
-    let bytes = 0, partial = false, events = 0, omitted = 0;
+    const reservation = id();
+    if (running) await maintenance(this.root, { operation: 'reserve-export', reservation, bytes: budget });
+    else if (!hasCapacity(diskUsage(this.root), settings.saved, budget)) throw new Error('storage_limit');
+    let primary: unknown;
     try {
-      const line = JSON.stringify({ format: 1, release: '0.1.0', image: manifest.image, context,
-        configuration: { severity: settings.saved.diagnosticLevel, max_bytes: settings.saved.diagnosticBytes }, gaps: 'diagnostics_may_be_incomplete' }) + '\n';
-      await output.writeFile(line); bytes = Buffer.byteLength(line);
-      for (const file of files) {
-        let pending = Buffer.alloc(0), oversized = false;
-        for await (const chunk of createReadStream(join(logs, file), { highWaterMark: 8192 })) {
-          if (!Buffer.isBuffer(chunk)) throw new Error('export_read_failed');
-          let from = 0;
-          while (from < chunk.byteLength) {
-            const end = chunk.indexOf(10, from), until = end < 0 ? chunk.byteLength : end;
-            if (pending.byteLength + until - from > 8192) { oversized = true; pending = Buffer.alloc(0); }
-            if (!oversized) pending = Buffer.concat([pending, chunk.subarray(from, until)]);
-            if (end < 0) break;
-            let line: string | undefined;
-            if (!oversized) { try { line = retainedEvent(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(pending))); } catch { line = undefined; } }
-            if (line === undefined || bytes + Buffer.byteLength(line) > budget - 4096) { partial = true; omitted++; }
-            else { await output.writeFile(line); bytes += Buffer.byteLength(line); events++; }
-            pending = Buffer.alloc(0); oversized = false; from = end + 1;
+      const output = await open(path, 'wx', 0o600);
+      let bytes = 0, partial = false, events = 0, omitted = 0;
+      try {
+        const line = JSON.stringify({ format: 1, release: '0.3.0', image: manifest.image, context,
+          configuration: { severity: settings.saved.diagnosticLevel, max_bytes: settings.saved.diagnosticBytes }, gaps: 'diagnostics_may_be_incomplete' }) + '\n';
+        await output.writeFile(line); bytes = Buffer.byteLength(line);
+        for (const file of files) {
+          let pending = Buffer.alloc(0), oversized = false;
+          for await (const chunk of createReadStream(join(logs, file), { highWaterMark: 8192 })) {
+            if (!Buffer.isBuffer(chunk)) throw new Error('export_read_failed');
+            let from = 0;
+            while (from < chunk.byteLength) {
+              const end = chunk.indexOf(10, from), until = end < 0 ? chunk.byteLength : end;
+              if (pending.byteLength + until - from > 8192) { oversized = true; pending = Buffer.alloc(0); }
+              if (!oversized) pending = Buffer.concat([pending, chunk.subarray(from, until)]);
+              if (end < 0) break;
+              let line: string | undefined;
+              if (!oversized) { try { line = retainedEvent(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(pending))); } catch { line = undefined; } }
+              if (line === undefined || bytes + Buffer.byteLength(line) > budget - 4096) { partial = true; omitted++; }
+              else { await output.writeFile(line); bytes += Buffer.byteLength(line); events++; }
+              pending = Buffer.alloc(0); oversized = false; from = end + 1;
+            }
           }
+          if (pending.byteLength > 0 || oversized) { partial = true; omitted++; }
         }
-        if (pending.byteLength > 0 || oversized) { partial = true; omitted++; }
+        const trailer = JSON.stringify({ partial, included_events: events, omitted_events: omitted }) + '\n';
+        await output.writeFile(trailer); bytes += Buffer.byteLength(trailer);
+        await output.sync();
+      } finally { await output.close(); }
+      await flushDirectory(join(path, '..'));
+      return { bytes, partial };
+    } catch (error) { primary = error; throw error; }
+    finally {
+      if (running) {
+        try { await maintenance(this.root, { operation: 'release-export', reservation }); }
+        catch (error) { throw new AggregateError(primary === undefined ? [error] : [primary, error], 'export_release_failed'); }
       }
-      const trailer = JSON.stringify({ partial, included_events: events, omitted_events: omitted }) + '\n';
-      await output.writeFile(trailer); bytes += Buffer.byteLength(trailer);
-      await output.sync();
-    } finally { await output.close(); }
-    await flushDirectory(join(path, '..'));
-    return { bytes, partial };
+    }
   }
 }

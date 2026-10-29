@@ -14,6 +14,10 @@ Updates require an explicit Reset between missions. There is no operational-data
 migration or backup/restore. Hard Reset keeps software and unrelated host resources.
 Installation-format conversion must be deliberate and preserve identity, revocation,
 and credentials. Incompatible retained formats never authorize an automatic wipe.
+Before recording update intent, the target image checks the retained database
+format through a read-only one-shot. An incompatible format returns
+`incompatible_format` without changing data, credentials, or installation setup.
+Use a fresh installation for that release; Reset does not convert old formats.
 
 ## Commands
 
@@ -22,6 +26,9 @@ Docker access uses `sudo -n docker`. The image argument is an immutable `sha256:
 from `artifacts/image-id`, never a tag. Setup supplies a valid TLS certificate and private key
 and a mode-0600 credential JSON file containing `api_key_id`, `request_id`, and `secret`.
 The secret is a 32-byte random base64url value. Commands never print that secret.
+Local JSON records are limited to 64 KiB before parsing. Readers consume at most
+one extra byte to detect excess, then close the input and return `record_limit`.
+The limit applies while reading, including when the input continues producing data.
 
 | Command | Required options or result |
 | --- | --- |
@@ -53,6 +60,11 @@ Core owns policy and its private mode-0600 Unix maintenance endpoint. Commands o
 Docker access and never edit live SQL. Containers disable logging and automatic restart.
 There is no persistent management service, takeover control, or automatic recovery.
 No detached cleanup worker runs after a command exits.
+Core stops scheduling maintenance and awaits active maintenance and summary work
+before closing transfers and HTTP. Diagnostics drain before their database worker
+reservation owner closes. Shutdown
+retains maintenance failures alongside cleanup failures. File reclamation completes
+its durable bookkeeping before the worker closes; Stop still verifies process exit.
 Failed Start attempts shutdown and writer-exit verification even when recording
 `apply_failure` fails. It retains the original, bookkeeping, and cleanup failures;
 an unwritten exit proof never counts as verified cleanup. CLI `failures` lists up to
@@ -69,6 +81,9 @@ Before destructive work, flush a bounded action outside cleared storage: action 
 old and intended Dataset, immutable writers, phases, and safe primary and cleanup failures.
 Use owned paths, atomic replacement, and file and directory flushes. Stop and verify every
 writer before deletion. Unverified exit blocks cleanup.
+Update recovery repeats the target image's compatibility check before cleanup,
+including intents written by older commands. Refusal leaves the action pending.
+If an older command already deleted files, recovery cannot restore those files.
 
 Clear operational data, logs, and activity. Core atomically establishes the intended
 Dataset and action marker, then the command flushes independent matching proof before
@@ -98,6 +113,8 @@ HTTPS/WSS use normal certificate verification and explicit trusted origins, with
 Offline setup supplies local trust, preloaded images and reference data, and the first credential.
 Setup needs no cloud login. Credentials stay out of URLs and diagnostics. Operator and key
 rules remain in [Protocol identity](../Atlas%20Protocol/identity.md).
+Setup flushes both retained TLS files before recording the installation manifest.
+A file-flush or close failure stops setup and preserves the failure for repair.
 [Diagnostics](diagnostics.md#collection-and-lifetime) owns log and export lifetime.
 Await diagnostic writers before clearing logs. Unmanaged container or host logs must not escape Reset.
 

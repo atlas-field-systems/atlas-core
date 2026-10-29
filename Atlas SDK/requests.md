@@ -1,56 +1,77 @@
 # Requests and unknown outcomes
 
-**A successful write means Core committed it, not that the local picture has
-already caught up.** Return that result immediately. Write responses never update
-the picture, its cursor, journal, or subscriptions.
+A successful write confirms Core's commit. Return it immediately, even while the
+local picture is behind. Write responses never update the picture or its journal.
 
 ## Prepare before sending
 
-Retain the original Dataset, operation kind, retry identity, submitted facts, and
-required edit precondition. Preparation happens before network transmission. Changes
-to Entity descriptions use their descriptive revision. Measurement-only Asset
-updates do not depend on it. Follow [UpdateAsset](../Atlas%20Protocol/messaging/assets.md#updating-sections)
-for section replacement and evidence requirements.
-Observation creation and reports retain the identities required by
-[Observation messages](../Atlas%20Protocol/messaging/observations.md). Reconcile
-through the Observation and its recorded Track association after a lost reply.
+A prepared operation owns the original Dataset, operation kind, retry identity,
+submitted facts, edit precondition, and durable-effect knowledge. Copy or freeze
+these facts before transmission. Each network attempt owns its own deadline,
+abort signal, and attempt result. Retrying never creates another logical operation.
 
-| Outcome | Meaning |
+Description edits retain their descriptive revision. Measurement-only updates
+follow [UpdateAsset](../Atlas%20Protocol/messaging/assets.md#updating-sections).
+Observation operations retain [source and report identities](../Atlas%20Protocol/messaging/observations.md).
+After a lost reply, reconcile through the Observation and its recorded Track.
+
+| Prepared-operation outcome | Meaning |
 | --- | --- |
-| `not_submitted` | Local failure before transmission |
-| `accepted` | Validated response confirms Core's committed result |
-| `rejected` | Validated definitive refusal |
-| `unknown_outcome` | Timeout, abort, disconnect, or invalid response after possible transmission |
-| `dataset_invalidated` | Dataset changed; an old submission must not be repurposed |
+| `not_submitted` | No attempt could have transmitted the operation |
+| `accepted` | A validated matching success confirms Core's committed result |
+| `rejected` | Evidence establishes no effect for every possible attempt |
+| `unknown_outcome` | Transmission may have occurred without definitive effect evidence |
+| `dataset_invalidated` | The Dataset changed; retain prior effect knowledge and never repurpose the submission |
 
-An invalid response can follow a real effect. A 404 during later lookup does not
-prove that a request never committed. Cancellation of a wait is not cancellation
-of processing. A valid late reply can resolve the prepared identity, but must not
-settle a call twice or contaminate a new Dataset's state.
+An attempt can return a validated HTTP error while the operation remains accepted
+or unknown. A denied retry never erases an earlier success or unresolved attempt.
+Timeout, abort, disconnect, invalid responses, and post-commit authorization loss
+can all leave `unknown_outcome`. A later lookup that returns 404 does not prove that
+an earlier commit is absent.
+
+## When refusal is definitive
+
+Use `rejected` only when the operation-specific refusal guarantees this attempt
+made no effect and no earlier or concurrent submission remains accepted or unknown.
+Do not infer this from HTTP status alone. For example, a first `CreateTask` refused
+as `unsupported_command` before admission can be rejected when no previous
+submission of those facts is possible. Local validation before any transmission
+instead leaves the operation `not_submitted`.
+
+A self-revoking `RevokeApiKey` can commit and then return `401 unauthorized`.
+Its first attempt is denied while its operation is unknown. A deliberate exact
+retry using another valid key can recover the retained success and commit cursor.
+Likewise, a lost success followed by a revoked-key retry remains unknown. An
+already validated success followed by that denial remains accepted.
+
+An edit conflict, capacity refusal, expired identity, or other error on a retry
+cannot by itself disprove an earlier effect. Preserve the error as that attempt's
+result and retain the operation's knowledge. If the contract does not establish
+no effect, keep uncertainty until matching success or authoritative reconciliation.
 
 ## Retry deliberately
 
-Retry the same identity, original facts, Dataset, and precondition under current
-authorization. Do not silently create another Observation or Task, allocate another Object, rebase
-an edit, or repeat physical work. Preserve conflict and ended-identity errors.
+Retry only on caller request, with the same identity, original facts, Dataset, and
+precondition under current authorization. Never rebase an edit, allocate replacement
+resources, or repeat physical work automatically. Preserve conflict and ended-identity errors.
+Same-release Restart retains valid Dataset retries. Reset requires reconciliation.
+Installation-lived API-key creation has its own identity lifetime; it is not
+permission for automatic retry across Dataset changes.
 
-Same-release Restart retains valid Dataset retries. Reset requires deliberate
-reconciliation, not attaching an old request to the new Dataset. Installation-lived
-API-key creation is a specific exception in identity lifetime, not automatic retry
-permission across Dataset changes.
+Known key rejection pauses network work under [authorization recovery](authorization.md).
+Only authenticated discovery with changed credentials can reopen it. Immediate
+revocation remains in force. Recovery never resubmits prepared writes.
 
-Known key rejection blocks network attempts under [authorization recovery](authorization.md).
-Only authenticated discovery with a changed credential can reopen them. Recovery
-never resubmits prepared writes; the caller must deliberately retry or reconcile.
+Aborting a wait does not cancel Core processing or physical execution. A valid late
+response still updates knowledge for its matching prepared identity. Record that
+knowledge before honoring later cancellation; never settle a call twice or copy an
+old Dataset's result into the new Dataset. A later error cannot undo this evidence.
 
 ## Files and execution
 
-A replayable upload source provides stable descriptor fields plus an `open` function
-that returns a fresh stream for each attempt. Retries begin at byte zero. A consumed
-one-shot source fails explicitly as non-replayable; do not buffer an arbitrary file
-or promise resume to hide that limitation.
-
-Keep transfer progress, Object publication, and Asset completion distinct. An
-aborted SDK wait does not change accepted work or prove that physical execution stopped.
+A replayable upload source supplies stable descriptor fields and an `open` function
+returning a fresh stream per attempt, starting at byte zero. A consumed one-shot
+source fails as non-replayable. Do not buffer an arbitrary file or promise resume.
+Keep transfer progress, Object publication, and Asset completion distinct.
 
 [Next: the local picture](picture.md)

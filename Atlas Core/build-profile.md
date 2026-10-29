@@ -49,6 +49,18 @@ Git archives omit `.git`. The consumer supplies `ATLAS_SOURCE_REVISION`,
 `ATLAS_SOURCE_TREE` and `ATLAS_SOURCE_DIRTY=false` from verified paired metadata.
 Image builds and manifest generation still require the clean release checkout.
 
+## Contract compatibility
+
+The required current-result timing metadata changes the strict wire contract.
+Timing metadata introduced 0.2.0; the required Task execution summary introduces
+0.3.0. Neither reuses an older strict contract version. No product release tag
+exists for 0.1.0. Clients declaring either older version are refused. SDK must target the same exact version when
+implemented. Existing 0.1.0 operational data lacks retained non-position status;
+startup refuses its evidence format rather than inventing admission facts. Use a
+fresh installation for 0.3.0 with private database format 4. Formats 1, 2 and 3
+are refused before interpreting incompatible images. Older Core builds refuse
+format 4. Operational-data migration remains outside this release.
+
 ## Shared schema profile
 
 The [Protocol profile](../Atlas%20Protocol/schema-profile.md) owns runtime schema

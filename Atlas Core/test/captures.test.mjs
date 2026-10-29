@@ -1,3 +1,4 @@
+import { mutableRoot } from './paths.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile, readdir, readFile } from 'node:fs/promises';
@@ -10,21 +11,21 @@ import WebSocket from 'ws';
 import { once } from 'node:events';
 import { readWssServer, writeWssClient, exchanges } from '@atlas/protocol';
 import { join } from 'node:path';
-import { setImmediate as yieldToLoop } from 'node:timers/promises';
+import { setImmediate as yieldToLoop, setTimeout as delay } from 'node:timers/promises';
 import { Engine } from '../dist/engine.js';
 import { Reads } from '../dist/reads.js';
 import { defaults } from '../dist/settings.js';
 import { digest } from '../dist/exact.js';
 import { publicError, Refusal } from '../dist/fault.js';
 import { diskUsage } from '../dist/capacity.js';
-import { root, uuid, secret, report, telemetry, fixture } from './helpers.mjs';
+import { root, uuid, secret, report, telemetry, fixture, registration } from './helpers.mjs';
 
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 async function local(t, temporary = {}) {
-  const directory = await mkdtemp(join(root, 'artifacts', 'capture-'));
+  const directory = await mkdtemp(join(mutableRoot, 'capture-'));
   const engine = new Engine(directory, { ...defaults, freeDiskBytes: 0, temporary: { ...defaults.temporary, ...temporary } });
   const key = { api_key_id: uuid(), request_id: uuid(), secret: secret() }; engine.provision(key);
-  const context = { verifier: digest(key.secret), dataset: engine.store.dataset, protocol: '0.1.0' };
+  const context = { verifier: digest(key.secret), dataset: engine.store.dataset, protocol: '0.3.0' };
   const call = async (name, request = {}) => (await engine.execute({ name, request }, context)).body.data;
   t.after(async () => { await engine.close(); await rm(directory, { recursive: true, force: true }); });
   return { engine, directory, context, key, call };
@@ -381,6 +382,12 @@ test('history expiry makes pages unavailable before unlink and shares reclamatio
 });
 test('failed pressure expiry retains charges, refuses pages, and can retry cleanup before its deadline', async t => {
   const f = await local(t), { page, request } = await historyView(f);
+  const asset = (await f.call('RegisterAsset', registration())).asset;
+  const health = await f.call('GetHealth');
+  const challenge = await f.call('BeginAssetContact', { allocation_context: health.allocation_context, request_id: uuid(), asset_id: asset.id, process_generation: asset.process_generation, mode: 'current' });
+  const proof = { ...report(f.engine.store.dataset, asset.id, { kind: 'asset_process', process_generation: asset.process_generation }, 1, {}),
+    generated_at: challenge.issued_at, contact_proof: { challenge_id: challenge.challenge_id } };
+  assert.equal((await f.call('UpdateAsset', { request_id: uuid(), asset_id: asset.id, report: proof })).asset.communications.health, 'healthy');
   const before = f.engine.temporary.peek(page.view_id), storageBytes = f.engine.settings.storageBytes;
   const blocked = join(f.directory, 'captures', `${page.view_id}.sqlite-shm`);
   await mkdir(blocked);
@@ -397,7 +404,18 @@ test('failed pressure expiry retains charges, refuses pages, and can retry clean
   await assert.rejects(f.call('GetObservationMovementHistory', { page_token: page.next_page_token }), error => error.code === 'allocation_expired');
   await assert.rejects(f.call('GetObservationMovementHistory', request), error => error.code === 'allocation_expired');
   await assert.rejects(f.call('ReleaseHistoryView', { release_token: page.release_token }), error => publicError(error, f.engine.store.dataset).status === 500);
-  await assert.rejects(f.engine.reads.cleanup(), error => publicError(error, f.engine.store.dataset).status === 500);
+  const due = performance.now() + 15_001;
+  t.mock.method(performance, 'now', () => due);
+  f.engine.store.db.exec("CREATE TRIGGER refuse_contact BEFORE UPDATE ON entity_assets BEGIN SELECT RAISE(ABORT,'contact_write_failed'); END");
+  const checkpoints = f.engine.store.metrics.checkpoints;
+  await assert.rejects(f.engine.tick(), error => error instanceof AggregateError &&
+    publicError(error.errors[0], f.engine.store.dataset).status === 500 && error.errors[1].message === 'contact_write_failed');
+  assert.equal((await f.call('GetAsset', { asset_id: asset.id })).communications.health, 'healthy');
+  assert.ok(f.engine.store.metrics.checkpoints > checkpoints, 'Capture and contact failures must not skip checkpointing');
+  f.engine.store.db.exec('DROP TRIGGER refuse_contact');
+  f.engine.settings.storageBytes = storageBytes;
+  await assert.rejects(f.engine.tick(), error => publicError(error, f.engine.store.dataset).status === 500);
+  assert.equal((await f.call('GetAsset', { asset_id: asset.id })).communications.health, 'degraded');
   assert.ok(f.engine.temporary.peek(page.view_id).bytes > 0, 'Failed release and cleanup must keep their charge');
   await rm(blocked, { recursive: true });
   await Promise.all([f.engine.reads.expireHistory(), f.engine.reads.cleanup(), f.call('ReleaseHistoryView', { release_token: page.release_token })]);
@@ -626,7 +644,7 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
     await once(socket, 'open', { signal: AbortSignal.timeout(10000) });
     const control = async frame => {
       const response = once(socket, 'message', { signal: AbortSignal.timeout(10000) });
-      socket.send(writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.1.0' }), { binary: false });
+      socket.send(writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.3.0' }), { binary: false });
       const [bytes] = await response;
       return readWssServer(bytes, { datasetId: f.core.dataset, requestId: frame.request_id });
     };
@@ -638,7 +656,7 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
     };
   }
   const failures = [];
-  f.core.rpc.worker.on('message', message => { if (message.type === 'refusal') failures.push(message); });
+  f.core.rpc.worker.on('message', message => { if (message.type === 'refusal' && message.causes !== undefined) failures.push(message); });
   const initial = await snapshot();
   assert.equal(initial.code, 'storage_limit'); assert.equal('details' in initial, false);
   const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
@@ -661,7 +679,12 @@ for (const transport of ['HTTP', 'WSS']) test(`worker capture failures preserve 
   }
   assert.equal(failures.length, 2);
   assert.ok(!JSON.stringify(failures).includes(f.directory)); assert.ok(!JSON.stringify(failures).includes(f.apiKey));
-  await rm(broken, { recursive: true }); await rm(pressure); await f.core.close();
+  const dropDeadline = performance.now() + 2000;
+  while (f.core.diagnostics.inspect().dropped === 0 && performance.now() < dropDeadline) await delay(10);
+  assert.ok(f.core.diagnostics.inspect().dropped > 0, 'Optional diagnostics drop when the installation is full');
+  await rm(broken, { recursive: true }); await rm(pressure);
+  for (let i = 0; i < 2; i++) assert.equal((await snapshot()).code, 'storage_limit');
+  await f.core.close();
   let logs = '';
   for (const name of await readdir(join(f.directory, 'logs'))) logs += await readFile(join(f.directory, 'logs', name), 'utf8');
   const events = logs.trim().split('\n').map(line => JSON.parse(line));

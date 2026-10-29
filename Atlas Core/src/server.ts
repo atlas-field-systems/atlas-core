@@ -63,10 +63,14 @@ export async function createCore(options: ServerOptions) {
 }
 async function initializeCore(options: ServerOptions, cleanup: (() => Promise<void>)[]) {
   const settings = Settings.parse(options.settings ?? defaults);
-  const diagnostics = new Diagnostics(join(options.directory, 'logs'), settings.diagnosticBytes, settings.diagnosticLevel);
-  cleanup.push(() => diagnostics.close());
+  const diagnostics = new Diagnostics(join(options.directory, 'logs'), settings.diagnosticBytes, settings.diagnosticLevel, async bytes => {
+    const reservation = id();
+    await rpc.call('reserve-diagnostics', { reservation, bytes }, 256);
+    return async () => { await rpc.call('release-diagnostics', reservation, 128, true); };
+  });
   const rpc = new DatabaseWorker(options.directory, settings, undefined, options.accountingRoot, () => diagnostics.emit({ severity: 'ERROR', component: 'database', event: 'worker_failed', evidence: 'unavailable' }));
   cleanup.push(() => rpc.close());
+  cleanup.push(() => diagnostics.close());
   const ready = await rpc.ready;
   async function enrollmentWarning(): Promise<void> {
     const enrollment = z.object({ enabled: z.boolean(), bindings: z.array(z.unknown()).max(128) }).parse(await rpc.call('enrollment-inspect', {}, 65536, true));
@@ -212,7 +216,7 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
         const responseHeaders = new Headers({ 'Atlas-Dataset-ID': ready.dataset, 'Atlas-Protocol-Version': PROTOCOL_VERSION });
         if (result.kind === 'reference') {
           const media = incoming.headers.get('Accept');
-          const document = media === 'text/html' ? '<!doctype html><html lang="en"><meta charset="utf-8"><title>Atlas Protocol</title><h1>Atlas Protocol 0.1.0</h1><p>The OpenAPI reference is available at this URL with Accept: application/vnd.oai.openapi+json.</p></html>' : result.document;
+          const document = media === 'text/html' ? '<!doctype html><html lang="en"><meta charset="utf-8"><title>Atlas Protocol</title><h1>Atlas Protocol 0.3.0</h1><p>The OpenAPI reference is available at this URL with Accept: application/vnd.oai.openapi+json.</p></html>' : result.document;
           const body = Buffer.from(document); responseHeaders.set('Content-Type', media ?? result.media);
           outgoing(() => bindings[name].response({ status: 200, headers: responseHeaders, body }, { request: input, datasetId: ready.dataset }));
           return reply.type(media ?? result.media).send(body);
@@ -237,14 +241,30 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
     const connection = new ChangesConnection(socket, rpc, ready.dataset, ready.run, settings, diagnostics, () => connections.delete(connection));
     connections.add(connection);
   });
-  let tickBusy = false;
+  let tick: Promise<void> | undefined, summaryWork: Promise<void> | undefined;
+  function backgroundFailed(error: unknown): void {
+    const causes: unknown[] = [];
+    function collect(cause: unknown, depth: number): void {
+      if (causes.length === 3) return;
+      if (cause instanceof AggregateError && cause.errors.length > 0 && depth < 8) {
+        for (const nested of cause.errors.slice(0, 3)) collect(nested, depth + 1);
+      } else causes.push(cause);
+    }
+    collect(error, 0);
+    for (const [index, cause] of causes.entries()) {
+      diagnostics.emit({ severity: 'ERROR', event: index === 0 ? 'background_failure' : 'background_cleanup_failure', component: 'runtime', code: publicError(cause, ready.dataset).body.error.code, ...faultFrames(cause) });
+    }
+  }
   const summary = setInterval(() => {
+    if (summaryWork !== undefined || stopped) return;
     for (const outcome of ['accepted', 'duplicate', 'rejected'] as const) {
       if (reports[outcome] > 0) diagnostics.emit({ severity: 'INFO', component: 'http', event: 'report_summary', outcome, count: reports[outcome] });
       reports[outcome] = 0;
     }
-    void enrollmentWarning().catch(() => {});
-    void rpc.call('inspect', {}, 4096, true).then(value => {
+    summaryWork = (async () => {
+      await enrollmentWarning();
+      if (stopped) return;
+      const value = await rpc.call('inspect', {}, 4096, true);
       const { metrics } = z.object({ metrics: z.object({ transactions: z.number(), commit_ms: z.number(), transaction_ms: z.number(), ipc_wait_ms: z.number(),
         wal_bytes: z.number(), checkpoint_ms: z.number(), contact_refreshes: z.number(), capture_builds: z.number(), capture_failures: z.number(), capture_releases: z.number(), capture_expiries: z.number(), captured_bytes: z.number() }) }).parse(value);
       diagnostics.emit({ severity: 'INFO', component: 'database', event: 'database_summary', count: metrics.transactions, duration_ms: metrics.commit_ms, transaction_ms: metrics.transaction_ms, writer_wait_ms: metrics.ipc_wait_ms });
@@ -256,33 +276,43 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
         diagnostics.emit({ severity: 'INFO', component: 'synchronization', event: 'capture_release_summary', count: metrics.capture_releases });
         diagnostics.emit({ severity: 'INFO', component: 'synchronization', event: 'capture_expiry_summary', count: metrics.capture_expiries });
       }
-    }).catch(() => {});
+    })();
+    void summaryWork.then(() => { summaryWork = undefined; }, error => { summaryWork = undefined; backgroundFailed(error); });
   }, 30_000);
   const timer = setInterval(() => {
-    if (tickBusy || stopped) return;
-    tickBusy = true;
-    void (async () => {
+    if (tick !== undefined || stopped) return;
+    tick = (async () => {
       await transfers.recheck();
-      if (!rpc.available) return;
+      if (stopped || !rpc.available) return;
       const usage = await storageUsage(options.accountingRoot ?? options.directory);
+      if (stopped) return;
       await rpc.call('pressure', usage.bytes + settings.reserveBytes >= settings.storageBytes || usage.free < settings.freeDiskBytes, 128, true);
-      await rpc.call('tick', {}, 0, true);
-      await transfers.reclaimDeleted();
-    })().catch(error => diagnostics.emit({ severity: 'ERROR', event: 'background_failure', component: 'runtime', ...faultFrames(error) })).finally(() => { tickBusy = false; });
+      if (stopped) return;
+      const failures: unknown[] = [];
+      try { await rpc.call('tick', {}, 0, true); } catch (error) { failures.push(error); }
+      if (!stopped && rpc.available) {
+        try { await transfers.reclaimDeleted(); } catch (error) { failures.push(error); }
+      }
+      if (failures.length === 1) throw failures[0];
+      if (failures.length > 1) throw new AggregateError(failures, 'maintenance_failed');
+    })();
+    void tick.then(() => { tick = undefined; }, error => { tick = undefined; backgroundFailed(error); });
   }, 250);
   async function close(): Promise<void> {
     if (closing) return closing;
     stopped = true; clearInterval(timer); clearInterval(summary);
+    const maintenance = [tick, summaryWork];
     closing = (async () => {
       const failures: unknown[] = [];
       async function finish(action: () => Promise<unknown>): Promise<void> { try { await action(); } catch (error) { failures.push(error); } }
       if (rpc.available) await finish(() => rpc.call('drain', {}, 0, true));
       for (const connection of connections) connection.close();
+      for (const work of maintenance) if (work !== undefined) await finish(() => work);
       await finish(() => transfers.close());
       await finish(() => app.close());
-      await finish(() => rpc.close());
-      diagnostics.emit({ severity: failures.length === 0 ? 'INFO' : 'ERROR', component: 'lifecycle', event: failures.length === 0 ? 'core_stopped' : 'core_stop_failed', dataset: ready.dataset, run: ready.run });
+      diagnostics.emit({ severity: failures.length === 0 ? 'INFO' : 'ERROR', component: 'lifecycle', event: failures.length === 0 ? 'core_stopping' : 'core_stop_failed', dataset: ready.dataset, run: ready.run });
       await finish(() => diagnostics.close());
+      await finish(() => rpc.close());
       if (failures.length > 0) throw new AggregateError(failures, 'core_shutdown_failed');
     })();
     return closing;

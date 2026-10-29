@@ -41,6 +41,7 @@ export class Engine {
   readonly reads: Reads;
   state: 'starting' | 'serving' | 'draining' = 'starting';
   pressure = false;
+  private readonly diagnosticReservations = new Map<Uuid, number>();
   constructor(readonly directory: string, readonly settings: Settings, establish?: { dataset: Uuid; actionId: Uuid }, readonly accountingRoot = directory, maintenance = false) {
     this.store = new Store(join(directory, 'core.sqlite'), settings, establish);
     this.identity = new Identity(this.store);
@@ -55,7 +56,11 @@ export class Engine {
     if (!maintenance) {
       for (const image of this.entities.picture(this.store.db)) writeJson(contract(Put, 'http_response'), Put.parse({ kind: 'put', resource_kind: image.entity_type, resource_id: image.id, version: image.version, image }), { maxBytes: settings.resourceImageBytes });
       if (this.store.maximumReplayBytes() > settings.limits.max_message_bytes - 4096) refuse('resource_limit');
-      this.entities.restartContact();
+      try { this.entities.restartContact(tx => this.admitContact(tx)); }
+      catch (error) {
+        try { this.store.close(); } catch (cleanup) { throw new AggregateError([error, cleanup], 'engine_initialization_failed'); }
+        throw error;
+      }
     }
     this.state = 'serving';
   }
@@ -171,7 +176,7 @@ export class Engine {
       case 'GetAssignedTasks': return tasks.assigned(tx, operation.request);
       case 'SetTaskOrder': return tasks.order(tx, operation.request);
       case 'ConfirmTaskOrder': return tasks.confirm(tx, operation.request);
-      case 'UploadObject': if (context.attempt === undefined) refuse('invalid_request'); return objects.publish(tx, context.attempt);
+      case 'UploadObject': return context.attempt === undefined ? objects.recover(tx, operation.request) : objects.publish(tx, context.attempt);
       case 'ListObjects': return reads.objectList(operation.request);
       case 'GetObject': return objects.get(operation.request.object_id);
       case 'EditObject': return objects.edit(tx, operation.request);
@@ -188,7 +193,27 @@ export class Engine {
     Secret.parse(request.secret);
     this.store.transact(null, tx => this.identity.createKey(tx, request, null, recordActivity), () => this.admitStorage(Buffer.byteLength(JSON.stringify(request)) * 16 + 65_536));
   }
-  async tick(): Promise<void> { this.entities.tick(); await this.reads.cleanup(); this.store.checkpoint(); }
+  private admitContact(tx: Transaction): void {
+    const effects = [...tx.effects.values()].reduce((bytes, effect) => bytes + Buffer.byteLength(JSON.stringify(effect)), 0);
+    this.admitStorage(65_536 + effects * 4 + tx.retainedBytes * 4, true);
+  }
+  async tick(): Promise<void> {
+    const failures: unknown[] = [];
+    try { await this.reads.cleanup(); } catch (error) { failures.push(error); }
+    try {
+      if (this.state === 'serving') this.entities.tick(tx => this.admitContact(tx));
+    } catch (error) { failures.push(error); }
+    try { this.store.checkpoint(); } catch (error) { failures.push(error); }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, 'maintenance_failed');
+  }
+  reserveDiagnostics(reservation: Uuid, bytes: number): void {
+    if (this.diagnosticReservations.has(reservation) || this.diagnosticReservations.size >= 2) refuse('resource_limit');
+    if (bytes > this.settings.diagnosticBytes / 2) refuse('storage_limit');
+    this.admitStorage(bytes);
+    this.diagnosticReservations.set(reservation, bytes);
+  }
+  releaseDiagnostics(reservation: Uuid): void { this.diagnosticReservations.delete(reservation); }
   async reserveStorage<T>(reserve: (admit: (bytes: number) => void) => T, produce: () => Promise<void> = async () => {}, release: () => void = () => {}): Promise<T> {
     const run = () => reserve(bytes => this.admitStorage(bytes));
     await produce();
@@ -207,7 +232,7 @@ export class Engine {
   }
   private admitStorage(bytes: number, required = false): void {
     const usage = diskUsage(this.accountingRoot);
-    const unwritten = this.objects.unwritten + this.reads.unwritten;
+    const unwritten = this.objects.unwritten + this.reads.unwritten + [...this.diagnosticReservations.values()].reduce((sum, bytes) => sum + bytes, 0);
     this.pressure = !hasCapacity(usage, this.settings, 32768 + unwritten);
     if (!hasCapacity(usage, this.settings, bytes + unwritten, required)) {
       const reclaimable = this.reads.reclaimableHistoryBytes;

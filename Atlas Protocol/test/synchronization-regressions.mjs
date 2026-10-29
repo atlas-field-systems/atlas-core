@@ -206,6 +206,17 @@ export function runSynchronizationRegressions(p) {
     accepted_at,
     expires_at,
     execution_state,
+    execution_summary:
+      execution_state === 'pending'
+        ? null
+        : {
+            origin: s.origin,
+            report_id: s.requestId,
+            sequence: '1',
+            generated_at: null,
+            event: 'state',
+            state: execution_state,
+          },
   });
   const taskReaders = {
     'Task schema': (task) => p.readJson(p.contract(p.Task), encode(task)),

@@ -16,6 +16,7 @@ const initial = (value) => ({
   observed_at: null,
   value,
   evidence: null,
+  time_status: Object.fromEntries(Object.keys(value).map((key) => [key, 'unknown'])),
 });
 export const asset = {
   dataset_id: id,
@@ -85,6 +86,7 @@ export const task = {
   accepted_at: time,
   submission_sequence: '1',
   execution_state: 'pending',
+  execution_summary: null,
   cancellation_request_id: null,
   result_declarations: [],
 };
@@ -112,7 +114,7 @@ export const operator = { operator_id: requestId, name: 'Operator', edit_revisio
 export const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 export const health = {
   healthy: true,
-  protocol_version: '0.1.0',
+  protocol_version: '0.3.0',
   core_run_id: requestId,
   allocation_context: 'allocation context',
   allocation_expires_at: later,
@@ -283,7 +285,10 @@ export const examples = {
     },
   ],
   GetAssetMovementHistory: [historyFirst, historyPage],
-  GetAssetObjects: [assetRequest, page(object)],
+  GetAssetObjects: [
+    assetRequest,
+    page({ ...object, metadata: { associations: [{ kind: 'asset', id: assetId }] } }),
+  ],
   CreateObservation: [
     { ...retry, ...observationRequest, publisher_id: processId },
     { observation, track },
@@ -297,21 +302,30 @@ export const examples = {
   GetObservation: [observationRequest, observation],
   GetObservationByAlias: [{ alias: 'O' }, { ...observation, alias: 'O' }],
   GetObservationMovementHistory: [{ ...historyFirst, entity_id: observationId }, historyPage],
-  GetObservationObjects: [observationRequest, page(object)],
+  GetObservationObjects: [
+    observationRequest,
+    page({ ...object, metadata: { associations: [{ kind: 'observation', id: observationId }] } }),
+  ],
   ListTracks: [{}, page(track)],
   GetTrack: [trackRequest, track],
   GetTrackByAlias: [{ alias: 'T' }, { ...track, alias: 'T' }],
   EditTrack: [{ ...edit, ...trackRequest, edits: { description: null } }, track],
   GetTrackObservations: [trackRequest, page(observation)],
   GetTrackMovementHistory: [{ ...historyFirst, entity_id: trackId }, historyPage],
-  GetTrackObjects: [trackRequest, page(object)],
+  GetTrackObjects: [
+    trackRequest,
+    page({ ...object, metadata: { associations: [{ kind: 'track', id: trackId }] } }),
+  ],
   CreateGeofeature: [{ ...retry, ...geofeatureRequest, geometry }, geofeature],
   ListGeofeatures: [{}, page(geofeature)],
   GetGeofeature: [geofeatureRequest, geofeature],
   GetGeofeatureByAlias: [{ alias: 'G' }, { ...geofeature, alias: 'G' }],
   EditGeofeature: [{ ...edit, ...geofeatureRequest, edits: { geometry } }, geofeature],
   DeleteGeofeature: [{ ...retry, ...geofeatureRequest }, deleted],
-  GetGeofeatureObjects: [geofeatureRequest, page(object)],
+  GetGeofeatureObjects: [
+    geofeatureRequest,
+    page({ ...object, metadata: { associations: [{ kind: 'geofeature', id: requestId }] } }),
+  ],
   CreateTask: [createTask, task],
   ListTasks: [{}, page(task)],
   GetTask: [taskRequest, task],

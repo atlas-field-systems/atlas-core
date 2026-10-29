@@ -26,9 +26,10 @@ try {
     const chunks: Buffer[] = []; let bytes = 0;
     for await (const raw of process.stdin) { if (!Buffer.isBuffer(raw) || (bytes += raw.byteLength) > 65_536) throw new Error('input_limit'); chunks.push(raw); }
     const raw: unknown = chunks.length === 0 ? {} : JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    const settings = mode === 'inspect-marker' ? undefined : (await readJsonFile(join(root, 'setup', 'settings.json'), SavedSettings)).saved;
+    const readonly = mode === 'inspect-marker' || mode === 'check-update';
+    const settings = readonly ? undefined : (await readJsonFile(join(root, 'setup', 'settings.json'), SavedSettings)).saved;
     const data = z.record(z.string(), z.unknown()).parse(raw);
-    const value = await offline({ ...data, mode, directory: join(root, 'data'), ...(mode === 'inspect-marker' ? {} : { settings }) });
+    const value = await offline({ ...data, mode, directory: join(root, 'data'), ...(readonly ? {} : { settings }) });
     process.stdout.write(JSON.stringify(value) + '\n');
   } else {
     const manifest = await readJsonFile(join(root, 'setup', 'installation.json'), Manifest);
@@ -83,6 +84,8 @@ try {
         }
         case 'provision': await core.rpc.call('provision', request.request, 65_536, true); return { provisioned: true };
         case 'export': return { dataset: core.dataset, run: core.run, diagnostics: core.diagnostics.inspect(), engine: await core.rpc.call('inspect', {}, 0, true) };
+        case 'reserve-export': return core.rpc.call('reserve-diagnostics', { reservation: request.reservation, bytes: request.bytes }, 256);
+        case 'release-export': return core.rpc.call('release-diagnostics', request.reservation, 128, true);
         case 'enrollment-inspect': return core.rpc.call('enrollment-inspect', {}, 65536, true);
         case 'open-enroll': return core.rpc.call('open-enroll', { dataset: request.dataset, request: request.request }, 65536, true);
         case 'enrollment-revoke': return core.rpc.call('enrollment-revoke', request, 1024, true);
@@ -99,7 +102,7 @@ try {
 } catch (error) {
   let cleanup: unknown;
   if (close) { try { await close(); } catch (failure) { cleanup = failure; } }
-  process.stdout.write(JSON.stringify({ failed: true, code: 'runtime_failed', severity: 'ERROR', component: 'runtime', event: 'runtime_failed', at: new Date().toISOString(), release: '0.1.0',
+  process.stdout.write(JSON.stringify({ failed: true, code: 'runtime_failed', severity: 'ERROR', component: 'runtime', event: 'runtime_failed', at: new Date().toISOString(), release: '0.3.0',
     ...faultFrames(error), ...(cleanup === undefined ? {} : { cleanup_failure: 'shutdown_failed' }) }) + '\n');
   process.exitCode = 1;
 }

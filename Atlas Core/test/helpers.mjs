@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -7,13 +7,14 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { defaults } from '../dist/settings.js';
 import { createCore } from '../dist/server.js';
 import { exchanges } from '@atlas/protocol';
+import { mutableRoot } from './paths.mjs';
+export { mutableRoot } from './paths.mjs';
 
 export const uuid = () => randomUUID();
 export const secret = () => randomBytes(32).toString('base64url');
 export const root = fileURLToPath(new URL('../', import.meta.url));
 export async function fixture(t, overrides = {}) {
-  await mkdir(join(root, 'artifacts'), { recursive: true });
-  const directory = await mkdtemp(join(root, 'artifacts', 'installation-'));
+  const directory = await mkdtemp(join(mutableRoot, 'installation-'));
   const certificate = join(directory, 'tls.pem'), key = join(directory, 'tls.key');
   execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2', '-subj', '/CN=localhost', '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1', '-keyout', key, '-out', certificate], { cwd: root, stdio: 'ignore' });
   const settings = { ...defaults, host: '127.0.0.1', port: 0, freeDiskBytes: 0, ...overrides };
@@ -27,7 +28,7 @@ export async function fixture(t, overrides = {}) {
     const body = data === undefined ? undefined : Buffer.isBuffer(data) ? data : Buffer.from(JSON.stringify(data));
     return new Promise((resolve, reject) => {
       const req = httpsRequest(new URL(path, address), { method, ca, headers: Object.fromEntries(Object.entries({
-        Authorization: `Bearer ${apiKey}`, 'Atlas-Dataset-ID': core.dataset, 'Atlas-Protocol-Version': '0.1.0',
+        Authorization: `Bearer ${apiKey}`, 'Atlas-Dataset-ID': core.dataset, 'Atlas-Protocol-Version': '0.3.0',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json', 'Content-Length': body.byteLength }), ...additional,
       }).filter(([, value]) => value !== undefined && value !== null)) }, res => {
         const chunks = [];

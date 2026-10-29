@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Counter, Uuid } from '@atlas/protocol';
-import { readFile, mkdir, open } from 'node:fs/promises';
+import { mkdir, open } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -20,16 +20,30 @@ export type ContainerWriter = z.infer<typeof ContainerWriter>;
 export const Action = z.strictObject({ format: z.literal(1), action_id: Uuid, installation_id: Uuid,
   kind: z.enum(['reset', 'hard-reset', 'update']), old_dataset: Uuid.nullable(), intended_dataset: Uuid,
   writer: ContainerWriter.nullable(), image: ImageId, phase: z.enum(['intent', 'stopped', 'cleaned', 'established', 'complete']),
-  primary_failure: z.enum(['writer_exit_unverified', 'docker_failed', 'cleanup_failed', 'repair_required']).nullable(),
+  primary_failure: z.enum(['writer_exit_unverified', 'docker_failed', 'cleanup_failed', 'repair_required', 'incompatible_format']).nullable(),
   cleanup_failure: z.enum(['writer_exit_unverified', 'docker_failed', 'cleanup_failed', 'repair_required']).nullable() });
 export type Action = z.infer<typeof Action>;
 export const Proof = z.strictObject({ action_id: Uuid, dataset: Uuid, installation_id: Uuid });
 export const Marker = z.strictObject({ exists: z.boolean(), dataset: Uuid.nullable(), marker: z.object({ dataset: Uuid, actionId: Uuid }).nullable() });
 export type Marker = z.infer<typeof Marker>;
 export async function readJsonFile<S extends z.ZodType>(path: string, schema: S): Promise<z.output<S>> {
-  const file = await readFile(path);
-  if (file.byteLength > 65_536) throw new Error('record_limit');
-  return readLocalJson(file, schema);
+  const file = await open(path, 'r');
+  let primary: unknown;
+  try {
+    const buffer = Buffer.alloc(65_537);
+    let length = 0;
+    while (length < buffer.byteLength) {
+      const { bytesRead } = await file.read(buffer, length, buffer.byteLength - length);
+      if (bytesRead === 0) break;
+      length += bytesRead;
+    }
+    if (length > 65_536) throw new Error('record_limit');
+    return readLocalJson(buffer.subarray(0, length), schema);
+  } catch (error) { primary = error; throw error; }
+  finally {
+    try { await file.close(); }
+    catch (error) { throw primary === undefined ? error : new AggregateError([primary, error], 'record_read_failed'); }
+  }
 }
 export async function optionalJson<S extends z.ZodType>(path: string, schema: S): Promise<z.output<S> | undefined> {
   try { return await readJsonFile(path, schema); }

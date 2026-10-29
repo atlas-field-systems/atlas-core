@@ -1,3 +1,4 @@
+import { orderedTimes } from './history.js';
 import { z } from 'zod';
 import { contract } from './json.js';
 import type { Budget, JsonContract } from './json.js';
@@ -237,10 +238,20 @@ export function historyMatches(
     (request === undefined ||
       'page_token' in request ||
       (request.query_id === data.query_id &&
-        data.readings.every((reading) =>
-          kind === 'track'
-            ? reading.track_ids.includes(request.entity_id)
-            : reading.source_entity_kind === kind && reading.source_entity_id === request.entity_id,
+        data.readings.every(
+          (reading) =>
+            (request.time_groups === undefined ||
+              request.time_groups.includes(reading.time_status)) &&
+            (reading.time_status !== 'known' ||
+              (reading.observed_at !== null &&
+                (request.source_time_from === undefined ||
+                  orderedTimes(request.source_time_from, reading.observed_at, true)) &&
+                (request.source_time_before === undefined ||
+                  orderedTimes(reading.observed_at, request.source_time_before)))) &&
+            (kind === 'track'
+              ? reading.track_ids.includes(request.entity_id)
+              : reading.source_entity_kind === kind &&
+                reading.source_entity_id === request.entity_id),
         )))
   );
 }

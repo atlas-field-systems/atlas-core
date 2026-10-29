@@ -45,5 +45,7 @@ results must catch a plausible broken implementation; generated snapshots alone
 are not an oracle. Do not add a helper test merely to satisfy a test-count habit.
 
 Report the exact changed scope, checks actually run, failures, and unrun coverage.
-Do not weaken a check to get green. This documentation-only baseline has no build
-or test command; introduce commands only with the implementation that supplies them.
+Do not weaken a check to get green. Use the owning layer's pinned build and
+qualification commands. Keep mutable test installations, database sidecars, captures,
+logs, and failure evidence outside the managed workspace. Core's test harness accepts
+`ATLAS_TEST_ROOT`; see [qualification](Atlas%20Core/qualification.md) before running it.

@@ -59,6 +59,14 @@ parent directory. Then take a short transaction, recheck current authority and
 Dataset, and commit ready metadata, retry result, and public change together.
 Only then acknowledge publication.
 
+Once a descriptor matches a committed upload receipt, retry verifies the entire
+incoming stream by bounded count and SHA-256 without another content reservation.
+It rechecks authority, Dataset, original facts, and deletion in the final transaction.
+When the file precedes its descriptor, normal staging can stop at a capacity refusal;
+Core finishes hashing and succeeds only if the later descriptor proves a committed
+exact retry. Otherwise it returns the refusal and reclaims the attempt. Concurrent
+first uploads still need separate staging and admission until one commits.
+
 Staging and installed paths share a local filesystem with supported flush semantics.
 Database durability and actual power-loss qualification follow the [worker contract](database.md#driver-and-durability).
 
@@ -72,7 +80,8 @@ erase evidence.
 ## Retention and capacity
 
 Object holds, accepted report identities, immutable positions, and terminal
-work accumulate until Reset. Bounded replay is not a bound on the entire Dataset.
+work accumulate until Reset, as do compact [assigned-read receipts](task-reads.md).
+Bounded replay is not a bound on the entire Dataset.
 Observations, Tracks, and their historical associations are retained records with
 no individual delete or automatic eviction. Inactivity does not release their storage.
 Charge uploads, active downloads awaiting reclamation, logs, database and indexes,
@@ -88,6 +97,11 @@ byte delta, inspect capacity, and record the reservation in one synchronous step
 Upload descriptors and bounded SQLite/WAL overhead pass admission before persistence,
 even without new binary bytes. Metadata then counts as actual disk use; unwritten
 binary bytes stay reserved until written.
+Contact expiry and restart transitions use required-effect admission before commit.
+If the hard ceiling prevents a transition, retain the prior image and report failure;
+checkpointing and deleted Object reclamation still run so later expiry can succeed.
+Capture cleanup failures do not skip contact expiry or checkpointing. Report each failure.
+Startup cannot serve until restart contact transitions succeed.
 
 ## History and activity
 
