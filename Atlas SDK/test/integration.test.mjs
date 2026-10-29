@@ -30,6 +30,7 @@ for (const mode of ['http', 'full']) {
     const { creation, reporter } = client.reporting.createObservation({
       observation_id: observationId,
       publisher_id: publisherId,
+      source_asset_id: asset.asset_id,
       request_id: uuid(),
     });
     const pair = sent(await creation.send());
@@ -94,6 +95,45 @@ for (const mode of ['http', 'full']) {
       read_id: uuid(),
     });
     assert.deepEqual(success(await assigned.next()).tasks, []);
+    const sourcePage = success(
+      await client.observations.list({ filters: { source_asset_ids: [asset.asset_id] } }).next(),
+    );
+    assert.deepEqual(
+      sourcePage.items.map((item) => item.id),
+      [observationId],
+    );
+    const trackSources = success(
+      await client.tracks
+        .observations({ track_id: pair.track.id, publisher_ids: [publisherId] })
+        .next(),
+    );
+    assert.deepEqual(
+      trackSources.items.map((item) => item.id),
+      [observationId],
+    );
+    const contact = client.assets.contact({
+      asset_id: asset.asset_id,
+      process_generation: asset.process_generation,
+      request_id: uuid(),
+      mode: 'current',
+    });
+    const challenge = success(await contact.read());
+    const proof = registered.reporter.update(
+      { request_id: uuid() },
+      reading(
+        1,
+        {},
+        {
+          generated_at: challenge.issued_at,
+          contact_proof: { challenge_id: challenge.challenge_id },
+        },
+      ),
+    );
+    const checkedIn = sent(await contact.checkIn(proof.submission.facts).send());
+    assert.equal(checkedIn.asset.communications.health, 'healthy');
+    assert.equal(proof.outcome.kind, 'accepted', 'Contact and reporting share prepared evidence');
+    assert.equal(contact.releaseEvidence, 'acknowledged');
+    await contact.close();
     const download = client.objects.content({
       object_id: descriptor.object_id,
       disposition: 'inline',
