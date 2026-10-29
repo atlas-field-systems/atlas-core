@@ -331,13 +331,16 @@ test('Stop awaits diagnostic reservation release while its database worker remai
 for (const name of ['tls.pem', 'tls.key']) {
   for (const failure of ['sync', 'close', 'both']) test(`setup ${name} ${failure} failure prevents a completed manifest and preserves failures`, { timeout: 10_000 }, async t => {
     const directory = await mkdtemp(join(mutableRoot, 'tls-flush-'));
-    t.after(() => rm(directory, { recursive: true, force: true }));
+    const syncing = Promise.withResolvers(), release = Promise.withResolvers();
+    let rejected;
+    t.after(async () => {
+      release.resolve();
+      try { await rejected; } finally { await rm(directory, { recursive: true, force: true }); }
+    });
     const certificate = join(directory, 'source.pem'), key = join(directory, 'source.key'), installation = join(directory, 'installation');
     execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2', '-subj', '/CN=localhost', '-keyout', key, '-out', certificate], { stdio: 'ignore' });
     const probe = await open(certificate), prototype = Object.getPrototypeOf(probe), sync = prototype.sync;
     await probe.close();
-    const syncing = Promise.withResolvers(), release = Promise.withResolvers();
-    t.after(() => release.resolve());
     const syncFailure = new Error('tls_sync_test_failure'), closeFailure = new Error('tls_close_test_failure');
     let handle;
     t.mock.method(prototype, 'sync', async function () {
@@ -353,7 +356,7 @@ for (const name of ['tls.pem', 'tls.key']) {
     });
     const pending = new Administration(installation).setup({ image: `sha256:${'0'.repeat(64)}`, certificate, key,
       credential: { request_id: uuid(), api_key_id: uuid(), secret: 's'.repeat(43) } });
-    const rejected = assert.rejects(pending, error => {
+    rejected = assert.rejects(pending, error => {
       assert.ok(error instanceof AggregateError);
       assert.deepEqual(error.errors, failure === 'sync' ? [syncFailure] : failure === 'close' ? [closeFailure] : [syncFailure, closeFailure]);
       return true;
