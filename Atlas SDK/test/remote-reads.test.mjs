@@ -490,6 +490,57 @@ test('remote handle and byte capacity is checked before allocation and returned 
   assert.equal((await view.close()).evidence, 'unacknowledged');
 });
 
+test(
+  'a history page arriving after expiry cannot charge a swept reservation',
+  { timeout: 80_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const { http } = await publicClient(
+      t,
+      f,
+      { timeoutMs: 120_000 },
+      { handles: 64, retainedBytes: 16384 },
+    );
+    const asset = registration();
+    sent(await http.assets.register(asset).send());
+    const open = () => http.assets.history({ entity_id: asset.asset_id, query_id: uuid() });
+    const capacity = async () => {
+      const handles = [];
+      let refusal;
+      try {
+        for (let i = 0; i < 64; i++) handles.push(open());
+      } catch (error) {
+        refusal = error;
+      }
+      await Promise.all(handles.map((handle) => handle.close()));
+      assert.ok(['capacity', 'payload_too_large'].includes(refusal?.code));
+      return handles.length;
+    };
+    const before = await capacity();
+    const view = open();
+    const reached = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.once('/messages/get_asset_movement_history', async ({ forward }) => {
+      reached.resolve();
+      await release.promise;
+      forward();
+    });
+    const pending = view.next();
+    await reached.promise;
+    await delay(Math.max(0, view.allocation.latestExpiry - performance.now()) + 100);
+    await open().close();
+    release.resolve();
+    const result = await pending;
+    assert.equal(result.kind, 'failed');
+    assert.equal(result.code, 'superseded');
+    assert.equal(view.context, undefined);
+    assert.equal(view.releaseEvidence, 'expired');
+    assert.equal(await capacity(), before);
+    await view.close();
+  },
+);
+
 test('prepared history cannot migrate to a new Core run before its first allocation', async (t) => {
   const f = await fixture(t);
   const { client, http } = await publicClient(t, f);

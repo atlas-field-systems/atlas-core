@@ -316,6 +316,68 @@ test('transfers: declared limits refuse before opening and source-side close awa
   await closing;
 });
 
+test('transfers: failed source cleanup before fetch preserves non-submission and fails close', async (t) => {
+  const f = await fixture(t);
+  const client = createClient({ baseUrl: f.proxyUrl, credentials: () => f.apiKey });
+  t.after(() => assert.rejects(client.close(), ClientCloseError));
+  response(await client.connect());
+  const nativeFetch = globalThis.fetch;
+  let fetches = 0,
+    cancellations = 0,
+    closing;
+  t.mock.method(globalThis, 'fetch', (...args) => {
+    fetches++;
+    return nativeFetch(...args);
+  });
+  const operation = client.objects.upload(descriptor(Buffer.from('one')), {
+    open() {
+      closing = client.close();
+      void closing.catch(() => {});
+      return new ReadableStream(
+        {
+          cancel() {
+            cancellations++;
+            throw new Error('private cleanup failure');
+          },
+        },
+        { highWaterMark: 0 },
+      );
+    },
+  });
+  const result = await operation.send();
+  assert.equal(fetches, 0);
+  assert.equal(cancellations, 1);
+  assert.equal(result.attempt.kind, 'not_sent');
+  assert.equal(result.attempt.code, 'closed');
+  assert.equal(result.outcome.kind, 'not_submitted');
+  await assert.rejects(
+    closing,
+    (error) =>
+      error instanceof ClientCloseError &&
+      error.errors.some((failure) => failure.code === 'network'),
+  );
+});
+
+test('transfers: a truncated HTTPS error body remains a read failure without poisoning close', async (t) => {
+  const f = await fixture(t);
+  const { client } = await setup(t, f);
+  const object_id = uuid();
+  f.once(`/objects/${object_id}/content?disposition=inline`, async ({ outgoing, headers }) => {
+    outgoing.writeHead(404, { ...headers, 'content-length': 1000 });
+    outgoing.write('{');
+    await delay(50);
+    outgoing.destroy();
+  });
+  const download = client.objects.content({ object_id, disposition: 'inline' });
+  assert.equal((await download.open()).kind, 'failed');
+  const result = await download.settled;
+  assert.equal(result.kind, 'failed');
+  assert.equal(result.code, 'network');
+  assert.equal(result.context.receivedBytes, 1);
+  assert.equal(result.context.cleanupFailure, undefined);
+  await client.close();
+});
+
 test('transfers: oversized source chunks fail without proportional copies or publication', async (t) => {
   const f = await fixture(t);
   const { client } = await setup(t, f, { baseUrl: f.address });
