@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, registration, report, telemetry, root, secret } from './helpers.mjs';
 import { uuid } from './helpers.mjs';
-import { writeFile, rm, readdir, stat, statfs, readFile, mkdtemp, mkdir } from 'node:fs/promises';
+import { writeFile, rm, readdir, stat, statfs, readFile, mkdtemp, mkdir, open, chmod } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
 import Database from 'better-sqlite3';
@@ -18,63 +18,71 @@ import { DatabaseWorker, QueuePressure } from '../dist/rpc.js';
 import { diskUsage } from '../dist/capacity.js';
 import { Store } from '../dist/database.js';
 import { Engine } from '../dist/engine.js';
-import { Refusal } from '../dist/fault.js';
-import { exchanges, PROTOCOL_VERSION } from '@atlas/protocol';
+import { PROTOCOL_VERSION } from '@atlas/protocol';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
-test('assigned retries stay read-only at the ceiling and new reads admit bounded cleanup', async t => {
-  const directory = await mkdtemp(join(mutableRoot, 'assigned-cleanup-'));
-  const settings = { ...defaults, freeDiskBytes: 0, storageBytes: 64 * 1024 * 1024, objectBytes: 16 * 1024 * 1024, reserveBytes: 1024 * 1024 };
-  const engine = new Engine(directory, settings);
-  t.after(async () => { await engine.close(); await rm(directory, { recursive: true, force: true }); });
-  const key = secret(); engine.provision({ api_key_id: uuid(), request_id: uuid(), secret: key });
-  const context = { verifier: digest(key), dataset: engine.store.dataset, protocol: PROTOCOL_VERSION };
-  const call = async (name, request) => (await engine.execute({ name, request: exchanges[name].request.schema.parse(request) }, context)).body;
-  const { data: { asset } } = await call('RegisterAsset', registration());
-  for (let i = 0; i < 100; i++) await call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } });
-  const request = { asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid(), page_size: 1 };
-  for (let i = 0; i < 200; i++) await call('GetAssignedTasks', { ...request, read_id: uuid() });
-  const plans = [], prepare = engine.store.db.prepare;
-  t.mock.method(engine.store.db, 'prepare', function(sql) {
-    const statement = Reflect.apply(prepare, this, [sql]);
-    if (!sql.includes('task_instruction_lifetime') || !sql.includes('task_instructions')) return statement;
-    const all = statement.all.bind(statement), database = this;
-    statement.all = (...bindings) => {
-      plans.push(Reflect.apply(prepare, database, [`EXPLAIN QUERY PLAN ${sql}`]).all(...bindings));
-      return all(...bindings);
-    };
-    return statement;
-  });
-  const live = await call('GetAssignedTasks', request);
-  assert.ok(live.data.next_page_token);
-  const ended = engine.store.db.prepare('SELECT read_id FROM task_instruction_lifetime WHERE read_id<>?').all(request.read_id);
-  const previousRuns = ['00000000-0000-4000-8000-000000000000', 'ffffffff-ffff-4fff-bfff-ffffffffffff'];
-  assert.ok(previousRuns[0] < engine.store.run && previousRuns[1] > engine.store.run);
-  const expire = engine.store.db.prepare('UPDATE task_instruction_lifetime SET run=?,deadline=? WHERE read_id=?');
-  for (const [index, { read_id }] of ended.entries()) {
-    expire.run(index % 3 === 0 ? engine.store.run : previousRuns[index % 3 - 1], index % 3 === 0 ? 0 : performance.now() + 120_000, read_id);
+test('HTTP assigned reads preserve receipts on refusal and reclaim at most 16 restart-ended contexts', async t => {
+  const f = await fixture(t, { storageBytes: 16 * 1024 * 1024, objectBytes: 4 * 1024 * 1024, reserveBytes: 1024 * 1024 });
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const taskIds = [uuid(), uuid()].sort();
+  let cursor;
+  for (const task_id of taskIds) {
+    const response = await f.call('CreateTask', { request_id: uuid(), task_id, asset_id: asset.id, command: 'move_to', scheduling: 'queued',
+      inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } });
+    ok(response); cursor = response.json.commit_cursor;
   }
-  engine.store.db.pragma('wal_checkpoint(TRUNCATE)');
-  const pressure = join(directory, 'pressure.bin');
-  await writeFile(pressure, Buffer.alloc(settings.storageBytes - diskUsage(directory).bytes - 4096));
-  const before = diskUsage(directory).bytes, cursor = engine.store.cursor();
-  assert.deepEqual(await call('GetAssignedTasks', request), live);
-  await call('GetAssignedTasks', { page_token: live.data.next_page_token });
-  assert.equal(diskUsage(directory).bytes, before);
-  assert.equal(engine.store.db.prepare('SELECT count(*) AS count FROM task_instructions').get().count, 201);
-  await assert.rejects(call('GetAssignedTasks', { ...request, read_id: uuid() }), error => error.code === 'storage_limit');
-  assert.equal(engine.store.db.prepare('SELECT count(*) AS count FROM task_instructions').get().count, 201);
-  assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
+  assert.ok(cursor);
+  const replay = { from_cursor: cursor, max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
+  const reads = Array.from({ length: 18 }, () => ({ asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid(), page_size: 1 }));
+  for (const request of reads) assert.equal(ok(await f.call('GetAssignedTasks', request)).tasks[0].task_id, taskIds[0]);
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => db.close());
+  const retained = () => ({
+    contexts: db.prepare('SELECT * FROM task_instructions ORDER BY read_id').all(),
+    lifetimes: db.prepare('SELECT * FROM task_instruction_lifetime ORDER BY read_id').all(),
+    receipts: db.prepare('SELECT * FROM task_instruction_receipts ORDER BY read_id').all(),
+  });
+  const beforeRestart = retained();
+  assert.equal(beforeRestart.contexts.length, 18); assert.equal(beforeRestart.receipts.length, 18);
+  await f.restart();
+  assert.deepEqual(retained(), beforeRestart, 'Restart ends contexts without rewriting them or their receipts');
+  await f.core.diagnostics.close();
+  await f.core.rpc.call('tick', {}, 0, true);
+  assert.deepEqual(ok(await f.call('ReadChanges', replay)).messages, []);
+  const pressure = join(f.directory, 'pressure.bin'), filler = await open(pressure, 'wx');
+  try { await filler.truncate(f.settings.storageBytes - diskUsage(f.directory).bytes - 4096); }
+  finally { await filler.close(); }
+  const request = { ...reads[0], read_id: uuid() };
+  assert.equal((await f.call('GetAssignedTasks', request)).json.error.code, 'storage_limit');
+  assert.deepEqual(retained(), beforeRestart, 'Refusal rolls back new identity and every attempted reclamation');
+  assert.equal((await f.call('GetAssignedTasks', reads[0])).json.error.code, 'allocation_expired');
+  assert.equal((await f.call('GetAssignedTasks', { ...reads[0], page_size: 2 })).json.error.code, 'identity_conflict');
+  assert.deepEqual(retained(), beforeRestart, 'Ended read retries perform no cleanup');
   await rm(pressure);
-  await call('GetAssignedTasks', { ...request, read_id: uuid() });
-  const backlog = engine.store.db.prepare('SELECT count(*) AS count FROM task_instruction_lifetime WHERE run<>? OR deadline=0');
-  assert.equal(backlog.get(engine.store.run).count, 184, 'One admitted read reclaims at most 16 ended contexts across all runs');
-  for (let i = 0; i < 20; i++) await call('GetAssignedTasks', { ...request, read_id: uuid() });
-  assert.equal(backlog.get(engine.store.run).count, 0);
-  assert.deepEqual(await call('GetAssignedTasks', request), live);
-  assert.ok(plans.length > 0, 'Observe the executed reclamation query');
-  assert.ok(plans.flat().every(row => !/\bSCAN\b|TEMP B-TREE/.test(row.detail)), JSON.stringify(plans));
-  t.diagnostic(JSON.stringify([...new Set(plans.flat().map(row => row.detail))]));
-  assert.equal(engine.store.cursor(), cursor);
+  const first = ok(await f.call('GetAssignedTasks', request));
+  assert.deepEqual(first.tasks.map(task => task.task_id), [taskIds[0]]); assert.ok(first.next_page_token);
+  const admitted = retained();
+  assert.equal(admitted.contexts.length, 3); assert.equal(admitted.lifetimes.length, 3);
+  assert.equal(admitted.receipts.length, 19, 'Reclamation retains all compact identity receipts');
+  assert.equal(admitted.contexts.filter(row => reads.some(read => read.read_id === row.read_id)).length, 2);
+  const retryPressure = await open(pressure, 'wx');
+  try { await retryPressure.truncate(f.settings.storageBytes - diskUsage(f.directory).bytes - 4096); }
+  finally { await retryPressure.close(); }
+  const continuation = { page_token: first.next_page_token };
+  const last = ok(await f.call('GetAssignedTasks', continuation));
+  assert.deepEqual(last.tasks.map(task => task.task_id), [taskIds[1]]); assert.equal(last.next_page_token, null);
+  assert.deepEqual(ok(await f.call('GetAssignedTasks', request)), first);
+  assert.deepEqual(ok(await f.call('GetAssignedTasks', continuation)), last);
+  assert.deepEqual(retained(), admitted, 'Exact retries and continuations at the ceiling neither allocate nor reclaim');
+  await rm(pressure);
+  ok(await f.call('GetAssignedTasks', { ...request, read_id: uuid() }));
+  assert.equal(retained().contexts.length, 2); assert.equal(retained().receipts.length, 20);
+  for (const read of reads) assert.equal((await f.call('GetAssignedTasks', read)).json.error.code, 'allocation_expired');
+  assert.equal((await f.call('GetAssignedTasks', { ...reads[0], page_size: 2 })).json.error.code, 'identity_conflict');
+  assert.deepEqual(ok(await f.call('GetAssignedTasks', request)), first);
+  const changes = ok(await f.call('ReadChanges', replay));
+  assert.deepEqual(changes.messages, [], 'Read allocation, cleanup and retries publish no progress');
+  assert.equal(changes.through_cursor, cursor);
+  assert.equal(retained().receipts.length, 20);
 });
 test('replay bytes and whole-commit boundaries survive rollback, restart and Reset', async t => {
   const directory = await mkdtemp(join(mutableRoot, 'replay-accounting-'));
@@ -215,21 +223,85 @@ test('contact expiry and restart obey the hard ceiling and can use required-effe
   assert.equal((await call('GetAsset', { asset_id: asset.id })).communications.health, 'offline');
   assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
 });
-test('maintenance reports contact, checkpoint and reclamation failures from the same pass', async t => {
-  const f = await fixture(t), events = [];
-  const call = f.core.rpc.call;
-  t.mock.method(f.core.rpc, 'call', async function(kind, ...args) {
-    if (kind === 'tick') throw new AggregateError([new Refusal('storage_limit'), new Refusal('integrity_fault')], 'worker_cleanup_failed');
-    if (kind === 'retired-files') throw new Refusal('resource_limit');
-    return call.call(this, kind, ...args);
+test('real capture cleanup failure preserves charges while contact expiry and checkpointing continue', { timeout: 25_000 }, async t => {
+  assert.notEqual(process.getuid(), 0, 'The cleanup regression requires an unprivileged filesystem owner');
+  const f = await fixture({ after() {} });
+  const captures = join(f.directory, 'captures');
+  t.after(async () => {
+    await chmod(captures, 0o700);
+    try { await f.core.close(); } finally { await rm(f.directory, { recursive: true, force: true }); }
   });
-  t.mock.method(f.core.diagnostics, 'emit', event => { events.push(event); });
-  const deadline = performance.now() + 3000;
-  while (!events.some(event => event.event === 'background_failure') && performance.now() < deadline) await delay(10);
-  assert.deepEqual(events.filter(event => event.event.startsWith('background_')).map(event => [event.event, event.code]), [
-    ['background_failure', 'storage_limit'], ['background_cleanup_failure', 'integrity_fault'], ['background_cleanup_failure', 'resource_limit'],
-  ]);
-  t.mock.restoreAll();
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const health = ok(await f.call('GetHealth'));
+  const challenge = ok(await f.call('BeginAssetContact', { allocation_context: health.allocation_context, request_id: uuid(),
+    asset_id: asset.id, process_generation: asset.process_generation, mode: 'current' }));
+  const proof = { ...report(f.core.dataset, asset.id, { kind: 'asset_process', process_generation: asset.process_generation }, 1, {}),
+    generated_at: challenge.issued_at, contact_proof: { challenge_id: challenge.challenge_id } };
+  const healthy = ok(await f.call('UpdateAsset', { request_id: uuid(), asset_id: asset.id, report: proof })).asset;
+  assert.equal(healthy.communications.health, 'healthy');
+  const snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context,
+    page_size: 100, max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 }));
+  const files = await readdir(captures); assert.equal(files.length, 1);
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => db.close());
+  const charges = () => db.prepare('SELECT * FROM temporary_files ORDER BY id').all();
+  const before = charges(); assert.equal(before.length, 1); assert.ok(before[0].bytes > 0);
+  await chmod(captures, 0o500);
+  const refused = await f.call('ReleaseSnapshot', { release_token: snapshot.release_token });
+  assert.equal(refused.status, 500); assert.equal(refused.json.error.code, 'integrity_fault');
+  const checkpoints = (await f.core.rpc.call('inspect', {}, 0, true)).metrics.checkpoints;
+  await assert.rejects(f.core.rpc.call('tick', {}, 0, true), error => error.code === 'integrity_fault');
+  assert.ok((await f.core.rpc.call('inspect', {}, 0, true)).metrics.checkpoints > checkpoints,
+    'The worker checkpoints even though its actual capture unlink failed');
+  assert.deepEqual(await readdir(captures), files); assert.deepEqual(charges(), before);
+  const deadline = performance.now() + 18_000;
+  let current;
+  do {
+    current = ok(await f.call('GetAsset', { asset_id: asset.id }));
+    if (current.communications.health === 'degraded') break;
+    await delay(100);
+  } while (performance.now() < deadline);
+  assert.equal(current.communications.health, 'degraded', 'Independent contact maintenance commits despite repeated capture cleanup failure');
+  assert.equal(current.heartbeat.last_contact_at, healthy.heartbeat.last_contact_at);
+  assert.deepEqual(charges(), before); assert.deepEqual(await readdir(captures), files);
+  await chmod(captures, 0o700);
+  await f.core.rpc.call('tick', {}, 0, true);
+  assert.deepEqual(await readdir(captures), []); assert.deepEqual(charges(), []);
+  assert.deepEqual(ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token })), { released: true }, 'Release retry acknowledges completed cleanup');
+  await f.core.diagnostics.close();
+  const logs = join(f.directory, 'logs');
+  const events = (await Promise.all((await readdir(logs)).map(name => readFile(join(logs, name), 'utf8'))))
+    .flatMap(text => text.trim().split('\n').filter(Boolean).map(line => JSON.parse(line)));
+  assert.ok(events.some(event => event.event === 'background_failure' && event.code === 'integrity_fault'));
+});
+test('real worker restart refuses contact transition at the hard ceiling and recovers without losing retained data', async t => {
+  const f = await fixture(t, { storageBytes: 8 * 1024 * 1024, reserveBytes: 1024 * 1024, objectBytes: 1024 * 1024 });
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const health = ok(await f.call('GetHealth'));
+  const challenge = ok(await f.call('BeginAssetContact', { allocation_context: health.allocation_context, request_id: uuid(),
+    asset_id: asset.id, process_generation: asset.process_generation, mode: 'current' }));
+  const proof = { ...report(f.core.dataset, asset.id, { kind: 'asset_process', process_generation: asset.process_generation }, 1, {}),
+    generated_at: challenge.issued_at, contact_proof: { challenge_id: challenge.challenge_id } };
+  const healthy = ok(await f.call('UpdateAsset', { request_id: uuid(), asset_id: asset.id, report: proof })).asset;
+  assert.equal(healthy.communications.health, 'healthy');
+  await f.core.close();
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => db.close());
+  const retained = () => ({ image: db.prepare('SELECT image FROM entity_assets WHERE id=?').get(asset.id).image,
+    sequence: db.prepare("SELECT value FROM core_meta WHERE key='sequence'").get().value });
+  const before = retained();
+  const pressure = join(f.directory, 'pressure.bin'), filler = await open(pressure, 'wx');
+  try { await filler.truncate(f.settings.storageBytes - diskUsage(f.directory).bytes - 32768); }
+  finally { await filler.close(); }
+  await assert.rejects(f.restart(), /database_worker_failed/);
+  assert.deepEqual(retained(), before, 'Failed worker startup must preserve the prior image and public cursor');
+  await rm(pressure);
+  await f.restart();
+  const offline = ok(await f.call('GetAsset', { asset_id: asset.id }));
+  assert.equal(offline.communications.health, 'offline'); assert.equal(offline.heartbeat.last_contact_at, null);
+  assert.equal(offline.process_generation, asset.process_generation); assert.equal(offline.id, asset.id);
+  assert.equal(BigInt(offline.version), BigInt(healthy.version) + 1n, 'Recovery commits one restart transition');
+  assert.equal(ok(await f.call('GetReadiness')).ready, true);
 });
 test('refused contact expiry still reclaims deleted Object files and then transitions without removing pressure', { timeout: 25_000 }, async t => {
   const held = Promise.withResolvers(), resume = Promise.withResolvers(), failures = [], events = [];

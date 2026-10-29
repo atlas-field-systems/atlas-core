@@ -6,7 +6,7 @@ import { fixture, uuid, registration } from './helpers.mjs';
 import { installationLock, recoveryDecision, readJsonFile } from '../dist/installation.js';
 import { z } from 'zod';
 import { processIdentity } from '../dist/ownership.js';
-import { mkdtemp, mkdir, open, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, open, readFile, readlink, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root } from './helpers.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -19,6 +19,7 @@ import { Transfers } from '../dist/transfers.js';
 import { defaults } from '../dist/settings.js';
 import { digest } from '../dist/exact.js';
 import Database from 'better-sqlite3';
+import { Administration } from '../dist/admin.js';
 const run = data => new Promise((resolve, reject) => { const worker = new Worker(new URL('../dist/offline.js', import.meta.url), { workerData: data }); let value; worker.on('message', result => { value = result; }); worker.once('error', reject); worker.once('exit', code => code === 0 ? resolve(value) : reject(new Error('offline_failed'))); });
 test('local JSON reads enforce the byte limit before an input reaches EOF', { timeout: 10000 }, async t => {
   const directory = await mkdtemp(join(mutableRoot, 'local-record-'));
@@ -260,3 +261,114 @@ test('multipart independently bounds descriptor and content when the Object ceil
   assert.equal(rejected.json.error.code, 'payload_too_large');
   assert.equal((await f.call('GetObject', { object_id: descriptor.object_id })).status, 404);
 });
+
+for (const phase of ['prepare-upload', 'installed']) test(`Stop awaits upload ownership held at the ${phase} worker reply`, { timeout: 15_000 }, async t => {
+  const held = Promise.withResolvers(), release = Promise.withResolvers(), cleaning = Promise.withResolvers();
+  const f = await fixture({ after() {} });
+  t.after(async () => { release.resolve(); try { await f.core.close(); } finally { await rm(f.directory, { recursive: true, force: true }); } });
+  const bytes = Buffer.from('owned upload bytes'), descriptor = objectDescriptor(bytes);
+  const call = f.core.rpc.call, closeTransfers = Transfers.prototype.close;
+  let intercepted = false, reclaimed = false;
+  t.mock.method(f.core.rpc, 'call', async function (kind, ...args) {
+    if (kind === 'reclaim') assert.equal(this.available, true, 'Upload cleanup retains a live worker for durable bookkeeping');
+    const value = await call.call(this, kind, ...args);
+    if (kind === 'reclaim') reclaimed = true;
+    if (!intercepted && kind === phase) { intercepted = true; held.resolve(); await release.promise; }
+    return value;
+  });
+  t.mock.method(Transfers.prototype, 'close', async function () { cleaning.resolve(); await closeTransfers.call(this); });
+  const uploading = f.upload(descriptor, bytes);
+  await held.promise;
+  let settled = false;
+  const stopping = f.core.close();
+  void stopping.then(() => { settled = true; }, () => { settled = true; });
+  await cleaning.promise;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(settled, false, 'Stop remains pending while the upload owns an unanswered worker operation');
+  assert.notEqual(f.core.rpc.worker.threadId, -1);
+  release.resolve();
+  const response = await uploading;
+  assert.equal(response.status, 429); assert.equal(response.json.error.code, 'resource_limit');
+  await stopping;
+  assert.equal(reclaimed, true, 'Unpublished attempt reaches acknowledged reclamation before Stop completes');
+  assert.equal(f.core.rpc.worker.threadId, -1);
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'installed')), []);
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  try {
+    assert.equal(db.prepare('SELECT count(*) AS count FROM object_images').get().count, 0);
+    assert.equal(db.prepare("SELECT count(*) AS count FROM object_attempts WHERE state<>'reclaimed'").get().count, 0);
+  } finally { db.close(); }
+});
+
+test('Stop awaits diagnostic reservation release while its database worker remains alive', { timeout: 15_000 }, async t => {
+  const held = Promise.withResolvers(), release = Promise.withResolvers(), draining = Promise.withResolvers();
+  const f = await fixture({ after() {} });
+  t.after(async () => { release.resolve(); try { await f.core.close(); } finally { await rm(f.directory, { recursive: true, force: true }); } });
+  const call = f.core.rpc.call, closeDiagnostics = f.core.diagnostics.close;
+  let intercepted = false, released = false;
+  t.mock.method(f.core.rpc, 'call', async function (kind, ...args) {
+    if (kind === 'release-diagnostics' && !intercepted) { intercepted = true; held.resolve(); await release.promise;
+      assert.equal(this.available, true, 'The reservation owner stays alive until diagnostic release'); }
+    const value = await call.call(this, kind, ...args);
+    if (kind === 'release-diagnostics') released = true;
+    return value;
+  });
+  t.mock.method(f.core.diagnostics, 'close', async function () { draining.resolve(); await closeDiagnostics.call(this); });
+  f.core.diagnostics.emit({ severity: 'INFO', component: 'runtime', event: 'held_release_test' });
+  await held.promise;
+  let settled = false;
+  const stopping = f.core.close();
+  void stopping.then(() => { settled = true; }, () => { settled = true; });
+  await draining.promise;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(settled, false); assert.equal(f.core.rpc.available, true); assert.equal(released, false);
+  release.resolve(); await stopping;
+  assert.equal(released, true); assert.equal(f.core.rpc.worker.threadId, -1);
+  const logs = join(f.directory, 'logs');
+  const events = (await Promise.all((await readdir(logs)).map(name => readFile(join(logs, name), 'utf8'))))
+    .flatMap(text => text.trim().split('\n').filter(Boolean).map(line => JSON.parse(line)));
+  assert.ok(events.some(event => event.event === 'held_release_test'), 'The owned diagnostic write reaches the retained file before Stop returns');
+});
+
+for (const name of ['tls.pem', 'tls.key']) {
+  for (const failure of ['sync', 'close', 'both']) test(`setup ${name} ${failure} failure prevents a completed manifest and preserves failures`, { timeout: 10_000 }, async t => {
+    const directory = await mkdtemp(join(mutableRoot, 'tls-flush-'));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    const certificate = join(directory, 'source.pem'), key = join(directory, 'source.key'), installation = join(directory, 'installation');
+    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2', '-subj', '/CN=localhost', '-keyout', key, '-out', certificate], { stdio: 'ignore' });
+    const probe = await open(certificate), prototype = Object.getPrototypeOf(probe), sync = prototype.sync;
+    await probe.close();
+    const syncing = Promise.withResolvers(), release = Promise.withResolvers();
+    t.after(() => release.resolve());
+    const syncFailure = new Error('tls_sync_test_failure'), closeFailure = new Error('tls_close_test_failure');
+    let handle;
+    t.mock.method(prototype, 'sync', async function () {
+      if (await readlink(`/proc/self/fd/${this.fd}`) !== join(installation, 'setup', name)) return sync.call(this);
+      handle = this;
+      if (failure !== 'sync') {
+        const close = this.close;
+        t.mock.method(this, 'close', async function () { await close.call(this); throw closeFailure; });
+      }
+      syncing.resolve(); await release.promise;
+      if (failure !== 'close') throw syncFailure;
+      return sync.call(this);
+    });
+    const pending = new Administration(installation).setup({ image: `sha256:${'0'.repeat(64)}`, certificate, key,
+      credential: { request_id: uuid(), api_key_id: uuid(), secret: 's'.repeat(43) } });
+    const rejected = assert.rejects(pending, error => {
+      assert.ok(error instanceof AggregateError);
+      assert.deepEqual(error.errors, failure === 'sync' ? [syncFailure] : failure === 'close' ? [closeFailure] : [syncFailure, closeFailure]);
+      return true;
+    });
+    await syncing.promise;
+    await assert.rejects(readFile(join(installation, 'setup', 'installation.json')), { code: 'ENOENT' }, 'Held TLS sync cannot publish setup completion');
+    await assert.rejects(readFile(join(installation, 'software.json')), { code: 'ENOENT' });
+    release.resolve(); await rejected;
+    assert.ok(handle); await assert.rejects(handle.stat(), { code: 'EBADF' }, 'The TLS handle is closed even when flushing fails');
+    await assert.rejects(readFile(join(installation, 'setup', 'installation.json')), { code: 'ENOENT' });
+    await assert.rejects(readFile(join(installation, 'setup', 'settings.json')), { code: 'ENOENT' });
+    assert.deepEqual(await readFile(join(installation, 'setup', 'tls.pem')), await readFile(certificate));
+    assert.deepEqual(await readFile(join(installation, 'setup', 'tls.key')), await readFile(key));
+  });
+}

@@ -131,10 +131,22 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   assert.equal((await api('/messages/get_asset', { asset_id: r.asset_id })).body.error.code, 'dataset_mismatch');
   dataset = action.intended_dataset;
   assert.equal((await api('/messages/get_asset', { asset_id: r.asset_id })).status, 404);
-  assert.equal((await cli('export', '--out', join(base, 'diagnostics.jsonl'))).ok, true);
-  const exported = await readFile(join(base, 'diagnostics.jsonl'), 'utf8');
-  assert.equal(JSON.parse(exported.split('\n')[0]).context.engine.version, '3.53.4');
+  const exportPath = join(base, 'diagnostics.jsonl');
+  const exportResult = await cli('export', '--out', exportPath); assert.equal(exportResult.ok, true, JSON.stringify(exportResult));
+  const exportBytes = await readFile(exportPath), exported = exportBytes.toString('utf8');
+  const exportedLines = exported.trim().split('\n').map(line => JSON.parse(line));
+  assert.equal(exportedLines[0].context.engine.version, '3.53.4');
+  assert.equal(exportResult.data.bytes, exportBytes.length); assert.equal((await stat(exportPath)).size, exportBytes.length);
+  assert.equal(exportedLines.at(-1).included_events, exportedLines.length - 2);
+  assert.equal(exportedLines.at(-1).partial, exportResult.data.partial);
   assert.ok(!exported.includes(apiKey)); assert.ok(!exported.includes(enrollment.secret));
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const failed = await cli('export', '--out', exportPath);
+    assert.equal(failed.ok, false, 'An existing output path must be refused');
+    assert.deepEqual(await readFile(exportPath), exportBytes, 'Failed export cannot overwrite the existing bundle');
+  }
+  const afterFailures = await cli('export', '--out', join(base, 'after-existing-path.jsonl'));
+  assert.equal(afterFailures.ok, true, JSON.stringify(afterFailures));
   const pressure = join(installation, 'data', 'export-pressure');
   const filler = await open(pressure, 'wx');
   try { await filler.truncate(settings.storageBytes - settings.reserveBytes - diskUsage(installation).bytes - 32768); }
@@ -174,6 +186,31 @@ test('real CLI and pinned container retain Restart, fence Reset, recover proof a
   assert.equal((await api('/health')).status, 401);
   assert.equal((await api('/health', undefined, newKey)).status, 200);
   const stopped = await cli('stop'); assert.equal(stopped.ok, true, JSON.stringify(stopped));
+  await t.test('stopped export checks aggregate capacity and persists a complete independently counted trailer', async () => {
+    const path = join(base, 'stopped-export.jsonl'), pressure = join(installation, 'data', 'stopped-pressure');
+    const logs = join(installation, 'data', 'logs');
+    for (const name of await readdir(logs)) await rm(join(logs, name));
+    const event = { at: '2026-10-29T00:00:00Z', severity: 'INFO', event: 'export_fixture', component: 'runtime', release: '0.3.0', count: 17 };
+    await writeFile(join(logs, 'events.0.jsonl'), JSON.stringify(event) + '\ninvalid JSON\n');
+    const database = join(installation, 'data', 'core.sqlite'), before = await readFile(database);
+    const filler = await open(pressure, 'wx');
+    try { await filler.truncate(candidate.storageBytes - candidate.reserveBytes - diskUsage(installation).bytes - 32768); }
+    finally { await filler.close(); }
+    try {
+      const refused = await cli('export', '--out', path);
+      assert.equal(refused.ok, false); assert.equal(refused.code, 'storage_limit', JSON.stringify(refused));
+      await assert.rejects(stat(path), { code: 'ENOENT' });
+      assert.deepEqual(await readFile(database), before, 'Stopped pressure refusal preserves retained SQLite bytes');
+    } finally { await rm(pressure); }
+    const result = await cli('export', '--out', path); assert.equal(result.ok, true, JSON.stringify(result));
+    const bytes = await readFile(path), lines = bytes.toString('utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(result.data.bytes, bytes.length); assert.equal((await stat(path)).size, bytes.length);
+    assert.equal(lines[0].context.marker.exists, true);
+    assert.deepEqual(lines.slice(1, -1), [event]);
+    assert.deepEqual(lines.at(-1), { partial: true, included_events: 1, omitted_events: 1 });
+    assert.equal(result.data.partial, true);
+    assert.deepEqual(await readFile(database), before, 'Successful stopped export also uses read-only inspection');
+  });
   await t.test('incompatible update and pending recovery preserve retained data and setup', async () => {
     const path = join(installation, 'data', 'core.sqlite');
     const db = new Database(path);
