@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@atlas/protocol": "file:artifacts/atlas-protocol-0.3.0.tgz",
+    "@noble/hashes": "2.4.0",
     "zod": "4.6.7"
   },
   "devDependencies": {

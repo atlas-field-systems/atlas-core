@@ -14,6 +14,10 @@ export type LocalCode =
   | 'network'
   | 'deadline'
   | 'cancelled'
+  | 'unsupported_source'
+  | 'non_replayable_source'
+  | 'source_failure'
+  | 'integrity_mismatch'
   | 'superseded';
 
 const localCodes = {
@@ -39,6 +43,10 @@ const localCodes = {
   network: true,
   deadline: true,
   cancelled: true,
+  unsupported_source: true,
+  non_replayable_source: true,
+  source_failure: true,
+  integrity_mismatch: true,
   superseded: true,
 } satisfies Record<LocalCode, true>;
 export function isLocalCode(value: unknown): value is LocalCode {
