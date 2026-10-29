@@ -10,6 +10,8 @@ import type { MutationPolicy } from './policy.js';
 type Cell = {
   epoch: number;
   canonical: string;
+  bytes: number;
+  handles: number;
   pending: number;
   attempts: number;
   uncertain: boolean;
@@ -37,6 +39,12 @@ export class Operations {
   readonly #cells = new Map<string, Cell>();
   #bytes = 0;
   constructor(readonly session: Session) {}
+
+  #retire(key: string, cell: Cell): void {
+    if (cell.handles !== 0 || cell.pending !== 0 || this.#cells.get(key) !== cell) return;
+    this.#cells.delete(key);
+    this.#bytes -= cell.bytes;
+  }
 
   bind<R extends z.ZodType, S extends z.ZodType<JsonReply>>(
     binding: JsonBinding<R, S> & { operationId: ExchangeName },
@@ -77,6 +85,8 @@ export class Operations {
         cell = {
           epoch: session.datasetEpoch,
           canonical: facts,
+          bytes: cost,
+          handles: 0,
           pending: 0,
           attempts: 0,
           uncertain: false,
@@ -87,6 +97,8 @@ export class Operations {
         this.#bytes += cost;
       }
       const shared = cell;
+      shared.handles++;
+      let closed = false;
       const epoch = shared.epoch;
       const outcome = (): OperationOutcome => {
         const knowledge = freeze(evidence(shared));
@@ -127,11 +139,14 @@ export class Operations {
             } else if (result.kind !== 'not_sent') {
               shared.uncertain = true;
             }
+            this.#retire(key, shared);
           },
         };
       };
       const start: Prepared<z.output<R>, z.output<S>>['start'] = (options = {}) => {
         const mutation = nextOwner();
+        if (closed)
+          return session.refuse(binding.operationId, 'closed', crypto.randomUUID(), mutation);
         if (outcome().kind === 'dataset_invalidated')
           return session.refuse(
             binding.operationId,
@@ -155,14 +170,20 @@ export class Operations {
         get outcome() {
           return freeze(outcome());
         },
+        close: () => {
+          if (closed) return;
+          closed = true;
+          shared.handles--;
+          this.#retire(key, shared);
+        },
         start,
         async send(options = {}) {
-          if (options.signal?.aborted) {
+          if (closed || options.signal?.aborted) {
             const id = crypto.randomUUID();
             return {
               attempt: await session.refuse<z.output<S>>(
                 binding.operationId,
-                'cancelled',
+                closed ? 'closed' : 'cancelled',
                 id,
                 nextOwner(),
               ).settled,

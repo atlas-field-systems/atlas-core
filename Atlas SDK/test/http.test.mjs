@@ -591,3 +591,61 @@ test('same-Dataset restart keeps exact retries and close drains active attempts'
   assert.equal(operation.outcome.kind, 'accepted');
   assert.equal(f.traffic.length, before);
 });
+
+for (const retryAlias of [false, true])
+  test(`operation close preserves shared handles and pending evidence with alias retry=${retryAlias}`, async (t) => {
+    const f = await fixture(t),
+      client = await connected(f, { limits: { preparedOperations: 1 } });
+    const facts = { operator_id: uuid(), request_id: uuid(), name: 'Retained outcome' };
+    const first = client.operators.create(facts),
+      alias = client.operators.create({ ...facts });
+    const reached = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.once('/messages/create_operator', async ({ forward }) => {
+      reached.resolve();
+      await release.promise;
+      forward();
+    });
+    const attempt = first.start();
+    await reached.promise;
+    first.close();
+    first.close();
+    assert.equal((await first.send()).attempt.code, 'closed');
+    assert.equal(alias.outcome.kind, 'unknown_outcome');
+    if (retryAlias) success((await alias.send()).attempt);
+    const replacement = { operator_id: uuid(), request_id: uuid(), name: 'New operation' };
+    assert.throws(() => client.operators.create(replacement), { code: 'capacity' });
+    alias.close();
+    assert.throws(() => client.operators.create(replacement), { code: 'capacity' });
+    release.resolve();
+    const committed = success(await attempt.settled);
+    assert.equal(first.outcome.kind, 'accepted');
+    assert.deepEqual(alias.outcome, first.outcome);
+    const next = client.operators.create(replacement);
+    assert.equal(next.outcome.kind, 'not_submitted');
+    next.close();
+    const retry = client.operators.create(facts);
+    assert.equal(retry.outcome.kind, 'not_submitted');
+    assert.equal(success((await retry.send()).attempt).commit_cursor, committed.commit_cursor);
+    retry.close();
+    const page = success(await client.operators.list({}).next());
+    assert.equal(page.data.items.length, 1);
+  });
+
+test('closing an uncertain write frees its slot without claiming no effect or erasing its retained outcome', async (t) => {
+  const f = await fixture(t),
+    client = await connected(f, { limits: { preparedOperations: 1 } });
+  const facts = { operator_id: uuid(), request_id: uuid(), name: 'Lost reply' };
+  const operation = client.operators.create(facts);
+  f.once('/messages/create_operator', ({ outgoing }) => outgoing.destroy());
+  assert.equal((await operation.send()).outcome.kind, 'unknown_outcome');
+  operation.close();
+  assert.equal(operation.outcome.kind, 'unknown_outcome');
+  const retry = client.operators.create(facts);
+  assert.equal((await retry.send()).outcome.kind, 'accepted');
+  assert.equal(operation.outcome.kind, 'unknown_outcome');
+  assert.equal((await operation.send()).attempt.code, 'closed');
+  assert.equal(success(await client.operators.list({}).next()).data.items.length, 1);
+  retry.close();
+});

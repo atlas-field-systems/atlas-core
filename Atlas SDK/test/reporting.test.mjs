@@ -265,3 +265,46 @@ test('report sections preserve omission and withdrawals and source queries retai
   assert.deepEqual(page.readings[0].track_ids, [pair.track.id]);
   success(await history.close());
 });
+
+for (const [budget, limits] of [
+  ['operation count', { preparedOperations: 1 }],
+  ['prepared bytes', { preparedOperations: 64, preparedBytes: 16384 }],
+])
+  test(`explicit operation close reclaims ${budget} without automatic evidence eviction`, async (t) => {
+    const f = await fixture(t);
+    const { reporting, http } = await publicClient(t, f, { limits });
+    const publisher_id = uuid(),
+      observation_id = uuid();
+    const { creation, reporter } = reporting.createObservation({
+      request_id: uuid(),
+      publisher_id,
+      observation_id,
+    });
+    sent(await creation.send());
+    creation.close();
+    const origin = { kind: 'publisher', publisher_id };
+    for (let sequence = 1; sequence <= 16; sequence++) {
+      const facts = reading(sequence, {
+        telemetry: telemetry(
+          origin,
+          sequence,
+          new Date(Date.UTC(2026, 9, 21, 12) + sequence * 1000).toISOString(),
+        ),
+      });
+      const operation = reporter.report(facts);
+      sent(await operation.send());
+      const accepted = operation.outcome;
+      assert.throws(
+        () => reporter.report({ ...facts, report_id: uuid(), sequence: String(sequence + 1) }),
+        { code: 'capacity' },
+      );
+      operation.close();
+      operation.close();
+      const traffic = f.traffic.length;
+      assert.equal((await operation.start().settled).code, 'closed');
+      assert.equal((await operation.send()).attempt.code, 'closed');
+      assert.equal(f.traffic.length, traffic);
+      assert.deepEqual(operation.outcome, accepted);
+    }
+    assert.equal(success(await http.observations.get({ observation_id })).id, observation_id);
+  });

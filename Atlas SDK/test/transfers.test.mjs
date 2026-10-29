@@ -120,6 +120,14 @@ test('transfers: fresh byte-zero streams recover a lost committed reply with one
   assert.equal(operation.outcome.kind, 'accepted');
   assert.equal(opens, 2);
   assert.equal(recovered.attempt.context.suppliedBytes, bytes.length);
+  operation.close();
+  same.close();
+  const traffic = f.traffic.length;
+  const closed = await same.send();
+  assert.equal(closed.attempt.code, 'closed');
+  assert.equal(closed.outcome.kind, 'accepted');
+  assert.equal(opens, 2);
+  assert.equal(f.traffic.length, traffic);
   const listed = response(await client.objects.list({}).next()).body.data;
   assert.deepEqual(
     listed.items.map((x) => x.object_id),

@@ -11,7 +11,11 @@ function check(value, message) {
 
 /** @param {Configuration} config */
 export async function runHttp(config) {
-  const client = createClient({ baseUrl: config.baseUrl, credentials: () => config.credential });
+  const client = createClient({
+    baseUrl: config.baseUrl,
+    credentials: () => config.credential,
+    limits: { preparedOperations: 1 },
+  });
   /** @type {AttemptContext[]} */
   const contexts = [];
   const operatorId = NewId.parse(crypto.randomUUID());
@@ -53,6 +57,24 @@ export async function runHttp(config) {
       'Retry retains original effect',
     );
     contexts.push(retry.attempt.context);
+    prepared.close();
+    prepared.close();
+    const afterOperationClose = await prepared.send();
+    check(
+      afterOperationClose.attempt.kind === 'not_sent' &&
+        afterOperationClose.attempt.code === 'closed',
+      'Closed operation cannot retry',
+    );
+    check(
+      afterOperationClose.outcome.kind === 'accepted',
+      'Closed operation preserves accepted evidence',
+    );
+    const unused = client.operators.create({
+      operator_id: NewId.parse(crypto.randomUUID()),
+      request_id: NewId.parse(crypto.randomUUID()),
+      name: 'Released slot',
+    });
+    unused.close();
     const read = await client.operators.get({ operator_id: operatorId });
     check(read.kind === 'response' && read.response.kind === 'success', 'Typed browser read');
     check(read.response.body.data.operator_id === operatorId, 'Read identity');
@@ -85,6 +107,7 @@ export async function runHttp(config) {
         'default HTTP mode',
         'typed mutation and read',
         'deliberate retry with one effect',
+        'explicit operation close preserves evidence and frees capacity',
         'complete list',
         'SDK close',
       ],

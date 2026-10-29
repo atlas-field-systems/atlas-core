@@ -61,6 +61,7 @@ const rows = view.context?.baseline_cursor;
 const reporter = reporting.observation({ id, publisher_id: id });
 const prepared = reporter.report({ report_id: newId, sequence: Sequence.parse('9007199254740993'), generated_at: null, mode: 'current', sections: { type: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { kind: 'person' } } } });
 const reportId: string = prepared.submission.facts.report.report_id;
+const reportClosed: void = prepared.close();
 const asset = reporting.asset({ id, process_generation: id });
 asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: at, mode: 'current', sections: {}, contact_proof: { challenge_id: id } });
 component(Position, { latitude: 51.5, longitude: -0.1 });
@@ -71,6 +72,7 @@ const trackHistory: HistoryView = full.tracks.history({ entity_id: id, query_id:
 const assigned: AssignedInstructions = full.tasks.assigned({ asset_id: id, process_generation: id, read_id: newId });
 const contact: ContactRequest = full.assets.contact({ asset_id: id, process_generation: id, request_id: newId, mode: 'current' });
 const upload: PreparedUpload = client.objects.upload({ object_id: newId, request_id: newId, byte_length: Counter.parse('0'), sha256: 'a'.repeat(64), content_type: 'text/plain', metadata: { associations: [] } }, new Blob());
+const uploadClosed: void = upload.close();
 const download: ContentDownload = full.objects.content({ object_id: id, disposition: 'attachment' }, { maxBytes: 0 });
 const opened = await download.open();
 if (opened.kind === 'response' && opened.response.kind === 'content') {

@@ -21,6 +21,7 @@ const operation = client.operators.create({
   name: 'Pilot',
 });
 const result = await operation.send();
+operation.close();
 const cleanup = await client.close();
 ```
 

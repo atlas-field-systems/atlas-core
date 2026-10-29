@@ -107,6 +107,7 @@ export type Submission<R> = Readonly<{
 export type Prepared<R, T> = Readonly<{
   submission: Submission<R>;
   outcome: OperationOutcome;
+  close: () => void;
   start: (options?: Omit<RequestOptions, 'signal'>) => Attempt<T>;
   send: (options?: RequestOptions) => Promise<
     Readonly<{
