@@ -14,8 +14,68 @@ import { processIdentity } from '../dist/ownership.js';
 import { digest } from '../dist/exact.js';
 import { defaults } from '../dist/settings.js';
 import { diskUsage } from '../dist/capacity.js';
+import { Transfers } from '../dist/transfers.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 const descriptor = bytes => ({ request_id: uuid(), object_id: uuid(), byte_length: String(bytes.byteLength), sha256: createHash('sha256').update(bytes).digest('hex'), content_type: 'application/octet-stream', metadata: { associations: [] } });
+for (const boundary of ['authorization', 'between parts']) test(`aborted upload settles across ${boundary} and shutdown reclaims its resources`, async t => {
+  const held = Promise.withResolvers(), release = Promise.withResolvers(), started = Promise.withResolvers(), rawClosed = Promise.withResolvers();
+  const f = await fixture({ after: action => t.after(async () => { release.resolve(); await action(); }) }, { maxUploads: 1 });
+  const bytes = Buffer.from('interrupted content'), input = descriptor(bytes);
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => db.close());
+  const cursor = db.prepare("SELECT value FROM core_meta WHERE key='sequence'").get().value;
+  const originalCall = f.core.rpc.call, originalUpload = Transfers.prototype.upload;
+  let first = true, receiving;
+  t.mock.method(f.core.rpc, 'call', async function(kind, ...args) {
+    const result = await originalCall.call(this, kind, ...args);
+    if (first && kind === (boundary === 'authorization' ? 'authorize' : 'upload-written')) {
+      first = false; held.resolve(); await release.promise;
+    }
+    return result;
+  });
+  t.mock.method(Transfers.prototype, 'upload', function(...args) {
+    const work = originalUpload.apply(this, args);
+    receiving = work.then(() => assert.fail('Aborted upload cannot succeed'), error => error);
+    started.resolve();
+    return work;
+  });
+  let raw;
+  f.core.app.server.once('request', request => { raw = request; request.once('close', rawClosed.resolve); });
+  const req = httpsRequest(new URL('/objects', f.address), { method: 'POST', ca: f.ca, headers: {
+    Authorization: `Bearer ${f.apiKey}`, 'Atlas-Dataset-ID': f.core.dataset, 'Atlas-Protocol-Version': '0.3.0',
+    'Content-Type': 'multipart/form-data; boundary=interrupted',
+  } });
+  req.on('error', () => {});
+  t.after(() => req.destroy());
+  const clientClosed = new Promise(resolve => req.once('close', resolve));
+  if (boundary === 'authorization') req.flushHeaders();
+  else req.write(Buffer.concat([Buffer.from('--interrupted\r\nContent-Disposition: form-data; name="file"; filename="owned.bin"\r\n\r\n'), bytes,
+    Buffer.from(`\r\n--interrupted\r\nContent-Disposition: form-data; name="descriptor"\r\n\r\n${JSON.stringify(input)}`)]));
+  await held.promise;
+  if (boundary === 'between parts') {
+    assert.deepEqual(db.prepare('SELECT state,bytes FROM object_attempts').all(), [{ state: 'active', bytes: bytes.length }]);
+    const staging = join(f.directory, 'objects', 'staging');
+    const names = await readdir(staging);
+    assert.equal(names.length, 1);
+    assert.deepEqual(await readFile(join(staging, names[0])), bytes);
+  }
+  req.destroy();
+  await Promise.all([clientClosed, rawClosed.promise]);
+  assert.equal(raw.aborted, true);
+  assert.equal(raw.destroyed, true);
+  assert.equal(raw.readableEnded, false);
+  release.resolve();
+  await started.promise;
+  t.diagnostic(JSON.stringify({ boundary, aborted: raw.aborted, destroyed: raw.destroyed, complete: raw.complete, readableEnded: raw.readableEnded }));
+  await f.core.close();
+  assert.ok(await receiving instanceof Error);
+  assert.equal(f.core.rpc.worker.threadId, -1);
+  assert.equal(db.prepare('SELECT count(*) AS count FROM object_images').get().count, 0);
+  assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='sequence'").get().value, cursor);
+  assert.equal(db.prepare("SELECT count(*) AS count FROM object_attempts WHERE state<>'reclaimed'").get().count, 0);
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
+  assert.deepEqual(await readdir(join(f.directory, 'objects', 'installed')), []);
+});
 for (const failBookkeeping of [false, true]) test(`shutdown awaits active reclamation and preserves failure=${failBookkeeping}`, { timeout: 15_000 }, async t => {
   const f = await fixture({ after() {} });
   const held = Promise.withResolvers(), release = Promise.withResolvers();

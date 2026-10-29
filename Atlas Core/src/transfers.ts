@@ -59,7 +59,7 @@ export class Transfers {
     this.receivers.set(request, receiver);
     const attemptId = id();
     let attempt: Attempt | undefined, file: FileHandle | undefined, primary: unknown;
-    const checkOpen = () => { if (this.closing) refuse('resource_limit'); };
+    const checkOpen = () => { if (request.raw.aborted) refuse('invalid_request'); if (this.closing) refuse('resource_limit'); };
     const discard = async () => {
       if (file !== undefined) { await file.close(); file = undefined; }
       if (attempt !== undefined) { await this.cleanup(attemptId); attempt = undefined; }
@@ -69,6 +69,8 @@ export class Transfers {
       let descriptor: UploadDescriptor | undefined, seenFile = false, length = 0, replay = false;
       let deferred: Refusal | undefined;
       const hash = createHash('sha256');
+      // Multipart only observes request closes after iteration starts.
+      checkOpen();
       for await (const part of request.parts()) {
         checkOpen();
         if (part.type !== 'file' || part.encoding !== '7bit' && part.encoding !== 'binary' && part.encoding !== '8bit') refuse('invalid_request');
@@ -133,6 +135,7 @@ export class Transfers {
           } else refuse('invalid_request');
         } finally { delete receiver.stream; this.streams.delete(part.file); if (!part.file.readableEnded) part.file.destroy(); }
       }
+      checkOpen();
       if (!seenFile || descriptor === undefined || String(length) !== descriptor.byte_length || hash.digest('hex') !== descriptor.sha256) refuse('invalid_request');
       this.diagnostics.emit({ severity: 'INFO', component: 'objects', event: 'content_verified', bytes: length });
       if (replay) {
