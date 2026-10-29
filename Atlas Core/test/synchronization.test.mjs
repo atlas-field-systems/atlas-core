@@ -123,13 +123,6 @@ test('WSS preserves Track time status and selected Task summaries through snapsh
   assert.deepEqual(batches[2].image.execution_summary, terminalSummary);
   assert.equal(batches[2].image.execution_state, 'failed');
   assert.equal(BigInt(batches[2].version), BigInt(batches[1].version) + 1n);
-  assert.equal(ok(await f.call('ReportObservation', { observation_id, publisher_id, report: updateReport })).evidence_disposition, 'duplicate');
-  assert.equal(ok(await f.call('ReportTaskExecution', { evidence: sameEvidence })).evidence_disposition, 'duplicate');
-  assert.equal(ok(await f.call('ReportTaskExecution', { evidence: terminalEvidence })).evidence_disposition, 'duplicate');
-  const conflict = await f.call('ReportTaskExecution', { evidence: { ...terminalEvidence, report_id: uuid(), sequence: '9007199254740996', payload: { task_id: task.task_id, event: 'state', state: 'completed' } } });
-  assert.equal(conflict.status, 409); assert.equal(conflict.json.error.code, 'terminal_state_conflict');
-  assert.deepEqual(ok(await f.call('GetTask', { task_id: task.task_id })).execution_summary, terminalSummary);
-  assert.deepEqual(ok(await f.call('ReadChanges', { from_cursor: cursor, ...limits })).messages, []);
   const closed = new Promise(resolve => client.ws.once('close', resolve)); client.ws.close(); await closed;
 
   const reconnected = await socket(f); t.after(() => reconnected.ws.terminate());

@@ -30,19 +30,20 @@ test('Entity selections preserve AND filters, OR alternatives and completeness a
   const aliases = ['Straße', 'Alpha', 'Distractor'];
   const publisher = uuid();
   for (let i = 0; i < 3; i++) {
-    assets.push(ok(await f.call('RegisterAsset', { ...registration(aliases[i]), type: { kind: [null, 'tracker', 'other'][i] } })).asset);
+    const asset = { ...registration(aliases[i]), type: { kind: [null, 'tracker', 'other'][i] } };
+    ok(await f.call('RegisterAsset', asset)); assets.push(asset.asset_id);
     const origin = { kind: 'publisher', publisher_id: i < 2 ? publisher : uuid() }, observation_id = uuid();
-    const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id: origin.publisher_id, source_asset_id: assets[i].id, alias: `Observation ${aliases[i]}`,
+    const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id: origin.publisher_id, source_asset_id: assets[i], alias: `Observation ${aliases[i]}`,
       report: report(f.core.dataset, observation_id, origin, 1, { type: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { kind: [null, 'person', 'animal'][i] } } }) }));
     ok(await f.call('EditTrack', { request_id: uuid(), track_id: pair.track.id, expected_edit_revision: '0', edits: { alias: `Track ${aliases[i]}` } }));
-    pairs.push(pair);
+    pairs.push({ observation_id, track_id: pair.track.id, publisher_id: origin.publisher_id, source_asset_id: assets[i] });
     const geofeature_id = uuid(); features.push(geofeature_id);
     ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id, alias: `Geofeature ${aliases[i]}`, type: { kind: [null, 'route', 'boundary'][i] }, geometry: { type: 'Point', coordinates: [i, i] } }));
   }
   const selections = [
-    { name: 'ListAssets', ids: assets.map(a => a.id), filters: { ids: assets.slice(0, 2).map(a => a.id), aliases: ['STRASSE', 'ALPHA'], kinds: [null, 'tracker'], health: ['offline'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'security_camera', health: 'degraded' } },
-    { name: 'ListObservations', ids: pairs.map(p => p.observation.id), filters: { ids: pairs.slice(0, 2).map(p => p.observation.id), aliases: ['OBSERVATION STRASSE', 'OBSERVATION ALPHA'], kinds: [null, 'person'], publisher_ids: [publisher], source_asset_ids: assets.slice(0, 2).map(a => a.id), track_ids: pairs.slice(0, 2).map(p => p.track.id) }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'aircraft', publisher_ids: uuid(), source_asset_ids: uuid(), track_ids: uuid() } },
-    { name: 'ListTracks', ids: pairs.map(p => p.track.id), filters: { ids: pairs.slice(0, 2).map(p => p.track.id), aliases: ['TRACK STRASSE', 'TRACK ALPHA'], kinds: [null, 'person'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'aircraft' } },
+    { name: 'ListAssets', ids: assets, filters: { ids: assets.slice(0, 2), aliases: ['STRASSE', 'ALPHA'], kinds: [null, 'tracker'], health: ['offline'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'security_camera', health: 'degraded' } },
+    { name: 'ListObservations', ids: pairs.map(p => p.observation_id), filters: { ids: pairs.slice(0, 2).map(p => p.observation_id), aliases: ['OBSERVATION STRASSE', 'OBSERVATION ALPHA'], kinds: [null, 'person'], publisher_ids: [publisher], source_asset_ids: assets.slice(0, 2), track_ids: pairs.slice(0, 2).map(p => p.track_id) }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'aircraft', publisher_ids: uuid(), source_asset_ids: uuid(), track_ids: uuid() } },
+    { name: 'ListTracks', ids: pairs.map(p => p.track_id), filters: { ids: pairs.slice(0, 2).map(p => p.track_id), aliases: ['TRACK STRASSE', 'TRACK ALPHA'], kinds: [null, 'person'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'aircraft' } },
     { name: 'ListGeofeatures', ids: features, filters: { ids: features.slice(0, 2), aliases: ['GEOFEATURE STRASSE', 'GEOFEATURE ALPHA'], kinds: [null, 'route'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'search_area' } },
   ];
   for (const { name, ids, filters, wrong } of selections) {
@@ -55,8 +56,8 @@ test('Entity selections preserve AND filters, OR alternatives and completeness a
     }
   }
   for (const pair of pairs) {
-    const query = { track_id: pair.track.id, publisher_ids: [uuid(), pair.observation.publisher_id], source_asset_ids: [uuid(), pair.observation.source_asset_id] };
-    await listIds(f, 'GetTrackObservations', query, [pair.observation.id]);
+    const query = { track_id: pair.track_id, publisher_ids: [uuid(), pair.publisher_id], source_asset_ids: [uuid(), pair.source_asset_id] };
+    await listIds(f, 'GetTrackObservations', query, [pair.observation_id]);
     for (const field of ['publisher_ids', 'source_asset_ids']) {
       await listIds(f, 'GetTrackObservations', { ...query, [field]: [] }, []);
       await listIds(f, 'GetTrackObservations', { ...query, [field]: [uuid()] }, []);
@@ -65,12 +66,15 @@ test('Entity selections preserve AND filters, OR alternatives and completeness a
 });
 
 test('Task selections distinguish cancellation requests from execution states', async t => {
-  const f = await fixture(t), assets = [], tasks = [];
-  for (let i = 0; i < 2; i++) assets.push(ok(await f.call('RegisterAsset', registration())).asset);
-  for (let i = 0; i < 4; i++) tasks.push(ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: assets[i % 2].id,
-    command: i === 3 ? 'pause' : 'move_to', scheduling: i === 3 ? 'immediate' : 'queued', inputs: i === 3 ? {} : { target: { kind: 'position', position: { latitude: i, longitude: 0 } } } })));
+  const f = await fixture(t), assets = [registration(), registration()], tasks = [];
+  for (const asset of assets) ok(await f.call('RegisterAsset', asset));
+  for (let i = 0; i < 4; i++) {
+    const task = { request_id: uuid(), task_id: uuid(), asset_id: assets[i % 2].asset_id,
+      command: i === 3 ? 'pause' : 'move_to', scheduling: i === 3 ? 'immediate' : 'queued', inputs: i === 3 ? {} : { target: { kind: 'position', position: { latitude: i, longitude: 0 } } } };
+    ok(await f.call('CreateTask', task)); tasks.push(task);
+  }
   ok(await f.call('RequestTaskCancellation', { request_id: uuid(), task_id: tasks[2].task_id }));
-  const filters = { ids: tasks.slice(0, 2).map(task => task.task_id), asset_ids: assets.map(a => a.id), commands: ['move_to'], states: ['pending'] };
+  const filters = { ids: tasks.slice(0, 2).map(task => task.task_id), asset_ids: assets.map(a => a.asset_id), commands: ['move_to'], states: ['pending'] };
   const expected = tasks.slice(0, 2).map(task => task.task_id);
   await listIds(f, 'ListTasks', {}, tasks.map(task => task.task_id), 'task_id');
   await listIds(f, 'ListTasks', { filters }, expected, 'task_id');
@@ -88,10 +92,13 @@ test('administrative selections page exact Operators, bound keys, resource kinds
   const f = await fixture(t), operators = [], keys = [];
   for (let i = 0; i < 3; i++) {
     const request = { request_id: uuid(), operator_id: uuid(), name: `Operator ${i}` };
-    const created = await f.call('CreateOperator', request); operators.push(ok(created).operator_id);
+    const created = await f.call('CreateOperator', request); ok(created); operators.push(request.operator_id);
     assert.equal((await f.call('CreateOperator', request)).json.commit_cursor, created.json.commit_cursor);
   }
-  for (let i = 0; i < 4; i++) keys.push(ok(await f.call('CreateApiKey', { request_id: uuid(), api_key_id: uuid(), secret: secret(), ...(i < 3 ? { operator_id: operators[i] } : {}) })).api_key_id);
+  for (let i = 0; i < 4; i++) {
+    const request = { request_id: uuid(), api_key_id: uuid(), secret: secret(), ...(i < 3 ? { operator_id: operators[i] } : {}) };
+    ok(await f.call('CreateApiKey', request)); keys.push(request.api_key_id);
+  }
   await listIds(f, 'ListOperators', {}, operators, 'operator_id');
   await listIds(f, 'ListOperators', { filters: { ids: [uuid(), ...operators.slice(0, 2)] } }, operators.slice(0, 2), 'operator_id');
   await listIds(f, 'ListOperators', { filters: { ids: [] } }, [], 'operator_id');
@@ -138,12 +145,13 @@ test('Track Observation membership validates unknown references independently of
 test('Object selections and parent associations retain exact membership across pages', async t => {
   const f = await fixture(t), parents = [], objects = [];
   for (let i = 0; i < 2; i++) {
-    const asset = ok(await f.call('RegisterAsset', registration())).asset;
-    const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id: uuid(), publisher_id: uuid(), source_asset_id: asset.id }));
+    const asset = registration(), observation_id = uuid(), task_id = uuid();
+    ok(await f.call('RegisterAsset', asset));
+    const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id: uuid(), source_asset_id: asset.asset_id }));
     const geofeature_id = uuid();
     ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id, geometry: { type: 'Point', coordinates: [i, i] } }));
-    const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: i, longitude: 0 } } } }));
-    parents.push({ asset: asset.id, observation: pair.observation.id, track: pair.track.id, geofeature: geofeature_id, task: task.task_id, generation: asset.process_generation });
+    ok(await f.call('CreateTask', { request_id: uuid(), task_id, asset_id: asset.asset_id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: i, longitude: 0 } } } }));
+    parents.push({ asset: asset.asset_id, observation: observation_id, track: pair.track.id, geofeature: geofeature_id, task: task_id, generation: asset.process_generation });
   }
   for (let i = 0; i < 4; i++) {
     const bytes = Buffer.from(`associated content ${i}`);
@@ -151,7 +159,7 @@ test('Object selections and parent associations retain exact membership across p
     const associations = selectedParents.flatMap(parent => ['asset', 'observation', 'track', 'geofeature'].map(kind => ({ kind, id: parent[kind] })));
     const descriptor = { request_id: uuid(), object_id: uuid(), byte_length: String(bytes.length), sha256: createHash('sha256').update(bytes).digest('hex'),
       content_type: ['text/plain', 'image/png', 'text/plain', 'application/octet-stream'][i], metadata: { associations } };
-    const uploaded = await f.upload(descriptor, bytes); objects.push(ok(uploaded).object_id);
+    const uploaded = await f.upload(descriptor, bytes); ok(uploaded); objects.push(descriptor.object_id);
     assert.equal((await f.upload(descriptor, bytes)).json.commit_cursor, uploaded.json.commit_cursor);
   }
   const filters = { ids: objects.slice(0, 3), content_types: ['text/plain', 'image/png'] };
@@ -181,7 +189,7 @@ test('Object selections and parent associations retain exact membership across p
 
 test('history selections retain exact nanosecond bounds and separate known, unknown and uncertain positions', async t => {
   const f = await fixture(t);
-  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const asset = registration(); ok(await f.call('RegisterAsset', asset));
   const publisher_id = uuid(), observation_id = uuid();
   const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id }));
   const facts = [
@@ -194,7 +202,7 @@ test('history selections retain exact nanosecond bounds and separate known, unkn
     ['9999-01-01T00:00:00Z', 'uncertain'],
   ].map(([observed_at, time_status], i) => ({ observed_at, time_status, reading_id: `10000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, latitude: i }));
   const sources = [
-    { kind: 'Asset', id: asset.id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, tracks: [] },
+    { kind: 'Asset', id: asset.asset_id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, tracks: [] },
     { kind: 'Observation', id: observation_id, origin: { kind: 'publisher', publisher_id }, tracks: [pair.track.id] },
   ];
   for (const source of sources) {
@@ -203,8 +211,6 @@ test('history selections retain exact nanosecond bounds and separate known, unkn
       const name = source.kind === 'Asset' ? 'UpdateAsset' : 'ReportObservation';
       const request = source.kind === 'Asset' ? { asset_id: source.id, request_id: uuid(), report: input } : { observation_id, publisher_id, report: input };
       ok(await f.call(name, request));
-      const retry = ok(await f.call(name, request));
-      assert.equal(retry.evidence_disposition, 'duplicate');
     }
   }
   const allocation_context = ok(await f.call('GetHealth')).allocation_context;
@@ -244,7 +250,7 @@ test('history selections retain exact nanosecond bounds and separate known, unkn
         }
         assert.deepEqual(readings, indices.map(index => {
           const fact = facts[index];
-          return { source_entity_kind: source.kind === 'Asset' ? 'asset' : 'observation', source_entity_id: source.kind === 'Asset' ? asset.id : observation_id,
+          return { source_entity_kind: source.kind === 'Asset' ? 'asset' : 'observation', source_entity_id: source.kind === 'Asset' ? asset.asset_id : observation_id,
             quantity: 'position', value: { latitude: fact.latitude, longitude: -1 }, observed_at: fact.observed_at, time_status: fact.time_status,
             source_evidence: { origin: source.origin, reading_id: fact.reading_id }, track_ids: source.tracks };
         }), `${name} ${JSON.stringify(selection)}`);

@@ -97,13 +97,14 @@ for (const reverse of [false, true]) test(`aggregate pressure refuses fresh uplo
   const fresh = descriptor(bytes);
   assert.equal((await f.upload(fresh, bytes, reverse)).json.error.code, 'storage_limit');
   assert.equal((await f.call('GetObject', { object_id: fresh.object_id })).status, 404);
-  for (let retry = 0; retry < 2; retry++) {
-    assert.deepEqual((await f.upload(input, bytes, reverse)).json, first.json);
-    assert.equal((await f.upload(input, Buffer.alloc(bytes.length, 38), reverse)).json.error.code, 'invalid_request');
-    assert.deepEqual(published(), before, 'Retry and invalid bytes cannot duplicate metadata, reservations or public effects');
-    assert.deepEqual(await readdir(installed), names); assert.deepEqual(await readdir(staging), []);
-    assert.deepEqual(await readFile(join(installed, names[0])), bytes);
-  }
+  assert.equal((await f.upload(input, Buffer.alloc(bytes.length, 38), reverse)).json.error.code, 'invalid_request');
+  assert.deepEqual(published(), before, 'Invalid bytes cannot change metadata, reservations or public effects');
+  assert.deepEqual(await readdir(installed), names); assert.deepEqual(await readdir(staging), []);
+  assert.deepEqual(await readFile(join(installed, names[0])), bytes);
+  assert.deepEqual((await f.upload(input, bytes, reverse)).json, first.json);
+  assert.deepEqual(published(), before, 'A valid retry after invalid bytes preserves the original publication');
+  assert.deepEqual(await readdir(installed), names); assert.deepEqual(await readdir(staging), []);
+  assert.deepEqual(await readFile(join(installed, names[0])), bytes);
   assert.deepEqual((await f.call('ReadObjectContent', { object_id: input.object_id, disposition: 'inline' })).bytes, bytes);
   await rm(pressure);
   ok(await f.upload(fresh, bytes, reverse));

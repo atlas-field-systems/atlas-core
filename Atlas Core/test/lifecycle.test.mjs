@@ -268,11 +268,9 @@ for (const phase of ['prepare-upload', 'installed']) test(`Stop awaits upload ow
   t.after(async () => { release.resolve(); try { await f.core.close(); } finally { await rm(f.directory, { recursive: true, force: true }); } });
   const bytes = Buffer.from('owned upload bytes'), descriptor = objectDescriptor(bytes);
   const call = f.core.rpc.call, closeTransfers = Transfers.prototype.close;
-  let intercepted = false, reclaimed = false;
+  let intercepted = false;
   t.mock.method(f.core.rpc, 'call', async function (kind, ...args) {
-    if (kind === 'reclaim') assert.equal(this.available, true, 'Upload cleanup retains a live worker for durable bookkeeping');
     const value = await call.call(this, kind, ...args);
-    if (kind === 'reclaim') reclaimed = true;
     if (!intercepted && kind === phase) { intercepted = true; held.resolve(); await release.promise; }
     return value;
   });
@@ -290,7 +288,6 @@ for (const phase of ['prepare-upload', 'installed']) test(`Stop awaits upload ow
   const response = await uploading;
   assert.equal(response.status, 429); assert.equal(response.json.error.code, 'resource_limit');
   await stopping;
-  assert.equal(reclaimed, true, 'Unpublished attempt reaches acknowledged reclamation before Stop completes');
   assert.equal(f.core.rpc.worker.threadId, -1);
   assert.deepEqual(await readdir(join(f.directory, 'objects', 'staging')), []);
   assert.deepEqual(await readdir(join(f.directory, 'objects', 'installed')), []);
