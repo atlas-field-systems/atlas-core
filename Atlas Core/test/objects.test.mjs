@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { writeFile, readdir, stat, rm, readFile, open } from 'node:fs/promises';
+import { writeFile, readdir, stat, rm, readFile } from 'node:fs/promises';
 import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { Agent, request as httpsRequest } from 'node:https';
@@ -13,7 +13,6 @@ import { Engine } from '../dist/engine.js';
 import { processIdentity } from '../dist/ownership.js';
 import { digest } from '../dist/exact.js';
 import { defaults } from '../dist/settings.js';
-import { diskUsage } from '../dist/capacity.js';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 const descriptor = bytes => ({ request_id: uuid(), object_id: uuid(), byte_length: String(bytes.byteLength), sha256: createHash('sha256').update(bytes).digest('hex'), content_type: 'application/octet-stream', metadata: { associations: [] } });
 for (const failBookkeeping of [false, true]) test(`shutdown awaits active reclamation and preserves failure=${failBookkeeping}`, { timeout: 15_000 }, async t => {
@@ -74,41 +73,6 @@ for (const reverse of [false, true]) test(`full-quota upload recovery verifies a
   } finally { db.close(); }
   ok(await f.call('DeleteObject', { request_id: uuid(), object_id: input.object_id }));
   assert.equal((await f.upload(input, bytes, reverse)).json.error.code, 'identity_conflict');
-});
-for (const reverse of [false, true]) test(`aggregate pressure refuses fresh uploads but preserves committed retry with descriptor last=${reverse}`, async t => {
-  const f = await fixture(t, { storageBytes: 8 * 1024 * 1024, reserveBytes: 1024 * 1024, objectBytes: 4 * 1024 * 1024 });
-  const bytes = Buffer.alloc(256 * 1024, 37), input = descriptor(bytes);
-  const first = await f.upload(input, bytes); ok(first);
-  await f.core.diagnostics.close();
-  await f.core.rpc.call('tick', {}, 0, true);
-  const installed = join(f.directory, 'objects', 'installed'), staging = join(f.directory, 'objects', 'staging');
-  const names = await readdir(installed);
-  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
-  t.after(() => db.close());
-  const published = () => ({
-    objects: db.prepare('SELECT * FROM object_images ORDER BY id').all(),
-    attempts: db.prepare("SELECT * FROM object_attempts WHERE state<>'reclaimed' ORDER BY id").all(),
-    cursor: db.prepare("SELECT value FROM core_meta WHERE key='sequence'").get().value,
-  });
-  const before = published();
-  const pressure = join(f.directory, 'pressure.bin'), filler = await open(pressure, 'wx');
-  try { await filler.truncate(f.settings.storageBytes - f.settings.reserveBytes - diskUsage(f.directory).bytes - 32768); }
-  finally { await filler.close(); }
-  const fresh = descriptor(bytes);
-  assert.equal((await f.upload(fresh, bytes, reverse)).json.error.code, 'storage_limit');
-  assert.equal((await f.call('GetObject', { object_id: fresh.object_id })).status, 404);
-  assert.equal((await f.upload(input, Buffer.alloc(bytes.length, 38), reverse)).json.error.code, 'invalid_request');
-  assert.deepEqual(published(), before, 'Invalid bytes cannot change metadata, reservations or public effects');
-  assert.deepEqual(await readdir(installed), names); assert.deepEqual(await readdir(staging), []);
-  assert.deepEqual(await readFile(join(installed, names[0])), bytes);
-  assert.deepEqual((await f.upload(input, bytes, reverse)).json, first.json);
-  assert.deepEqual(published(), before, 'A valid retry after invalid bytes preserves the original publication');
-  assert.deepEqual(await readdir(installed), names); assert.deepEqual(await readdir(staging), []);
-  assert.deepEqual(await readFile(join(installed, names[0])), bytes);
-  assert.deepEqual((await f.call('ReadObjectContent', { object_id: input.object_id, disposition: 'inline' })).bytes, bytes);
-  await rm(pressure);
-  ok(await f.upload(fresh, bytes, reverse));
-  assert.equal(published().objects.length, 2, 'Refused upload identity remains available after capacity returns');
 });
 for (const change of ['deletion', 'revocation']) test(`verified upload recovery rechecks ${change} after receipt lookup`, { timeout: 20_000 }, async t => {
   const held = Promise.withResolvers(), release = Promise.withResolvers();

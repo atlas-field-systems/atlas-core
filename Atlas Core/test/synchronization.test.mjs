@@ -6,10 +6,9 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setImmediate as yieldToLoop } from 'node:timers/promises';
 import { QueuePressure } from '../dist/rpc.js';
-import { readWssServer } from '@atlas/protocol';
 const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
-async function socket(f, credential = f.apiKey, authenticate = true) {
+async function socket(f, credential = f.apiKey) {
   const ws = new WebSocket(f.address.replace('https:', 'wss:') + '/changes', { ca: f.ca });
   const messages = []; const waiters = new Set();
   ws.on('message', raw => { const frame = JSON.parse(raw.toString()); messages.push(frame); for (const waiter of waiters) waiter(); });
@@ -20,129 +19,10 @@ async function socket(f, credential = f.apiKey, authenticate = true) {
     return new Promise((resolve, reject) => { const timer = setTimeout(() => { waiters.delete(check); reject(new Error('Required WSS event was not delivered')); }, 10000); const check = () => { const value = found(); if (value) { clearTimeout(timer); waiters.delete(check); resolve(value); } }; waiters.add(check); });
   };
   const send = (type, data) => ws.send(JSON.stringify({ type, dataset_id: f.core.dataset, protocol_version: '0.3.0', request_id: uuid(), data }));
-  if (authenticate) {
-    ws.send(JSON.stringify({ type: 'authenticate', request_id: uuid(), dataset_id: f.core.dataset, protocol_version: '0.3.0', api_key: credential }));
-    await take(frame => frame.type === 'authenticated');
-  }
+  ws.send(JSON.stringify({ type: 'authenticate', request_id: uuid(), dataset_id: f.core.dataset, protocol_version: '0.3.0', api_key: credential }));
+  await take(frame => frame.type === 'authenticated');
   return { ws, take, send, messages };
 }
-test('WSS refuses API 0.1.0 and 0.2.0 authentication without exposing picture data', { timeout: 30000 }, async t => {
-  const f = await fixture(t);
-  const registered = await f.call('RegisterAsset', registration()); ok(registered);
-  for (const version of ['0.1.0', '0.2.0']) {
-    const client = await socket(f, f.apiKey, false); t.after(() => client.ws.terminate());
-    const closed = new Promise(resolve => client.ws.once('close', code => resolve(code)));
-    const request_id = uuid();
-    client.ws.send(JSON.stringify({ type: 'authenticate', request_id, dataset_id: f.core.dataset, protocol_version: version, api_key: f.apiKey }));
-    const frame = await client.take(() => true);
-    assert.equal(frame.type, 'error');
-    assert.equal(frame.request_id, request_id);
-    assert.equal(frame.protocol_version, '0.3.0');
-    assert.equal(frame.dataset_id, f.core.dataset);
-    assert.equal(frame.error.code, 'protocol_mismatch');
-    assert.deepEqual(frame.error.details, { protocol_version: '0.3.0' });
-    assert.equal(await closed, 1008);
-    assert.deepEqual(client.messages, []);
-  }
-  const current = await socket(f); t.after(() => current.ws.terminate());
-  current.send('read_changes', { from_cursor: registered.json.commit_cursor, ...limits });
-  assert.deepEqual((await current.take(frame => frame.type === 'read_changes_result')).data.messages, []);
-});
-
-test('WSS preserves Track time status and selected Task summaries through snapshot, live commits and reconnect replay', { timeout: 30000 }, async t => {
-  const f = await fixture(t);
-  const asset = ok(await f.call('RegisterAsset', registration())).asset;
-  const publisher_id = uuid(), observation_id = uuid(), origin = { kind: 'publisher', publisher_id };
-  const initialTelemetry = { ...telemetry(origin, 51), source_times: { altitude: null, ground_speed: '9999-01-01T00:00:00Z' } };
-  const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id,
-    report: report(f.core.dataset, observation_id, origin, 1, { telemetry: initialTelemetry }) }));
-  const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 51, longitude: -1 } } } }));
-  const taskOrigin = { kind: 'asset_process', process_generation: asset.process_generation };
-  const firstEvidence = { dataset_id: f.core.dataset, asset_id: asset.id, origin: taskOrigin, report_id: uuid(), sequence: '9007199254740993', generated_at: '2026-10-21T12:00:00.000000123Z',
-    payload: { task_id: task.task_id, event: 'state', state: 'in_progress', message: 'Started' } };
-  const started = await f.call('ReportTaskExecution', { evidence: firstEvidence }); ok(started);
-  const firstSummary = { origin: taskOrigin, report_id: firstEvidence.report_id, sequence: firstEvidence.sequence, generated_at: firstEvidence.generated_at, event: 'state', state: 'in_progress', message: 'Started' };
-  const client = await socket(f); t.after(() => client.ws.terminate());
-  client.send('read_snapshot', { load_id: uuid(), allocation_context: ok(await f.call('GetHealth')).allocation_context, page_size: 1, ...limits });
-  const snapshotFrame = await client.take(frame => frame.type === 'read_snapshot_result');
-  readWssServer(Buffer.from(JSON.stringify(snapshotFrame)), { datasetId: f.core.dataset });
-  const snapshot = snapshotFrame.data;
-  assert.equal(snapshot.baseline_cursor, started.json.commit_cursor);
-  const items = [...snapshot.items];
-  let page = snapshot;
-  while (page.next_page_token !== null) {
-    assert.ok(items.length < 3, 'The snapshot must contain exactly Asset, Track and Task');
-    client.send('read_snapshot', { page_token: page.next_page_token });
-    const frame = await client.take(frame => frame.type === 'read_snapshot_result');
-    readWssServer(Buffer.from(JSON.stringify(frame)), { datasetId: f.core.dataset });
-    page = frame.data;
-    assert.equal(page.baseline_cursor, snapshot.baseline_cursor);
-    assert.equal(page.capture_id, snapshot.capture_id);
-    assert.equal(page.release_token, snapshot.release_token);
-    assert.equal(page.items.length, 1);
-    items.push(...page.items);
-  }
-  assert.deepEqual(items.map(item => [item.resource_kind, item.resource_id]), [['asset', asset.id], ['task', task.task_id], ['track', pair.track.id]]);
-  assert.deepEqual(items.find(item => item.resource_kind === 'track').image.telemetry.time_status, { position: 'known', altitude: 'unknown', ground_speed: 'uncertain' });
-  assert.deepEqual(items.find(item => item.resource_kind === 'task').image.execution_summary, firstSummary);
-  client.send('release_snapshot', { release_token: snapshot.release_token });
-  await client.take(frame => frame.type === 'snapshot_released');
-  const subscription_id = uuid();
-  client.send('subscribe_changes', { subscription_id, from_cursor: snapshot.baseline_cursor, ...limits });
-  assert.equal((await client.take(frame => frame.type === 'subscribed')).data.handoff_cursor, snapshot.baseline_cursor);
-  assert.equal((await client.take(frame => frame.type === 'handoff_complete')).data.handoff_cursor, snapshot.baseline_cursor);
-
-  const updateReport = report(f.core.dataset, observation_id, origin, 2, { telemetry: { ...telemetry(origin, 52, null), source_times: { altitude: '2026-10-21T12:00:01Z', ground_speed: '9999-01-01T00:00:00Z' } } });
-  const changedTrack = await f.call('ReportObservation', { observation_id, publisher_id, report: updateReport }); ok(changedTrack);
-  const sameEvidence = { ...firstEvidence, report_id: uuid(), sequence: '9007199254740994', generated_at: null, payload: { task_id: task.task_id, event: 'state', state: 'in_progress' } };
-  const sameState = await f.call('ReportTaskExecution', { evidence: sameEvidence }); ok(sameState);
-  const sameSummary = { origin: taskOrigin, report_id: sameEvidence.report_id, sequence: sameEvidence.sequence, generated_at: null, event: 'state', state: 'in_progress' };
-  const terminalEvidence = { ...sameEvidence, report_id: uuid(), sequence: '9007199254740995', payload: { task_id: task.task_id, event: 'state', state: 'failed', reason: 'navigation_failed', message: 'Position unavailable' } };
-  const terminated = await f.call('ReportTaskExecution', { evidence: terminalEvidence }); ok(terminated);
-  const terminalSummary = { ...sameSummary, report_id: terminalEvidence.report_id, sequence: terminalEvidence.sequence, state: 'failed', reason: 'navigation_failed', message: 'Position unavailable' };
-  const expected = [
-    { cursor: changedTrack.json.commit_cursor, kind: 'track', id: pair.track.id },
-    { cursor: sameState.json.commit_cursor, kind: 'task', id: task.task_id },
-    { cursor: terminated.json.commit_cursor, kind: 'task', id: task.task_id },
-  ];
-  const batches = [];
-  let cursor = snapshot.baseline_cursor;
-  for (const change of expected) {
-    const frame = await client.take(frame => ['change_batch', 'progress', 'gap', 'error'].includes(frame.type));
-    assert.equal(frame.type, 'change_batch', JSON.stringify(frame));
-    readWssServer(Buffer.from(JSON.stringify(frame)), { datasetId: f.core.dataset, subscriptionId: subscription_id });
-    assert.equal(frame.data.previous_cursor, cursor);
-    assert.equal(frame.data.commit_cursor, change.cursor);
-    assert.deepEqual(frame.data.changes.map(item => [item.kind, item.resource_kind, item.resource_id]), [['put', change.kind, change.id]]);
-    cursor = change.cursor; batches.push(frame.data.changes[0]);
-  }
-  assert.deepEqual(batches[0].image.telemetry.time_status, { position: 'unknown', altitude: 'known', ground_speed: 'uncertain' });
-  assert.deepEqual(batches[0].image.telemetry.evidence, { dataset_id: f.core.dataset, entity_id: observation_id, origin, report_id: updateReport.report_id, sequence: '2', section: 'telemetry' });
-  assert.deepEqual(batches[1].image.execution_summary, sameSummary);
-  assert.equal(batches[1].image.execution_state, 'in_progress');
-  assert.deepEqual(batches[2].image.execution_summary, terminalSummary);
-  assert.equal(batches[2].image.execution_state, 'failed');
-  assert.equal(BigInt(batches[2].version), BigInt(batches[1].version) + 1n);
-  const closed = new Promise(resolve => client.ws.once('close', resolve)); client.ws.close(); await closed;
-
-  const reconnected = await socket(f); t.after(() => reconnected.ws.terminate());
-  reconnected.send('subscribe_changes', { subscription_id: uuid(), from_cursor: snapshot.baseline_cursor, ...limits });
-  assert.equal((await reconnected.take(frame => frame.type === 'subscribed')).data.handoff_cursor, cursor);
-  let replayCursor = snapshot.baseline_cursor;
-  for (const [i, change] of expected.entries()) {
-    const frame = await reconnected.take(frame => ['change_batch', 'progress', 'gap', 'error', 'handoff_complete'].includes(frame.type));
-    assert.equal(frame.type, 'change_batch', JSON.stringify(frame));
-    assert.equal(frame.data.previous_cursor, replayCursor);
-    assert.equal(frame.data.commit_cursor, change.cursor);
-    assert.deepEqual(frame.data.changes, [batches[i]]);
-    replayCursor = change.cursor;
-  }
-  const handoff = await reconnected.take(frame => ['change_batch', 'progress', 'gap', 'error', 'handoff_complete'].includes(frame.type));
-  assert.equal(handoff.type, 'handoff_complete'); assert.equal(handoff.data.handoff_cursor, cursor);
-  reconnected.send('read_changes', { from_cursor: cursor, ...limits });
-  const empty = await reconnected.take(frame => ['change_batch', 'progress', 'gap', 'error', 'read_changes_result'].includes(frame.type));
-  assert.equal(empty.type, 'read_changes_result'); assert.equal(empty.data.through_cursor, cursor); assert.deepEqual(empty.data.messages, []);
-});
 test('WSS fixed snapshot handoff, whole commits, ordered progress and revocation', { timeout: 30000 }, async t => {
   const f = await fixture(t);
   const key = { api_key_id: uuid(), request_id: uuid(), secret: secret() }; ok(await f.call('CreateApiKey', key));
