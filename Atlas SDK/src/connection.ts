@@ -245,6 +245,9 @@ export class Session {
       this.#observers.delete(observer);
     };
   }
+  recordCleanupFailure(code: LocalCode): void {
+    this.#cleanupFailure ??= code;
+  }
   observeAuthority(generation: number, code: ErrorObject['code']): void {
     if (generation !== this.#generation || this.#state.kind !== 'ready') return;
     switch (code) {

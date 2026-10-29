@@ -83,6 +83,8 @@ old Dataset's result into the new Dataset. A later error cannot undo this eviden
 A replayable upload source supplies stable descriptor fields and an `open` function
 returning a fresh stream per attempt, starting at byte zero. A consumed one-shot
 source fails as non-replayable. Do not buffer an arbitrary file or promise resume.
+Source cleanup failure before transmission leaves the operation `not_submitted`;
+SDK close reports that cleanup failure separately.
 Keep transfer progress, Object publication, and Asset completion distinct.
 
 [Next: the local picture](picture.md)

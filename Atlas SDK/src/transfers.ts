@@ -288,12 +288,14 @@ export function createTransfers(session: Session, operations: Operations): Trans
               if (!sourceClosed) await reader?.close(primary);
             } catch (cleanup) {
               // A validated success still establishes the effect even if source cleanup fails.
+              const code =
+                cleanup instanceof CleanupFailure ? cleanup.cleanupFailure : failureCode(cleanup);
               context = {
                 ...context,
-                cleanupFailure:
-                  cleanup instanceof CleanupFailure ? cleanup.cleanupFailure : failureCode(cleanup),
+                cleanupFailure: code,
               };
-              if (result.kind !== 'response') result = failed(cleanup, lease, context);
+              if (result.kind === 'not_sent') session.recordCleanupFailure(code);
+              else if (result.kind !== 'response') result = failed(cleanup, lease, context);
             }
             context = {
               ...context,
@@ -456,7 +458,8 @@ export function createTransfers(session: Session, operations: Operations): Trans
               signal.throwIfAborted();
               if (!lease.current()) throw new SdkError('superseded');
             } catch (error) {
-              return await discard(response, error);
+              if (response.status === 200) return await discard(response, error);
+              throw error;
             }
             context = { ...context, validationMs: performance.now() - validation };
             if (reply.kind === 'error')
