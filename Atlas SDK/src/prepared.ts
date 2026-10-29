@@ -78,14 +78,14 @@ export class Operations {
       let cell = this.#cells.get(key);
       const facts = canonical(validated.facts);
       if (cell && cell.canonical !== facts) throw new SdkError('identity_conflict');
+      const cost = validated.bytes.byteLength * 8 + key.length * 2 + 512;
+      if (cost > remaining || (!cell && this.#cells.size >= session.maxPreparedOperations))
+        throw new SdkError('capacity');
       if (!cell) {
-        const cost = validated.bytes.byteLength * 8 + key.length * 2 + 512;
-        if (this.#cells.size >= session.maxPreparedOperations || cost > remaining)
-          throw new SdkError('capacity');
         cell = {
           epoch: session.datasetEpoch,
           canonical: facts,
-          bytes: cost,
+          bytes: 0,
           handles: 0,
           pending: 0,
           attempts: 0,
@@ -94,8 +94,9 @@ export class Operations {
           accepted: undefined,
         };
         this.#cells.set(key, cell);
-        this.#bytes += cost;
       }
+      cell.bytes += cost;
+      this.#bytes += cost;
       const shared = cell;
       shared.handles++;
       let closed = false;

@@ -61,6 +61,7 @@ permission for automatic retry across Dataset changes.
 Call `operation.close()` when that handle no longer needs to retry. Close is
 idempotent, disables that handle's `start()` and `send()`, and preserves its effect
 knowledge. Other handles for the same identity remain usable and share evidence.
+Each handle's retained submission counts against the prepared byte budget.
 After all such handles close and their bounded attempts settle, SDK frees the
 record's count and byte capacity. Nothing is evicted automatically at a limit.
 Close does not abort an attempt or undo a commit; late matching replies still
