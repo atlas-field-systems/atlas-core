@@ -187,8 +187,11 @@ export function createClient(options: ClientOptions): Client {
     connect: () => session.discover(),
     recover: () => session.discover(true),
     async close() {
-      await session.close();
-      operations.close();
+      try {
+        await session.close();
+      } finally {
+        operations.close();
+      }
     },
   });
 }

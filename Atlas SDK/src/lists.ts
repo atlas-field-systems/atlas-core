@@ -40,19 +40,19 @@ export function list<R extends z.ZodType, S extends z.ZodType<PageReply>>(
       async next(options: RequestOptions = {}) {
         const id = crypto.randomUUID();
         if (closed || epoch !== session.datasetEpoch || datasetId !== session.datasetId) {
-          return {
-            kind: 'not_sent',
-            code: closed ? 'closed' : 'dataset_invalidated',
-            attemptId: id,
-          };
+          return session.refuse<z.output<S>>(
+            binding.operationId,
+            closed ? 'closed' : 'dataset_invalidated',
+            id,
+          ).settled;
         }
         if (ended) return { kind: 'end' };
         if (busy || options.signal?.aborted)
-          return {
-            kind: 'not_sent',
-            code: busy ? 'capacity' : 'cancelled',
-            attemptId: id,
-          };
+          return session.refuse<z.output<S>>(
+            binding.operationId,
+            busy ? 'capacity' : 'cancelled',
+            id,
+          ).settled;
         busy = true;
         try {
           const request =
@@ -72,6 +72,21 @@ export function list<R extends z.ZodType, S extends z.ZodType<PageReply>>(
           const result = await running.wait(options.signal);
           if (result.kind === 'response' && result.response.kind === 'success') {
             if (closed || epoch !== session.datasetEpoch || datasetId !== session.datasetId) {
+              if (session.diagnosticsEnabled)
+                session.emit({
+                  kind: 'request',
+                  operation: binding.operationId,
+                  source: 'http',
+                  phase: 'read',
+                  outcome: 'failed',
+                  elapsedMs: result.context.elapsedMs,
+                  attemptId: result.context.attemptId,
+                  datasetId,
+                  code: closed ? 'closed' : 'dataset_invalidated',
+                  ...(result.context.requestId === undefined
+                    ? {}
+                    : { requestId: result.context.requestId }),
+                });
               return {
                 kind: 'failed',
                 code: closed ? 'closed' : 'dataset_invalidated',
@@ -84,7 +99,7 @@ export function list<R extends z.ZodType, S extends z.ZodType<PageReply>>(
           }
           return result;
         } catch (error) {
-          return { kind: 'not_sent', code: failureCode(error), attemptId: id };
+          return session.refuse<z.output<S>>(binding.operationId, failureCode(error), id).settled;
         } finally {
           busy = false;
         }

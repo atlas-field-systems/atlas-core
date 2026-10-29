@@ -1,11 +1,4 @@
-import type {
-  BoundaryCode,
-  ErrorObject,
-  ExchangeName,
-  HealthData,
-  HttpError,
-  ResourceKind,
-} from '@atlas/protocol';
+import type { BoundaryCode, ErrorObject, ExchangeName, HealthData } from '@atlas/protocol';
 
 export type LocalCode =
   | BoundaryCode
@@ -23,6 +16,35 @@ export type LocalCode =
   | 'cancelled'
   | 'superseded';
 
+const localCodes = {
+  invalid_json: true,
+  invalid_utf8: true,
+  invalid_value: true,
+  payload_too_large: true,
+  resource_limit: true,
+  invalid_geometry: true,
+  unsupported_geometry: true,
+  geometry_limit_exceeded: true,
+  invalid_http: true,
+  invalid_budget: true,
+  invalid_options: true,
+  not_connected: true,
+  authorization_required: true,
+  unchanged_credential: true,
+  protocol_mismatch: true,
+  dataset_invalidated: true,
+  closed: true,
+  capacity: true,
+  identity_conflict: true,
+  network: true,
+  deadline: true,
+  cancelled: true,
+  superseded: true,
+} satisfies Record<LocalCode, true>;
+export function isLocalCode(value: unknown): value is LocalCode {
+  return typeof value === 'string' && Object.hasOwn(localCodes, value);
+}
+
 export type Failure = Readonly<{ kind: 'failure'; code: LocalCode }>;
 export class SdkError extends Error {
   constructor(readonly code: LocalCode) {
@@ -36,6 +58,9 @@ export type AttemptContext = Readonly<{
   requestId?: string;
   elapsedMs: number;
   receivedBytes: number;
+  suppliedBytes?: number;
+  observedTransportBytes?: number | null;
+  validationMs?: number;
   cleanupFailure?: LocalCode;
 }>;
 export type AttemptResult<T> =
@@ -119,33 +144,3 @@ export type PictureRead<T> =
       status: PictureStatus;
     }>
   | Readonly<{ kind: 'unavailable'; status: PictureStatus }>;
-
-export type DiagnosticEvent =
-  | Readonly<{
-      kind: 'request';
-      operation: ExchangeName;
-      attemptId: string;
-      requestId?: string;
-      outcome: 'success' | 'error' | 'failed' | 'not_sent';
-      elapsedMs: number;
-      receivedBytes: number;
-      code?: LocalCode | HttpError['body']['error']['code'];
-    }>
-  | Readonly<{
-      kind: 'connection';
-      state: ConnectionState['kind'];
-      generation: number;
-    }>
-  | Readonly<{
-      kind: 'synchronization';
-      phase: 'capture' | 'handoff' | 'live' | 'rebuild' | 'gap';
-      generation: number;
-      resource?: ResourceKind;
-    }>
-  | Readonly<{
-      kind: 'summary';
-      requests: number;
-      failures: number;
-      omitted: number;
-    }>;
-export type DiagnosticEmitter = (event: DiagnosticEvent) => void;

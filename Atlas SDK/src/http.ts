@@ -6,9 +6,9 @@ import {
   readJson,
   writeJson,
 } from '@atlas/protocol';
-import type { Budget, HttpError } from '@atlas/protocol';
+import type { Budget, ExchangeName, HttpError, JsonContract } from '@atlas/protocol';
 import type { z } from 'zod';
-import { SdkError } from './contracts.js';
+import { isLocalCode, SdkError } from './contracts.js';
 import type { AttemptContext, AttemptResult, LocalCode } from './contracts.js';
 
 export type JsonReply =
@@ -20,7 +20,7 @@ export type JsonReply =
     };
 export type JsonBinding<R extends z.ZodType, S extends z.ZodType<JsonReply>> = Parameters<
   typeof readHttp<R, S>
->[0] & { transport: 'json' };
+>[0] & { transport: 'json'; operationId: ExchangeName };
 
 export function freeze<T>(value: T): T {
   if (typeof value === 'object' && value !== null) {
@@ -30,8 +30,8 @@ export function freeze<T>(value: T): T {
   return value;
 }
 
-export function submission<R extends z.ZodType, S extends z.ZodType<JsonReply>>(
-  binding: JsonBinding<R, S>,
+export function submission<R extends z.ZodType>(
+  binding: Readonly<{ request: JsonContract<R> }>,
   input: z.output<R>,
   budget: Budget,
 ) {
@@ -41,11 +41,14 @@ export function submission<R extends z.ZodType, S extends z.ZodType<JsonReply>>(
 }
 
 export function failureCode(error: unknown): LocalCode {
-  if (error instanceof ProtocolError || error instanceof SdkError) return error.code;
+  if (error instanceof ProtocolError || error instanceof SdkError) {
+    const code: unknown = Object.getOwnPropertyDescriptor(error, 'code')?.value;
+    if (isLocalCode(code)) return code;
+  }
   return 'network';
 }
 
-class IngestionFailure extends SdkError {
+export class CleanupFailure extends SdkError {
   constructor(
     code: LocalCode,
     readonly cleanupFailure: LocalCode,
@@ -58,7 +61,7 @@ async function refuseBody(response: Response, code: LocalCode): Promise<never> {
   try {
     await response.body?.cancel();
   } catch (cleanup) {
-    throw new IngestionFailure(code, failureCode(cleanup));
+    throw new CleanupFailure(code, failureCode(cleanup));
   }
   throw new SdkError(code);
 }
@@ -100,7 +103,7 @@ export async function receive(
     try {
       await reader.cancel();
     } catch (cleanup) {
-      throw new IngestionFailure(failureCode(error), failureCode(cleanup));
+      throw new CleanupFailure(failureCode(error), failureCode(cleanup));
     }
     throw error;
   } finally {
@@ -117,6 +120,23 @@ export type HttpLease = Readonly<{
   baseUrl: string;
 }>;
 
+export function failed(
+  error: unknown,
+  lease: HttpLease,
+  context: AttemptContext,
+): Extract<AttemptResult<never>, { kind: 'failed' }> {
+  return {
+    kind: 'failed',
+    code: lease.signal.aborted ? failureCode(lease.signal.reason) : failureCode(error),
+    context: {
+      ...context,
+      ...(error instanceof CleanupFailure
+        ? { cleanupFailure: isLocalCode(error.cleanupFailure) ? error.cleanupFailure : 'network' }
+        : {}),
+    },
+  };
+}
+
 export async function exchange<R extends z.ZodType, S extends z.ZodType<JsonReply>>(
   binding: JsonBinding<R, S>,
   input: Readonly<{ facts: z.output<R>; bytes: Uint8Array }>,
@@ -130,6 +150,8 @@ export async function exchange<R extends z.ZodType, S extends z.ZodType<JsonRepl
     attemptId: lease.attemptId,
     elapsedMs: 0,
     receivedBytes: 0,
+    suppliedBytes: binding.method === 'POST' ? input.bytes.byteLength : 0,
+    observedTransportBytes: null,
   };
   try {
     const headers = new Headers({
@@ -162,6 +184,7 @@ export async function exchange<R extends z.ZodType, S extends z.ZodType<JsonRepl
       receivedBytes: body.byteLength,
       elapsedMs: performance.now() - started,
     };
+    const validationStarted = performance.now();
     const result = readHttp(
       binding,
       { status: response.status, headers: response.headers, body },
@@ -171,17 +194,20 @@ export async function exchange<R extends z.ZodType, S extends z.ZodType<JsonRepl
         budget,
       },
     );
-    return { kind: 'response', response: freeze(result), context };
-  } catch (error) {
     return {
-      kind: 'failed',
-      code: lease.signal.aborted ? failureCode(lease.signal.reason) : failureCode(error),
+      kind: 'response',
+      response: freeze(result),
       context: {
         ...context,
-        receivedBytes,
         elapsedMs: performance.now() - started,
-        ...(error instanceof IngestionFailure ? { cleanupFailure: error.cleanupFailure } : {}),
+        validationMs: performance.now() - validationStarted,
       },
     };
+  } catch (error) {
+    return failed(error, lease, {
+      ...context,
+      receivedBytes,
+      elapsedMs: performance.now() - started,
+    });
   }
 }

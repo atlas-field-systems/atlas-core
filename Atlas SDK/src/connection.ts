@@ -9,25 +9,34 @@ import {
   readJson,
   writeJson,
 } from '@atlas/protocol';
-import type { Budget, HealthData } from '@atlas/protocol';
+import type { Budget, ErrorObject, ExchangeName, HealthData, HttpError } from '@atlas/protocol';
 import type { z } from 'zod';
 import { SdkError } from './contracts.js';
 import type {
   Attempt,
   AttemptResult,
   ConnectionState,
-  DiagnosticEmitter,
   LocalCode,
   RequestOptions,
+  OperationOutcome,
   WaitResult,
 } from './contracts.js';
-import { exchange, failureCode, freeze, submission } from './http.js';
+import { exchange, failed, failureCode, freeze, submission } from './http.js';
 import type { HttpLease, JsonBinding, JsonReply } from './http.js';
+import { createDiagnostics } from './diagnostics.js';
+import type {
+  DiagnosticInput,
+  DiagnosticOptions,
+  Diagnostics,
+  DiagnosticSource,
+} from './diagnostics.js';
+import { policies } from './policy.js';
 
 export type ClientOptions = Readonly<{
   baseUrl: string;
   credentials: () => string | Promise<string>;
   mode?: 'http';
+  diagnostics?: DiagnosticOptions;
   datasetId?: Uuid;
   timeoutMs?: number;
   limits?: Readonly<{
@@ -43,7 +52,27 @@ type Accepted = Readonly<{
   datasetId: string;
   health: HealthData;
 }>;
-type Lease = HttpLease & { finish: () => void };
+export type ValidatedReply = HttpError | Readonly<{ kind: 'success' | 'content' | 'reference' }>;
+export type MutationOwner<T> = Readonly<{
+  identity: string;
+  attemptNumber: number;
+  report: boolean;
+  outcome: () => OperationOutcome;
+  transmitted: () => void;
+  completed: (result: AttemptResult<T>) => void;
+}>;
+export type NetworkOptions<T> = Readonly<{
+  timeoutMs?: number;
+  datasetId?: string;
+  coreRunId?: string;
+  mutation?: MutationOwner<T>;
+}>;
+export type NetworkLease = HttpLease &
+  Readonly<{ datasetId: string; coreRunId: string; current: () => boolean }>;
+export type SocketLease = NetworkLease &
+  Readonly<{
+    release: () => Promise<void>;
+  }>;
 
 function limit(value: number | undefined, fallback: number, maximum: number): number {
   const result = value ?? fallback;
@@ -52,15 +81,23 @@ function limit(value: number | undefined, fallback: number, maximum: number): nu
   return result;
 }
 
-export function attempt<T>(id: string, settled: Promise<AttemptResult<T>>): Attempt<T> {
+export function attempt<T>(
+  id: string,
+  settled: Promise<AttemptResult<T>>,
+  cancelled?: () => void,
+): Attempt<T> {
   return Object.freeze({
     id,
     settled,
     wait(signal?: AbortSignal): Promise<WaitResult<T>> {
       if (!signal) return settled;
-      if (signal.aborted) return Promise.resolve({ kind: 'cancelled', attemptId: id });
+      if (signal.aborted) {
+        cancelled?.();
+        return Promise.resolve({ kind: 'cancelled', attemptId: id });
+      }
       return new Promise((resolve) => {
         const cancel = () => {
+          cancelled?.();
           resolve({ kind: 'cancelled', attemptId: id });
         };
         signal.addEventListener('abort', cancel, { once: true });
@@ -97,7 +134,10 @@ export class Session {
     datasetId: null,
     reason: 'not_connected',
   };
-  #emitter: DiagnosticEmitter | undefined;
+  readonly #diagnostics: Diagnostics | undefined;
+  readonly #observers = new Set<(state: ConnectionState) => void>();
+  #cleanupFailure: LocalCode | undefined;
+  #closing: Promise<void> | undefined;
 
   constructor(options: ClientOptions) {
     const url = new URL(options.baseUrl);
@@ -128,6 +168,7 @@ export class Session {
     );
     this.#requestBudget = effectiveBudget('http_request', options.limits?.request);
     this.#responseBudget = effectiveBudget('http_response', options.limits?.response);
+    this.#diagnostics = createDiagnostics(options.diagnostics);
   }
 
   get state(): ConnectionState {
@@ -162,20 +203,97 @@ export class Session {
         };
   }
 
-  setEmitter(emitter: DiagnosticEmitter | undefined): void {
-    this.#emitter = emitter;
+  get diagnosticsEnabled(): boolean {
+    return this.#diagnostics !== undefined;
   }
-  #transition(state: ConnectionState): void {
+  emit(event: DiagnosticInput): void {
+    this.#diagnostics?.record(event);
+  }
+  #transition(state: ConnectionState, elapsedMs?: number): void {
     this.#state = freeze(state);
-    try {
-      this.#emitter?.({
-        kind: 'connection',
-        state: state.kind,
-        generation: state.generation,
-      });
-    } catch {
-      // Diagnostic delivery cannot change authority or request outcomes.
+    for (const observer of this.#observers) {
+      try {
+        observer(this.#state);
+      } catch {
+        // An owner cannot prevent the remaining owners from observing a transition.
+      }
     }
+    this.#diagnostics?.record({
+      kind: 'connection',
+      state: state.kind,
+      generation: state.generation,
+      ...(state.datasetId === null ? {} : { datasetId: state.datasetId }),
+      ...(state.kind === 'ready' ? {} : { code: state.reason }),
+      ...(elapsedMs === undefined ? {} : { elapsedMs }),
+    });
+  }
+
+  observe(observer: (state: ConnectionState) => void): () => void {
+    if (this.#state.kind === 'closed') throw new SdkError('closed');
+    if (this.#observers.size >= this.#maximum) throw new SdkError('capacity');
+    this.#observers.add(observer);
+    return () => {
+      this.#observers.delete(observer);
+    };
+  }
+  observeAuthority(generation: number, code: ErrorObject['code']): void {
+    if (generation !== this.#generation || this.#state.kind !== 'ready') return;
+    switch (code) {
+      case 'unauthorized':
+        this.rejectAuthority(generation);
+        break;
+      case 'protocol_mismatch':
+        this.#blocked('protocol_mismatch');
+        break;
+      case 'dataset_mismatch':
+        this.#blocked('dataset_invalidated');
+        break;
+    }
+  }
+  #acceptedLease(): Accepted {
+    if (this.#state.kind !== 'ready' || !this.#accepted)
+      throw new SdkError(this.#state.kind === 'ready' ? 'not_connected' : this.#state.reason);
+    return this.#accepted;
+  }
+  ownSocket(cleanup: () => void | Promise<void>): SocketLease {
+    const accepted = this.#acceptedLease();
+    const id = crypto.randomUUID();
+    const admission = this.#admit(id);
+    const generation = this.#generation;
+    let released: Promise<void> | undefined;
+    const release = (): Promise<void> => {
+      if (released) return released;
+      admission.signal.removeEventListener('abort', stop);
+      released = this.#track(
+        Promise.resolve()
+          .then(cleanup)
+          .catch((error: unknown) => {
+            this.#cleanupFailure ??= failureCode(error);
+            throw new SdkError(failureCode(error));
+          })
+          .finally(admission.finish),
+      );
+      return released;
+    };
+    const stop = () => {
+      void release().catch(() => undefined);
+    };
+    admission.signal.addEventListener('abort', stop, { once: true });
+    return Object.freeze({
+      attemptId: id,
+      credential: accepted.credential,
+      datasetId: accepted.datasetId,
+      coreRunId: accepted.health.core_run_id,
+      generation,
+      baseUrl: this.baseUrl,
+      signal: admission.signal,
+      current: () =>
+        !released &&
+        !admission.signal.aborted &&
+        this.#state.kind === 'ready' &&
+        generation === this.#generation,
+      release,
+    });
   }
   #stop(reason: LocalCode): void {
     for (const controller of this.#active.values()) controller.abort(new SdkError(reason));
@@ -192,10 +310,13 @@ export class Session {
     });
     this.#stop(reason);
   }
+  #rememberRejected(credential: string): void {
+    if (this.#rejectedCredentials.size < 64) this.#rejectedCredentials.add(credential);
+  }
   rejectAuthority(generation: number): void {
     if (generation !== this.#generation || this.#state.kind === 'closed') return;
     this.#recovery++;
-    if (this.#accepted) this.#rejectedCredentials.add(this.#accepted.credential);
+    if (this.#accepted) this.#rememberRejected(this.#accepted.credential);
     this.#generation++;
     this.#transition({
       kind: 'authorization-required',
@@ -206,11 +327,14 @@ export class Session {
     this.#stop('authorization_required');
   }
 
-  #admit(id: string, timeout: number) {
+  #admit(id: string, timeout?: number) {
     if (this.#active.size >= this.#maximum) throw new SdkError('capacity');
     const controller = new AbortController();
     this.#active.set(id, controller);
-    const timer = setTimeout(() => controller.abort(new SdkError('deadline')), timeout);
+    const timer =
+      timeout === undefined
+        ? undefined
+        : setTimeout(() => controller.abort(new SdkError('deadline')), timeout);
     return {
       signal: controller.signal,
       finish: () => {
@@ -228,35 +352,212 @@ export class Session {
     return promise;
   }
 
+  #source(operation: ExchangeName): DiagnosticSource {
+    switch (policies[operation].kind) {
+      case 'upload':
+        return 'upload';
+      case 'content':
+        return 'content';
+      case 'reference':
+        return 'reference';
+      default:
+        return 'http';
+    }
+  }
+  #recordAttempt<T extends ValidatedReply>(
+    operation: ExchangeName,
+    result: AttemptResult<T>,
+    mutation?: MutationOwner<T>,
+    resolution = false,
+    datasetId = this.datasetId,
+    generation = this.#generation,
+  ): void {
+    if (!this.#diagnostics) return;
+    const outcome = mutation?.outcome();
+    this.#diagnostics.record({
+      kind: 'request',
+      phase: 'attempt',
+      operation,
+      source: this.#source(operation),
+      ...(datasetId === null ? {} : { datasetId }),
+      generation,
+      attemptId: result.kind === 'not_sent' ? result.attemptId : result.context.attemptId,
+      outcome:
+        result.kind === 'response'
+          ? result.response.kind === 'error'
+            ? 'error'
+            : 'success'
+          : result.kind,
+      elapsedMs: result.kind === 'not_sent' ? 0 : result.context.elapsedMs,
+      ...(result.kind === 'not_sent'
+        ? {}
+        : {
+            ...(result.context.validationMs === undefined
+              ? {}
+              : { validationMs: result.context.validationMs }),
+            bytes: {
+              received: result.context.receivedBytes,
+              observedTransport: result.context.observedTransportBytes ?? null,
+              ...(result.context.suppliedBytes === undefined
+                ? {}
+                : { supplied: result.context.suppliedBytes }),
+            },
+            ...(result.context.requestId === undefined
+              ? {}
+              : { requestId: result.context.requestId }),
+            ...(result.context.cleanupFailure === undefined
+              ? {}
+              : { cleanupFailure: result.context.cleanupFailure }),
+          }),
+      ...(result.kind === 'response'
+        ? result.response.kind === 'error'
+          ? { code: result.response.body.error.code }
+          : {}
+        : { code: result.code }),
+      ...(mutation === undefined || outcome === undefined
+        ? {}
+        : {
+            retryId: mutation.identity,
+            attemptNumber: mutation.attemptNumber,
+            intentionalRetry: mutation.attemptNumber > 1,
+            report: mutation.report,
+            operationOutcome: outcome.kind,
+            evidence: outcome.kind === 'dataset_invalidated' ? outcome.evidence.kind : outcome.kind,
+            resolution,
+          }),
+    });
+  }
+  refuse<T extends ValidatedReply>(
+    operation: ExchangeName,
+    code: LocalCode,
+    id: string = crypto.randomUUID(),
+    mutation?: MutationOwner<T>,
+  ): Attempt<T> {
+    const result = { kind: 'not_sent', code, attemptId: id } satisfies AttemptResult<T>;
+    this.#recordAttempt(operation, result, mutation);
+    return attempt(id, Promise.resolve(result));
+  }
+  startNetwork<T extends ValidatedReply>(
+    operation: ExchangeName,
+    run: (lease: NetworkLease) => Promise<AttemptResult<T>>,
+    options: NetworkOptions<T> = {},
+  ): Attempt<T> {
+    const id = crypto.randomUUID();
+    let lease: NetworkLease & { finish: () => void };
+    try {
+      const accepted = this.#acceptedLease();
+      if (options.datasetId !== undefined && options.datasetId !== accepted.datasetId)
+        throw new SdkError('dataset_invalidated');
+      if (options.coreRunId !== undefined && options.coreRunId !== accepted.health.core_run_id)
+        throw new SdkError('superseded');
+      const generation = this.#generation;
+      lease = {
+        ...this.#admit(id, limit(options.timeoutMs, this.timeoutMs, 120_000)),
+        attemptId: id,
+        credential: accepted.credential,
+        datasetId: accepted.datasetId,
+        coreRunId: accepted.health.core_run_id,
+        generation,
+        baseUrl: this.baseUrl,
+        current: () =>
+          this.#state.kind === 'ready' && generation === this.#generation && !lease.signal.aborted,
+      };
+    } catch (error) {
+      return this.refuse(operation, failureCode(error), id, options.mutation);
+    }
+    const previous = this.#diagnostics ? options.mutation?.outcome() : undefined;
+    let cancelledWait = false;
+    options.mutation?.transmitted();
+    const execute = async (): Promise<AttemptResult<T>> => {
+      try {
+        let result: AttemptResult<T>;
+        const started = performance.now();
+        try {
+          result = await run(lease);
+        } catch (error) {
+          result = failed(error, lease, {
+            attemptId: id,
+            elapsedMs: performance.now() - started,
+            receivedBytes: 0,
+          });
+        }
+        options.mutation?.completed(result);
+        if (result.kind === 'response' && result.response.kind === 'error')
+          this.observeAuthority(lease.generation, result.response.body.error.code);
+        if (
+          !options.mutation &&
+          result.kind === 'response' &&
+          result.response.kind !== 'error' &&
+          (lease.generation !== this.#generation || lease.signal.aborted)
+        )
+          result = {
+            kind: 'failed',
+            code: lease.signal.aborted ? failureCode(lease.signal.reason) : 'superseded',
+            context: result.context,
+          };
+        const resolved = this.#diagnostics ? options.mutation?.outcome() : undefined;
+        this.#recordAttempt(
+          operation,
+          result,
+          options.mutation,
+          (cancelledWait ||
+            previous?.kind === 'unknown_outcome' ||
+            (previous?.kind === 'dataset_invalidated' &&
+              previous.evidence.kind === 'unknown_outcome')) &&
+            (resolved?.kind === 'accepted' ||
+              (resolved?.kind === 'dataset_invalidated' && resolved.evidence.kind === 'accepted')),
+          lease.datasetId,
+          lease.generation,
+        );
+        return result;
+      } finally {
+        lease.finish();
+      }
+    };
+    const started = performance.now();
+    return attempt(id, this.#track(Promise.resolve().then(execute)), () => {
+      if (cancelledWait) return;
+      cancelledWait = true;
+      if (!this.#diagnostics) return;
+      const outcome = options.mutation?.outcome();
+      this.#diagnostics.record({
+        kind: 'request',
+        phase: 'wait',
+        operation,
+        source: this.#source(operation),
+        attemptId: id,
+        generation: lease.generation,
+        ...(lease.datasetId === null ? {} : { datasetId: lease.datasetId }),
+        elapsedMs: performance.now() - started,
+        outcome: 'cancelled',
+        ...(options.mutation === undefined || outcome === undefined
+          ? {}
+          : {
+              retryId: options.mutation.identity,
+              attemptNumber: options.mutation.attemptNumber,
+              operationOutcome: outcome.kind,
+              evidence:
+                outcome.kind === 'dataset_invalidated' ? outcome.evidence.kind : outcome.kind,
+            }),
+      });
+    });
+  }
+
   start<R extends z.ZodType, S extends z.ZodType<JsonReply>>(
     binding: JsonBinding<R, S>,
     input: Readonly<{ facts: z.output<R>; bytes: Uint8Array }>,
-    options: Readonly<{
-      timeoutMs?: number;
-      datasetId?: string;
-      selection?: z.output<R>;
-      mutation?: Readonly<{
-        transmitted: () => void;
-        completed: (result: AttemptResult<z.output<S>>) => void;
-      }>;
-    }> = {},
+    options: NetworkOptions<z.output<S>> & Readonly<{ selection?: z.output<R> }> = {},
   ): Attempt<z.output<S>> {
-    const id = crypto.randomUUID();
-    let lease: Lease;
     try {
-      if (this.#state.kind !== 'ready' || !this.#accepted) {
-        throw new SdkError(this.#state.kind === 'ready' ? 'not_connected' : this.#state.reason);
-      }
-      if (options.datasetId !== undefined && options.datasetId !== this.datasetId)
-        throw new SdkError('dataset_invalidated');
+      const accepted = this.#acceptedLease();
       readHttpRequest(
         binding,
         {
           method: binding.method,
           path: binding.path,
           headers: new Headers({
-            Authorization: `Bearer ${this.#accepted.credential}`,
-            'Atlas-Dataset-ID': this.#accepted.datasetId,
+            Authorization: `Bearer ${accepted.credential}`,
+            'Atlas-Dataset-ID': accepted.datasetId,
             'Atlas-Protocol-Version': PROTOCOL_VERSION,
             'Content-Type': 'application/json',
           }),
@@ -264,81 +565,22 @@ export class Session {
         },
         this.requestBudget,
       );
-      lease = {
-        ...this.#admit(id, limit(options.timeoutMs, this.timeoutMs, 120_000)),
-        attemptId: id,
-        credential: this.#accepted.credential,
-        datasetId: this.#accepted.datasetId,
-        generation: this.#generation,
-        baseUrl: this.baseUrl,
-      };
     } catch (error) {
-      return attempt(
-        id,
-        Promise.resolve({
-          kind: 'not_sent',
-          code: failureCode(error),
-          attemptId: id,
-        }),
-      );
+      const id = crypto.randomUUID();
+      return this.refuse(binding.operationId, failureCode(error), id, options.mutation);
     }
-    options.mutation?.transmitted();
-    const run = async (): Promise<AttemptResult<z.output<S>>> => {
-      try {
-        const result = await exchange(
-          binding,
-          input,
-          lease,
-          this.responseBudget,
-          options.selection,
-        );
-        options.mutation?.completed(result);
-        if (
-          result.kind === 'response' &&
-          result.response.kind === 'error' &&
-          lease.generation === this.#generation
-        ) {
-          switch (result.response.body.error.code) {
-            case 'unauthorized':
-              this.rejectAuthority(lease.generation);
-              break;
-            case 'protocol_mismatch':
-              this.#blocked('protocol_mismatch');
-              break;
-            case 'dataset_mismatch':
-              this.#blocked('dataset_invalidated');
-              break;
-          }
-        }
-        if (
-          !options.mutation &&
-          result.kind === 'response' &&
-          result.response.kind === 'success' &&
-          lease.generation !== this.#generation
-        ) {
-          return {
-            kind: 'failed',
-            code: 'superseded',
-            context: result.context,
-          };
-        }
-        return result;
-      } finally {
-        lease.finish();
-      }
-    };
-    return attempt(id, this.#track(run()));
+    return this.startNetwork(
+      binding.operationId,
+      (lease) => exchange(binding, input, lease, this.responseBudget, options.selection),
+      options,
+    );
   }
 
   read<R extends z.ZodType, S extends z.ZodType<JsonReply>>(binding: JsonBinding<R, S>) {
     return (input: z.output<R>, options: RequestOptions = {}): Promise<WaitResult<z.output<S>>> => {
       const id = crypto.randomUUID();
       if (options.signal?.aborted)
-        return Promise.resolve({
-          kind: 'not_sent',
-          code: 'cancelled',
-          attemptId: id,
-        });
+        return this.refuse<z.output<S>>(binding.operationId, 'cancelled', id).settled;
       try {
         const facts = submission(binding, input, this.requestBudget);
         return this.start(
@@ -347,11 +589,7 @@ export class Session {
           options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs },
         ).wait(options.signal);
       } catch (error) {
-        return Promise.resolve({
-          kind: 'not_sent',
-          code: failureCode(error),
-          attemptId: id,
-        });
+        return this.refuse<z.output<S>>(binding.operationId, failureCode(error), id).settled;
       }
     };
   }
@@ -359,7 +597,12 @@ export class Session {
   discover(
     recover = false,
   ): Promise<WaitResult<z.output<typeof exchanges.GetHealth.response.schema>>> {
-    return this.#track(this.#discover(recover));
+    return this.#track(
+      this.#discover(recover).then((result) => {
+        if (result.kind !== 'cancelled') this.#recordAttempt('GetHealth', result);
+        return result;
+      }),
+    );
   }
   #currentDiscovery(recovery: number): boolean {
     return this.#state.kind !== 'closed' && recovery === this.#recovery;
@@ -367,6 +610,7 @@ export class Session {
   async #discover(
     recover: boolean,
   ): Promise<WaitResult<z.output<typeof exchanges.GetHealth.response.schema>>> {
+    const started = performance.now();
     const id = crypto.randomUUID();
     const denied = (code: LocalCode) =>
       ({ kind: 'not_sent', code, attemptId: id }) satisfies AttemptResult<never>;
@@ -376,6 +620,7 @@ export class Session {
     if (this.#active.size >= this.#maximum || this.#pendingProviders >= this.#maximum)
       return denied('capacity');
     const recovery = ++this.#recovery;
+    const generation = this.#generation;
     const admission = this.#admit(id, this.timeoutMs);
     try {
       let credential: string;
@@ -429,6 +674,12 @@ export class Session {
         },
         this.#responseBudget,
       );
+      if (
+        result.kind === 'response' &&
+        result.response.kind === 'error' &&
+        result.response.body.error.code === 'unauthorized'
+      )
+        this.#rememberRejected(credential);
       if (!this.#currentDiscovery(recovery)) {
         return result.kind === 'not_sent'
           ? result
@@ -448,17 +699,27 @@ export class Session {
             context: result.context,
           } satisfies AttemptResult<never>;
         }
-        this.#stop('superseded');
-        this.#generation++;
+        const changed =
+          this.#state.kind !== 'ready' ||
+          this.#accepted?.credential !== credential ||
+          this.#accepted.datasetId !== datasetId ||
+          this.#accepted.health.core_run_id !== health.core_run_id;
+        if (changed) {
+          this.#stop('superseded');
+          this.#generation++;
+        }
         if (this.#accepted && this.#accepted.datasetId !== datasetId) this.#datasetEpoch++;
         this.#accepted = { credential, datasetId, health };
-        this.#transition({ kind: 'ready', generation: this.#generation, datasetId, health });
+        this.#transition(
+          { kind: 'ready', generation: this.#generation, datasetId, health },
+          performance.now() - started,
+        );
       } else if (
         result.kind === 'response' &&
         result.response.kind === 'error' &&
         result.response.body.error.code === 'unauthorized'
       ) {
-        this.#rejectedCredentials.add(credential);
+        this.#rememberRejected(credential);
         this.#generation++;
         this.#transition({
           kind: 'authorization-required',
@@ -467,8 +728,15 @@ export class Session {
           reason: 'authorization_required',
         });
         this.#stop('authorization_required');
-      } else if (this.#state.kind !== 'authorization-required') {
+      } else if (this.#state.kind !== 'ready' && this.#state.kind !== 'authorization-required') {
         this.#blocked(result.kind === 'response' ? 'protocol_mismatch' : result.code);
+      } else if (result.kind === 'response' && result.response.kind === 'error') {
+        this.observeAuthority(generation, result.response.body.error.code);
+      } else if (
+        result.kind === 'failed' &&
+        !['network', 'deadline', 'cancelled'].includes(result.code)
+      ) {
+        this.#blocked(result.code);
       }
       return result;
     } finally {
@@ -476,7 +744,26 @@ export class Session {
     }
   }
 
-  async close(): Promise<void> {
+  refreshHealth(): Promise<WaitResult<z.output<typeof exchanges.GetHealth.response.schema>>> {
+    if (this.#state.kind !== 'ready') {
+      return Promise.resolve({
+        kind: 'not_sent',
+        code: this.#state.reason,
+        attemptId: crypto.randomUUID(),
+      });
+    }
+    return this.discover();
+  }
+
+  close(): Promise<void> {
+    if (this.#closing) return this.#closing;
+    this.#closing = Promise.resolve().then(async () => {
+      await Promise.allSettled(this.#jobs);
+      this.#accepted = undefined;
+      this.#rejectedCredentials.clear();
+      if (this.#cleanupFailure) throw new SdkError(this.#cleanupFailure);
+    });
+    this.#diagnostics?.close();
     this.#recovery++;
     this.#generation++;
     this.#transition({
@@ -486,9 +773,7 @@ export class Session {
       reason: 'closed',
     });
     this.#stop('closed');
-    await Promise.allSettled(this.#jobs);
-    this.#emitter = undefined;
-    this.#accepted = undefined;
-    this.#rejectedCredentials.clear();
+    this.#observers.clear();
+    return this.#closing;
   }
 }

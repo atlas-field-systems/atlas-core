@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, rm } from 'node:fs/promises';
 import { spawn, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -33,7 +33,19 @@ execFileSync(
   ],
   { stdio: 'ignore' },
 );
-const child = spawn(process.execPath, ['--test', ...process.argv.slice(2), 'test/http.test.mjs'], {
+const suites = (await readdir(new URL('../test/', import.meta.url)))
+  .filter(
+    (name) =>
+      name.endsWith('.test.mjs') &&
+      (!process.env.ATLAS_SDK_ENTRY || !name.endsWith('.owner.test.mjs')),
+  )
+  .sort()
+  .map((name) => `test/${name}`);
+console.log(
+  `${process.env.ATLAS_SDK_ENTRY ? 'Installed public' : 'Source public and internal owner'} suites: ${suites.join(', ')}`,
+);
+if (suites.length === 0) throw new Error('No SDK test suites found');
+const child = spawn(process.execPath, ['--test', ...process.argv.slice(2), ...suites], {
   cwd: new URL('../', import.meta.url),
   stdio: 'inherit',
   env: {

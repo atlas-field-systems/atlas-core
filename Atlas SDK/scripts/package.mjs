@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFile, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -50,11 +50,14 @@ await writeFile(
   }),
 );
 npm(['install', '--ignore-scripts', '--no-audit', '--no-fund']);
-await writeFile(join(consumer, 'entry.mjs'), "export { createClient } from '@atlas/sdk';\n");
-const positive = `import { createClient, type Prepared } from '@atlas/sdk';
+await writeFile(
+  join(consumer, 'entry.mjs'),
+  "export { createClient, SdkError } from '@atlas/sdk';\n",
+);
+const positive = `import { createClient, type DiagnosticEvent, type Prepared } from '@atlas/sdk';
 import { Counter, NewId, type RequestOf, type ResponseOf, type Task } from '@atlas/protocol';
 const id = NewId.parse('11111111-1111-4111-8111-111111111111');
-const client = createClient({ baseUrl: 'https://localhost:8443', credentials: () => '' });
+const client = createClient({ baseUrl: 'https://localhost:8443', credentials: () => '', diagnostics: { mode: 'summary', observer: (event: DiagnosticEvent) => { if (event.kind === 'request') { const source: string = event.source; void source; } } } });
 const operation: Prepared<RequestOf<'CreateTask'>, ResponseOf<'CreateTask'>> = client.tasks.create({
   request_id: id, task_id: id, asset_id: id, command: 'move_to', scheduling: 'queued',
   inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } },
@@ -94,6 +97,8 @@ const negatives = [
   "client.assets.list({ page_token: 'foreign' });",
   "client.assets.update({ asset_id: id, request_id: id, expected_edit_revision: Counter.parse('1'), alias: undefined });",
   "createClient({ baseUrl: 'https://localhost', credentials: () => '', mode: 'full' });",
+  "createClient({ baseUrl: 'https://localhost', credentials: () => '', diagnostics: { mode: 'summary' } });",
+  "createClient({ baseUrl: 'https://localhost', credentials: () => '', diagnostics: { mode: 'disabled', observer: () => {} } });",
   "const read = await client.tasks.get({ task_id: id }); if (read.kind === 'response' && read.response.kind === 'success') read.response.body.data.object_id;",
 ];
 for (const [i, line] of negatives.entries()) {
@@ -146,6 +151,10 @@ const report = {
   negativeTypeCases: negatives.length,
   browserBundle: true,
   installedHttpsTests: true,
+  installedSuites: (await readdir(join(root, 'test')))
+    .filter((name) => name.endsWith('.test.mjs') && !name.endsWith('.owner.test.mjs'))
+    .sort(),
+  internalOwnerChecks: 'source-only; excluded from installed suites',
   protocol: manifest.atlasBuild.protocol,
 };
 await writeFile(join(consumer, 'qualification.json'), JSON.stringify(report, null, 2) + '\n');

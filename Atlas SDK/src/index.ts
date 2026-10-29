@@ -17,3 +17,15 @@ export type {
   ConnectionState,
 } from './contracts.js';
 export type { ListCursor } from './lists.js';
+export type {
+  DiagnosticOptions,
+  DiagnosticObserver,
+  DiagnosticEvent,
+  DiagnosticSource,
+  DiagnosticBytes,
+  DiagnosticOperation,
+  DiagnosticReason,
+  DiagnosticCode,
+  OperationSummary,
+  CodeFrame,
+} from './diagnostics.js';

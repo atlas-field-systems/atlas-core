@@ -1,9 +1,8 @@
 import type { ErrorObject, ExchangeName } from '@atlas/protocol';
 import type { z } from 'zod';
-import { attempt } from './connection.js';
-import type { Session } from './connection.js';
+import type { MutationOwner, NetworkOptions, Session } from './connection.js';
 import { SdkError } from './contracts.js';
-import type { AttemptResult, EffectEvidence, OperationOutcome, Prepared } from './contracts.js';
+import type { EffectEvidence, OperationOutcome, Prepared } from './contracts.js';
 import { freeze, submission } from './http.js';
 import type { JsonBinding, JsonReply } from './http.js';
 import type { MutationPolicy } from './policy.js';
@@ -12,6 +11,7 @@ type Cell = {
   epoch: number;
   canonical: string;
   pending: number;
+  attempts: number;
   uncertain: boolean;
   refusal: ErrorObject['code'] | undefined;
   accepted: Extract<EffectEvidence, { kind: 'accepted' }> | undefined;
@@ -42,6 +42,22 @@ export class Operations {
     binding: JsonBinding<R, S> & { operationId: ExchangeName },
     policy: MutationPolicy<z.output<R>>,
   ) {
+    return this.bindTransport(binding, policy, (validated, options) =>
+      this.session.start(binding, validated, options),
+    );
+  }
+
+  bindTransport<R extends z.ZodType, S extends z.ZodType<JsonReply>>(
+    binding: Omit<JsonBinding<R, S>, 'transport'> & {
+      transport: 'json' | 'upload';
+      operationId: ExchangeName;
+    },
+    policy: MutationPolicy<z.output<R>>,
+    transmit: (
+      input: Readonly<{ facts: z.output<R>; bytes: Uint8Array }>,
+      options: NetworkOptions<z.output<S>>,
+    ) => ReturnType<Prepared<z.output<R>, z.output<S>>['start']>,
+  ) {
     return (input: z.output<R>): Prepared<z.output<R>, z.output<S>> => {
       const session = this.session;
       const datasetId = session.datasetId;
@@ -67,6 +83,7 @@ export class Operations {
           epoch: session.datasetEpoch,
           canonical: facts,
           pending: 0,
+          attempts: 0,
           uncertain: false,
           refusal: undefined,
           accepted: undefined,
@@ -86,46 +103,51 @@ export class Operations {
             }
           : knowledge;
       };
+      const nextOwner = (): MutationOwner<z.output<S>> => {
+        shared.attempts = Math.min(Number.MAX_SAFE_INTEGER, shared.attempts + 1);
+        return {
+          identity,
+          attemptNumber: shared.attempts,
+          report: policy.report?.(validated.facts) ?? false,
+          outcome,
+          transmitted: () => {
+            shared.pending++;
+          },
+          completed: (result) => {
+            shared.pending--;
+            if (result.kind === 'response' && result.response.kind === 'success') {
+              shared.accepted ??= freeze({
+                kind: 'accepted',
+                attemptId: result.context.attemptId,
+                ...(result.context.requestId === undefined
+                  ? {}
+                  : { requestId: result.context.requestId }),
+              });
+            } else if (
+              result.kind === 'response' &&
+              result.response.kind === 'error' &&
+              policy.noEffect(result.response.body.error)
+            ) {
+              shared.refusal = result.response.body.error.code;
+            } else if (result.kind !== 'not_sent') {
+              shared.uncertain = true;
+            }
+          },
+        };
+      };
       const start: Prepared<z.output<R>, z.output<S>>['start'] = (options = {}) => {
-        if (outcome().kind === 'dataset_invalidated') {
-          const id = crypto.randomUUID();
-          return attempt(
-            id,
-            Promise.resolve({
-              kind: 'not_sent',
-              code: 'dataset_invalidated',
-              attemptId: id,
-            }),
+        const mutation = nextOwner();
+        if (outcome().kind === 'dataset_invalidated')
+          return session.refuse(
+            binding.operationId,
+            'dataset_invalidated',
+            crypto.randomUUID(),
+            mutation,
           );
-        }
-        return session.start(binding, validated, {
+        return transmit(validated, {
           ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
           datasetId,
-          mutation: {
-            transmitted: () => {
-              shared.pending++;
-            },
-            completed: (result: AttemptResult<z.output<S>>) => {
-              shared.pending--;
-              if (result.kind === 'response' && result.response.kind === 'success') {
-                shared.accepted ??= freeze({
-                  kind: 'accepted',
-                  attemptId: result.context.attemptId,
-                  ...(result.context.requestId === undefined
-                    ? {}
-                    : { requestId: result.context.requestId }),
-                });
-              } else if (
-                result.kind === 'response' &&
-                result.response.kind === 'error' &&
-                policy.noEffect(result.response.body.error)
-              ) {
-                shared.refusal = result.response.body.error.code;
-              } else {
-                shared.uncertain = true;
-              }
-            },
-          },
+          mutation,
         });
       };
       return Object.freeze({
@@ -143,7 +165,12 @@ export class Operations {
           if (options.signal?.aborted) {
             const id = crypto.randomUUID();
             return {
-              attempt: { kind: 'not_sent', code: 'cancelled', attemptId: id },
+              attempt: await session.refuse<z.output<S>>(
+                binding.operationId,
+                'cancelled',
+                id,
+                nextOwner(),
+              ).settled,
               outcome: outcome(),
             };
           }

@@ -2,6 +2,7 @@ import type { ErrorObject, ExchangeName, RequestOf } from '@atlas/protocol';
 
 export type MutationPolicy<R> = Readonly<{
   kind: 'mutation';
+  report?: (request: R) => boolean;
   identity: (request: R) => string;
   noEffect: (error: ErrorObject) => boolean;
 }>;
@@ -29,6 +30,7 @@ const request = {
 } satisfies MutationPolicy<{ request_id: string }>;
 const execution = {
   kind: 'mutation',
+  report: () => true,
   identity: (input: RequestOf<'ReportTaskExecution'> | RequestOf<'ReportTaskResults'>) =>
     JSON.stringify([
       input.evidence.asset_id,
@@ -58,7 +60,15 @@ export const policies = {
   ListAssets: { kind: 'moving-list' },
   GetAsset: { kind: 'read' },
   GetAssetByAlias: { kind: 'read' },
-  UpdateAsset: request,
+  UpdateAsset: {
+    ...request,
+    report: (input) =>
+      input.report !== undefined &&
+      input.alias === undefined &&
+      input.description === undefined &&
+      input.type === undefined &&
+      input.capabilities === undefined,
+  },
   DeleteAsset: request,
   GetAssetStatus: { kind: 'read' },
   GetAssetMovementHistory: { kind: 'history-view' },
@@ -66,6 +76,7 @@ export const policies = {
   CreateObservation: request,
   ReportObservation: {
     kind: 'mutation',
+    report: () => true,
     identity: (input) =>
       JSON.stringify([input.observation_id, input.publisher_id, input.report.report_id]),
     noEffect: () => false,
@@ -104,6 +115,7 @@ export const policies = {
   SetTaskOrder: request,
   ConfirmTaskOrder: {
     kind: 'mutation',
+    report: () => true,
     identity: (input) =>
       JSON.stringify([
         input.evidence.asset_id,
