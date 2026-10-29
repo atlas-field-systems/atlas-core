@@ -8,6 +8,30 @@ import { request as httpsRequest } from 'node:https';
 import { Worker } from 'node:worker_threads';
 
 const ok = result => { assert.equal(result.status, 200, JSON.stringify(result.json)); return result.json.data; };
+test('HTTP refuses API 0.1.0 and 0.2.0 before reserving registration identities', async t => {
+  const f = await fixture(t);
+  for (const version of ['0.1.0', '0.2.0']) {
+    const request = registration(`Version ${version}`);
+    for (const [name, input] of [['GetReadiness', {}], ['ListTasks', {}], ['RegisterAsset', request]]) {
+      const refused = await f.call(name, input, { 'Atlas-Protocol-Version': version });
+      assert.equal(refused.status, 409, name);
+      assert.equal(refused.headers['atlas-protocol-version'], PROTOCOL_VERSION);
+      assert.equal(refused.headers['atlas-dataset-id'], f.core.dataset);
+      const parsed = readHttp(exchanges[name], { status: refused.status, headers: new Headers(refused.headers), body: refused.bytes }, { datasetId: f.core.dataset, request: input });
+      assert.equal(parsed.kind, 'error');
+      assert.equal(parsed.body.error.code, 'protocol_mismatch');
+      assert.deepEqual(parsed.body.error.details, { protocol_version: PROTOCOL_VERSION });
+    }
+    const missing = await f.call('GetAsset', { asset_id: request.asset_id });
+    assert.equal(missing.status, 404);
+    assert.equal(missing.json.error.code, 'asset_not_found');
+    assert.deepEqual(ok(await f.call('ListApiKeys', { filters: { ids: [request.api_key_id] } })).items, []);
+    const accepted = await f.call('RegisterAsset', request);
+    assert.equal(ok(accepted).asset.id, request.asset_id);
+    assert.equal((await f.call('RegisterAsset', request)).json.commit_cursor, accepted.json.commit_cursor);
+    assert.deepEqual(ok(await f.call('ListAssets', { filters: { ids: [request.asset_id] } })).items.map(asset => asset.id), [request.asset_id]);
+  }
+});
 test('original bytes, actual context and ignored diagnostic header defects', async t => {
   const f = await fixture(t, { trustedOrigins: ['https://example.test'] });
   const failures = [

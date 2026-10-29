@@ -1,10 +1,127 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { exchanges } from '@atlas/protocol';
+import { exchanges, readHttp } from '@atlas/protocol';
 import { fixture, uuid, secret, report, telemetry, registration } from './helpers.mjs';
 
 function ok(result) { assert.equal(result.status, 200, JSON.stringify(result.json)); return result.json.data; }
+async function listItems(f, name, query) {
+  const items = [], tokens = new Set();
+  let request = { ...query, page_size: 1 };
+  for (let page = 0; page < 100; page++) {
+    const response = await f.call(name, request); ok(response);
+    const data = readHttp(exchanges[name], { status: response.status, headers: new Headers(response.headers), body: response.bytes }, { datasetId: f.core.dataset, request }).body.data;
+    assert.ok(data.items.length <= 1, name);
+    items.push(...data.items);
+    if (data.next_page_token === null) return items;
+    assert.equal(tokens.has(data.next_page_token), false, `${name} repeated a continuation`);
+    tokens.add(data.next_page_token);
+    request = { page_token: data.next_page_token };
+  }
+  assert.fail(`${name} did not complete`);
+}
+async function listIds(f, name, query, expected, key = 'id') {
+  const items = await listItems(f, name, query);
+  assert.deepEqual(items.map(item => item[key]).sort(), expected.toSorted(), `${name} ${JSON.stringify(query)}`);
+}
+
+test('Entity selections preserve AND filters, OR alternatives and completeness across one-item pages', async t => {
+  const f = await fixture(t), assets = [], pairs = [], features = [];
+  const aliases = ['Straße', 'Alpha', 'Distractor'];
+  const publisher = uuid();
+  for (let i = 0; i < 3; i++) {
+    assets.push(ok(await f.call('RegisterAsset', { ...registration(aliases[i]), type: { kind: [null, 'tracker', 'other'][i] } })).asset);
+    const origin = { kind: 'publisher', publisher_id: i < 2 ? publisher : uuid() }, observation_id = uuid();
+    const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id: origin.publisher_id, source_asset_id: assets[i].id, alias: `Observation ${aliases[i]}`,
+      report: report(f.core.dataset, observation_id, origin, 1, { type: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { kind: [null, 'person', 'animal'][i] } } }) }));
+    ok(await f.call('EditTrack', { request_id: uuid(), track_id: pair.track.id, expected_edit_revision: '0', edits: { alias: `Track ${aliases[i]}` } }));
+    pairs.push(pair);
+    const geofeature_id = uuid(); features.push(geofeature_id);
+    ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id, alias: `Geofeature ${aliases[i]}`, type: { kind: [null, 'route', 'boundary'][i] }, geometry: { type: 'Point', coordinates: [i, i] } }));
+  }
+  const selections = [
+    { name: 'ListAssets', ids: assets.map(a => a.id), filters: { ids: assets.slice(0, 2).map(a => a.id), aliases: ['STRASSE', 'ALPHA'], kinds: [null, 'tracker'], health: ['offline'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'security_camera', health: 'degraded' } },
+    { name: 'ListObservations', ids: pairs.map(p => p.observation.id), filters: { ids: pairs.slice(0, 2).map(p => p.observation.id), aliases: ['OBSERVATION STRASSE', 'OBSERVATION ALPHA'], kinds: [null, 'person'], publisher_ids: [publisher], source_asset_ids: assets.slice(0, 2).map(a => a.id), track_ids: pairs.slice(0, 2).map(p => p.track.id) }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'aircraft', publisher_ids: uuid(), source_asset_ids: uuid(), track_ids: uuid() } },
+    { name: 'ListTracks', ids: pairs.map(p => p.track.id), filters: { ids: pairs.slice(0, 2).map(p => p.track.id), aliases: ['TRACK STRASSE', 'TRACK ALPHA'], kinds: [null, 'person'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'aircraft' } },
+    { name: 'ListGeofeatures', ids: features, filters: { ids: features.slice(0, 2), aliases: ['GEOFEATURE STRASSE', 'GEOFEATURE ALPHA'], kinds: [null, 'route'] }, wrong: { ids: uuid(), aliases: 'absent', kinds: 'search_area' } },
+  ];
+  for (const { name, ids, filters, wrong } of selections) {
+    await listIds(f, name, {}, ids);
+    await listIds(f, name, { filters }, ids.slice(0, 2));
+    for (const [field, value] of Object.entries(wrong)) {
+      await listIds(f, name, { filters: { ...filters, [field]: [value] } }, []);
+      await listIds(f, name, { filters: { ...filters, [field]: [] } }, []);
+      await listIds(f, name, { filters: { ...filters, [field]: [value, ...filters[field]] } }, ids.slice(0, 2));
+    }
+  }
+  for (const pair of pairs) {
+    const query = { track_id: pair.track.id, publisher_ids: [uuid(), pair.observation.publisher_id], source_asset_ids: [uuid(), pair.observation.source_asset_id] };
+    await listIds(f, 'GetTrackObservations', query, [pair.observation.id]);
+    for (const field of ['publisher_ids', 'source_asset_ids']) {
+      await listIds(f, 'GetTrackObservations', { ...query, [field]: [] }, []);
+      await listIds(f, 'GetTrackObservations', { ...query, [field]: [uuid()] }, []);
+    }
+  }
+});
+
+test('Task selections distinguish cancellation requests from execution states', async t => {
+  const f = await fixture(t), assets = [], tasks = [];
+  for (let i = 0; i < 2; i++) assets.push(ok(await f.call('RegisterAsset', registration())).asset);
+  for (let i = 0; i < 4; i++) tasks.push(ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: assets[i % 2].id,
+    command: i === 3 ? 'pause' : 'move_to', scheduling: i === 3 ? 'immediate' : 'queued', inputs: i === 3 ? {} : { target: { kind: 'position', position: { latitude: i, longitude: 0 } } } })));
+  ok(await f.call('RequestTaskCancellation', { request_id: uuid(), task_id: tasks[2].task_id }));
+  const filters = { ids: tasks.slice(0, 2).map(task => task.task_id), asset_ids: assets.map(a => a.id), commands: ['move_to'], states: ['pending'] };
+  const expected = tasks.slice(0, 2).map(task => task.task_id);
+  await listIds(f, 'ListTasks', {}, tasks.map(task => task.task_id), 'task_id');
+  await listIds(f, 'ListTasks', { filters }, expected, 'task_id');
+  for (const [field, wrong] of Object.entries({ ids: uuid(), asset_ids: uuid(), commands: 'resume', states: 'completed' })) {
+    await listIds(f, 'ListTasks', { filters: { ...filters, [field]: [wrong] } }, [], 'task_id');
+    await listIds(f, 'ListTasks', { filters: { ...filters, [field]: [] } }, [], 'task_id');
+    await listIds(f, 'ListTasks', { filters: { ...filters, [field]: [wrong, ...filters[field]] } }, expected, 'task_id');
+  }
+  await listIds(f, 'ListTasks', { filters: { states: ['pending'], commands: ['move_to'] } }, expected, 'task_id');
+  await listIds(f, 'ListTasks', { filters: { states: ['cancellation_requested'] } }, [tasks[2].task_id], 'task_id');
+  await listIds(f, 'ListTasks', { filters: { states: ['cancellation_requested', 'pending'] } }, tasks.map(task => task.task_id), 'task_id');
+});
+
+test('administrative selections page exact Operators, bound keys, resource kinds and activity', async t => {
+  const f = await fixture(t), operators = [], keys = [];
+  for (let i = 0; i < 3; i++) {
+    const request = { request_id: uuid(), operator_id: uuid(), name: `Operator ${i}` };
+    const created = await f.call('CreateOperator', request); operators.push(ok(created).operator_id);
+    assert.equal((await f.call('CreateOperator', request)).json.commit_cursor, created.json.commit_cursor);
+  }
+  for (let i = 0; i < 4; i++) keys.push(ok(await f.call('CreateApiKey', { request_id: uuid(), api_key_id: uuid(), secret: secret(), ...(i < 3 ? { operator_id: operators[i] } : {}) })).api_key_id);
+  await listIds(f, 'ListOperators', {}, operators, 'operator_id');
+  await listIds(f, 'ListOperators', { filters: { ids: [uuid(), ...operators.slice(0, 2)] } }, operators.slice(0, 2), 'operator_id');
+  await listIds(f, 'ListOperators', { filters: { ids: [] } }, [], 'operator_id');
+  await listIds(f, 'ListOperators', { filters: { ids: [uuid()] } }, [], 'operator_id');
+  const filters = { ids: keys, operator_ids: operators.slice(0, 2) };
+  await listIds(f, 'ListApiKeys', { filters }, keys.slice(0, 2), 'api_key_id');
+  for (const field of ['ids', 'operator_ids']) {
+    await listIds(f, 'ListApiKeys', { filters: { ...filters, [field]: [] } }, [], 'api_key_id');
+    await listIds(f, 'ListApiKeys', { filters: { ...filters, [field]: [uuid()] } }, [], 'api_key_id');
+    await listIds(f, 'ListApiKeys', { filters: { ...filters, [field]: [uuid(), ...filters[field]] } }, keys.slice(0, 2), 'api_key_id');
+  }
+  await listIds(f, 'ListApiKeys', { filters: { ids: keys } }, keys, 'api_key_id');
+  await listIds(f, 'ListResources', {}, ['objects', 'temporary_receipts'], 'kind');
+  await listIds(f, 'ListResources', { filters: { kinds: ['absent', 'temporary_receipts', 'objects'] } }, ['objects', 'temporary_receipts'], 'kind');
+  await listIds(f, 'ListResources', { filters: { kinds: ['objects'] } }, ['objects'], 'kind');
+  await listIds(f, 'ListResources', { filters: { kinds: ['absent'] } }, [], 'kind');
+  await listIds(f, 'ListResources', { filters: { kinds: [] } }, [], 'kind');
+  const operatorActivity = Array(3).fill('operator:Operator created');
+  const credentialActivity = ['credential:Local administrator created credential', ...Array(4).fill('credential:Credential created')];
+  const label = item => `${item.category}:${item.message}`;
+  for (const [categories, expected] of [
+    [['operator'], operatorActivity], [['credential'], credentialActivity],
+    [['absent', 'operator', 'credential'], [...operatorActivity, ...credentialActivity]],
+    [[], []], [['absent'], []],
+  ]) {
+    const items = await listItems(f, 'ReadActivity', { filters: { categories } });
+    assert.deepEqual(items.map(label).sort(), expected.toSorted());
+    assert.equal(new Set(items.map(item => item.activity_id)).size, items.length);
+  }
+});
 test('Track Observation membership validates unknown references independently of unrelated records', async t => {
   const f = await fixture(t); const unknown = uuid();
   assert.equal((await f.call('GetTrackObservations', { track_id: unknown })).json.error.code, 'entity_not_found');
@@ -14,8 +131,128 @@ test('Track Observation membership validates unknown references independently of
   for (const pair of pairs) {
     assert.deepEqual(ok(await f.call('GetTrackObservations', { track_id: pair.track.id })).items.map(item => item.id), [pair.observation.id]);
     assert.deepEqual(ok(await f.call('GetTrackObservations', { track_id: pair.track.id, publisher_ids: [uuid()] })).items, []);
+    await listIds(f, 'GetTrackObservations', { track_id: pair.track.id, publisher_ids: [pair.observation.publisher_id], source_asset_ids: [uuid()] }, []);
+  }
+  await listIds(f, 'ListObservations', { filters: { publisher_ids: pairs.map(pair => pair.observation.publisher_id), source_asset_ids: [uuid()] } }, []);
+});
+test('Object selections and parent associations retain exact membership across pages', async t => {
+  const f = await fixture(t), parents = [], objects = [];
+  for (let i = 0; i < 2; i++) {
+    const asset = ok(await f.call('RegisterAsset', registration())).asset;
+    const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id: uuid(), publisher_id: uuid(), source_asset_id: asset.id }));
+    const geofeature_id = uuid();
+    ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id, geometry: { type: 'Point', coordinates: [i, i] } }));
+    const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: i, longitude: 0 } } } }));
+    parents.push({ asset: asset.id, observation: pair.observation.id, track: pair.track.id, geofeature: geofeature_id, task: task.task_id, generation: asset.process_generation });
+  }
+  for (let i = 0; i < 4; i++) {
+    const bytes = Buffer.from(`associated content ${i}`);
+    const selectedParents = i === 1 ? parents : i === 3 ? [] : [parents[i === 0 ? 0 : 1]];
+    const associations = selectedParents.flatMap(parent => ['asset', 'observation', 'track', 'geofeature'].map(kind => ({ kind, id: parent[kind] })));
+    const descriptor = { request_id: uuid(), object_id: uuid(), byte_length: String(bytes.length), sha256: createHash('sha256').update(bytes).digest('hex'),
+      content_type: ['text/plain', 'image/png', 'text/plain', 'application/octet-stream'][i], metadata: { associations } };
+    const uploaded = await f.upload(descriptor, bytes); objects.push(ok(uploaded).object_id);
+    assert.equal((await f.upload(descriptor, bytes)).json.commit_cursor, uploaded.json.commit_cursor);
+  }
+  const filters = { ids: objects.slice(0, 3), content_types: ['text/plain', 'image/png'] };
+  await listIds(f, 'ListObjects', {}, objects, 'object_id');
+  await listIds(f, 'ListObjects', { filters }, objects.slice(0, 3), 'object_id');
+  await listIds(f, 'ListObjects', { filters: { content_types: ['text/plain'] } }, [objects[0], objects[2]], 'object_id');
+  for (const [field, wrong] of Object.entries({ ids: uuid(), content_types: 'application/json' })) {
+    await listIds(f, 'ListObjects', { filters: { ...filters, [field]: [wrong] } }, [], 'object_id');
+    await listIds(f, 'ListObjects', { filters: { ...filters, [field]: [] } }, [], 'object_id');
+    await listIds(f, 'ListObjects', { filters: { ...filters, [field]: [wrong, ...filters[field]] } }, objects.slice(0, 3), 'object_id');
+  }
+  for (let i = 0; i < parents.length; i++) {
+    const parent = parents[i], expected = i === 0 ? objects.slice(0, 2) : objects.slice(1, 3);
+    const evidence = { dataset_id: f.core.dataset, asset_id: parent.asset, origin: { kind: 'asset_process', process_generation: parent.generation }, report_id: uuid(), sequence: '1', generated_at: null,
+      payload: { task_id: parent.task, declarations: expected.map(object_id => ({ object_id, required: false })) } };
+    ok(await f.call('ReportTaskResults', { evidence }));
+    assert.equal(ok(await f.call('ReportTaskResults', { evidence })).evidence_disposition, 'duplicate');
+    for (const family of ['Asset', 'Observation', 'Track', 'Geofeature', 'Task']) {
+      const kind = family.toLowerCase();
+      await listIds(f, `Get${family}Objects`, { [`${kind}_id`]: parent[kind] }, expected, 'object_id');
+      const unknown = await f.call(`Get${family}Objects`, { [`${kind}_id`]: uuid() });
+      assert.equal(unknown.status, 404);
+      assert.equal(unknown.json.error.code, 'entity_not_found');
+    }
   }
 });
+
+test('history selections retain exact nanosecond bounds and separate known, unknown and uncertain positions', async t => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const publisher_id = uuid(), observation_id = uuid();
+  const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id }));
+  const facts = [
+    ['2026-10-21T12:00:00.099999999Z', 'known'],
+    ['2026-10-21T12:00:00.1Z', 'known'],
+    ['2026-10-21T12:00:00.100000000Z', 'known'],
+    ['2026-10-21T12:00:00.100000001Z', 'known'],
+    ['2026-10-21T12:00:00.100000002Z', 'known'],
+    [null, 'unknown'],
+    ['9999-01-01T00:00:00Z', 'uncertain'],
+  ].map(([observed_at, time_status], i) => ({ observed_at, time_status, reading_id: `10000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, latitude: i }));
+  const sources = [
+    { kind: 'Asset', id: asset.id, origin: { kind: 'asset_process', process_generation: asset.process_generation }, tracks: [] },
+    { kind: 'Observation', id: observation_id, origin: { kind: 'publisher', publisher_id }, tracks: [pair.track.id] },
+  ];
+  for (const source of sources) {
+    for (const [i, fact] of facts.entries()) {
+      const input = report(f.core.dataset, source.id, source.origin, i + 1, { telemetry: telemetry(source.origin, fact.latitude, fact.observed_at, fact.reading_id) });
+      const name = source.kind === 'Asset' ? 'UpdateAsset' : 'ReportObservation';
+      const request = source.kind === 'Asset' ? { asset_id: source.id, request_id: uuid(), report: input } : { observation_id, publisher_id, report: input };
+      ok(await f.call(name, request));
+      const retry = ok(await f.call(name, request));
+      assert.equal(retry.evidence_disposition, 'duplicate');
+    }
+  }
+  const allocation_context = ok(await f.call('GetHealth')).allocation_context;
+  const bounds = { source_time_from: '2026-10-21T12:00:00.100000000Z', source_time_before: '2026-10-21T12:00:00.100000002Z' };
+  const selections = [
+    [{ time_groups: ['known'], ...bounds }, [1, 2, 3]],
+    [{ time_groups: ['known'], source_time_from: bounds.source_time_from }, [1, 2, 3, 4]],
+    [{ time_groups: ['known'], source_time_before: bounds.source_time_before }, [0, 1, 2, 3]],
+    [{ time_groups: ['unknown'], ...bounds }, [5]],
+    [{ time_groups: ['uncertain'], ...bounds }, [6]],
+    [{ time_groups: ['unknown', 'uncertain'], ...bounds }, [5, 6]],
+    [{ time_groups: ['known', 'unknown'], ...bounds }, [1, 2, 3, 5]],
+    [{ time_groups: ['known', 'uncertain'], ...bounds }, [1, 2, 3, 6]],
+    [bounds, [1, 2, 3, 5, 6]],
+    [{ time_groups: [], ...bounds }, []],
+    [{}, [0, 1, 2, 3, 4, 5, 6]],
+  ];
+  for (const source of [...sources, { ...sources[1], kind: 'Track', id: pair.track.id }]) {
+    const name = `Get${source.kind}MovementHistory`;
+    for (const [selection, indices] of selections) {
+      let request = { entity_id: source.id, query_id: uuid(), allocation_context, page_size: 1, ...selection };
+      const readings = [], tokens = new Set();
+      let context;
+      try {
+        for (let page = 0; ; page++) {
+          assert.ok(page <= facts.length, `${name} must finish`);
+          const response = await f.call(name, request); ok(response);
+          const data = readHttp(exchanges[name], { status: response.status, headers: new Headers(response.headers), body: response.bytes }, { datasetId: f.core.dataset, request }).body.data;
+          const { readings: pageReadings, next_page_token, ...pageContext } = data;
+          if (context === undefined) context = pageContext;
+          else assert.deepEqual(pageContext, context);
+          assert.ok(pageReadings.length <= 1);
+          readings.push(...pageReadings);
+          if (next_page_token === null) break;
+          assert.equal(tokens.has(next_page_token), false); tokens.add(next_page_token);
+          request = { page_token: next_page_token };
+        }
+        assert.deepEqual(readings, indices.map(index => {
+          const fact = facts[index];
+          return { source_entity_kind: source.kind === 'Asset' ? 'asset' : 'observation', source_entity_id: source.kind === 'Asset' ? asset.id : observation_id,
+            quantity: 'position', value: { latitude: fact.latitude, longitude: -1 }, observed_at: fact.observed_at, time_status: fact.time_status,
+            source_evidence: { origin: source.origin, reading_id: fact.reading_id }, track_ids: source.tracks };
+        }), `${name} ${JSON.stringify(selection)}`);
+      } finally { if (context) ok(await f.call('ReleaseHistoryView', { release_token: context.release_token })); }
+    }
+  }
+});
+
 test('every HTTP exchange succeeds through HTTPS, the worker, SQLite and files', { timeout: 120000 }, async t => {
   const f = await fixture(t);
   let health = ok(await f.call('GetHealth'));
