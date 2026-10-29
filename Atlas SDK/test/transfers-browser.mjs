@@ -1,23 +1,26 @@
-/** @param {import('../dist/transfers.js').Transfers} transfers */
-export async function runTransferAssertions(transfers) {
-  const check = (condition, message) => {
+import { NewId, Counter } from '@atlas/protocol';
+
+/** @param {import('@atlas/sdk').HttpClient | import('@atlas/sdk').FullClient} client */
+export async function runTransferAssertions(client) {
+  /** @param {unknown} condition @param {string} message @returns {asserts condition} */
+  function check(condition, message) {
     if (!condition) throw new Error(message);
-  };
+  }
   const bytes = new TextEncoder().encode('Atlas browser multipart\0exact bytes');
   const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
   // The owning browser runner supplies a freshly discovered client and records HTTP traffic.
   const facts = {
-    object_id: crypto.randomUUID(),
-    request_id: crypto.randomUUID(),
-    byte_length: String(bytes.length),
+    object_id: NewId.parse(crypto.randomUUID()),
+    request_id: NewId.parse(crypto.randomUUID()),
+    byte_length: Counter.parse(String(bytes.length)),
     sha256: digest,
     content_type: 'application/octet-stream',
     metadata: { associations: [] },
   };
   let opens = 0;
-  const unsupported = transfers.prepareUpload(facts, {
+  const unsupported = client.objects.upload(facts, {
     open() {
       opens++;
       return new ReadableStream();
@@ -32,12 +35,13 @@ export async function runTransferAssertions(transfers) {
     opens === 0 && refusal.outcome.kind === 'not_submitted',
     'unsupported source stays unopened',
   );
+  /** @type {import('@atlas/sdk').AttemptContext[]} */
   const contexts = [];
   for (const file of [
     new Blob([bytes]),
     new File([bytes], 'private-name.bin', { type: 'text/plain' }),
   ]) {
-    const uploaded = await transfers.prepareUpload(facts, file).send();
+    const uploaded = await client.objects.upload(facts, file).send();
     check(
       uploaded.attempt.kind === 'response' && uploaded.attempt.response.kind === 'success',
       'native multipart accepted',
@@ -51,7 +55,10 @@ export async function runTransferAssertions(transfers) {
     );
     contexts.push(uploaded.attempt.context);
   }
-  const download = transfers.getContent({ object_id: facts.object_id, disposition: 'attachment' });
+  const download = client.objects.content({
+    object_id: facts.object_id,
+    disposition: 'attachment',
+  });
   const opened = await download.open();
   if (opened.kind !== 'response' || opened.response.kind !== 'content')
     throw new Error('content headers failed');
@@ -79,7 +86,15 @@ export async function runTransferAssertions(transfers) {
   );
   if (verified.kind !== 'response') throw new Error('missing download context');
   contexts.push(verified.context);
-  const reference = await transfers.getReference('text/html');
+  const listed = await client.http.objects.list({}).next();
+  check(listed.kind === 'response' && listed.response.kind === 'success', 'Object list');
+  check(
+    listed.response.body.data.items.filter((item) => item.object_id === facts.object_id).length ===
+      1,
+    'one Object after retry',
+  );
+  contexts.push(listed.context);
+  const reference = await client.reference('text/html');
   check(
     reference.kind === 'response' &&
       reference.response.kind === 'reference' &&
@@ -90,6 +105,8 @@ export async function runTransferAssertions(transfers) {
   contexts.push(reference.context);
   return {
     objectId: facts.object_id,
+    digest,
+    byteLength: bytes.length,
     contexts,
     refusedAttemptId: refusal.attempt.kind === 'not_sent' ? refusal.attempt.attemptId : null,
     assertions: [

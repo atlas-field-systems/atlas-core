@@ -50,10 +50,7 @@ await writeFile(
   }),
 );
 npm(['install', '--ignore-scripts', '--no-audit', '--no-fund']);
-await writeFile(
-  join(consumer, 'entry.mjs'),
-  "export { createClient, SdkError } from '@atlas/sdk';\n",
-);
+await writeFile(join(consumer, 'entry.mjs'), "export * from '@atlas/sdk';\n");
 const positive = `import { createClient, type DiagnosticEvent, type Prepared } from '@atlas/sdk';
 import { Counter, NewId, type RequestOf, type ResponseOf, type Task } from '@atlas/protocol';
 const id = NewId.parse('11111111-1111-4111-8111-111111111111');

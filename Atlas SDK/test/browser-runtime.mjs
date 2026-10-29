@@ -63,6 +63,9 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
   const responseJobs = [];
   let upgrades = 0;
   const sockets = [];
+  const activeSockets = new Set();
+  const frames = [];
+  const multipart = [];
   const pageErrors = [];
   const contexts = [];
   let completed = false;
@@ -218,6 +221,12 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
     });
     browsers.add(context);
     context.setDefaultTimeout(15_000);
+    context.on('request', (request) => {
+      if (request.method() !== 'POST' || new URL(request.url()).pathname !== '/objects') return;
+      const body = request.postDataBuffer();
+      assert.ok(body && body.length < 8192, 'Bounded native multipart fixture');
+      multipart.push(body.toString('latin1'));
+    });
     context.on('response', (response) => {
       if (!response.url().startsWith('https:')) return;
       responseJobs.push(
@@ -239,7 +248,14 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
       );
     });
     context.on('page', (page) => {
-      page.on('websocket', (socket) => sockets.push(socket.url()));
+      page.on('websocket', (socket) => {
+        sockets.push(socket.url());
+        activeSockets.add(socket);
+        socket.on('close', () => activeSockets.delete(socket));
+        socket.on('framereceived', ({ payload }) => {
+          if (typeof payload === 'string') frames.push(JSON.parse(payload).type);
+        });
+      });
       page.on('pageerror', (error) => pageErrors.push(error.message));
     });
     return context;
@@ -395,6 +411,86 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(sockets, [], 'Default HTTP mode opens zero browser WebSockets');
   assert.equal(upgrades, 0, 'Core receives zero WebSocket upgrades');
+  const transfers = await page.evaluate(
+    async (config) => (await import('/browser.mjs')).runTransfers(config),
+    { baseUrl, credential, datasetId },
+  );
+  await Promise.all(responseJobs);
+  assert.equal(
+    traffic.filter((request) => request.attemptId === transfers.refusedAttemptId).length,
+    0,
+  );
+  assert.equal(multipart.length, 2, 'Blob and File both use native multipart');
+  for (const body of multipart) {
+    assert.ok(body.indexOf('name="descriptor"') < body.indexOf('name="file"'));
+    assert.match(body, /name="descriptor"[^\r]*\r\nContent-Type: application\/json/i);
+    assert.match(body, /name="file"[^\r]*\r\nContent-Type: application\/octet-stream/i);
+    assert.ok(!body.includes('private-name.bin'), 'Transport does not expose caller filename');
+  }
+  for (const attempt of transfers.contexts) {
+    const request = traffic.filter((request) => request.attemptId === attempt.attemptId);
+    const response = responses.find((response) => response.attemptId === attempt.attemptId);
+    assert.equal(request.length, 1);
+    assert.equal(response?.requestId, attempt.requestId);
+  }
+  const content = responses.find(
+    (response) => response.path === `/objects/${transfers.objectId}/content`,
+  );
+  assert.ok(content, 'Actual Core binary response');
+  for (const header of [
+    'content-length',
+    'content-disposition',
+    'atlas-content-sha256',
+    'atlas-request-id',
+  ]) {
+    assert.ok(content.exposedHeaders?.toLowerCase().includes(header), `CORS exposes ${header}`);
+  }
+  const full = await page.evaluate(
+    async (config) => (await import('/browser.mjs')).startFull(config),
+    { baseUrl, credential, datasetId },
+  );
+  const localBefore = traffic.length;
+  await page.evaluate(async () => (await import('/browser.mjs')).readFull());
+  assert.equal(
+    traffic.length,
+    localBefore,
+    'Ready Full reads, query, changedSince and subscription send zero HTTP',
+  );
+  const updated = await page.evaluate(async () => (await import('/browser.mjs')).updateFull());
+  assert.ok(traffic.some((request) => request.path === '/messages/get_track_movement_history'));
+  assert.ok(traffic.some((request) => request.path === '/messages/get_observation'));
+  assert.ok(
+    frames.includes('authenticated') && frames.includes('change_batch'),
+    'Real authenticated WSS delivered complete updates',
+  );
+  const paused = await page.evaluate(async () => (await import('/browser.mjs')).pauseFull());
+  const pausedBefore = traffic.length;
+  await page.evaluate(async () => (await import('/browser.mjs')).pausedFull());
+  assert.equal(traffic.length, pausedBefore, 'Authorization pause sends zero HTTP');
+  const recovered = await page.evaluate(async () => (await import('/browser.mjs')).recoverFull());
+  const closed = await page.evaluate(async () => (await import('/browser.mjs')).closeFull());
+  const fullContexts = [
+    ...full.contexts,
+    ...updated.contexts,
+    ...paused.contexts,
+    ...recovered.contexts,
+  ];
+  await Promise.all(responseJobs);
+  for (const context of fullContexts) {
+    assert.match(context.requestId, uuid);
+    assert.equal(traffic.filter((request) => request.attemptId === context.attemptId).length, 1);
+    assert.equal(
+      responses.find((response) => response.attemptId === context.attemptId)?.requestId,
+      context.requestId,
+    );
+  }
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.equal(activeSockets.size, 0, 'Awaited client close shuts down native sockets');
+  const afterClose = traffic.length;
+  await page.waitForTimeout(200);
+  assert.equal(traffic.length, afterClose, 'No recovery or traffic after close');
+  assert.ok(upgrades >= 2, 'Initial authenticated feed and changed-key recovery');
+  assert.deepEqual(pageErrors, []);
   report.trust = {
     profile,
     database: 'cert9.db',
@@ -411,9 +507,28 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
     'request and error correlation',
     'CORS preflight and exposed context',
     'untrusted origin blocked',
-    'zero WebSocket connections',
+    'zero HTTP-mode WebSocket connections',
+    ...transfers.assertions,
+    ...closed.assertions,
+    'changed-key recovery over real WSS',
+    'native multipart part order and media',
+    'binary CORS headers and correlation',
   ];
-  report.notExercised = ['Full synchronization', 'Blob upload'];
-  report.attempts = contexts.length;
+  report.notExercised = ['Chromium', 'WebKit', 'sustained workload', 'power-loss durability'];
+  report.full = {
+    socketCount: sockets.length,
+    upgradeCount: upgrades,
+    receivedFrameTypes: [...new Set(frames)],
+    correlatedAttempts: fullContexts.length,
+  };
+  report.transfers = {
+    objectId: transfers.objectId,
+    sha256: transfers.digest,
+    byteLength: transfers.byteLength,
+    nativeMultipartRequests: multipart.length,
+    correlatedAttempts: transfers.contexts.length,
+  };
+  report.attempts = contexts.length + transfers.contexts.length + fullContexts.length;
+
   completed = true;
 });

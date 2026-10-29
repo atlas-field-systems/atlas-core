@@ -1,5 +1,5 @@
 export { createClient } from './client.js';
-export type { Client, HttpClient, FullClient } from './client.js';
+export type { Client, HttpClient, FullClient, HttpResources } from './client.js';
 export type { PictureLimits } from './picture-data.js';
 export type {
   LocalPictureStatus,
@@ -42,3 +42,38 @@ export type {
   OperationSummary,
   CodeFrame,
 } from './diagnostics.js';
+export { component, commandCatalog } from './components.js';
+export { ClientCloseError } from './lifecycle.js';
+export type { ClientCloseResult } from './lifecycle.js';
+export type {
+  RemoteReads,
+  RemoteLimits,
+  AllocationEvidence,
+  HistorySelection,
+  HistoryContext,
+  HistoryView,
+  ReleaseEvidence,
+  RemoteAbandonment,
+  HistoryCloseResult,
+  RemoteCloseResult,
+  AssignedInstructions,
+  ContactSelection,
+  ContactRequest,
+} from './remote-reads.js';
+export type {
+  Reporting,
+  AssetReporter,
+  ObservationReporter,
+  AssetReading,
+  ObservationReading,
+  AssetChanges,
+} from './reporting.js';
+export type {
+  Transfers,
+  UploadSource,
+  PreparedUpload,
+  ReferenceMedia,
+  ContentHandle,
+  ContentDownload,
+  ContentOptions,
+} from './transfers.js';

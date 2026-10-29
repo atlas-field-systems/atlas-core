@@ -9,6 +9,14 @@ import type { ConnectionState, Prepared, RequestOptions, WaitResult } from './co
 import type { ListCursor } from './lists.js';
 import { Picture } from './picture.js';
 import { SdkError } from './contracts.js';
+import { createRemoteReads } from './remote-reads.js';
+import type { RemoteReads } from './remote-reads.js';
+import { createReporting } from './reporting.js';
+import type { Reporting } from './reporting.js';
+import { createTransfers } from './transfers.js';
+import type { Transfers } from './transfers.js';
+import { ClientCloseError } from './lifecycle.js';
+import type { ClientCloseResult } from './lifecycle.js';
 
 type Reads<M extends Record<string, ExchangeName>> = {
   readonly [P in keyof M]: (
@@ -27,11 +35,12 @@ type Writes<M extends Record<string, ExchangeName>> = {
   ) => Prepared<RequestOf<M[P]>, ResponseOf<M[P]>>;
 };
 export type HttpResources = Readonly<{
-  assets: Reads<{
-    get: 'GetAsset';
-    byAlias: 'GetAssetByAlias';
-    status: 'GetAssetStatus';
-  }> &
+  assets: Readonly<{ history: RemoteReads['history']['asset']; contact: RemoteReads['contact'] }> &
+    Reads<{
+      get: 'GetAsset';
+      byAlias: 'GetAssetByAlias';
+      status: 'GetAssetStatus';
+    }> &
     Lists<{ list: 'ListAssets'; objects: 'GetAssetObjects' }> &
     Writes<{
       register: 'RegisterAsset';
@@ -39,17 +48,19 @@ export type HttpResources = Readonly<{
       delete: 'DeleteAsset';
       replaceProcess: 'ReplaceAssetProcess';
     }>;
-  observations: Reads<{
-    get: 'GetObservation';
-    byAlias: 'GetObservationByAlias';
-  }> &
+  observations: Readonly<{ history: RemoteReads['history']['observation'] }> &
+    Reads<{
+      get: 'GetObservation';
+      byAlias: 'GetObservationByAlias';
+    }> &
     Lists<{ list: 'ListObservations'; objects: 'GetObservationObjects' }> &
     Writes<{
       create: 'CreateObservation';
       report: 'ReportObservation';
       edit: 'EditObservation';
     }>;
-  tracks: Reads<{ get: 'GetTrack'; byAlias: 'GetTrackByAlias' }> &
+  tracks: Readonly<{ history: RemoteReads['history']['track'] }> &
+    Reads<{ get: 'GetTrack'; byAlias: 'GetTrackByAlias' }> &
     Lists<{
       list: 'ListTracks';
       objects: 'GetTrackObjects';
@@ -66,7 +77,8 @@ export type HttpResources = Readonly<{
       edit: 'EditGeofeature';
       delete: 'DeleteGeofeature';
     }>;
-  tasks: Reads<{ get: 'GetTask' }> &
+  tasks: Readonly<{ assigned: RemoteReads['assigned'] }> &
+    Reads<{ get: 'GetTask' }> &
     Lists<{ list: 'ListTasks'; objects: 'GetTaskObjects' }> &
     Writes<{
       create: 'CreateTask';
@@ -76,7 +88,8 @@ export type HttpResources = Readonly<{
       setOrder: 'SetTaskOrder';
       confirmOrder: 'ConfirmTaskOrder';
     }>;
-  objects: Reads<{ get: 'GetObject' }> &
+  objects: Readonly<{ upload: Transfers['prepareUpload']; content: Transfers['getContent'] }> &
+    Reads<{ get: 'GetObject' }> &
     Lists<{ list: 'ListObjects' }> &
     Writes<{ edit: 'EditObject'; delete: 'DeleteObject' }>;
   operators: Reads<{ get: 'GetOperator' }> &
@@ -98,7 +111,9 @@ export type HttpClient = HttpResources &
     state: ConnectionState;
     connect: () => Promise<WaitResult<ResponseOf<'GetHealth'>>>;
     recover: () => Promise<WaitResult<ResponseOf<'GetHealth'>>>;
-    close: () => Promise<void>;
+    reporting: Reporting;
+    reference: Transfers['getReference'];
+    close: () => Promise<ClientCloseResult>;
   }>;
 type LocalReads = Picture['reads'];
 export type FullClient = Omit<HttpClient, 'mode' | keyof LocalReads> &
@@ -110,9 +125,16 @@ export type FullClient = Omit<HttpClient, 'mode' | keyof LocalReads> &
   };
 export type Client = HttpClient | FullClient;
 
-export function httpResources(session: Session, operations: Operations): HttpResources {
+export function httpResources(
+  session: Session,
+  operations: Operations,
+  remote: RemoteReads,
+  transfers: Transfers,
+): HttpResources {
   return Object.freeze({
     assets: Object.freeze({
+      history: remote.history.asset,
+      contact: remote.contact,
       get: session.read(exchanges.GetAsset),
       byAlias: session.read(exchanges.GetAssetByAlias),
       status: session.read(exchanges.GetAssetStatus),
@@ -124,6 +146,7 @@ export function httpResources(session: Session, operations: Operations): HttpRes
       replaceProcess: operations.bind(exchanges.ReplaceAssetProcess, policies.ReplaceAssetProcess),
     }),
     observations: Object.freeze({
+      history: remote.history.observation,
       get: session.read(exchanges.GetObservation),
       byAlias: session.read(exchanges.GetObservationByAlias),
       list: list(session, exchanges.ListObservations),
@@ -133,6 +156,7 @@ export function httpResources(session: Session, operations: Operations): HttpRes
       edit: operations.bind(exchanges.EditObservation, policies.EditObservation),
     }),
     tracks: Object.freeze({
+      history: remote.history.track,
       get: session.read(exchanges.GetTrack),
       byAlias: session.read(exchanges.GetTrackByAlias),
       list: list(session, exchanges.ListTracks),
@@ -150,6 +174,7 @@ export function httpResources(session: Session, operations: Operations): HttpRes
       delete: operations.bind(exchanges.DeleteGeofeature, policies.DeleteGeofeature),
     }),
     tasks: Object.freeze({
+      assigned: remote.assigned,
       get: session.read(exchanges.GetTask),
       list: list(session, exchanges.ListTasks),
       objects: list(session, exchanges.GetTaskObjects),
@@ -161,6 +186,8 @@ export function httpResources(session: Session, operations: Operations): HttpRes
       confirmOrder: operations.bind(exchanges.ConfirmTaskOrder, policies.ConfirmTaskOrder),
     }),
     objects: Object.freeze({
+      upload: transfers.prepareUpload,
+      content: transfers.getContent,
       get: session.read(exchanges.GetObject),
       list: list(session, exchanges.ListObjects),
       edit: operations.bind(exchanges.EditObject, policies.EditObject),
@@ -192,23 +219,52 @@ export function createClient(options: ClientOptions): Client {
     throw new SdkError('invalid_options');
   const session = new Session(options);
   const operations = new Operations(session);
-  const http = httpResources(session, operations);
+  const remote = createRemoteReads(session, operations, options.remote);
+  const reporting = createReporting(session, operations);
+  const transfers = createTransfers(session, operations);
+  const http = httpResources(session, operations, remote, transfers);
   const picture = options.mode === 'full' ? new Picture(session, options.picture) : undefined;
+  let closing: Promise<ClientCloseResult> | undefined;
   const lifecycle = {
     http,
+    reporting,
+    reference: transfers.getReference,
     connect: () => session.discover(),
     recover: () => session.discover(true),
-    async close() {
-      try {
+    close(): Promise<ClientCloseResult> {
+      if (closing) return closing;
+      session.beginClose();
+      // Stop the picture synchronously before any cleanup wait can resume recovery.
+      const pictureShutdown = picture?.shutdown();
+      const remoteShutdown = remote.close();
+      closing = (async () => {
+        const errors: unknown[] = [];
+        const [pictureResult, remoteResult] = await Promise.allSettled([
+          pictureShutdown,
+          remoteShutdown,
+        ]);
+        if (pictureResult.status === 'rejected') errors.push(pictureResult.reason);
+        if (remoteResult.status === 'rejected') errors.push(remoteResult.reason);
         try {
-          await picture?.shutdown();
-        } finally {
           await session.close();
+        } catch (error) {
+          errors.push(error);
         }
-      } finally {
-        operations.close();
-        await picture?.settled();
-      }
+        try {
+          await picture?.settled();
+        } catch (error) {
+          errors.push(error);
+        }
+        try {
+          operations.close();
+        } catch (error) {
+          errors.push(error);
+        }
+        if (remoteResult.status === 'rejected') throw new ClientCloseError(errors, undefined);
+        if (errors.length) throw new ClientCloseError(errors, remoteResult.value);
+        return Object.freeze({ remote: remoteResult.value });
+      })();
+      return closing;
     },
   };
   if (picture)

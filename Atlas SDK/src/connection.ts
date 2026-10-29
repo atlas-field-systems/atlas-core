@@ -32,12 +32,14 @@ import type {
 } from './diagnostics.js';
 import { policies } from './policy.js';
 import type { PictureLimits } from './picture-data.js';
+import type { RemoteLimits } from './remote-reads.js';
 
 export type ClientOptions = Readonly<{
   baseUrl: string;
   credentials: () => string | Promise<string>;
   mode?: 'http' | 'full';
   picture?: PictureLimits;
+  remote?: RemoteLimits;
   diagnostics?: DiagnosticOptions;
   datasetId?: Uuid;
   timeoutMs?: number;
@@ -143,6 +145,7 @@ export class Session {
   readonly #observers = new Set<(state: ConnectionState) => void>();
   #cleanupFailure: LocalCode | undefined;
   #closing: Promise<void> | undefined;
+  #draining = false;
 
   constructor(options: ClientOptions) {
     const url = new URL(options.baseUrl);
@@ -255,7 +258,9 @@ export class Session {
         break;
     }
   }
-  #acceptedLease(): Accepted {
+  #acceptedLease(operation?: ExchangeName): Accepted {
+    if (this.#draining && operation !== 'ReleaseHistoryView' && operation !== 'ReleaseSnapshot')
+      throw new SdkError('closed');
     if (this.#state.kind !== 'ready' || !this.#accepted)
       throw new SdkError(this.#state.kind === 'ready' ? 'not_connected' : this.#state.reason);
     return this.#accepted;
@@ -451,7 +456,7 @@ export class Session {
     const id = crypto.randomUUID();
     let lease: NetworkLease & { finish: () => void };
     try {
-      const accepted = this.#acceptedLease();
+      const accepted = this.#acceptedLease(operation);
       if (options.datasetId !== undefined && options.datasetId !== accepted.datasetId)
         throw new SdkError('dataset_invalidated');
       if (options.coreRunId !== undefined && options.coreRunId !== accepted.health.core_run_id)
@@ -565,7 +570,7 @@ export class Session {
     options: NetworkOptions<z.output<S>> & Readonly<{ selection?: z.output<R> }> = {},
   ): Attempt<z.output<S>> {
     try {
-      const accepted = this.#acceptedLease();
+      const accepted = this.#acceptedLease(binding.operationId);
       readHttpRequest(
         binding,
         {
@@ -621,7 +626,7 @@ export class Session {
     );
   }
   #currentDiscovery(recovery: number): boolean {
-    return this.#state.kind !== 'closed' && recovery === this.#recovery;
+    return !this.#draining && this.#state.kind !== 'closed' && recovery === this.#recovery;
   }
   async #discover(
     recover: boolean,
@@ -630,7 +635,7 @@ export class Session {
     const id = crypto.randomUUID();
     const denied = (code: LocalCode) =>
       ({ kind: 'not_sent', code, attemptId: id }) satisfies AttemptResult<never>;
-    if (this.#state.kind === 'closed') return denied('closed');
+    if (this.#draining || this.#state.kind === 'closed') return denied('closed');
     if (
       !recover &&
       (this.#state.kind === 'authorization-required' ||
@@ -774,8 +779,16 @@ export class Session {
     return this.discover();
   }
 
+  beginClose(): void {
+    if (this.#draining) return;
+    this.#draining = true;
+    this.#recovery++;
+    this.#stop('closed');
+  }
+
   close(): Promise<void> {
     if (this.#closing) return this.#closing;
+    this.beginClose();
     this.#closing = Promise.resolve().then(async () => {
       await Promise.allSettled(this.#jobs);
       this.#accepted = undefined;

@@ -1,43 +1,75 @@
-# Qualify the HTTP SDK
+# Qualify the Atlas SDK
 
 Use Node 24.22.1 and npm 11.19.0. Build Core with the same Protocol artifact first.
-Run these commands from Atlas SDK, with a unique external directory for tests.
+Keep mutable consumers, browser profiles, databases and logs outside the workspace.
+Run from Atlas SDK with a unique external root.
 
 ```sh
 export ATLAS_TEST_ROOT="$(mktemp -d /var/tmp/atlas-sdk-tests.XXXXXX)"
 npm run verify:inputs
 npm run qualify
+npm run test:browser
 ```
 
 `verify:inputs` checks pinned tools, lock entries, Core's matching Protocol hash,
-the packed artifact, and the installed Protocol runtime and declaration bytes.
-`qualify` builds, runs real HTTPS tests, packs SDK, installs an external consumer,
-checks positive and negative inferred types, bundles for browsers, and repeats the
-public HTTPS suites using that installed package. The runner discovers `*.test.mjs`
-suites. Internal `*.owner.test.mjs` checks run from source only. The consumer retains
-`qualification.json` and its browser dependency graph under the external test root.
+the packed artifact, and installed Protocol runtime and declaration bytes.
+`qualify` builds, runs all source suites, packs SDK, installs an external consumer,
+checks positive and negative inferred types, bundles every public export for
+browsers, and reruns public workflows through the installed root entry.
+`*.owner.test.mjs` runs only in source. Public type suites resolve the installed
+package when `ATLAS_SDK_ENTRY` is set. The unsupported `partial` mode check remains
+independent of positive and negative Full-mode checks.
 
-The test runner creates a test CA and starts a fresh Node process with
-`NODE_EXTRA_CA_CERTS`. TLS validation remains enabled. Core fixtures provision and
-close installations. Domain assertions use public HTTPS exchanges. A real HTTPS
-proxy drops, delays, or alters responses after Core processes requests.
+## Public workflow coverage
 
-The workflows check discovery, exact version and Dataset refusal, original list
-selection, immutable preparation, shared retry evidence, lost committed replies,
-deliberate deduplication, operation-specific refusal, self-revocation, explicit
-changed-key recovery, paused traffic, concurrent attempts, cancellation, late
-success, bounded ingestion, Reset, restart, and shutdown. Diagnostics tests exercise
-real lost commits, retry correlation, deferred and throwing observers, shutdown,
-privacy, and a real 30-second read/report summary. Source-only owner checks cover
-real WSS cleanup, same-credential health refresh, superseded rejected credentials,
-shared multipart-upload evidence, late original-Dataset replies, cleanup failures,
-queue and string bounds, Debug rate limiting, frames, and idle timers. The package
-check rejects Node imports and the reference exporter from the browser bundle.
+Real HTTPS/WSS fixtures exercise discovery, exact Dataset/version refusal, prepared
+identities and shared evidence, lost replies, deliberate retries, cancellation,
+late original-Dataset success, key recovery, bounded ingestion, Restart and Reset.
+Reporting tests cover retained source identities, exact readings, sections and
+recorded Track attribution. Remote tests cover frozen history, repeated context,
+assigned instructions, contact proofs and process replacement. Transfer tests
+cover native multipart, byte-zero retry, content/reference validation, provisional
+streams, EOF digest verification and cleanup failures.
 
-Each passing test closes clients, proxy sockets, and Core workers before removing
-its installation. Failed runner roots remain for inspection. These functional
-checks do not establish sustained workload capacity, power-loss durability,
-actual browser execution through this command, Full synchronization, or the remaining
-workflows in the [package guide](package-usage.md). Internal multipart evidence checks
-do not establish an installed public upload workflow.
-Running on tmpfs supplies no disk-durability evidence.
+Full tests cover all five resource kinds, atomic snapshot/feed publication, local
+reads without HTTP, frozen queries, journals/subscriptions, stale authorization,
+recovery, invalid frames and finite capacity. Integration tests combine the owners
+in both modes and check active-stream close, blocked admissions, concurrent close,
+lost release evidence, paused release traffic and failure aggregation. Internal
+suites retain allocation-owner timing, Session/socket cleanup, diagnostic bounds,
+and an isolated bounded-memory transfer check.
+
+The Node runner establishes a test CA before a fresh process starts; TLS validation
+stays enabled. A real HTTPS proxy can lose, delay or alter Core responses. Each
+passing fixture awaits clients, proxy jobs, sockets and Core workers before removal.
+Failed roots remain for inspection. The external package consumer retains
+`qualification.json` and the complete browser dependency graph.
+
+## Actual Firefox execution
+
+`test:browser` packs and installs another consumer, type-checks its browser JavaScript
+with strict DOM-only declarations, bundles all public exports, and runs Firefox
+through real Core HTTPS/WSS. Install the browser matching pinned Playwright 1.64.1.
+Set `PLAYWRIGHT_BROWSERS_PATH` for a task-local browser cache and
+`ATLAS_BROWSER_CERTUTIL` for NSS certutil when it is outside PATH.
+
+A fresh isolated Firefox profile first rejects the test issuer. The runner imports
+its CA into only that profile, then proves normal authenticated TLS. It preserves
+HTTP's zero-WebSocket check, CORS/correlation, wrong context/key/version refusals
+and retained values after Core Restart. Full then proves initial publication,
+authenticated WSS updates, zero-HTTP local reads, explicit Observation/history,
+stale authorization, changed-key recovery and awaited socket/client shutdown.
+Native Blob/File tests verify multipart order/media against Core, exact retry with
+one Object, streamed bytes and digest, reference retrieval, exposed content headers,
+and generic-stream refusal before opener or HTTP. Evidence records the actual
+artifact, browser version, trust database, wire observations and cleanup.
+
+## Limits of this evidence
+
+Source and installed Node suites are separate from actual Firefox. Browser bundling
+alone proves neither browser execution nor server compatibility. Chromium, WebKit,
+other platforms, sustained workload, container/release validation and power-loss
+durability are unrun here. Core has its own [qualification](../Atlas%20Core/qualification.md).
+Functional tmpfs Restart and bounded-memory checks establish no disk durability or
+supported retained-workload capacity. Independent full-branch review remains a
+separate gate.

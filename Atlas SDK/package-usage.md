@@ -1,99 +1,97 @@
-# Use the HTTP SDK
+# Use the Atlas SDK
 
-This package implements Protocol 0.3.0 HTTP clients, prepared JSON writes, and diagnostics.
-Full synchronization, remote history, assigned work, contact allocation, reporting helpers,
-binary transfers, and reference downloads remain unimplemented.
-
-Install the packed SDK together with its hash-pinned Protocol artifact. For a
-source checkout, prepare Protocol with `npm run protocol:prepare`, install with
-`npm ci --ignore-scripts`, and run `npm run build` from this directory.
+The package implements Protocol 0.3.0 with HTTP by default and opt-in Full
+synchronization. Install the packed SDK with its hash-pinned Protocol artifact.
+For a source checkout, prepare Protocol with `npm run protocol:prepare`, install
+with `npm ci --ignore-scripts`, then run `npm run build`.
 
 ```ts
 import { createClient } from '@atlas/sdk';
 import { NewId } from '@atlas/protocol';
 
 const client = createClient({
-	baseUrl: 'https://core.example:8443',
-	credentials: () => applicationCredential,
+  baseUrl: 'https://core.example:8443',
+  credentials: () => applicationCredential,
 });
-const discovery = await client.connect();
+await client.connect();
 if (client.state.kind !== 'ready') throw new Error('Connection unavailable');
-
 const operation = client.operators.create({
-	operator_id: NewId.parse(crypto.randomUUID()),
-	request_id: NewId.parse(crypto.randomUUID()),
-	name: 'Pilot',
+  operator_id: NewId.parse(crypto.randomUUID()),
+  request_id: NewId.parse(crypto.randomUUID()),
+  name: 'Pilot',
 });
 const result = await operation.send();
-if (result.attempt.kind === 'response' && result.attempt.response.kind === 'success') {
-	const operator = result.attempt.response.body.data;
-}
-await client.close();
+const cleanup = await client.close();
 ```
 
-Resource groups are `assets`, `observations`, `tracks`, `geofeatures`, `tasks`,
-`objects`, `operators`, and `apiKeys`. Their methods accept Protocol-inferred
-request objects. `resources`, `activity`, and `readiness` are explicit HTTP reads.
-`client.http` exposes the same HTTP clients for future routing integration.
-Object methods currently concern metadata only.
+## Choose read behavior
 
-## Read pages
+Omitted mode or `mode: 'http'` returns `HttpClient`. `mode: 'full'` returns
+`FullClient`; a dynamic option returns the discriminated `Client` union.
+Full Assets, Tracks, Geofeatures, Tasks and Object metadata expose synchronous
+`get`, `list` and `query`, plus Entity `byAlias`. Check `kind === 'available'`
+before using a value. A complete stale value includes its readiness status.
+Loading, rebuild and stopped states are unavailable. There is no HTTP fallback.
+`client.picture` exposes status, local cursor, `changedSince`, `subscribe` and
+explicit capacity `retry`. See [picture rules](picture.md) for token lifetimes.
 
-```ts
-const query = client.assets.list({ page_size: 100, filters: { health: ['offline'] } });
-const page = await query.next();
-if (page.kind === 'response' && page.response.kind === 'success') {
-	const assets = page.response.body.data.items;
-}
-query.close();
-```
+`client.http` provides explicit HTTP resource reads in either mode. HTTP lists
+return cursors with `next()` and `close()`; they retain their original selection.
+Observations, history, assigned work, contact, content, references, administration,
+`resources`, `readiness` and `activity` always use HTTP.
 
-Each cursor retains the original selection and validates every page against it.
-`next()` returns `end` after the final page. A failed or cancelled wait does not
-advance it. A cursor never accepts a foreign token or starts a replacement query.
+## Use resource workflows
 
-## Inspect a write
+- `assets.history`, `observations.history` and `tracks.history` return frozen remote
+  views. Supply stable `query_id` and `entity_id`; use `next()` and await `close()`.
+  The handle exposes its original allocation, repeated context and release evidence.
+- `tasks.assigned` retains process, read, queue, control and Core-run context.
+  Reading instructions does not acknowledge or execute them.
+- `assets.contact` returns a current or replacement challenge handle. `read()`
+  retains its original allocation; `checkIn()` and `replace()` prepare proofs.
+- `reporting.register`, `reporting.asset`, `reporting.createObservation` and
+  `reporting.observation` retain source identities across section updates/reports.
+  Observation reporters offer explicit `reconcile()` and `recordedTrack()` reads.
+- `component(schema, value)` constructs detached frozen Protocol values.
+  `commandCatalog` is the installed local Protocol catalog.
 
-Preparation validates and freezes facts. It can throw `ProtocolError` or `SdkError`
-before sending. `send()` returns an attempt result and the operation's current
-[effect evidence](requests.md). Repeating `send()` deliberately retries the same
-facts. Repeated preparation with the same scoped identity shares evidence;
-conflicting facts fail locally. Accepted evidence retains the validating attempt
-and Core request IDs. The attempt response contains the resource and commit cursor.
+All writes use shared frozen preparation and [effect evidence](requests.md).
+`send()` deliberately retries original facts. `start()` separates a caller's wait
+from its bounded attempt. A lost reply can leave `unknown_outcome`; a lookup or
+later refusal does not erase that uncertainty. Write replies never update Full's
+picture. Known key rejection pauses traffic until changed-key `recover()` succeeds.
+See [authorization](authorization.md). Recovery never resubmits writes.
 
-`operation.start()` returns an attempt with `settled` and `wait(signal)`.
-Cancelling a wait leaves that attempt running to its bounded deadline. A late
-matching success updates `operation.outcome`. `close()` aborts network work and
-waits for owned attempts to settle. Core's committed effects survive close.
+## Transfer complete files
 
-After validated key rejection, network methods return `authorization_required`
-without traffic. Change the credential provider, then call `recover()` explicitly.
-Changing its value alone does not replace accepted credentials. Recovery never
-resubmits writes. `connect()` refreshes health under accepted credentials. An unchanged
-Dataset, Core run, and credential preserve unrelated work and its generation.
-An optional `datasetId` pins the expected Dataset and refuses another one.
+`objects.upload(descriptor, source)` returns a prepared upload. Supply stable IDs,
+length, SHA-256, media and metadata. Blob/File use native browser multipart. Node
+also accepts a fresh byte-zero stream opener; a direct stream is one-shot. Generic
+browser streams fail before opening or fetching. A retry starts at byte zero.
 
-## Configure bounds
+`objects.content({ object_id, disposition }, { maxBytes? })` returns a download.
+Await `open()` to obtain validated headers and a provisional `stream`. Consume the
+stream, then require a successful content result from `settled` before trusting
+complete length and digest verification. `cancel()` awaits cleanup. An open or
+unread stream retains admission until EOF, cancellation or its deadline.
+`reference('text/html')` and `reference('application/vnd.oai.openapi+json')` return
+bounded validated documents. Content bytes never enter the local picture.
 
-Defaults are a 30-second attempt deadline, 16 concurrent attempts, 1,024 retained
-operation identities, and a 16 MiB accounting budget for retained equality facts.
-Request and response budgets default to Protocol's ceilings and can only decrease.
-Discovery limits can lower them further. Transport keeps at most one bounded byte
-buffer per response. Operation evidence retains no attempt log or response images.
-Capacity refusal is explicit. Identities last until close. At 64 rejected credentials,
-recovery refuses further candidates. HTTP attempt timers end with their attempts.
+## Bound and close owners
 
-Node uses its normal TLS trust. Set `NODE_EXTRA_CA_CERTS` before starting Node when
-using a private CA. Browsers use their configured trust and Core's trusted origins.
-See [qualification](qualification.md) for tested targets and remaining coverage.
+Options include attempt deadlines, request/response budgets, prepared evidence,
+`picture` limits and `remote: { handles, retainedBytes }`. Remote defaults are
+16 handles and 1 MiB; maxima are 1,024 and 16 MiB. Default network admission is
+16 attempts with a 30-second deadline. Full requires at least two admission slots.
 
-## Observe diagnostics
+`close(): Promise<ClientCloseResult>` is idempotent and awaits every owner.
+`result.remote` contains per-handle cleanup outcomes. A fulfilled close proves
+local shutdown; inspect release evidence before claiming a remote acknowledgment.
+Authorization pause permits no release traffic. `ClientCloseError` aggregates
+cleanup failures and exposes available remote evidence, or `undefined` when the
+remote owner failed. Existing `await client.close()` remains valid.
 
-Pass `diagnostics: { mode: 'summary', observer: event => applicationLogger(event) }`
-to `createClient`. Use `debug` for bounded attempt details and safe code frames.
-Omitting this option, or selecting `disabled`, creates no diagnostic owner or timer.
-`DiagnosticEvent` is the exported discriminated union. Successful reads and reports
-aggregate. Failures and other write completions retain attempt, Core request, and
-prepared retry identities. Unknown transport byte counts remain null.
-Delivery is deferred and observer exceptions do not change requests. `close()`
-discards pending records and counters. See [diagnostics](diagnostics.md) for bounds.
+Node and browsers use normal TLS trust. Configure private CAs before starting
+Node or in the browser profile. Optional Summary/Debug observers use the bounded
+[diagnostic contract](diagnostics.md). See [qualification](qualification.md) for
+executed coverage and limits.

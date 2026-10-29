@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Position, Telemetry, Counter, inputSections, exchanges } from '@atlas/protocol';
-import { component, commandCatalog } from '../dist/components.js';
+const { component, commandCatalog } = await import(
+  process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
+);
 import { fixture, uuid, registration, barrier } from './harness.mjs';
-import { owners, success, sent, reading, telemetry } from './remote-helpers.mjs';
+import { publicClient, success, sent, reading, telemetry } from './public-helpers.mjs';
 
 test('component construction preserves exact values, null and omission and refuses hostile constructed values', () => {
   const position = { latitude: 51.50000000000001, longitude: -0.1 };
@@ -45,7 +47,7 @@ test('component construction preserves exact values, null and omission and refus
 
 test('report helpers retain one Observation, report, reading and Core Track across lost replies and deliberate retries', async (t) => {
   const f = await fixture(t);
-  const { reporting, http } = await owners(t, f);
+  const { reporting, http } = await publicClient(t, f);
   const input = {
     observation_id: uuid(),
     request_id: uuid(),
@@ -107,7 +109,7 @@ test('report helpers retain one Observation, report, reading and Core Track acro
 
 test('Asset helper preserves registration identity, revision conditions, omitted fields and explicit clears', async (t) => {
   const f = await fixture(t);
-  const { reporting, http } = await owners(t, f);
+  const { reporting, http } = await publicClient(t, f);
   const input = registration('Camera');
   input.description = { name: 'Camera A' };
   const { registration: operation, reporter } = reporting.register(input);
@@ -160,7 +162,7 @@ test('Asset helper preserves registration identity, revision conditions, omitted
 
 test('report wait cancellation retains the bounded attempt and late shared evidence', async (t) => {
   const f = await fixture(t);
-  const { reporting } = await owners(t, f);
+  const { reporting } = await publicClient(t, f);
   const { reporter, creation } = reporting.createObservation({
     observation_id: uuid(),
     request_id: uuid(),
@@ -198,7 +200,7 @@ test('report wait cancellation retains the bounded attempt and late shared evide
 
 test('report sections preserve omission and withdrawals and source queries retain recorded Asset attribution', async (t) => {
   const f = await fixture(t);
-  const { reporting, http, remote } = await owners(t, f);
+  const { reporting, http } = await publicClient(t, f);
   const source = registration();
   sent(await http.assets.register(source).send());
   const publisher_id = uuid(),
@@ -256,7 +258,7 @@ test('report sections preserve omission and withdrawals and source queries retai
     await http.observations.list({ filters: { source_asset_ids: [uuid()] } }).next(),
   );
   assert.equal(empty.items.length, 0);
-  const history = remote.history.observation({ entity_id: observation_id, query_id: uuid() });
+  const history = http.observations.history({ entity_id: observation_id, query_id: uuid() });
   const page = success(await history.next());
   assert.equal(page.readings.length, 1);
   assert.equal(page.readings[0].observed_at, '2026-10-21T12:00:01Z');

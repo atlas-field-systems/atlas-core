@@ -5,16 +5,17 @@ and retain what they report.**
 
 Atlas Protocol supplies the browser-safe TypeScript contract. Atlas Core implements
 the initial HTTPS/WSS server, durable worker, local lifecycle commands, and container.
-SDK remains a design contract. Functional checks are separate from the unrun
-sustained-workload and power-loss qualification.
+SDK provides the browser-safe TypeScript client with HTTP by default, opt-in Full
+synchronization, reporting, remote history and verified file transfers. Functional
+checks are separate from the unrun sustained-workload and power-loss qualification.
 
 ## Three layers, one contract
 
-| Layer | Owns | Does not own |
-| --- | --- | --- |
+| Layer              | Owns                                                            | Does not own                                    |
+| ------------------ | --------------------------------------------------------------- | ----------------------------------------------- |
 | **Atlas Protocol** | Shared vocabulary, schemas, message contracts, observable rules | Databases, server processes, physical execution |
-| **Atlas Core** | A running server that enforces Protocol and retains state | Physical execution on a drone |
-| **Atlas SDK** | An IP-specific TypeScript client for Protocol | Server policy or private Core internals |
+| **Atlas Core**     | A running server that enforces Protocol and retains state       | Physical execution on a drone                   |
+| **Atlas SDK**      | An IP-specific TypeScript client for Protocol                   | Server policy or private Core internals         |
 
 Protocol is foundational. Core implements it; SDK speaks it. Applications use
 SDK to reach Core. A gateway translates radio traffic; the Asset runtime executes.

@@ -54,6 +54,7 @@ await writeFile(
   npm(['install', '--ignore-scripts', '--no-audit', '--no-fund']),
 );
 await copyFile(join(root, 'test/browser-workflows.mjs'), join(consumer, 'workflows.mjs'));
+await copyFile(join(root, 'test/transfers-browser.mjs'), join(consumer, 'transfers-browser.mjs'));
 await writeFile(
   join(consumer, 'tsconfig.json'),
   JSON.stringify({
