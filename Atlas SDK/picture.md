@@ -93,6 +93,8 @@ Recovery retains one retiring socket until physical closure is confirmed before
 opening another. Feed end and a close deadline do not confirm transport closure.
 Closing or authorization supersession interrupts recovery's wait. Bounded shutdown
 reports unconfirmed closure as a cleanup failure; later closure does not erase it.
+Shutdown cancels queued recovery before it acquires transport ownership; cancelling
+that pending start is not a cleanup failure.
 
 Closing SDK invalidates local tokens and releases remote captures/views while authority
 permits. Without acknowledgment, retain bounded facts that respect original expiry.

@@ -171,7 +171,9 @@ export class Picture {
       return;
     let failed = false;
     this.#job = Promise.resolve()
-      .then(() => this.#run())
+      .then(() => {
+        if (!this.#closed && this.#session.state.kind === 'ready') return this.#run();
+      })
       .catch((error: unknown) => {
         if (error instanceof SdkError && error.code === 'capacity') {
           this.#limited = true;

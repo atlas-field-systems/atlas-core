@@ -737,6 +737,38 @@ test(
   },
 );
 
+test('close cancels queued capacity recovery without starting transport or reporting cleanup failure', async (t) => {
+  const f = await fixture(t);
+  const admin = await connected(f);
+  await register(admin, 'first capacity image');
+  await register(admin, 'second capacity image');
+  const sockets = observeSockets(t);
+  const client = createClient({
+    baseUrl: f.proxyUrl,
+    credentials: () => f.apiKey,
+    mode: 'full',
+    picture: { images: 1 },
+  });
+  try {
+    success(await client.connect());
+    await until(() => client.picture.status.kind === 'resource-limited', 'No capacity stop');
+    await delay(700);
+    const requests = f.traffic.length;
+    const socketCount = sockets.length;
+    client.picture.retry({ images: 10 });
+    const closing = client.close();
+    assert.equal(client.close(), closing);
+    await closing;
+    assert.equal(client.state.kind, 'closed');
+    assert.equal(client.picture.status.kind, 'stopped');
+    assert.equal(f.traffic.length, requests);
+    assert.equal(sockets.length, socketCount);
+    assert.throws(() => client.picture.retry(), { code: 'closed' });
+  } finally {
+    await client.close().catch(() => undefined);
+  }
+});
+
 test(
   'snapshot/feed races publish only the fixed handoff and later writes remain independent live commits',
   { timeout: 30_000 },
