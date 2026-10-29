@@ -502,6 +502,7 @@ export class Session {
             receivedBytes: 0,
           });
         }
+        if (result.kind !== 'not_sent') this.#cleanupFailure ??= result.context.cleanupFailure;
         options.mutation?.completed(result);
         if (result.kind === 'response' && result.response.kind === 'error')
           this.observeAuthority(lease.generation, result.response.body.error.code);
@@ -752,7 +753,7 @@ export class Session {
           this.rejectAuthority(generation);
       } else if (this.#state.kind !== 'ready' && this.#state.kind !== 'authorization-required') {
         this.#blocked(result.kind === 'response' ? 'not_connected' : result.code);
-      } else if (result.kind === 'response' && result.response.kind === 'error') {
+      } else if (!recover && result.kind === 'response' && result.response.kind === 'error') {
         this.observeAuthority(generation, result.response.body.error.code);
       } else if (
         result.kind === 'failed' &&

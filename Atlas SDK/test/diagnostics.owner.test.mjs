@@ -173,7 +173,7 @@ test('generic transport attempts preserve primary and body cancellation failures
     credentials: () => f.apiKey,
     diagnostics: { mode: 'debug', observer: (event) => events.push(event) },
   });
-  t.after(() => session.close());
+  t.after(() => assert.rejects(session.close(), { code: 'network' }));
   await session.discover();
   let cancellations = 0;
   const stream = new ReadableStream({
@@ -200,7 +200,7 @@ test('generic transport attempts preserve primary and body cancellation failures
   assert.equal(record.code, 'payload_too_large');
   assert.equal(record.cleanupFailure, 'network');
   assert.equal(JSON.stringify(events).includes('SENTINEL'), false);
-  await session.close();
+  await assert.rejects(session.close(), { code: 'network' });
 });
 
 test('a late validated mutation reply refines original evidence after Dataset invalidation', async (t) => {

@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { build } from 'esbuild';
 import { exchanges } from '@atlas/protocol';
-const { createClient } = await import(process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js');
+const { createClient, ClientCloseError } = await import(
+  process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
+);
 import { fixture, barrier, uuid } from './harness.mjs';
 
 const descriptor = (bytes) => ({
@@ -369,6 +371,7 @@ test('transfers: source and content failures never establish publication', async
     const operation = client.objects.upload(facts, input.source);
     const result = await operation.send();
     assert.equal(result.attempt.code, input.code);
+    assert.equal(result.attempt.context?.cleanupFailure, undefined);
     assert.equal(result.outcome.kind, input.notSent ? 'not_submitted' : 'unknown_outcome');
     const missing = response(await client.objects.get({ object_id: facts.object_id }), 'error');
     assert.equal(missing.body.error.code, 'entity_not_found');
@@ -477,6 +480,7 @@ test('transfers: an unread download retains admission until cancellation and clo
   const active = response(await other.open(), 'content');
   await client.close();
   assert.equal((await other.settled).code, 'closed');
+  assert.equal((await other.settled).context.cleanupFailure, undefined);
   await assert.rejects(active.stream.getReader().read(), { code: 'closed' });
 });
 
@@ -641,7 +645,9 @@ test('transfers: source cancellation holds admission and shutdown through awaite
 
 test('transfers: source cleanup rejection preserves both primary deadline and safe cleanup failure', async (t) => {
   const f = await fixture(t);
-  const { client } = await setup(t, f, { baseUrl: f.address });
+  const client = createClient({ baseUrl: f.address, credentials: () => f.apiKey });
+  t.after(() => assert.rejects(client.close(), ClientCloseError));
+  response(await client.connect());
   const operation = client.objects.upload(descriptor(Buffer.from('one')), {
     open() {
       return new ReadableStream(
@@ -661,5 +667,10 @@ test('transfers: source cleanup rejection preserves both primary deadline and sa
   assert.equal(result.code, 'deadline');
   assert.equal(result.context.cleanupFailure, 'network');
   assert.equal(operation.outcome.kind, 'unknown_outcome');
-  await client.close();
+  await assert.rejects(
+    client.close(),
+    (error) =>
+      error instanceof ClientCloseError &&
+      error.errors.some((failure) => failure.code === 'network'),
+  );
 });

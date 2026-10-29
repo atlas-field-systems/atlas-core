@@ -34,6 +34,65 @@ test('a refused rotation candidate preserves accepted authority and an in-flight
   assert.equal((await client.connect()).response.kind, 'success');
 });
 
+for (const code of ['protocol_mismatch', 'dataset_mismatch']) {
+  test(`candidate ${code} leaves accepted work ready while ordinary discovery still fences it`, async (t) => {
+    const f = await fixture(t);
+    let candidate = f.apiKey;
+    const client = f.client({ credentials: () => candidate });
+    assert.equal((await client.connect()).response.kind, 'success');
+    const asset = registration();
+    await client.assets.register(asset).send();
+    const replacement = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+    assert.equal((await client.apiKeys.create(replacement).send()).outcome.kind, 'accepted');
+    const generation = client.state.generation;
+    const committed = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.once('/messages/create_task', async ({ status, forward }) => {
+      committed.resolve(status);
+      await release.promise;
+      forward();
+    });
+    const operation = client.tasks.create(task(asset.asset_id));
+    const running = operation.start();
+    assert.equal(await committed.promise, 200);
+    const refuseDiscovery = ({ headers, forward }) => {
+      const version = code === 'protocol_mismatch' ? '0.4.0' : '0.3.0';
+      forward(
+        Buffer.from(
+          JSON.stringify({
+            dataset_id: f.datasetId,
+            error: {
+              code,
+              message: 'Discovery refused',
+              request_id: headers['atlas-request-id'],
+              ...(code === 'protocol_mismatch' ? { details: { protocol_version: version } } : {}),
+            },
+          }),
+        ),
+        409,
+        { ...headers, 'atlas-protocol-version': version },
+      );
+    };
+    candidate = replacement.secret;
+    f.once('/health', refuseDiscovery);
+    try {
+      assert.equal((await client.recover()).response.body.error.code, code);
+    } finally {
+      release.resolve();
+    }
+    assert.equal(client.state.kind, 'ready');
+    assert.equal(client.state.generation, generation);
+    assert.equal((await running.settled).response.kind, 'success');
+    assert.equal(operation.outcome.kind, 'accepted');
+    assert.equal((await client.readiness({})).response.kind, 'success');
+    f.once('/health', refuseDiscovery);
+    assert.equal((await client.connect()).response.body.error.code, code);
+    assert.equal(client.state.kind, 'blocked');
+    assert.equal(client.state.reason, code === 'dataset_mismatch' ? 'dataset_invalidated' : code);
+  });
+}
+
 test('invalid recovery responses preserve the rejected-key pause without new traffic', async (t) => {
   const f = await fixture(t);
   let candidate = f.apiKey;

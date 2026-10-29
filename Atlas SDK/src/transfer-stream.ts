@@ -9,6 +9,7 @@ const maximumChunk = 1024 * 1024;
 
 export class TransferReader {
   readonly #reader: ReadableStreamDefaultReader<Uint8Array>;
+  readonly #terminal: Promise<Readonly<{ error: unknown }> | undefined>;
   readonly #hash = sha256.create();
   readonly #signal: AbortSignal;
   readonly #length: number;
@@ -27,6 +28,10 @@ export class TransferReader {
     readFailure: LocalCode,
   ) {
     this.#reader = stream.getReader();
+    this.#terminal = this.#reader.closed.then(
+      () => undefined,
+      (error: unknown) => ({ error }),
+    );
     this.#signal = signal;
     this.#length = length;
     this.#digest = digest;
@@ -44,7 +49,11 @@ export class TransferReader {
     void this.stop().catch(() => undefined);
   };
   stop(): Promise<void> {
-    this.#stopping ??= this.#reader.cancel();
+    this.#stopping ??= this.#reader.cancel().catch(async (error: unknown) => {
+      // Cancelling an errored stream repeats its stored error without invoking source cleanup.
+      const terminal = await this.#terminal;
+      if (terminal === undefined || !Object.is(terminal.error, error)) throw error;
+    });
     return this.#stopping;
   }
   async read(): Promise<Uint8Array | undefined> {

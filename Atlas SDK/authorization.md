@@ -24,6 +24,8 @@ network work. A failed or superseded attempt leaves authorization-required in pl
 Do not retry rejected credentials in the background or accept them by elapsed time.
 An identical rejected credential is not a changed candidate.
 Concurrent recovery has one owner; later candidates fence older discovery replies.
+Failed candidate discovery preserves an already-ready accepted generation and its
+pending work. Ordinary requests still validate Protocol version and Dataset.
 
 Accepted new credentials permit read/feed recovery, not replay of mutations, uploads,
 cancellations, or control requests. The caller deliberately retries prepared work

@@ -70,7 +70,7 @@ export function pictureReads(local: PictureLocal, session: Session): PictureReso
   >(
     binding: JsonBinding<R, S>,
     select: (data: PictureData) => ReadonlyMap<string, T>,
-    matches: (facts: z.output<R>, image: T) => boolean,
+    matches: (facts: z.output<R>, image: T, data: PictureData) => boolean,
   ) {
     return (request: Exclude<z.output<R>, { page_token: string }>) => {
       const input = local.queryInput(() => submission(binding, request, session.requestBudget));
@@ -81,9 +81,10 @@ export function pictureReads(local: PictureLocal, session: Session): PictureReso
         return local.read(() => {
           throw new SdkError('not_connected');
         });
+      const data = local.data;
       return local.query(
-        select(local.data),
-        (image) => matches(facts, image),
+        select(data),
+        (image) => matches(facts, image, data),
         facts.page_size ?? 100,
       );
     };
@@ -185,9 +186,12 @@ export function pictureReads(local: PictureLocal, session: Session): PictureReso
       objects: query(
         exchanges.GetTaskObjects,
         (data) => data.objects,
-        (q, image) =>
+        (q, image, data) =>
           !('page_token' in q) &&
-          image.metadata.associations.some((a) => a.kind === 'task' && a.id === q.task_id),
+          (image.metadata.associations.some((a) => a.kind === 'task' && a.id === q.task_id) ||
+            data.tasks
+              .get(q.task_id)
+              ?.result_declarations.some((d) => d.object_id === image.object_id) === true),
       ),
     }),
     objects: Object.freeze({

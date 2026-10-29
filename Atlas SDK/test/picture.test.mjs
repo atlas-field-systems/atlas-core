@@ -51,6 +51,91 @@ async function call(f, operation, data, credential = f.apiKey) {
   assert.equal(response.status, 200, JSON.stringify(result));
   return result;
 }
+test('Full Task Objects include the deduplicated ready union of declarations and associations', async (t) => {
+  const f = await fixture(t);
+  const writer = await connected(f);
+  const asset = await register(writer, 'Task result owner');
+  const created = success((await writer.tasks.create(task(asset.id)).send()).attempt).data;
+  const bytes = Buffer.from('Task output');
+  const descriptor = (associations) => ({
+    object_id: uuid(),
+    request_id: uuid(),
+    byte_length: String(bytes.length),
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    content_type: 'text/plain',
+    metadata: { associations },
+  });
+  const association = { kind: 'task', id: created.task_id };
+  const objects = [
+    descriptor([]),
+    descriptor([association]),
+    descriptor([association]),
+    descriptor([]),
+  ];
+  const pending = descriptor([]);
+  for (const object of objects)
+    success((await writer.objects.upload(object, new Blob([bytes])).send()).attempt);
+  const declared = success(
+    (
+      await writer.tasks
+        .reportResults({
+          evidence: {
+            dataset_id: f.datasetId,
+            asset_id: asset.id,
+            origin: { kind: 'asset_process', process_generation: asset.process_generation },
+            report_id: uuid(),
+            sequence: '1',
+            generated_at: null,
+            payload: {
+              task_id: created.task_id,
+              declarations: [objects[0], objects[2], pending].map(({ object_id }) => ({
+                object_id,
+                required: true,
+              })),
+            },
+          },
+        })
+        .send()
+    ).attempt,
+  );
+  const client = await connected(f, { mode: 'full' });
+  await ready(client, declared.commit_cursor);
+  const expected = objects
+    .slice(0, 3)
+    .map(({ object_id }) => object_id)
+    .sort();
+  const remote = success(await client.http.tasks.objects({ task_id: created.task_id }).next());
+  assert.deepEqual(
+    remote.data.items.map(({ object_id }) => object_id),
+    expected,
+  );
+  const before = f.traffic.length;
+  const query = available(client.tasks.objects({ task_id: created.task_id, page_size: 1 }));
+  const collected = [];
+  let token;
+  do {
+    const page = available(query.page(token));
+    collected.push(...page.items.map(({ object_id }) => object_id));
+    token = page.nextPageToken;
+    assert.ok(collected.length <= expected.length);
+  } while (token !== null);
+  assert.deepEqual(collected, expected);
+  assert.equal(available(client.objects.get({ object_id: pending.object_id })), null);
+  assert.equal(f.traffic.length, before);
+  const published = success(
+    (await writer.objects.upload(pending, new Blob([bytes])).send()).attempt,
+  );
+  await ready(client, published.commit_cursor);
+  const refreshed = available(client.tasks.objects({ task_id: created.task_id }));
+  assert.deepEqual(
+    available(refreshed.page()).items.map(({ object_id }) => object_id),
+    [...expected, pending.object_id].sort(),
+  );
+  assert.equal(available(query.page()).items[0].object_id, expected[0]);
+  query.close();
+  refreshed.close();
+});
+
 async function observation(f) {
   const observation_id = uuid(),
     publisher_id = uuid();

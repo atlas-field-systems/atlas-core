@@ -270,46 +270,61 @@ test('public close awaits every release and drains attempts despite a cleanup pr
   await assert.rejects(client.close(), ClientCloseError);
 });
 
-test('reentrant source cancellation joins the same public close owner', async (t) => {
-  const f = await fixture(t);
-  const client = createClient({ baseUrl: f.address, credentials: () => f.apiKey });
-  t.after(() => client.close());
-  success(await client.connect());
-  const reading = barrier();
-  let reentrant;
-  const bytes = Buffer.from('x');
-  const operation = client.objects.upload(
-    {
-      object_id: uuid(),
-      request_id: uuid(),
-      byte_length: '1',
-      sha256: createHash('sha256').update(bytes).digest('hex'),
-      content_type: 'application/octet-stream',
-      metadata: { associations: [] },
-    },
-    {
-      open() {
-        return new ReadableStream(
-          {
-            pull() {
-              reading.resolve();
-              return new Promise(() => {});
-            },
-            cancel() {
-              reentrant = client.close();
-            },
-          },
-          { highWaterMark: 0 },
-        );
+for (const cleanupFails of [false, true])
+  test(`reentrant source cancellation joins the same public close owner with cleanup failure=${cleanupFails}`, async (t) => {
+    const f = await fixture(t);
+    const client = createClient({ baseUrl: f.address, credentials: () => f.apiKey });
+    t.after(() =>
+      cleanupFails ? assert.rejects(client.close(), ClientCloseError) : client.close(),
+    );
+    success(await client.connect());
+    const reading = barrier();
+    let reentrant;
+    let cancellations = 0;
+    const bytes = Buffer.from('x');
+    const operation = client.objects.upload(
+      {
+        object_id: uuid(),
+        request_id: uuid(),
+        byte_length: '1',
+        sha256: createHash('sha256').update(bytes).digest('hex'),
+        content_type: 'application/octet-stream',
+        metadata: { associations: [] },
       },
-    },
-  );
-  const running = operation.start();
-  await reading.promise;
-  const closed = client.close();
-  await closed;
-  await reentrant;
-  assert.equal(reentrant, closed);
-  assert.equal((await running.settled).code, 'closed');
-  assert.equal(client.state.kind, 'closed');
-});
+      {
+        open() {
+          return new ReadableStream(
+            {
+              pull() {
+                reading.resolve();
+                return new Promise(() => {});
+              },
+              cancel() {
+                cancellations++;
+                reentrant = client.close();
+                if (cleanupFails) throw new Error('source cancellation failed');
+              },
+            },
+            { highWaterMark: 0 },
+          );
+        },
+      },
+    );
+    const running = operation.start();
+    await reading.promise;
+    const closed = client.close();
+    if (cleanupFails) {
+      await assert.rejects(
+        closed,
+        (error) =>
+          error instanceof ClientCloseError &&
+          error.errors.some((failure) => failure.code === 'network'),
+      );
+      assert.equal((await running.settled).context.cleanupFailure, 'network');
+    } else await closed;
+    assert.equal(reentrant, closed);
+    assert.equal(client.close(), closed);
+    assert.equal(cancellations, 1);
+    assert.equal((await running.settled).code, 'closed');
+    assert.equal(client.state.kind, 'closed');
+  });
