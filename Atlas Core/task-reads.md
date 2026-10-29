@@ -8,7 +8,8 @@ rules and ten-second instruction validity. This page owns Core's private retenti
 
 Tasks retains the original request and queue/control context for a 60-second read
 lifetime. Each newly allocated read reclaims at most 16 expired contexts and their
-lifetime rows in its admitted transaction. Charge the removed bytes and per-row
+lifetime rows in its admitted transaction. Indexed ranges locate expired current-run
+and previous-run contexts without scanning live contexts. Charge the removed bytes and per-row
 SQLite work as well as the new context, because deletion can grow the WAL before
 checkpointing. Refusal rolls reclamation back. Exact retries and continuations do
 no reclamation writes. Restart ends every live context; later admitted reads reclaim

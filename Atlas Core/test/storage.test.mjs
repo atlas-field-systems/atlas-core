@@ -33,10 +33,26 @@ test('assigned retries stay read-only at the ceiling and new reads admit bounded
   for (let i = 0; i < 100; i++) await call('CreateTask', { task_id: uuid(), request_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } });
   const request = { asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid(), page_size: 1 };
   for (let i = 0; i < 200; i++) await call('GetAssignedTasks', { ...request, read_id: uuid() });
+  const plans = [], prepare = engine.store.db.prepare;
+  t.mock.method(engine.store.db, 'prepare', function(sql) {
+    const statement = Reflect.apply(prepare, this, [sql]);
+    if (!sql.includes('task_instruction_lifetime') || !sql.includes('task_instructions')) return statement;
+    const all = statement.all.bind(statement), database = this;
+    statement.all = (...bindings) => {
+      plans.push(Reflect.apply(prepare, database, [`EXPLAIN QUERY PLAN ${sql}`]).all(...bindings));
+      return all(...bindings);
+    };
+    return statement;
+  });
   const live = await call('GetAssignedTasks', request);
   assert.ok(live.data.next_page_token);
-  // Set up expired persisted contexts without extending the existing real-expiry workflow.
-  engine.store.db.prepare('UPDATE task_instruction_lifetime SET deadline=0 WHERE read_id<>?').run(request.read_id);
+  const ended = engine.store.db.prepare('SELECT read_id FROM task_instruction_lifetime WHERE read_id<>?').all(request.read_id);
+  const previousRuns = ['00000000-0000-4000-8000-000000000000', 'ffffffff-ffff-4fff-bfff-ffffffffffff'];
+  assert.ok(previousRuns[0] < engine.store.run && previousRuns[1] > engine.store.run);
+  const expire = engine.store.db.prepare('UPDATE task_instruction_lifetime SET run=?,deadline=? WHERE read_id=?');
+  for (const [index, { read_id }] of ended.entries()) {
+    expire.run(index % 3 === 0 ? engine.store.run : previousRuns[index % 3 - 1], index % 3 === 0 ? 0 : performance.now() + 120_000, read_id);
+  }
   engine.store.db.pragma('wal_checkpoint(TRUNCATE)');
   const pressure = join(directory, 'pressure.bin');
   await writeFile(pressure, Buffer.alloc(settings.storageBytes - diskUsage(directory).bytes - 4096));
@@ -50,10 +66,14 @@ test('assigned retries stay read-only at the ceiling and new reads admit bounded
   assert.ok(diskUsage(directory).bytes <= settings.storageBytes);
   await rm(pressure);
   await call('GetAssignedTasks', { ...request, read_id: uuid() });
-  const remaining = engine.store.db.prepare('SELECT count(*) AS count FROM task_instruction_lifetime WHERE deadline=0').get().count;
-  assert.ok(remaining > 0 && remaining < 200, 'An admitted read reclaims a bounded part of the backlog');
+  const backlog = engine.store.db.prepare('SELECT count(*) AS count FROM task_instruction_lifetime WHERE run<>? OR deadline=0');
+  assert.equal(backlog.get(engine.store.run).count, 184, 'One admitted read reclaims at most 16 ended contexts across all runs');
   for (let i = 0; i < 20; i++) await call('GetAssignedTasks', { ...request, read_id: uuid() });
-  assert.equal(engine.store.db.prepare('SELECT count(*) AS count FROM task_instruction_lifetime WHERE deadline=0').get().count, 0);
+  assert.equal(backlog.get(engine.store.run).count, 0);
+  assert.deepEqual(await call('GetAssignedTasks', request), live);
+  assert.ok(plans.length > 0, 'Observe the executed reclamation query');
+  assert.ok(plans.flat().every(row => !/\bSCAN\b|TEMP B-TREE/.test(row.detail)), JSON.stringify(plans));
+  t.diagnostic(JSON.stringify([...new Set(plans.flat().map(row => row.detail))]));
   assert.equal(engine.store.cursor(), cursor);
 });
 test('replay bytes and whole-commit boundaries survive rollback, restart and Reset', async t => {

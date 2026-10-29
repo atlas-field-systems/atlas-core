@@ -18,7 +18,7 @@ import { defaults } from '../dist/settings.js';
 import { digest } from '../dist/exact.js';
 import { publicError, Refusal } from '../dist/fault.js';
 import { diskUsage } from '../dist/capacity.js';
-import { root, uuid, secret, report, telemetry, fixture } from './helpers.mjs';
+import { root, uuid, secret, report, telemetry, fixture, registration } from './helpers.mjs';
 
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 async function local(t, temporary = {}) {
@@ -382,6 +382,12 @@ test('history expiry makes pages unavailable before unlink and shares reclamatio
 });
 test('failed pressure expiry retains charges, refuses pages, and can retry cleanup before its deadline', async t => {
   const f = await local(t), { page, request } = await historyView(f);
+  const asset = (await f.call('RegisterAsset', registration())).asset;
+  const health = await f.call('GetHealth');
+  const challenge = await f.call('BeginAssetContact', { allocation_context: health.allocation_context, request_id: uuid(), asset_id: asset.id, process_generation: asset.process_generation, mode: 'current' });
+  const proof = { ...report(f.engine.store.dataset, asset.id, { kind: 'asset_process', process_generation: asset.process_generation }, 1, {}),
+    generated_at: challenge.issued_at, contact_proof: { challenge_id: challenge.challenge_id } };
+  assert.equal((await f.call('UpdateAsset', { request_id: uuid(), asset_id: asset.id, report: proof })).asset.communications.health, 'healthy');
   const before = f.engine.temporary.peek(page.view_id), storageBytes = f.engine.settings.storageBytes;
   const blocked = join(f.directory, 'captures', `${page.view_id}.sqlite-shm`);
   await mkdir(blocked);
@@ -398,7 +404,18 @@ test('failed pressure expiry retains charges, refuses pages, and can retry clean
   await assert.rejects(f.call('GetObservationMovementHistory', { page_token: page.next_page_token }), error => error.code === 'allocation_expired');
   await assert.rejects(f.call('GetObservationMovementHistory', request), error => error.code === 'allocation_expired');
   await assert.rejects(f.call('ReleaseHistoryView', { release_token: page.release_token }), error => publicError(error, f.engine.store.dataset).status === 500);
-  await assert.rejects(f.engine.reads.cleanup(), error => publicError(error, f.engine.store.dataset).status === 500);
+  const due = performance.now() + 15_001;
+  t.mock.method(performance, 'now', () => due);
+  f.engine.store.db.exec("CREATE TRIGGER refuse_contact BEFORE UPDATE ON entity_assets BEGIN SELECT RAISE(ABORT,'contact_write_failed'); END");
+  const checkpoints = f.engine.store.metrics.checkpoints;
+  await assert.rejects(f.engine.tick(), error => error instanceof AggregateError &&
+    publicError(error.errors[0], f.engine.store.dataset).status === 500 && error.errors[1].message === 'contact_write_failed');
+  assert.equal((await f.call('GetAsset', { asset_id: asset.id })).communications.health, 'healthy');
+  assert.ok(f.engine.store.metrics.checkpoints > checkpoints, 'Capture and contact failures must not skip checkpointing');
+  f.engine.store.db.exec('DROP TRIGGER refuse_contact');
+  f.engine.settings.storageBytes = storageBytes;
+  await assert.rejects(f.engine.tick(), error => publicError(error, f.engine.store.dataset).status === 500);
+  assert.equal((await f.call('GetAsset', { asset_id: asset.id })).communications.health, 'degraded');
   assert.ok(f.engine.temporary.peek(page.view_id).bytes > 0, 'Failed release and cleanup must keep their charge');
   await rm(blocked, { recursive: true });
   await Promise.all([f.engine.reads.expireHistory(), f.engine.reads.cleanup(), f.call('ReleaseHistoryView', { release_token: page.release_token })]);

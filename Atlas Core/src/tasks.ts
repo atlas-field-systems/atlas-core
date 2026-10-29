@@ -42,7 +42,8 @@ export class Tasks {
       CREATE TABLE IF NOT EXISTS task_terminal(id TEXT PRIMARY KEY,payload TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS task_cancellation_retries(request TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS task_instruction_lifetime(read_id TEXT PRIMARY KEY,run TEXT NOT NULL,deadline REAL NOT NULL) STRICT;
-      CREATE INDEX IF NOT EXISTS task_instruction_deadline ON task_instruction_lifetime(deadline);
+      CREATE INDEX IF NOT EXISTS task_instruction_run_deadline ON task_instruction_lifetime(run,deadline);
+      DROP INDEX IF EXISTS task_instruction_deadline;
       CREATE TABLE IF NOT EXISTS task_instruction_receipts(read_id TEXT PRIMARY KEY,facts TEXT NOT NULL,proof TEXT) STRICT;`);
   }
   private rememberInstructions(context: z.infer<typeof AssignedContext>, facts: string): number {
@@ -316,8 +317,11 @@ export class Tasks {
       } else {
         const expired = z.array(z.object({ read_id: Uuid, bytes: z.number().int().nonnegative() })).max(16).parse(
           this.store.db.prepare(`SELECT i.read_id,length(CAST(i.image AS BLOB))+length(CAST(i.facts AS BLOB)) AS bytes
-            FROM task_instruction_lifetime l JOIN task_instructions i USING(read_id)
-            WHERE l.run<>? OR l.deadline<=? ORDER BY l.deadline LIMIT 16`).all(this.store.run, performance.now()));
+            FROM task_instructions i WHERE i.read_id IN (
+              SELECT read_id FROM task_instruction_lifetime WHERE run=? AND deadline<=?
+              UNION ALL SELECT read_id FROM task_instruction_lifetime WHERE run<?
+              UNION ALL SELECT read_id FROM task_instruction_lifetime WHERE run>?
+              LIMIT 16)`).all(this.store.run, performance.now(), this.store.run, this.store.run));
         for (const old of expired) {
           tx.retainedBytes += 8192 + old.bytes;
           this.store.db.prepare('DELETE FROM task_instructions WHERE read_id=?').run(old.read_id);

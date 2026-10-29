@@ -199,8 +199,8 @@ export class Engine {
   }
   async tick(): Promise<void> {
     const failures: unknown[] = [];
+    try { await this.reads.cleanup(); } catch (error) { failures.push(error); }
     try {
-      await this.reads.cleanup();
       if (this.state === 'serving') this.entities.tick(tx => this.admitContact(tx));
     } catch (error) { failures.push(error); }
     try { this.store.checkpoint(); } catch (error) { failures.push(error); }

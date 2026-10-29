@@ -26,8 +26,8 @@ After a lost reply, reconcile through the Observation and its recorded Track.
 An attempt can return a validated HTTP error while the operation remains accepted
 or unknown. A denied retry never erases an earlier success or unresolved attempt.
 Timeout, abort, disconnect, invalid responses, and post-commit authorization loss
-can all leave `unknown_outcome`. A later lookup returning 404 proves no absence of
-an earlier commit.
+can all leave `unknown_outcome`. A later lookup that returns 404 does not prove that
+an earlier commit is absent.
 
 ## When refusal is definitive
 

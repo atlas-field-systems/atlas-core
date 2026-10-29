@@ -3,7 +3,7 @@
 These disposable prototypes investigate the documented design at commit `1ca5623`.
 They are instruments for finding implementation traps, not an Atlas server or SDK.
 The findings link to that historical design. Current Protocol, Core, and SDK pages
-own the supported implementation.
+define the supported contracts. The SDK remains unimplemented.
 
 ## Run
 
