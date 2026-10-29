@@ -64,3 +64,6 @@ The Core allocation expires at its original deadline. Recovery obeys Protocol's
 allocation/retry rules before replacing it. Discard partial private staging; preserve
 the complete published picture. Retain only bounded allocation identity/expiry facts
 needed to avoid duplicate allocation after lost replies. No persistent SDK cache exists.
+After close, a received contact challenge stops reserving its Asset once it is
+certainly expired. A lost challenge reply retains the original allocation deadline.
+Neither case claims that Core released its allocation receipt.

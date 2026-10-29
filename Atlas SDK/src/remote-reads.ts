@@ -637,6 +637,7 @@ export function createRemoteReads(
     let challenge:
       | Extract<ResponseOf<'BeginAssetContact'>, { kind: 'success' }>['body']['data']
       | undefined;
+    let latestChallengeExpiry = Infinity;
     const checkIn = operations.bindTransport(
       exchanges.UpdateAsset,
       policies.UpdateAsset,
@@ -772,7 +773,10 @@ export function createRemoteReads(
                     code: 'invalid_http',
                     context: result.context,
                   } satisfies WaitResult<ResponseOf<'BeginAssetContact'>>;
-                challenge ??= data;
+                if (!challenge) {
+                  challenge = data;
+                  latestChallengeExpiry = performance.now() + 10_000;
+                }
               }
               return result;
             });
@@ -799,7 +803,8 @@ export function createRemoteReads(
         return { kind: 'abandoned', evidence: owner.evidence };
       },
     });
-    reservation.ended = owner.ended;
+    reservation.ended = () =>
+      owner.ended() || (closed && performance.now() >= latestChallengeExpiry);
     reservation.close = handle.close;
     reservations.set(key, reservation);
     return handle;

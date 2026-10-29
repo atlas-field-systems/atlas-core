@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fixture, uuid, registration, task, barrier } from './harness.mjs';
 import { publicClient, success, sent, reading, telemetry } from './public-helpers.mjs';
 
@@ -290,6 +291,52 @@ test('assigned instructions retain process, read and Core run across actual endp
   success(await client.connect());
   assert.equal((await stale.next()).code, 'superseded');
 });
+
+test(
+  'closed contact handles release known expired challenges while lost replies retain their reservation',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const { http } = await publicClient(t, f, {}, { handles: 1 });
+    const { http: uncertain } = await publicClient(t, f);
+    const asset = registration(),
+      other = registration();
+    sent(await http.assets.register(asset).send());
+    sent(await uncertain.assets.register(other).send());
+    const request = (registered) => ({
+      request_id: uuid(),
+      asset_id: registered.asset_id,
+      process_generation: registered.process_generation,
+      mode: 'current',
+    });
+    const contact = http.assets.contact(request(asset));
+    const challenge = success(await contact.read());
+    const expiry = performance.now() + 10_200;
+    const lost = uncertain.assets.contact(request(other));
+    f.once('/messages/begin_asset_contact', ({ outgoing }) => outgoing.destroy());
+    assert.equal((await lost.read()).kind, 'failed');
+    assert.deepEqual(await lost.close(), { kind: 'abandoned', evidence: 'unacknowledged' });
+
+    await delay(5_000);
+    assert.deepEqual(success(await contact.read()), challenge);
+    assert.deepEqual(await contact.close(), { kind: 'abandoned', evidence: 'unacknowledged' });
+    assert.throws(() => http.assets.contact(request(asset)), { code: 'capacity' });
+    await delay(Math.max(0, expiry - performance.now()));
+
+    assert.throws(() => uncertain.assets.contact(request(other)), { code: 'identity_conflict' });
+    assert.equal(lost.releaseEvidence, 'unacknowledged');
+    const fresh = http.assets.contact(request(asset));
+    const replacement = success(await fresh.read());
+    assert.notEqual(replacement.challenge_id, challenge.challenge_id);
+    assert.equal(replacement.asset_id, asset.asset_id);
+    assert.notEqual(fresh.allocation.allocationContext, contact.allocation.allocationContext);
+    const traffic = f.traffic.length;
+    assert.equal((await contact.read()).code, 'closed');
+    await contact.close();
+    assert.equal(f.traffic.length, traffic);
+    assert.deepEqual(success(await fresh.read()), replacement);
+  },
+);
 
 test('contact retries the original challenge, proves current contact, and replacement changes only the requested process', async (t) => {
   const f = await fixture(t);
