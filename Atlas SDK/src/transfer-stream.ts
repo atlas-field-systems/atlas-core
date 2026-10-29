@@ -1,11 +1,11 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { SdkError } from './contracts.js';
-import type { LocalCode } from './contracts.js';
 import { CleanupFailure, failureCode, readerCancellation } from './http.js';
 
 // Bound SDK-owned copies and work per pull independently of the complete file size.
 const maximumChunk = 1024 * 1024;
+type TransferOrigin = 'upload' | 'download';
 
 export class TransferReader {
   readonly #reader: ReadableStreamDefaultReader<Uint8Array>;
@@ -14,7 +14,8 @@ export class TransferReader {
   readonly #signal: AbortSignal;
   readonly #length: number;
   readonly #digest: string;
-  readonly #readFailure: LocalCode;
+  readonly #origin: TransferOrigin;
+  #pending: { chunk: Uint8Array; offset: number } | undefined;
   #stopping: Promise<void> | undefined;
   #eof = false;
   #bytes = 0;
@@ -25,14 +26,14 @@ export class TransferReader {
     signal: AbortSignal,
     length: number,
     digest: string,
-    readFailure: LocalCode,
+    origin: TransferOrigin,
   ) {
     this.#reader = stream.getReader();
     this.#cancel = readerCancellation(this.#reader);
     this.#signal = signal;
     this.#length = length;
     this.#digest = digest;
-    this.#readFailure = readFailure;
+    this.#origin = origin;
     signal.addEventListener('abort', this.#abort, { once: true });
     if (signal.aborted) this.#abort();
   }
@@ -46,33 +47,43 @@ export class TransferReader {
     void this.stop().catch(() => undefined);
   };
   stop(): Promise<void> {
+    this.#pending = undefined;
     this.#stopping ??= this.#cancel();
     return this.#stopping;
   }
   async read(): Promise<Uint8Array | undefined> {
     try {
       this.#signal.throwIfAborted();
-      let chunk: ReadableStreamReadResult<Uint8Array>;
-      try {
-        chunk = await this.#reader.read();
-      } catch {
-        throw new SdkError(this.#readFailure);
-      }
-      this.#signal.throwIfAborted();
       if (this.#stopping) throw new SdkError('cancelled');
-      if (chunk.done) {
-        this.#eof = true;
-        if (this.#bytes !== this.#length || bytesToHex(this.#hash.digest()) !== this.#digest)
+      if (!this.#pending) {
+        let chunk: ReadableStreamReadResult<Uint8Array>;
+        try {
+          chunk = await this.#reader.read();
+        } catch {
+          throw new SdkError(this.#origin === 'upload' ? 'source_failure' : 'network');
+        }
+        this.#signal.throwIfAborted();
+        if (this.#stopping) throw new SdkError('cancelled');
+        if (chunk.done) {
+          this.#eof = true;
+          if (this.#bytes !== this.#length || bytesToHex(this.#hash.digest()) !== this.#digest)
+            throw new SdkError('integrity_mismatch');
+          return undefined;
+        }
+        if (!(chunk.value instanceof Uint8Array)) throw new SdkError('invalid_value');
+        this.#observed += chunk.value.byteLength;
+        if (chunk.value.byteLength > this.#length - this.#bytes)
           throw new SdkError('integrity_mismatch');
-        return undefined;
+        if (this.#origin === 'upload' && chunk.value.byteLength > maximumChunk)
+          throw new SdkError('resource_limit');
+        this.#pending = { chunk: chunk.value, offset: 0 };
       }
-      if (!(chunk.value instanceof Uint8Array)) throw new SdkError('invalid_value');
-      this.#observed += chunk.value.byteLength;
-      if (chunk.value.byteLength > this.#length - this.#bytes)
-        throw new SdkError('integrity_mismatch');
-      if (chunk.value.byteLength > maximumChunk) throw new SdkError('resource_limit');
-      // The source may reuse its storage on its next pull. Own only this bounded chunk.
-      const bytes = new Uint8Array(chunk.value);
+      const pending = this.#pending;
+      const end = Math.min(pending.offset + maximumChunk, pending.chunk.byteLength);
+      // The source may reuse its storage on its next pull. Copy only this bounded piece.
+      const bytes = new Uint8Array(pending.chunk.subarray(pending.offset, end));
+      pending.offset = end;
+      if (end === pending.chunk.byteLength) this.#pending = undefined;
       this.#hash.update(bytes);
       this.#bytes += bytes.byteLength;
       return bytes;
@@ -88,6 +99,7 @@ export class TransferReader {
     } catch (error) {
       throw new CleanupFailure(failureCode(primary ?? this.#failure ?? error), failureCode(error));
     } finally {
+      this.#pending = undefined;
       this.#reader.releaseLock();
       this.#hash.destroy();
     }

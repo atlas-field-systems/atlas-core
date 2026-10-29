@@ -210,7 +210,7 @@ export function createTransfers(session: Session, operations: Operations): Trans
                   lease.signal,
                   length,
                   input.facts.sha256,
-                  'source_failure',
+                  'upload',
                 );
                 const boundary = `atlas-${crypto.randomUUID()}`;
                 requestHeaders.set('Content-Type', `multipart/form-data; boundary=${boundary}`);
@@ -474,7 +474,7 @@ export function createTransfers(session: Session, operations: Operations): Trans
               signal,
               Number(reply.descriptor.byte_length),
               reply.descriptor.sha256,
-              'network',
+              'download',
             );
             const content = verifiedStream(reader, signal);
             publish({

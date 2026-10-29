@@ -71,12 +71,15 @@ See [authorization](authorization.md). Recovery never resubmits writes.
 length, SHA-256, media and metadata. Blob/File use native browser multipart. Node
 also accepts a fresh byte-zero stream opener; a direct stream is one-shot. Generic
 browser streams fail before opening or fetching. A retry starts at byte zero.
+Caller upload streams must supply chunks no larger than 1 MiB.
 
 `objects.content({ object_id, disposition }, { maxBytes? })` returns a download.
 Await `open()` to obtain validated headers and a provisional `stream`. Consume the
 stream, then require a successful content result from `settled` before trusting
 complete length and digest verification. `cancel()` awaits cleanup. An open or
 unread stream retains admission until EOF, cancellation or its deadline.
+Downloads accept network chunks of any size within the remaining declared length
+and return copies no larger than 1 MiB. A chunk exceeding that length fails integrity verification.
 `reference('text/html')` and `reference('application/vnd.oai.openapi+json')` return
 bounded validated documents. Content bytes never enter the local picture.
 
