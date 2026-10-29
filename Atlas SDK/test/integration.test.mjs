@@ -269,3 +269,47 @@ test('public close awaits every release and drains attempts despite a cleanup pr
   assert.equal(client.state.kind, 'closed');
   await assert.rejects(client.close(), ClientCloseError);
 });
+
+test('reentrant source cancellation joins the same public close owner', async (t) => {
+  const f = await fixture(t);
+  const client = createClient({ baseUrl: f.address, credentials: () => f.apiKey });
+  t.after(() => client.close());
+  success(await client.connect());
+  const reading = barrier();
+  let reentrant;
+  const bytes = Buffer.from('x');
+  const operation = client.objects.upload(
+    {
+      object_id: uuid(),
+      request_id: uuid(),
+      byte_length: '1',
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      content_type: 'application/octet-stream',
+      metadata: { associations: [] },
+    },
+    {
+      open() {
+        return new ReadableStream(
+          {
+            pull() {
+              reading.resolve();
+              return new Promise(() => {});
+            },
+            cancel() {
+              reentrant = client.close();
+            },
+          },
+          { highWaterMark: 0 },
+        );
+      },
+    },
+  );
+  const running = operation.start();
+  await reading.promise;
+  const closed = client.close();
+  await closed;
+  await reentrant;
+  assert.equal(reentrant, closed);
+  assert.equal((await running.settled).code, 'closed');
+  assert.equal(client.state.kind, 'closed');
+});

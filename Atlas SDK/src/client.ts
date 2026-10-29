@@ -233,11 +233,7 @@ export function createClient(options: ClientOptions): Client {
     recover: () => session.discover(true),
     close(): Promise<ClientCloseResult> {
       if (closing) return closing;
-      session.beginClose();
-      // Stop the picture synchronously before any cleanup wait can resume recovery.
-      const pictureShutdown = picture?.shutdown();
-      const remoteShutdown = remote.close();
-      closing = (async () => {
+      closing = Promise.resolve().then(async () => {
         const errors: unknown[] = [];
         const [pictureResult, remoteResult] = await Promise.allSettled([
           pictureShutdown,
@@ -263,7 +259,11 @@ export function createClient(options: ClientOptions): Client {
         if (remoteResult.status === 'rejected') throw new ClientCloseError(errors, undefined);
         if (errors.length) throw new ClientCloseError(errors, remoteResult.value);
         return Object.freeze({ remote: remoteResult.value });
-      })();
+      });
+      // Publish the close owner before aborting user-owned sources can re-enter it.
+      session.beginClose();
+      const pictureShutdown = picture?.shutdown();
+      const remoteShutdown = remote.close();
       return closing;
     },
   };
