@@ -161,7 +161,15 @@ export class Picture {
     }
   }
   #start(): void {
-    if (this.#closed || this.#limited || this.#job || this.#session.state.kind !== 'ready') return;
+    if (
+      this.#closed ||
+      this.#limited ||
+      this.#job ||
+      this.#socket ||
+      this.#session.state.kind !== 'ready'
+    )
+      return;
+    let failed = false;
     this.#job = Promise.resolve()
       .then(() => this.#run())
       .catch((error: unknown) => {
@@ -171,12 +179,20 @@ export class Picture {
           this.#diagnostic('capacity', 'capacity');
           return;
         }
-        this.#cleanupFailure = error;
-        if (!this.#closed) this.#local.state('disconnected', failureCode(error));
+        failed = true;
+        this.#cleanupFailure ??= error;
+        if (!this.#closed && this.#session.state.kind === 'ready')
+          this.#local.state('disconnected', failureCode(error));
       })
       .finally(() => {
         this.#job = undefined;
-        if (!this.#cleanupFailure) this.#start();
+        const socket = this.#socket;
+        if (socket) {
+          void socket.closed.then(() => {
+            if (this.#socket === socket) this.#socket = undefined;
+            this.#start();
+          });
+        } else if (!failed) this.#start();
       });
   }
   async #delay(ms: number, lease: SocketLease): Promise<void> {
@@ -195,7 +211,9 @@ export class Picture {
   async #run(): Promise<void> {
     const lease = this.#session.ownSocket(async () => {
       this.#cancelDelay?.();
-      await this.#socket?.close();
+      const socket = this.#socket;
+      await socket?.close();
+      if (this.#socket === socket) this.#socket = undefined;
     });
     this.#lease = lease;
     try {
@@ -249,8 +267,21 @@ export class Picture {
           } else this.#local.state('disconnected', failure.code);
         } finally {
           const socket = this.#socket;
-          this.#socket = undefined;
-          await socket?.close();
+          if (socket) {
+            await new Promise<void>((resolve) => {
+              const finish = () => {
+                lease.signal.removeEventListener('abort', finish);
+                resolve();
+              };
+              void socket.closed.then(finish);
+              lease.signal.addEventListener('abort', finish, { once: true });
+              if (!lease.current()) finish();
+            });
+            if (lease.current()) {
+              await socket.close();
+              this.#socket = undefined;
+            }
+          }
         }
       }
     } finally {

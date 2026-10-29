@@ -4,6 +4,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createHash } from 'node:crypto';
 import { fixture, uuid, secret, registration, task, barrier } from './harness.mjs';
 import { publicClient, sent, reading, telemetry } from './public-helpers.mjs';
+const { createClient, ClientCloseError } = await import(
+  process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
+);
 
 function success(result) {
   assert.equal(result.kind, 'response', JSON.stringify(result));
@@ -36,6 +39,20 @@ async function ready(client, cursor) {
 }
 async function register(client, alias) {
   return success((await client.assets.register(registration(alias)).send()).attempt).data.asset;
+}
+function observeSockets(t) {
+  const Native = globalThis.WebSocket;
+  const sockets = [];
+  globalThis.WebSocket = class extends Native {
+    constructor(...args) {
+      super(...args);
+      sockets.push(this);
+    }
+  };
+  t.after(() => {
+    globalThis.WebSocket = Native;
+  });
+  return sockets;
 }
 async function call(f, operation, data, credential = f.apiKey) {
   const response = await fetch(`${f.proxyUrl}/messages/${operation}`, {
@@ -506,6 +523,188 @@ test(
       f.traffic.some((entry) => entry.path === '/messages/read_changes'),
       false,
     );
+  },
+);
+
+test(
+  'a retiring native socket blocks replacement until physical close then resumes complete staging',
+  { timeout: 20_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const sockets = observeSockets(t);
+    let peer;
+    f.wssOnce('handoff_complete', ({ to }) => {
+      peer = to;
+      peer._socket.pause();
+    });
+    const client = createClient({
+      baseUrl: f.proxyUrl,
+      credentials: () => f.apiKey,
+      mode: 'full',
+      timeoutMs: 500,
+    });
+    try {
+      success(await client.connect());
+      await until(() => peer && client.picture.status.reason === 'deadline', 'No handoff deadline');
+      await delay(1300);
+      assert.equal(sockets.length, 1);
+      assert.equal(sockets[0].readyState, WebSocket.CLOSING);
+      assert.equal(client.assets.get({ asset_id: uuid() }).kind, 'unavailable');
+      const requests = f.traffic.length;
+      await delay(300);
+      assert.equal(sockets.length, 1);
+      assert.equal(f.traffic.length, requests);
+      peer._socket.resume();
+      await until(() => sockets[0].readyState === WebSocket.CLOSED, 'Native close not confirmed');
+      await ready(client);
+      assert.equal(sockets.length, 2);
+      assert.equal(f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length, 1);
+      const asset = await register(client, 'after-retirement');
+      await until(
+        () => client.assets.get({ asset_id: asset.id }).value?.id === asset.id,
+        'Live feed did not resume',
+      );
+      await client.close();
+      assert.ok(sockets.every((socket) => socket.readyState === WebSocket.CLOSED));
+    } finally {
+      peer?._socket.resume();
+      await client.close().catch(() => undefined);
+    }
+  },
+);
+
+test(
+  'close interrupts a stalled native socket retirement and retains its bounded cleanup failure',
+  { timeout: 15_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const sockets = observeSockets(t);
+    let peer;
+    f.wssOnce('handoff_complete', ({ to }) => {
+      peer = to;
+      peer._socket.pause();
+    });
+    const client = createClient({
+      baseUrl: f.proxyUrl,
+      credentials: () => f.apiKey,
+      mode: 'full',
+      timeoutMs: 500,
+    });
+    try {
+      success(await client.connect());
+      await until(() => peer && client.picture.status.reason === 'deadline', 'No handoff deadline');
+      await delay(1300);
+      assert.equal(sockets[0].readyState, WebSocket.CLOSING);
+      const requests = f.traffic.length;
+      const started = performance.now();
+      const closing = client.close();
+      assert.equal(client.close(), closing);
+      await assert.rejects(
+        closing,
+        (error) =>
+          error instanceof ClientCloseError &&
+          error.errors.some((failure) => failure.code === 'deadline'),
+      );
+      assert.ok(
+        performance.now() - started < 2500,
+        'Shutdown waited for unconfirmed physical close',
+      );
+      assert.equal(sockets[0].readyState, WebSocket.CLOSING);
+      assert.equal(sockets.length, 1);
+      assert.equal(client.state.kind, 'closed');
+      assert.equal(client.picture.status.kind, 'stopped');
+      peer._socket.resume();
+      await until(() => sockets[0].readyState === WebSocket.CLOSED, 'Native close not confirmed');
+      await delay(350);
+      assert.equal(sockets.length, 1);
+      assert.equal(f.traffic.length, requests);
+      await assert.rejects(client.close(), ClientCloseError);
+    } finally {
+      peer?._socket.resume();
+      await client.close().catch(() => undefined);
+    }
+  },
+);
+
+test(
+  'authorization interrupts socket retirement without traffic and recovery waits for the old physical close',
+  { timeout: 20_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const admin = await connected(f);
+    const asset = await register(admin, 'stale-through-retirement');
+    const key = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+    success((await admin.apiKeys.create(key).send()).attempt);
+    const sockets = observeSockets(t);
+    let credential = key.secret;
+    let peer;
+    const client = createClient({
+      baseUrl: f.proxyUrl,
+      credentials: () => credential,
+      mode: 'full',
+      timeoutMs: 500,
+    });
+    try {
+      success(await client.connect());
+      await ready(client);
+      const query = available(client.assets.query({}));
+      const boundary = client.picture.cursor;
+      const generation = client.picture.status.generation;
+      f.wssOnce('handoff_complete', ({ to }) => {
+        peer = to;
+        peer._socket.pause();
+      });
+      f.closeFeeds();
+      await until(() => peer && client.picture.status.reason === 'deadline', 'No handoff deadline');
+      await delay(1300);
+      assert.equal(sockets.length, 2);
+      assert.equal(sockets[1].readyState, WebSocket.CLOSING);
+      success(
+        (await admin.apiKeys.revoke({ request_id: uuid(), api_key_id: key.api_key_id }).send())
+          .attempt,
+      );
+      await client.http.assets.get({ asset_id: asset.id });
+      await until(() => client.state.kind === 'authorization-required', 'No authority rejection');
+      const requests = f.traffic.length;
+      const frames = f.wssTraffic.filter((entry) => entry.direction === 'client').length;
+      await delay(1300);
+      assert.equal(client.picture.status.kind, 'authorization-required');
+      assert.equal(client.assets.get({ asset_id: asset.id }).stale, true);
+      assert.equal(query.page().stale, true);
+      assert.equal(available(query.page()).cursor, boundary);
+      assert.equal(
+        (await client.http.assets.get({ asset_id: asset.id })).code,
+        'authorization_required',
+      );
+      assert.equal((await client.recover()).code, 'unchanged_credential');
+      assert.equal(f.traffic.length, requests);
+      assert.equal(f.wssTraffic.filter((entry) => entry.direction === 'client').length, frames);
+      credential = f.apiKey;
+      success(await client.recover());
+      const recoveredRequests = f.traffic.length;
+      await delay(1300);
+      assert.equal(sockets.length, 2);
+      assert.equal(sockets[1].readyState, WebSocket.CLOSING);
+      assert.equal(f.traffic.length, recoveredRequests);
+      peer._socket.resume();
+      await until(() => sockets[1].readyState === WebSocket.CLOSED, 'Native close not confirmed');
+      await ready(client);
+      assert.equal(sockets.length, 3);
+      assert.equal(client.picture.status.generation, generation);
+      assert.equal(client.assets.get({ asset_id: asset.id }).stale, false);
+      assert.equal(available(query.page()).cursor, boundary);
+      assert.equal(f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length, 1);
+      query.close();
+      await assert.rejects(
+        client.close(),
+        (error) =>
+          error instanceof ClientCloseError &&
+          error.errors.some((failure) => failure.code === 'deadline'),
+      );
+    } finally {
+      peer?._socket.resume();
+      await client.close().catch(() => undefined);
+    }
   },
 );
 

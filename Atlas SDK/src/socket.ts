@@ -22,7 +22,11 @@ export type FeedFrame = Extract<
   ServerFrame,
   { type: 'change_batch' | 'progress' | 'handoff_complete' }
 >;
-export type FeedConnection = Readonly<{ done: Promise<SocketEnd>; close: () => Promise<void> }>;
+export type FeedConnection = Readonly<{
+  done: Promise<SocketEnd>;
+  closed: Promise<void>;
+  close: () => Promise<void>;
+}>;
 function messageBudget(budget: Budget, limits: NegotiatedLimits): Budget {
   return effectiveBudget('wss_data', {
     ...budget,
@@ -297,7 +301,16 @@ export function feedSocket(
   }
   socket.addEventListener('message', message);
   socket.addEventListener('error', () => end({ kind: 'transport', code: 'network' }));
-  socket.addEventListener('close', () => end({ kind: 'transport', code: 'network' }));
+  const closed = new Promise<void>((resolve) => {
+    socket.addEventListener(
+      'close',
+      () => {
+        end({ kind: 'transport', code: 'network' });
+        resolve();
+      },
+      { once: true },
+    );
+  });
   if (!lease.current()) aborted();
-  return { done, close };
+  return { done, closed, close };
 }
