@@ -528,7 +528,11 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
     nativeMultipartRequests: multipart.length,
     correlatedAttempts: transfers.contexts.length,
   };
-  report.attempts = contexts.length + transfers.contexts.length + fullContexts.length;
+  report.correlatedAttemptContexts =
+    contexts.length + transfers.contexts.length + fullContexts.length;
+  report.sdkHttpRequests = traffic.filter(
+    (request) => request.attemptId !== undefined && request.protocol === '0.3.0',
+  ).length;
 
   completed = true;
 });
