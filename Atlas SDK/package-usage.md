@@ -1,10 +1,8 @@
 # Use the HTTP SDK
 
-This package implements HTTP resource clients and prepared JSON domain writes for
-Protocol 0.3.0. Full synchronization, frozen remote history, assigned-work reads,
-contact allocation, reporting convenience helpers, binary transfers, reference
-downloads, and diagnostic observers are not implemented in this package yet.
-The five contract pages still define the complete SDK scope.
+This package implements Protocol 0.3.0 HTTP clients, prepared JSON writes, and diagnostics.
+Full synchronization, remote history, assigned work, contact allocation, reporting helpers,
+binary transfers, and reference downloads remain unimplemented.
 
 Install the packed SDK together with its hash-pinned Protocol artifact. For a
 source checkout, prepare Protocol with `npm run protocol:prepare`, install with
@@ -71,7 +69,8 @@ waits for owned attempts to settle. Core's committed effects survive close.
 After validated key rejection, network methods return `authorization_required`
 without traffic. Change the credential provider, then call `recover()` explicitly.
 Changing its value alone does not replace accepted credentials. Recovery never
-resubmits writes. `connect()` also refreshes discovery under accepted credentials.
+resubmits writes. `connect()` refreshes health under accepted credentials. An unchanged
+Dataset, Core run, and credential preserve unrelated work and its generation.
 An optional `datasetId` pins the expected Dataset and refuses another one.
 
 ## Configure bounds
@@ -81,10 +80,20 @@ operation identities, and a 16 MiB accounting budget for retained equality facts
 Request and response budgets default to Protocol's ceilings and can only decrease.
 Discovery limits can lower them further. Transport keeps at most one bounded byte
 buffer per response. Operation evidence retains no attempt log or response images.
-All capacities refuse explicitly. Retained identities last until close. At most
-64 rejected credentials are retained per instance; reaching that bound refuses
-further recovery. There are no timers while idle.
+Capacity refusal is explicit. Identities last until close. At 64 rejected credentials,
+recovery refuses further candidates. HTTP attempt timers end with their attempts.
 
 Node uses its normal TLS trust. Set `NODE_EXTRA_CA_CERTS` before starting Node when
 using a private CA. Browsers use their configured trust and Core's trusted origins.
 See [qualification](qualification.md) for tested targets and remaining coverage.
+
+## Observe diagnostics
+
+Pass `diagnostics: { mode: 'summary', observer: event => applicationLogger(event) }`
+to `createClient`. Use `debug` for bounded attempt details and safe code frames.
+Omitting this option, or selecting `disabled`, creates no diagnostic owner or timer.
+`DiagnosticEvent` is the exported discriminated union. Successful reads and reports
+aggregate. Failures and other write completions retain attempt, Core request, and
+prepared retry identities. Unknown transport byte counts remain null.
+Delivery is deferred and observer exceptions do not change requests. `close()`
+discards pending records and counters. See [diagnostics](diagnostics.md) for bounds.
