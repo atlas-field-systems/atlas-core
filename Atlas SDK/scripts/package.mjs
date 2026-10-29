@@ -96,7 +96,7 @@ const negatives = [
   'client.assets.get({ task_id: id });',
   "client.assets.list({ page_token: 'foreign' });",
   "client.assets.update({ asset_id: id, request_id: id, expected_edit_revision: Counter.parse('1'), alias: undefined });",
-  "createClient({ baseUrl: 'https://localhost', credentials: () => '', mode: 'full' });",
+  "createClient({ baseUrl: 'https://localhost', credentials: () => '', mode: 'partial' });",
   "createClient({ baseUrl: 'https://localhost', credentials: () => '', diagnostics: { mode: 'summary' } });",
   "createClient({ baseUrl: 'https://localhost', credentials: () => '', diagnostics: { mode: 'disabled', observer: () => {} } });",
   "const read = await client.tasks.get({ task_id: id }); if (read.kind === 'response' && read.response.kind === 'success') read.response.body.data.object_id;",
