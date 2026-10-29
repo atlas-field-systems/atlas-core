@@ -1,0 +1,870 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
+import { createHash } from 'node:crypto';
+import { fixture, uuid, secret, registration, task, barrier } from './harness.mjs';
+
+function success(result) {
+  assert.equal(result.kind, 'response', JSON.stringify(result));
+  assert.equal(result.response.kind, 'success', JSON.stringify(result));
+  return result.response.body;
+}
+function available(result) {
+  assert.equal(result.kind, 'available', JSON.stringify(result));
+  return result.value;
+}
+async function until(predicate, label, timeout = 10_000) {
+  const end = Date.now() + timeout;
+  while (!predicate()) {
+    assert.ok(Date.now() < end, label);
+    await delay(10);
+  }
+}
+async function connected(f, options) {
+  const client = f.client(options);
+  success(await client.connect());
+  return client;
+}
+async function ready(client, cursor) {
+  await until(
+    () =>
+      client.picture.status.kind === 'synchronized' &&
+      (cursor === undefined || client.picture.status.cursor === cursor),
+    `Picture did not synchronize: ${JSON.stringify(client.picture.status)}`,
+  );
+}
+async function register(client, alias) {
+  return success((await client.assets.register(registration(alias)).send()).attempt).data.asset;
+}
+async function call(f, operation, data, credential = f.apiKey) {
+  const response = await fetch(`${f.proxyUrl}/messages/${operation}`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${credential}`,
+      'atlas-dataset-id': f.datasetId,
+      'atlas-protocol-version': '0.3.0',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  const result = await response.json();
+  assert.equal(response.status, 200, JSON.stringify(result));
+  return result;
+}
+async function observation(f) {
+  const observation_id = uuid(),
+    publisher_id = uuid();
+  return call(f, 'create_observation', {
+    request_id: uuid(),
+    observation_id,
+    publisher_id,
+    report: {
+      dataset_id: f.datasetId,
+      entity_id: observation_id,
+      origin: { kind: 'publisher', publisher_id },
+      report_id: uuid(),
+      sequence: '1',
+      generated_at: null,
+      mode: 'current',
+      sections: {
+        type: {
+          state: 'value',
+          classification: 'state_until_changed',
+          observed_at: null,
+          value: { kind: 'ground_vehicle' },
+        },
+      },
+    },
+  });
+}
+async function object(f, assetId) {
+  const content = new TextEncoder().encode('picture object');
+  const descriptor = {
+    request_id: uuid(),
+    object_id: uuid(),
+    byte_length: String(content.length),
+    sha256: createHash('sha256').update(content).digest('hex'),
+    content_type: 'text/plain',
+    metadata: { name: 'retained', associations: [{ kind: 'asset', id: assetId }] },
+  };
+  const form = new FormData();
+  form.append('descriptor', JSON.stringify(descriptor));
+  form.append('file', new Blob([content], { type: 'text/plain' }), 'picture.txt');
+  const response = await fetch(`${f.proxyUrl}/objects`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${f.apiKey}`,
+      'atlas-dataset-id': f.datasetId,
+      'atlas-protocol-version': '0.3.0',
+    },
+    body: form,
+  });
+  const result = await response.json();
+  assert.equal(response.status, 200, JSON.stringify(result));
+  return result;
+}
+
+test(
+  'Full stages all five kinds, catches up through fixed handoff, and routes ordinary reads locally',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const admin = await connected(f);
+    const asset = await register(admin, 'Straße');
+    const feature = success(
+      (
+        await admin.geofeatures
+          .create({
+            request_id: uuid(),
+            geofeature_id: uuid(),
+            alias: 'marker',
+            geometry: { type: 'Point', coordinates: [0, 0] },
+          })
+          .send()
+      ).attempt,
+    ).data;
+    const created = success((await admin.tasks.create(task(asset.id)).send()).attempt);
+    const pair = await observation(f);
+    const uploaded = await object(f, asset.id);
+    const reached = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.wssOnce('handoff_complete', async ({ send }) => {
+      reached.resolve();
+      await release.promise;
+      send();
+    });
+    const client = await connected(f, { mode: 'full', picture: { pageSize: 1 } });
+    assert.equal(client.assets.get({ asset_id: asset.id }).kind, 'unavailable');
+    await reached.promise;
+    assert.equal(client.tasks.get({ task_id: created.data.task_id }).kind, 'unavailable');
+    release.resolve();
+    await ready(client, uploaded.commit_cursor);
+    const count = f.traffic.length;
+    assert.equal(available(client.assets.byAlias({ alias: 'STRASSE' })).id, asset.id);
+    assert.equal(available(client.assets.status({ asset_id: asset.id })).asset_id, asset.id);
+    assert.equal(
+      available(client.tracks.get({ track_id: pair.data.track.id })).id,
+      pair.data.track.id,
+    );
+    assert.equal(available(client.geofeatures.byAlias({ alias: 'MARKER' })).id, feature.id);
+    assert.equal(
+      available(client.tasks.get({ task_id: created.data.task_id })).task_id,
+      created.data.task_id,
+    );
+    assert.equal(
+      available(client.objects.get({ object_id: uploaded.data.object_id })).metadata.name,
+      'retained',
+    );
+    for (const resources of [
+      client.assets,
+      client.tracks,
+      client.geofeatures,
+      client.tasks,
+      client.objects,
+    ]) {
+      const query = available(resources.list({}));
+      assert.equal(available(query.page()).items.length, 1);
+      query.close();
+    }
+    const objects = available(client.assets.objects({ asset_id: asset.id }));
+    assert.equal(available(objects.page()).items[0].object_id, uploaded.data.object_id);
+    objects.close();
+    assert.equal(available(client.picture.changedSince(client.picture.cursor)).commits.length, 0);
+    assert.equal(f.traffic.length, count);
+    success(await client.http.assets.get({ asset_id: asset.id }));
+    success(await client.observations.get({ observation_id: pair.data.observation.id }));
+    assert.equal(f.traffic.length, count + 2);
+  },
+);
+
+test(
+  'Full writes cannot advance the picture before the complete feed commit and subscribers see atomic images',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const client = await connected(f, { mode: 'full' });
+    await ready(client);
+    const asset = await register(client, 'atomic');
+    await until(
+      () => client.assets.get({ asset_id: asset.id }).value?.id === asset.id,
+      'Asset feed image missing',
+    );
+    const before = client.picture.status.cursor,
+      boundary = client.picture.cursor;
+    const subscriber = client.picture.subscribe();
+    assert.equal((await subscriber.next()).value.kind, 'status');
+    const reached = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.wssOnce('change_batch', async ({ frame, send }) => {
+      reached.resolve(frame);
+      await release.promise;
+      send();
+    });
+    const created = success((await client.tasks.create(task(asset.id)).send()).attempt);
+    const frame = await reached.promise;
+    assert.deepEqual(frame.data.changes.map((change) => change.resource_kind).sort(), [
+      'asset',
+      'task',
+    ]);
+    assert.equal(client.picture.status.cursor, before);
+    assert.equal(available(client.tasks.get({ task_id: created.data.task_id })), null);
+    release.resolve();
+    const event = (await subscriber.next()).value;
+    assert.equal(event.kind, 'commit');
+    assert.equal(event.commit.coreCursor, created.commit_cursor);
+    assert.equal(
+      available(client.tasks.get({ task_id: created.data.task_id })).task_id,
+      created.data.task_id,
+    );
+    assert.deepEqual(
+      available(client.assets.get({ asset_id: asset.id })).task_queue.requested_task_ids,
+      [created.data.task_id],
+    );
+    assert.equal(available(client.picture.changedSince(boundary)).commits.length, 1);
+    subscriber.close();
+    const cancellation = success(
+      (await client.tasks.cancel({ task_id: created.data.task_id, request_id: uuid() }).send())
+        .attempt,
+    );
+    await ready(client, cancellation.commit_cursor);
+    const cancelled = available(
+      client.tasks.query({ filters: { states: ['cancellation_requested'] } }),
+    );
+    assert.deepEqual(
+      available(cancelled.page()).items.map((image) => image.task_id),
+      [created.data.task_id],
+    );
+    cancelled.close();
+  },
+);
+
+test(
+  'frozen pages retain old images, capture and filters while live commits advance; expiry and foreign tokens fail explicitly',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const admin = await connected(f);
+    const a = await register(admin, 'Straße'),
+      b = await register(admin, 'second');
+    const client = await connected(f, { mode: 'full', picture: { queryLifetimeMs: 2000 } });
+    await ready(client);
+    const query = available(client.assets.query({ page_size: 1 }));
+    const first = available(query.page());
+    const secondId = [a.id, b.id].sort()[1];
+    const removed = success(
+      (await client.assets.delete({ asset_id: secondId, request_id: uuid() }).send()).attempt,
+    );
+    await ready(client, removed.commit_cursor);
+    const second = available(query.page(first.nextPageToken));
+    assert.equal(second.items[0].id, secondId);
+    assert.equal(second.cursor, first.cursor);
+    assert.equal(second.coreCursor, first.coreCursor);
+    assert.equal(second.capturedAt, first.capturedAt);
+    assert.equal(available(client.assets.get({ asset_id: secondId })), null);
+    const filtered = available(client.assets.query({ filters: { aliases: ['STRASSE'] } }));
+    assert.deepEqual(
+      available(filtered.page()).items.map((image) => image.id),
+      secondId === a.id ? [] : [a.id],
+    );
+    const empty = available(client.assets.query({ filters: { ids: [] } }));
+    assert.deepEqual(available(empty.page()).items, []);
+    assert.equal(filtered.page(first.nextPageToken).code, 'invalid_token');
+    const retainedId = first.items[0].id;
+    const edited = success(
+      (
+        await client.assets
+          .update({
+            asset_id: retainedId,
+            request_id: uuid(),
+            expected_edit_revision: '0',
+            alias: 'edited',
+          })
+          .send()
+      ).attempt,
+    );
+    await ready(client, edited.commit_cursor);
+    assert.equal(available(client.assets.get({ asset_id: retainedId })).alias, 'edited');
+    assert.equal(available(query.page()).items[0].alias, first.items[0].alias);
+    const starts = f.traffic.length;
+    await delay(2100);
+    assert.equal(query.page().code, 'expired_token');
+    assert.equal(f.traffic.length, starts);
+    filtered.close();
+    empty.close();
+  },
+);
+
+test(
+  'whole-commit journal replay joins live atomically and slow subscribers report a gap without pinning queries',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const client = await connected(f, { mode: 'full', picture: { journalCommits: 2 } });
+    await ready(client);
+    const query = available(client.assets.query({})),
+      page = available(query.page());
+    const slow = client.picture.subscribe(page.cursor);
+    assert.equal((await slow.next()).value.kind, 'status');
+    const commits = [];
+    for (let i = 0; i < 3; i++) {
+      const result = success(
+        (await client.assets.register(registration(`journal-${i}`)).send()).attempt,
+      );
+      await ready(client, result.commit_cursor);
+      commits.push(client.picture.cursor);
+    }
+    assert.equal(client.picture.changedSince(page.cursor).kind, 'gap');
+    assert.deepEqual((await slow.next()).value, {
+      kind: 'gap',
+      reason: 'pruned',
+      status: client.picture.status,
+    });
+    assert.equal((await slow.next()).done, true);
+    assert.deepEqual(available(query.page()).items, []);
+    const joined = client.picture.subscribe(commits[0]);
+    assert.equal((await joined.next()).value.kind, 'status');
+    assert.equal((await joined.next()).value.commit.cursor, commits[1]);
+    const pending = joined.next();
+    assert.equal((await pending).value.commit.cursor, commits[2]);
+    const live = joined.next();
+    const next = success(
+      (await client.assets.register(registration('journal-live')).send()).attempt,
+    );
+    assert.equal((await live).value.commit.coreCursor, next.commit_cursor);
+    joined.close();
+    query.close();
+  },
+);
+
+test(
+  'authorization loss retains stale complete reads and frozen tokens with zero traffic until changed-key recovery',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const admin = await connected(f);
+    const key = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+    success((await admin.apiKeys.create(key).send()).attempt);
+    let credential = key.secret;
+    const client = await connected(f, { mode: 'full', credentials: () => credential });
+    await ready(client);
+    const a = await register(admin, 'retained');
+    await until(() => client.assets.get({ asset_id: a.id }).value?.id === a.id, 'Asset missing');
+    const query = available(client.assets.query({})),
+      original = available(query.page());
+    const subscription = client.picture.subscribe();
+    await subscription.next();
+    success(
+      (await admin.apiKeys.revoke({ request_id: uuid(), api_key_id: key.api_key_id }).send())
+        .attempt,
+    );
+    await until(
+      () => client.picture.status.kind === 'authorization-required',
+      'Revocation not observed',
+    );
+    assert.equal((await subscription.next()).value.status.kind, 'authorization-required');
+    const count = f.traffic.length,
+      sockets = f.wssTraffic.length;
+    assert.equal(client.assets.get({ asset_id: a.id }).stale, true);
+    assert.equal(query.page().stale, true);
+    assert.equal(available(query.page()).cursor, original.cursor);
+    assert.equal((await client.http.assets.get({ asset_id: a.id })).code, 'authorization_required');
+    assert.equal((await client.recover()).code, 'unchanged_credential');
+    await delay(600);
+    assert.equal(f.traffic.length, count);
+    assert.equal(f.wssTraffic.length, sockets);
+    credential = f.apiKey;
+    success(await client.recover());
+    await ready(client);
+    assert.equal(client.assets.get({ asset_id: a.id }).stale, false);
+    assert.equal(available(query.page()).cursor, original.cursor);
+    subscription.close();
+    query.close();
+  },
+);
+
+test(
+  'same-Dataset restart and ambiguous WSS close resume complete cursors without allocating another capture',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const client = await connected(f, { mode: 'full' });
+    await ready(client);
+    const a = await register(client, 'restart');
+    await until(() => client.assets.get({ asset_id: a.id }).value?.id === a.id, 'Asset missing');
+    const generation = client.picture.status.generation;
+    const snapshots = f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length;
+    for (const code of [1008, 1009, 1013]) {
+      const before = f.wssTraffic.filter((entry) => entry.type === 'authenticate').length;
+      f.closeFeeds(code);
+      await until(() => client.picture.status.kind === 'disconnected', 'Closure not observed');
+      assert.equal(client.state.kind, 'ready');
+      assert.equal(client.assets.get({ asset_id: a.id }).stale, true);
+      await until(
+        () => f.wssTraffic.filter((entry) => entry.type === 'authenticate').length > before,
+        'No reconnect',
+      );
+      await ready(client);
+    }
+    await f.restart();
+    await until(() => client.picture.status.kind !== 'synchronized', 'Restart not observed');
+    await ready(client);
+    assert.equal(client.picture.status.generation, generation);
+    assert.equal(available(client.assets.get({ asset_id: a.id })).id, a.id);
+    assert.equal(
+      f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length,
+      snapshots,
+    );
+    assert.equal(
+      f.traffic.some((entry) => entry.path === '/messages/read_changes'),
+      false,
+    );
+  },
+);
+
+test(
+  'capacity loss invalidates readable data and tokens until explicit retry; query refusal alone keeps the picture',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const client = await connected(f, { mode: 'full', picture: { images: 1, queries: 1 } });
+    await ready(client);
+    assert.throws(() => client.picture.retry({ bytes: 1 }), { code: 'invalid_options' });
+    const empty = available(client.assets.query({}));
+    assert.equal(client.assets.query({}).code, 'capacity');
+    assert.equal(client.assets.get({ asset_id: uuid() }).kind, 'available');
+    const a = await register(client, 'capacity');
+    await until(() => client.assets.get({ asset_id: a.id }).value?.id === a.id, 'Asset missing');
+    success((await client.tasks.create(task(a.id)).send()).attempt);
+    await until(() => client.picture.status.kind === 'resource-limited', 'No capacity stop');
+    assert.equal(client.assets.get({ asset_id: a.id }).kind, 'unavailable');
+    assert.equal(empty.page().code, 'invalid_token');
+    const count = f.traffic.length;
+    await delay(700);
+    assert.equal(f.traffic.length, count);
+    client.picture.retry({ images: 10 });
+    await ready(client);
+    assert.equal(available(client.assets.get({ asset_id: a.id })).id, a.id);
+    const tasks = available(client.tasks.query({}));
+    assert.equal(available(tasks.page()).items.length, 1);
+    tasks.close();
+  },
+);
+
+test(
+  'snapshot/feed races publish only the fixed handoff and later writes remain independent live commits',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t),
+      admin = await connected(f);
+    const captured = barrier(),
+      releaseCapture = barrier(),
+      handoff = barrier(),
+      releaseHandoff = barrier(),
+      live = barrier(),
+      releaseLive = barrier();
+    t.after(() => {
+      releaseCapture.resolve();
+      releaseHandoff.resolve();
+      releaseLive.resolve();
+    });
+    f.once('/messages/read_snapshot', async ({ forward }) => {
+      captured.resolve();
+      await releaseCapture.promise;
+      forward();
+    });
+    f.wssOnce('handoff_complete', async ({ frame, send }) => {
+      handoff.resolve(frame);
+      await releaseHandoff.promise;
+      send();
+    });
+    const client = await connected(f, { mode: 'full' });
+    await captured.promise;
+    const first = success((await admin.assets.register(registration('caught-up')).send()).attempt);
+    releaseCapture.resolve();
+    const fixed = await handoff.promise;
+    assert.equal(fixed.data.handoff_cursor, first.commit_cursor);
+    assert.equal(client.assets.get({ asset_id: first.data.asset.id }).kind, 'unavailable');
+    f.wssOnce('change_batch', async ({ send }) => {
+      live.resolve();
+      await releaseLive.promise;
+      send();
+    });
+    const second = success((await admin.assets.register(registration('live')).send()).attempt);
+    releaseHandoff.resolve();
+    await live.promise;
+    await ready(client, first.commit_cursor);
+    assert.equal(
+      available(client.assets.get({ asset_id: first.data.asset.id })).alias,
+      'caught-up',
+    );
+    assert.equal(available(client.assets.get({ asset_id: second.data.asset.id })), null);
+    const boundary = client.picture.cursor;
+    assert.deepEqual(available(client.picture.changedSince(boundary)).commits, []);
+    releaseLive.resolve();
+    await ready(client, second.commit_cursor);
+    assert.equal(available(client.picture.changedSince(boundary)).commits.length, 1);
+  },
+);
+
+test(
+  'required rebuild invalidates tokens immediately and publishes a new generation; Reset changes Dataset',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t),
+      client = await connected(f, { mode: 'full' });
+    await ready(client);
+    const a = await register(client, 'before-reset');
+    await until(() => client.assets.get({ asset_id: a.id }).value?.id === a.id, 'Asset missing');
+    const query = available(client.assets.query({}));
+    const cursor = client.picture.cursor,
+      generation = client.picture.status.generation;
+    const rebuilding = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.once('/messages/read_snapshot', async ({ forward }) => {
+      rebuilding.resolve();
+      await release.promise;
+      forward();
+    });
+    f.wssOnce('subscribed', ({ frame, send }) => {
+      send();
+      send({
+        type: 'gap',
+        dataset_id: frame.dataset_id,
+        protocol_version: frame.protocol_version,
+        data: {
+          subscription_id: frame.data.subscription_id,
+          reason: 'cursor_expired',
+          earliest_recoverable_cursor: frame.data.handoff_cursor,
+        },
+      });
+    });
+    f.closeFeeds();
+    await rebuilding.promise;
+    assert.equal(client.assets.get({ asset_id: a.id }).kind, 'unavailable');
+    assert.equal(query.page().code, 'invalid_token');
+    assert.equal(client.picture.changedSince(cursor).reason, 'invalid_cursor');
+    release.resolve();
+    await ready(client);
+    assert.ok(client.picture.status.generation > generation);
+    const oldDataset = client.picture.status.datasetId;
+    const oldQuery = available(client.assets.query({}));
+    const resetCapture = barrier(),
+      releaseReset = barrier();
+    t.after(() => releaseReset.resolve());
+    f.once('/messages/read_snapshot', async ({ forward }) => {
+      resetCapture.resolve();
+      await releaseReset.promise;
+      forward();
+    });
+    await f.reset();
+    await resetCapture.promise;
+    assert.equal(client.assets.get({ asset_id: a.id }).kind, 'unavailable');
+    assert.equal(oldQuery.page().code, 'invalid_token');
+    releaseReset.resolve();
+    await ready(client);
+    assert.notEqual(client.picture.status.datasetId, oldDataset);
+    assert.equal(available(client.assets.get({ asset_id: a.id })), null);
+  },
+);
+
+test(
+  'only a correlated pre-auth unauthorized frame rejects the accepted key',
+  { timeout: 30_000 },
+  async (t) => {
+    for (const correlation of ['absent', 'different', 'matching'])
+      await t.test(correlation, async (t) => {
+        const f = await fixture(t);
+        f.wssOnce('authenticated', ({ frame, send, to }) => {
+          send({
+            type: 'error',
+            dataset_id: frame.dataset_id,
+            protocol_version: frame.protocol_version,
+            ...(correlation === 'absent'
+              ? {}
+              : { request_id: correlation === 'matching' ? frame.request_id : uuid() }),
+            error: { code: 'unauthorized', message: 'unauthorized', request_id: uuid() },
+          });
+          to.close(1008);
+        });
+        const client = await connected(f, { mode: 'full' });
+        if (correlation === 'matching') {
+          await until(
+            () => client.state.kind === 'authorization-required',
+            'Correlated rejection not observed',
+          );
+          const count = f.traffic.length;
+          await delay(500);
+          assert.equal(f.traffic.length, count);
+          assert.equal(client.picture.status.kind, 'authorization-required');
+        } else {
+          await ready(client);
+          assert.equal(client.state.kind, 'ready');
+          assert.equal(f.wssTraffic.filter((entry) => entry.type === 'authenticate').length, 2);
+          assert.equal(
+            f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length,
+            1,
+          );
+        }
+      });
+  },
+);
+
+test(
+  'duplicate feed commits are harmless and conflicting copies trigger replacement before exposing corruption',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t),
+      client = await connected(f, { mode: 'full' });
+    await ready(client);
+    const boundary = client.picture.cursor;
+    f.wssOnce('change_batch', ({ send }) => {
+      send();
+      send();
+    });
+    const a = await register(client, 'original');
+    await until(() => client.assets.get({ asset_id: a.id }).value?.id === a.id, 'Asset missing');
+    await delay(50);
+    assert.equal(available(client.picture.changedSince(boundary)).commits.length, 1);
+    const generation = client.picture.status.generation;
+    f.wssOnce('change_batch', ({ frame, send }) => {
+      send();
+      const conflicting = structuredClone(frame);
+      const asset = conflicting.data.changes.find((change) => change.resource_kind === 'asset');
+      asset.image.alias = 'corrupt';
+      send(conflicting);
+    });
+    const b = await register(client, 'second');
+    await until(
+      () => client.picture.status.generation > generation,
+      'Conflicting commit did not invalidate',
+    );
+    await ready(client);
+    assert.equal(available(client.assets.get({ asset_id: b.id })).alias, 'second');
+  },
+);
+
+test(
+  'binary frames and incomplete commits invalidate the picture without applying a partial batch',
+  { timeout: 30_000 },
+  async (t) => {
+    for (const kind of ['binary', 'invalid-item'])
+      await t.test(kind, async (t) => {
+        const f = await fixture(t),
+          client = await connected(f, { mode: 'full' });
+        await ready(client);
+        const a = await register(client, 'framing');
+        await until(
+          () => client.assets.get({ asset_id: a.id }).value?.id === a.id,
+          'Asset missing',
+        );
+        const query = available(client.assets.query({}));
+        const generation = client.picture.status.generation;
+        const reached = barrier(),
+          release = barrier();
+        t.after(() => release.resolve());
+        f.once('/messages/read_snapshot', async ({ forward }) => {
+          reached.resolve();
+          await release.promise;
+          forward();
+        });
+        f.wssOnce('change_batch', ({ frame, send }) => {
+          if (kind === 'binary') send(frame, true);
+          else {
+            const bad = structuredClone(frame);
+            bad.data.changes.find((change) => change.resource_kind === 'task').version = '99';
+            send(bad);
+          }
+        });
+        const created = success((await client.tasks.create(task(a.id)).send()).attempt);
+        await reached.promise;
+        assert.ok(client.picture.status.generation > generation);
+        assert.equal(client.tasks.get({ task_id: created.data.task_id }).kind, 'unavailable');
+        assert.equal(query.page().code, 'invalid_token');
+        release.resolve();
+        await ready(client);
+        assert.equal(
+          available(client.tasks.get({ task_id: created.data.task_id })).task_id,
+          created.data.task_id,
+        );
+      });
+  },
+);
+
+test(
+  'repeated captures expired by Core restart use bounded backoff and retain exact allocation facts after a lost reply',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t),
+      admin = await connected(f);
+    await register(admin, 'page-a');
+    await register(admin, 'page-b');
+    const diagnostics = [],
+      originals = [],
+      attempts = [];
+    f.once('/messages/read_snapshot', ({ request, outgoing }) => {
+      originals.push(JSON.parse(request));
+      outgoing.destroy();
+    });
+    f.once('/messages/read_snapshot', ({ request, forward }) => {
+      originals.push(JSON.parse(request));
+      forward();
+    });
+    const client = await connected(f, {
+      mode: 'full',
+      picture: { pageSize: 1 },
+      diagnostics: { mode: 'debug', observer: (event) => diagnostics.push(event) },
+    });
+    await ready(client);
+    assert.deepEqual(originals[0], originals[1]);
+    for (let i = 0; i < 2; i++) {
+      f.wssOnce('subscribed', ({ frame, send }) => {
+        send();
+        send({
+          type: 'gap',
+          dataset_id: frame.dataset_id,
+          protocol_version: frame.protocol_version,
+          data: {
+            subscription_id: frame.data.subscription_id,
+            reason: 'cursor_expired',
+            earliest_recoverable_cursor: frame.data.handoff_cursor,
+          },
+        });
+      });
+      f.once('/messages/read_snapshot', async ({ forward }) => {
+        attempts.push(performance.now());
+        await f.restart();
+        forward();
+      });
+      const generation = client.picture.status.generation;
+      f.closeFeeds();
+      await until(() => client.picture.status.generation > generation, 'No rebuild');
+      await ready(client);
+    }
+    await until(
+      () =>
+        diagnostics.some(
+          (event) => event.kind === 'synchronization' && event.reason === 'expired_capture',
+        ),
+      'Missing expired_capture reason',
+    );
+    assert.equal(attempts.length, 2);
+    assert.ok(attempts[1] - attempts[0] >= 250);
+    assert.ok(diagnostics.some((event) => event.kind === 'connection' && event.backoffMs >= 250));
+    assert.ok(diagnostics.every((event) => event.mode === 'full'));
+  },
+);
+
+test(
+  'capture lifetime ends after sixty seconds without page extensions and recovery backs off',
+  { timeout: 85_000 },
+  async (t) => {
+    const f = await fixture(t),
+      admin = await connected(f);
+    await register(admin, 'expiry-a');
+    await register(admin, 'expiry-b');
+    const reached = barrier(),
+      diagnostics = [];
+    f.once('/messages/read_snapshot', async ({ forward }) => {
+      reached.resolve();
+      await delay(61_000);
+      forward();
+    });
+    const client = await connected(f, {
+      mode: 'full',
+      timeoutMs: 120_000,
+      picture: { pageSize: 1 },
+      diagnostics: { mode: 'debug', observer: (event) => diagnostics.push(event) },
+    });
+    await reached.promise;
+    assert.equal(client.assets.list({}).kind, 'unavailable');
+    await until(
+      () => client.picture.status.kind === 'synchronized',
+      'Expired capture never recovered',
+      75_000,
+    );
+    assert.ok(
+      diagnostics.some(
+        (event) => event.kind === 'synchronization' && event.reason === 'expired_capture',
+      ),
+    );
+    assert.ok(diagnostics.some((event) => event.kind === 'connection' && event.backoffMs >= 250));
+    const query = available(client.assets.list({}));
+    assert.equal(available(query.page()).items.length, 2);
+    query.close();
+  },
+);
+
+test(
+  'a lost capture release retains its identity and blocks replacement until release acknowledgment',
+  { timeout: 20_000 },
+  async (t) => {
+    const f = await fixture(t),
+      requests = [];
+    f.once('/messages/release_snapshot', ({ request, outgoing }) => {
+      requests.push(JSON.parse(request));
+      outgoing.destroy();
+    });
+    const client = await connected(f, { mode: 'full' });
+    await ready(client);
+    const reached = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.once('/messages/release_snapshot', async ({ request, forward }) => {
+      requests.push(JSON.parse(request));
+      reached.resolve();
+      await release.promise;
+      forward();
+    });
+    f.wssOnce('subscribed', ({ frame, send }) => {
+      send();
+      send({
+        type: 'gap',
+        dataset_id: frame.dataset_id,
+        protocol_version: frame.protocol_version,
+        data: {
+          subscription_id: frame.data.subscription_id,
+          reason: 'cursor_expired',
+          earliest_recoverable_cursor: frame.data.handoff_cursor,
+        },
+      });
+    });
+    f.closeFeeds();
+    await reached.promise;
+    assert.equal(f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length, 1);
+    assert.deepEqual(requests[0], requests[1]);
+    assert.equal(client.assets.get({ asset_id: uuid() }).kind, 'unavailable');
+    release.resolve();
+    await ready(client);
+    assert.equal(f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length, 2);
+  },
+);
+
+test(
+  'close aborts an in-flight capture, invalidates local handles and owns all reconnect timers',
+  { timeout: 10_000 },
+  async (t) => {
+    const f = await fixture(t),
+      reached = barrier(),
+      release = barrier();
+    t.after(() => release.resolve());
+    f.once('/messages/read_snapshot', async ({ forward }) => {
+      reached.resolve();
+      await release.promise;
+      forward();
+    });
+    const client = await connected(f, { mode: 'full' });
+    await reached.promise;
+    const started = performance.now();
+    await client.close();
+    assert.ok(performance.now() - started < 2000);
+    assert.equal(client.picture.status.kind, 'stopped');
+    assert.equal(client.state.kind, 'closed');
+    release.resolve();
+    const count = f.traffic.length;
+    await delay(400);
+    assert.equal(f.traffic.length, count);
+  },
+);

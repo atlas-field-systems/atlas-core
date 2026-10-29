@@ -31,11 +31,13 @@ import type {
   DiagnosticSource,
 } from './diagnostics.js';
 import { policies } from './policy.js';
+import type { PictureLimits } from './picture-data.js';
 
 export type ClientOptions = Readonly<{
   baseUrl: string;
   credentials: () => string | Promise<string>;
-  mode?: 'http';
+  mode?: 'http' | 'full';
+  picture?: PictureLimits;
   diagnostics?: DiagnosticOptions;
   datasetId?: Uuid;
   timeoutMs?: number;
@@ -149,7 +151,7 @@ export class Session {
       url.hash ||
       url.pathname !== '/' ||
       typeof options.credentials !== 'function' ||
-      (options.mode !== undefined && options.mode !== 'http')
+      (options.mode !== undefined && options.mode !== 'http' && options.mode !== 'full')
     )
       throw new SdkError('invalid_options');
     this.baseUrl = url.origin;
@@ -168,7 +170,7 @@ export class Session {
     );
     this.#requestBudget = effectiveBudget('http_request', options.limits?.request);
     this.#responseBudget = effectiveBudget('http_response', options.limits?.response);
-    this.#diagnostics = createDiagnostics(options.diagnostics);
+    this.#diagnostics = createDiagnostics(options.diagnostics, options.mode);
   }
 
   get state(): ConnectionState {

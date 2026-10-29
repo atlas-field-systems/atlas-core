@@ -7,6 +7,8 @@ import { policies } from './policy.js';
 import { Operations } from './prepared.js';
 import type { ConnectionState, Prepared, RequestOptions, WaitResult } from './contracts.js';
 import type { ListCursor } from './lists.js';
+import { Picture } from './picture.js';
+import { SdkError } from './contracts.js';
 
 type Reads<M extends Record<string, ExchangeName>> = {
   readonly [P in keyof M]: (
@@ -89,7 +91,7 @@ export type HttpResources = Readonly<{
 }> &
   Lists<{ resources: 'ListResources'; activity: 'ReadActivity' }> &
   Reads<{ readiness: 'GetReadiness' }>;
-export type Client = HttpResources &
+export type HttpClient = HttpResources &
   Readonly<{
     mode: 'http';
     http: HttpResources;
@@ -98,6 +100,15 @@ export type Client = HttpResources &
     recover: () => Promise<WaitResult<ResponseOf<'GetHealth'>>>;
     close: () => Promise<void>;
   }>;
+type LocalReads = Picture['reads'];
+export type FullClient = Omit<HttpClient, 'mode' | keyof LocalReads> &
+  Readonly<{
+    mode: 'full';
+    picture: Pick<Picture, 'status' | 'cursor' | 'changedSince' | 'subscribe' | 'retry'>;
+  }> & {
+    readonly [K in keyof LocalReads]: Omit<HttpResources[K], keyof LocalReads[K]> & LocalReads[K];
+  };
+export type Client = HttpClient | FullClient;
 
 export function httpResources(session: Session, operations: Operations): HttpResources {
   return Object.freeze({
@@ -173,25 +184,64 @@ export function httpResources(session: Session, operations: Operations): HttpRes
   });
 }
 
+export function createClient(options: ClientOptions & { mode: 'full' }): FullClient;
+export function createClient(options: ClientOptions & { mode?: 'http' }): HttpClient;
+export function createClient(options: ClientOptions): Client;
 export function createClient(options: ClientOptions): Client {
+  if (options.mode === 'full' && options.limits?.concurrentAttempts === 1)
+    throw new SdkError('invalid_options');
   const session = new Session(options);
   const operations = new Operations(session);
   const http = httpResources(session, operations);
-  return Object.freeze({
-    mode: 'http' satisfies 'http',
-    ...http,
+  const picture = options.mode === 'full' ? new Picture(session, options.picture) : undefined;
+  const lifecycle = {
     http,
-    get state() {
-      return session.state;
-    },
     connect: () => session.discover(),
     recover: () => session.discover(true),
     async close() {
       try {
-        await session.close();
+        try {
+          await picture?.shutdown();
+        } finally {
+          await session.close();
+        }
       } finally {
         operations.close();
+        await picture?.settled();
       }
+    },
+  };
+  if (picture)
+    return Object.freeze({
+      ...http,
+      ...lifecycle,
+      mode: 'full',
+      get state() {
+        return session.state;
+      },
+      picture: Object.freeze({
+        get status() {
+          return picture.status;
+        },
+        get cursor() {
+          return picture.cursor;
+        },
+        changedSince: (cursor: string, limit?: number) => picture.changedSince(cursor, limit),
+        subscribe: (cursor?: string) => picture.subscribe(cursor),
+        retry: (limits?: ClientOptions['picture']) => picture.retry(limits),
+      }),
+      assets: Object.freeze({ ...http.assets, ...picture.reads.assets }),
+      tracks: Object.freeze({ ...http.tracks, ...picture.reads.tracks }),
+      geofeatures: Object.freeze({ ...http.geofeatures, ...picture.reads.geofeatures }),
+      tasks: Object.freeze({ ...http.tasks, ...picture.reads.tasks }),
+      objects: Object.freeze({ ...http.objects, ...picture.reads.objects }),
+    });
+  return Object.freeze({
+    ...http,
+    ...lifecycle,
+    mode: 'http',
+    get state() {
+      return session.state;
     },
   });
 }

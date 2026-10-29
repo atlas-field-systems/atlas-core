@@ -1,5 +1,16 @@
 export { createClient } from './client.js';
-export type { Client } from './client.js';
+export type { Client, HttpClient, FullClient } from './client.js';
+export type { PictureLimits } from './picture-data.js';
+export type {
+  LocalPictureStatus,
+  FrozenQuery,
+  PicturePage,
+  PictureRefusal,
+  LocalCommit,
+  PictureGap,
+  PictureEvent,
+  PictureSubscription,
+} from './picture-local.js';
 export type { ClientOptions } from './connection.js';
 export { SdkError } from './contracts.js';
 export type {
@@ -15,6 +26,8 @@ export type {
   Submission,
   Prepared,
   ConnectionState,
+  PictureStatus,
+  PictureRead,
 } from './contracts.js';
 export type { ListCursor } from './lists.js';
 export type {

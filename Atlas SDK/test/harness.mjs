@@ -3,10 +3,14 @@ import { join } from 'node:path';
 import { createServer, request } from 'node:https';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { Worker } from 'node:worker_threads';
+import { createRequire } from 'node:module';
 import { createCore } from '../../Atlas Core/dist/server.js';
 import { defaults } from '../../Atlas Core/dist/settings.js';
 import { mutableRoot } from '../../Atlas Core/test/paths.mjs';
 const { createClient } = await import(process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js');
+const { WebSocket, WebSocketServer } = createRequire(
+  new URL('../../Atlas Core/package.json', import.meta.url),
+)('ws');
 
 export const uuid = () => randomUUID();
 export const secret = () => randomBytes(32).toString('base64url');
@@ -66,9 +70,16 @@ export async function fixture(t, options = {}) {
     sockets = new Set(),
     jobs = new Set();
   const failures = [];
+  let restarting = false,
+    lifecycle = 0;
   const rules = [];
   const traffic = [];
+  const wssTraffic = [],
+    wssRules = [],
+    feeds = new Set();
   const server = createServer({ cert: ca, key: await readFile(key) }, (incoming, outgoing) => {
+    const startedDuringRestart = restarting,
+      startedInLifecycle = lifecycle;
     const run = async () => {
       const index = rules.findIndex((rule) => rule.path === incoming.url);
       const rule = index < 0 ? undefined : rules.splice(index, 1)[0];
@@ -119,6 +130,11 @@ export async function fixture(t, options = {}) {
     };
     const job = run().catch((error) => {
       outgoing.destroy(error);
+      if (
+        (startedDuringRestart || startedInLifecycle !== lifecycle) &&
+        ['ECONNREFUSED', 'ECONNRESET'].includes(error.code)
+      )
+        return;
       throw error;
     });
     jobs.add(job);
@@ -134,10 +150,73 @@ export async function fixture(t, options = {}) {
     sockets.add(socket);
     socket.once('close', () => sockets.delete(socket));
   });
+  const websocketServer = new WebSocketServer({ noServer: true });
+  server.on('upgrade', (incoming, socket, head) => {
+    websocketServer.handleUpgrade(incoming, socket, head, (downstream) => {
+      const upstream = new WebSocket(address.replace('https:', 'wss:') + '/changes', { ca });
+      const pair = { downstream, upstream };
+      feeds.add(pair);
+      const opened = new Promise((resolve, reject) => {
+        upstream.once('open', resolve);
+        upstream.once('error', reject);
+      });
+      let clientFrames = Promise.resolve(),
+        serverFrames = Promise.resolve();
+      function forward(from, to, direction, raw, binary) {
+        const run = async () => {
+          if (direction === 'client') await opened;
+          const frame = binary ? undefined : JSON.parse(raw.toString());
+          wssTraffic.push({ direction, type: frame?.type, requestId: frame?.request_id });
+          const send = (value = frame, asBinary = binary) => {
+            if (to.readyState === WebSocket.OPEN)
+              to.send(asBinary ? raw : JSON.stringify(value), { binary: asBinary });
+          };
+          const index = wssRules.findIndex(
+            (rule) => rule.direction === direction && rule.type === frame?.type,
+          );
+          const rule = index < 0 ? undefined : wssRules.splice(index, 1)[0];
+          if (rule) await rule.action({ frame, send, from, to });
+          else send();
+        };
+        const job = (direction === 'client' ? clientFrames : serverFrames).then(run);
+        if (direction === 'client') clientFrames = job;
+        else serverFrames = job;
+        jobs.add(job);
+        void job.then(
+          () => jobs.delete(job),
+          (error) => {
+            jobs.delete(job);
+            failures.push(error);
+            downstream.terminate();
+            upstream.terminate();
+          },
+        );
+      }
+      downstream.on('message', (raw, binary) =>
+        forward(downstream, upstream, 'client', raw, binary),
+      );
+      upstream.on('message', (raw, binary) => forward(upstream, downstream, 'server', raw, binary));
+      downstream.on('error', () => upstream.terminate());
+      upstream.on('error', () => downstream.terminate());
+      downstream.once('close', () => {
+        feeds.delete(pair);
+        upstream.close();
+      });
+      upstream.once('close', (code) =>
+        downstream.close(code >= 1000 && ![1005, 1006, 1015].includes(code) ? code : 1001),
+      );
+      void opened.catch(() => undefined);
+    });
+  });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const proxyUrl = `https://127.0.0.1:${server.address().port}`;
   t.after(async () => {
     await Promise.all([...clients].map((client) => client.close()));
+    for (const { upstream, downstream } of feeds) {
+      upstream.terminate();
+      downstream.terminate();
+    }
+    await new Promise((resolve) => websocketServer.close(resolve));
     for (const socket of sockets) socket.destroy();
     await new Promise((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
@@ -152,6 +231,7 @@ export async function fixture(t, options = {}) {
     apiKey,
     apiKeyId,
     traffic,
+    wssTraffic,
     proxyUrl,
     get address() {
       return address;
@@ -171,12 +251,23 @@ export async function fixture(t, options = {}) {
     once(path, action) {
       rules.push({ path, action });
     },
+    wssOnce(type, action, direction = 'server') {
+      wssRules.push({ type, action, direction });
+    },
+    closeFeeds(code = 1008) {
+      for (const { downstream } of feeds) downstream.close(code);
+    },
     async restart() {
+      restarting = true;
+      lifecycle++;
       await core.close();
       core = await createCore({ directory, certificate, key, settings });
       address = await core.listen();
+      restarting = false;
     },
     async reset() {
+      restarting = true;
+      lifecycle++;
       await core.close();
       await new Promise((resolve, reject) => {
         const worker = new Worker(new URL('../../Atlas Core/dist/offline.js', import.meta.url), {
@@ -194,6 +285,7 @@ export async function fixture(t, options = {}) {
       });
       core = await createCore({ directory, certificate, key, settings });
       address = await core.listen();
+      restarting = false;
     },
   };
 }
