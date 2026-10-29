@@ -217,6 +217,175 @@ test('current time status survives wall-clock passage, carry-forward, new client
     ok(await f.call('ReleaseHistoryView', { release_token: history.release_token }, credentials));
   }
 });
+test('component quantity timing survives reads and Restart while replacement removes optional quantities', async t => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const origin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const past = '2026-10-21T12:00:00.000000001Z', future = '9999-12-31T23:59:59.999999999Z';
+  const fuel = uuid(), removedFuel = uuid();
+  const sections = {
+    communications: { state: 'value', classification: 'state_until_changed', observed_at: future,
+      value: { bandwidth_bps: 1200 }, source_times: { bandwidth_bps: past } },
+    status: { state: 'value', classification: 'state_until_changed', observed_at: past,
+      value: { condition: 'degraded', explanation: 'Navigation unavailable' }, source_times: { condition: null } },
+    camera: { state: 'value', classification: 'dated_measurement', observed_at: future,
+      value: { zoom_ratio: null, recording: false, capturing: true }, source_times: { zoom_ratio: null, recording: past } },
+    camera_optics: { state: 'value', classification: 'state_until_changed', observed_at: null,
+      value: { horizontal_fov: 90, vertical_fov: 60 }, source_times: { horizontal_fov: past, vertical_fov: future } },
+    gimbal: { state: 'value', classification: 'dated_measurement', observed_at: past,
+      value: { bearing: null, elevation: -90 }, source_times: { bearing: null } },
+    power: { state: 'value', classification: 'dated_measurement', observed_at: future,
+      value: { external_power: null, reserves: [{ id: fuel, kind: 'fuel', remaining_percent: 38 }, { id: removedFuel, kind: 'fuel', remaining_percent: null }] },
+      source_times: { external_power: null, reserves: { [removedFuel]: { remaining_percent: past } } } },
+    telemetry: { ...telemetry(origin, 51, past), value: { position: { latitude: 51, longitude: -1 }, altitude: null, ground_speed: 0, airspeed: 4 },
+      constituents: { ...telemetry(origin, 51, past).constituents, airspeed: { origin, reading_id: uuid() } }, source_times: { airspeed: null } },
+  };
+  const expected = {
+    communications: { bandwidth_bps: 'known' }, status: { condition: 'unknown' },
+    camera: { zoom_ratio: 'unknown', recording: 'known', capturing: 'uncertain' },
+    camera_optics: { horizontal_fov: 'known', vertical_fov: 'uncertain' }, gimbal: { bearing: 'unknown', elevation: 'known' },
+    power: { external_power: 'unknown', reserves: { [fuel]: { remaining_percent: 'uncertain' }, [removedFuel]: { remaining_percent: 'known' } } },
+    telemetry: { position: 'known', altitude: 'known', ground_speed: 'known', airspeed: 'unknown' },
+  };
+  const accepted = ok(await f.call('UpdateAsset', { asset_id: asset.id, request_id: uuid(), report: report(f.core.dataset, asset.id, origin, 1, sections) })).asset;
+  const checkAsset = image => {
+    assert.equal(image.communications.health, 'offline');
+    for (const [name, status] of Object.entries(expected)) {
+      const result = name === 'communications' ? image.communications.capacity : image[name];
+      assert.deepEqual(result.time_status, status, name);
+      assert.deepEqual(result.value, sections[name].value, name);
+      assert.deepEqual(result.source_times, sections[name].source_times, name);
+      assert.equal(result.observed_at, sections[name].observed_at, name);
+    }
+  };
+  checkAsset(accepted);
+  const publisher = uuid(), observation = uuid(), publisherOrigin = { kind: 'publisher', publisher_id: publisher };
+  const geometry = { state: 'value', classification: 'dated_measurement', observed_at: future,
+    source_times: { geometry: past }, value: { type: 'Point', coordinates: [-1, 51] } };
+  const pair = ok(await f.call('CreateObservation', { observation_id: observation, publisher_id: publisher, request_id: uuid(),
+    report: report(f.core.dataset, observation, publisherOrigin, 1, { geometry }) }));
+  const checkGeometry = image => {
+    assert.deepEqual(image.geometry.time_status, { geometry: 'known' });
+    assert.deepEqual(image.geometry.value, { type: 'Point', coordinates: [-1, 51] });
+    assert.deepEqual(image.geometry.source_times, { geometry: past });
+    assert.equal(image.geometry.observed_at, future);
+    assert.equal(image.geometry.evidence.entity_id, observation);
+  };
+  checkGeometry(pair.observation); checkGeometry(pair.track);
+  for (const restart of [false, true]) {
+    if (restart) await f.restart();
+    checkAsset(ok(await f.call('GetAsset', { asset_id: asset.id })));
+    checkGeometry(ok(await f.call('GetObservation', { observation_id: observation })));
+    checkGeometry(ok(await f.call('GetTrack', { track_id: pair.track.id })));
+    const health = ok(await f.call('GetHealth'));
+    const snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }));
+    checkAsset(snapshot.items.find(item => item.resource_id === asset.id).image);
+    checkGeometry(snapshot.items.find(item => item.resource_id === pair.track.id).image);
+    ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token }));
+  }
+  const reducedTelemetry = structuredClone(sections.telemetry);
+  delete reducedTelemetry.value.airspeed; delete reducedTelemetry.constituents.airspeed; delete reducedTelemetry.source_times.airspeed;
+  const replaced = ok(await f.call('UpdateAsset', { asset_id: asset.id, request_id: uuid(), report: report(f.core.dataset, asset.id, origin, 2, {
+    camera: { state: 'value', classification: 'dated_measurement', observed_at: null, value: { zoom_ratio: 1 } },
+    telemetry: reducedTelemetry,
+    power: { state: 'value', classification: 'dated_measurement', observed_at: past, value: { external_power: true, reserves: [{ id: fuel, kind: 'fuel', remaining_percent: 37 }] } },
+  }) })).asset;
+  assert.deepEqual(replaced.camera.value, { zoom_ratio: 1 });
+  assert.deepEqual(replaced.camera.time_status, { zoom_ratio: 'unknown' });
+  assert.equal(Object.hasOwn(replaced.camera, 'source_times'), false);
+  assert.equal(Object.hasOwn(replaced.telemetry.value, 'airspeed'), false);
+  assert.equal(Object.hasOwn(replaced.telemetry.constituents, 'airspeed'), false);
+  assert.deepEqual(replaced.telemetry.time_status, { position: 'known', altitude: 'known', ground_speed: 'known' });
+  assert.deepEqual(replaced.power.time_status, { external_power: 'known', reserves: { [fuel]: { remaining_percent: 'known' } } });
+  assert.deepEqual(replaced.camera_optics, accepted.camera_optics, 'Omitting a section retains all its facts');
+  const withdrawnAsset = ok(await f.call('UpdateAsset', { asset_id: asset.id, request_id: uuid(), report: report(f.core.dataset, asset.id, origin, 3, {
+    status: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null },
+    camera: { state: 'withdrawn', classification: 'state_until_changed', observed_at: past },
+    gimbal: { state: 'withdrawn', classification: 'state_until_changed', observed_at: future },
+  }) })).asset;
+  for (const [name, status] of [['status', 'unknown'], ['camera', 'known'], ['gimbal', 'uncertain']]) {
+    assert.equal(withdrawnAsset[name].state, 'withdrawn'); assert.equal(withdrawnAsset[name].time_status, status);
+    assert.equal(Object.hasOwn(withdrawnAsset[name], 'value'), false);
+    assert.equal(Object.hasOwn(withdrawnAsset[name], 'source_times'), false);
+  }
+  const withdrawn = { state: 'withdrawn', classification: 'state_until_changed', observed_at: future };
+  const withdrawal = report(f.core.dataset, observation, publisherOrigin, 2, { geometry: withdrawn });
+  const ended = ok(await f.call('ReportObservation', { observation_id: observation, publisher_id: publisher, report: withdrawal }));
+  for (const image of [ended.observation, ended.track]) assert.deepEqual(image.geometry, { ...withdrawn, time_status: 'uncertain',
+    evidence: { dataset_id: f.core.dataset, entity_id: observation, origin: publisherOrigin, report_id: withdrawal.report_id, sequence: '2', section: 'geometry' } });
+  await f.restart();
+  assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })), withdrawnAsset);
+  assert.deepEqual(ok(await f.call('GetTrack', { track_id: pair.track.id })).geometry, ended.track.geometry);
+});
+test('history-only first admission keeps a future reading uncertain when later selected as current', async t => {
+  const f = await fixture(t), publisher = uuid(), entity = uuid();
+  const origin = { kind: 'publisher', publisher_id: publisher };
+  const pair = ok(await f.call('CreateObservation', { observation_id: entity, publisher_id: publisher, request_id: uuid(),
+    report: report(f.core.dataset, entity, origin, 1, { telemetry: telemetry(origin, 50) }) }));
+  const future = new Date(Date.now() + 5000).toISOString(), reading = telemetry(origin, 51, future);
+  const historical = report(f.core.dataset, entity, origin, 2, { telemetry: reading }, 'history_only');
+  const historyRequest = { observation_id: entity, publisher_id: publisher, report: historical };
+  const admitted = ok(await f.call('ReportObservation', historyRequest));
+  assert.deepEqual(admitted.observation, pair.observation); assert.deepEqual(admitted.track, pair.track);
+  const health = ok(await f.call('GetHealth'));
+  const query = { entity_id: entity, query_id: uuid(), allocation_context: health.allocation_context, time_groups: ['uncertain'] };
+  const frozen = ok(await f.call('GetObservationMovementHistory', query));
+  assert.equal(frozen.readings.length, 1); assert.equal(frozen.readings[0].time_status, 'uncertain');
+  assert.equal(frozen.readings[0].source_evidence.reading_id, reading.constituents.position.reading_id);
+  await new Promise(resolve => setTimeout(resolve, Math.max(0, Date.parse(future) - Date.now() + 20)));
+  assert.ok(Date.now() > Date.parse(future), 'The source time passed before current admission');
+  const carried = report(f.core.dataset, entity, origin, 3, { telemetry: reading });
+  const selected = await f.call('ReportObservation', { ...historyRequest, report: carried });
+  const expected = { position: 'uncertain', altitude: 'uncertain', ground_speed: 'uncertain' };
+  for (const image of [ok(selected).observation, ok(selected).track]) {
+    assert.deepEqual(image.telemetry.time_status, expected);
+    assert.equal(image.telemetry.observed_at, future);
+    assert.deepEqual(image.telemetry.constituents, reading.constituents);
+  }
+  assert.deepEqual(ok(await f.call('GetObservationMovementHistory', query)), frozen);
+  assert.equal(ok(await f.call('ReportObservation', historyRequest)).evidence_disposition, 'duplicate');
+  assert.equal(ok(await f.call('ReportObservation', { ...historyRequest, report: carried })).evidence_disposition, 'duplicate');
+  assert.deepEqual(ok(await f.call('ReadChanges', { from_cursor: selected.json.commit_cursor, ...limits })).messages, []);
+  await f.restart();
+  assert.deepEqual(ok(await f.call('GetObservation', { observation_id: entity })).telemetry.time_status, expected);
+  assert.deepEqual(ok(await f.call('GetTrack', { track_id: pair.track.id })).telemetry.time_status, expected);
+  const fresh = telemetry(origin, 51, future);
+  const newReading = ok(await f.call('ReportObservation', { ...historyRequest, report: report(f.core.dataset, entity, origin, 4, { telemetry: fresh }) }));
+  assert.deepEqual(newReading.observation.telemetry.time_status, { position: 'known', altitude: 'known', ground_speed: 'known' });
+  const afterRestart = ok(await f.call('GetHealth'));
+  for (const [group, ids] of [['uncertain', [reading.constituents.position.reading_id]], ['known', [pair.observation.telemetry.constituents.position.reading_id, fresh.constituents.position.reading_id]]]) {
+    const page = ok(await f.call('GetTrackMovementHistory', { entity_id: pair.track.id, query_id: uuid(), allocation_context: afterRestart.allocation_context, time_groups: [group] }));
+    assert.deepEqual(page.readings.map(value => value.source_evidence.reading_id), ids);
+    assert.ok(page.readings.every(value => value.time_status === group));
+    ok(await f.call('ReleaseHistoryView', { release_token: page.release_token }));
+  }
+});
+test('HTTP refuses publisher time_status without evidence or retry effects and permits correction of the same identity', async t => {
+  const f = await fixture(t), asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const publisher = uuid(), entity = uuid(), origin = { kind: 'publisher', publisher_id: publisher };
+  const assetOrigin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => db.close());
+  const counts = () => Object.fromEntries(['evidence_reports', 'evidence_sections', 'evidence_readings', 'evidence_positions', 'retry', 'commit_log', 'entity_identity']
+    .map(table => [table, db.prepare(`SELECT count(*) AS n FROM ${table}`).get().n]));
+  const requests = [
+    ['UpdateAsset', { asset_id: asset.id, request_id: uuid(), report: report(f.core.dataset, asset.id, assetOrigin, 1, { telemetry: telemetry(assetOrigin, 51) }) }],
+    ['CreateObservation', { observation_id: entity, publisher_id: publisher, request_id: uuid(), report: report(f.core.dataset, entity, origin, 1, { telemetry: telemetry(origin, 51) }) }],
+    ['ReportObservation', { observation_id: entity, publisher_id: publisher, report: report(f.core.dataset, entity, origin, 2, { telemetry: telemetry(origin, 52) }) }],
+  ];
+  for (const [name, request] of requests) {
+    const forged = structuredClone(request);
+    forged.report.sections.telemetry.time_status = { position: 'known', altitude: 'known', ground_speed: 'known' };
+    const before = counts(), rejected = await f.call(name, forged);
+    assert.equal(rejected.status, 400, name); assert.equal(rejected.json.error.code, 'invalid_request', name);
+    assert.deepEqual(counts(), before, 'Rejected read-only metadata must reserve no identity or evidence');
+    if (name === 'CreateObservation') assert.equal((await f.call('GetObservation', { observation_id: entity })).status, 404);
+    assert.equal(ok(await f.call(name, request)).evidence_disposition, 'accepted', name);
+    const acceptedCounts = counts();
+    assert.equal(ok(await f.call(name, request)).evidence_disposition, 'duplicate', name);
+    assert.deepEqual(counts(), acceptedCounts, 'An exact correction replay must add no durable effects');
+  }
+});
 test('startup refuses legacy evidence without retained quantity status', async t => {
   const f = await fixture(t);
   await f.core.close();
