@@ -58,7 +58,7 @@ const child = spawn(process.execPath, ['--test', ...process.argv.slice(2), ...su
 });
 const code = await new Promise((resolve, reject) => {
   child.once('error', reject);
-  child.once('exit', (code, signal) => resolve(signal ? 1 : (code ?? 1)));
+  child.once('close', (code, signal) => resolve(signal ? 1 : (code ?? 1)));
 });
 if (code === 0) await rm(root, { recursive: true, force: true });
 else console.error(`Retained SDK test evidence at ${root}`);

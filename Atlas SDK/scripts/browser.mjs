@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join, relative, resolve, isAbsolute, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
+import { createQualification } from './qualification-evidence.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const workspace = await realpath(new URL('../../', import.meta.url));
@@ -21,115 +20,138 @@ const consumer = join(directory, 'consumer');
 await mkdir(join(consumer, 'artifacts'), { recursive: true });
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 assert.ok(process.env.npm_execpath, 'Run through npm');
-const npm = (args, cwd = consumer) =>
-  execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+const qualification = await createQualification(directory, 'browser', root);
+const { report, run } = qualification;
+const npm = (name, args, cwd = consumer, capture = false) =>
+  run(name, [process.execPath, process.env.npm_execpath, ...args], {
     cwd,
-    encoding: 'utf8',
-    maxBuffer: 4 * 1024 * 1024,
+    capture,
     env: {
       ...process.env,
       npm_config_cache: process.env.npm_config_cache ?? join(directory, 'npm-cache'),
     },
   });
-const [packed] = JSON.parse(
-  npm(['pack', '--json', '--ignore-scripts', '--pack-destination', consumer], root),
-);
-assert.ok(packed.files.some((file) => file.path === 'dist/index.js'));
-assert.ok(packed.files.every((file) => !/^(src|test|node_modules)\//.test(file.path)));
-await copyFile(
-  join(root, 'artifacts/atlas-protocol-0.3.0.tgz'),
-  join(consumer, 'artifacts/atlas-protocol-0.3.0.tgz'),
-);
-await writeFile(
-  join(consumer, 'package.json'),
-  JSON.stringify({
-    private: true,
-    type: 'module',
-    dependencies: {
-      '@atlas/sdk': `file:${packed.filename}`,
-      '@atlas/protocol': 'file:artifacts/atlas-protocol-0.3.0.tgz',
-      typescript: manifest.devDependencies.typescript,
-    },
-  }),
-);
-await writeFile(
-  join(directory, 'install.log'),
-  npm(['install', '--ignore-scripts', '--no-audit', '--no-fund']),
-);
-await copyFile(join(root, 'test/browser-workflows.mjs'), join(consumer, 'workflows.mjs'));
-await copyFile(join(root, 'test/transfers-browser.mjs'), join(consumer, 'transfers-browser.mjs'));
-await writeFile(
-  join(consumer, 'tsconfig.json'),
-  JSON.stringify({
-    compilerOptions: {
-      target: 'ES2022',
-      module: 'NodeNext',
-      moduleResolution: 'NodeNext',
-      strict: true,
-      exactOptionalPropertyTypes: true,
-      allowJs: true,
-      checkJs: true,
-      noEmit: true,
-      types: [],
-      lib: ['ES2022', 'DOM'],
-    },
-    files: ['workflows.mjs'],
-  }),
-);
-execFileSync(
-  process.execPath,
-  [join(consumer, 'node_modules/typescript/bin/tsc'), '-p', join(consumer, 'tsconfig.json')],
-  { stdio: 'inherit' },
-);
-const bundled = await build({
-  absWorkingDir: consumer,
-  entryPoints: ['workflows.mjs'],
-  bundle: true,
-  platform: 'browser',
-  format: 'esm',
-  outfile: join(consumer, 'browser.mjs'),
-  metafile: true,
-});
-const inputs = Object.keys(bundled.metafile.inputs);
-assert.ok(inputs.some((path) => path.includes('node_modules/@atlas/sdk/dist/index.js')));
-assert.ok(
-  inputs.every((path) => !/node:|Atlas Core|@atlas\/core|zod-openapi|\/reference[/.]/.test(path)),
-);
-assert.ok(Object.values(bundled.metafile.outputs).every((output) => output.imports.length === 0));
-await writeFile(
-  join(directory, 'browser-metafile.json'),
-  JSON.stringify(bundled.metafile, null, 2),
-);
-await writeFile(
-  join(directory, 'package.json'),
-  JSON.stringify(
-    {
-      node: process.versions.node,
-      command: 'npm run test:browser',
-      platform: `${process.platform}/${process.arch}`,
-      artifact: join(consumer, packed.filename),
-      consumer,
-      typedBrowserWorkflows: true,
-      browserBundle: true,
-      protocol: manifest.atlasBuild.protocol,
-    },
-    null,
-    2,
-  ),
-);
-const child = spawn(process.execPath, ['--test', join(root, 'test/browser-runtime.mjs')], {
-  cwd: root,
-  stdio: 'inherit',
-  env: { ...process.env, ATLAS_BROWSER_DIRECTORY: directory, TMPDIR: directory },
-});
-const code = await new Promise((resolve, reject) => {
-  child.once('error', reject);
-  child.once('close', (code, signal) => resolve(signal ? 1 : (code ?? 1)));
-});
-if (code === 0) {
-  const report = JSON.parse(await readFile(join(directory, 'qualification.json'), 'utf8'));
+let failure;
+try {
+  for (const name of ['typescript', 'esbuild']) {
+    report.evidence.tools[name] = JSON.parse(
+      await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8'),
+    ).version;
+  }
+  await npm('build', ['run', 'build'], root);
+  const [packed] = JSON.parse(
+    await npm(
+      'pack',
+      ['pack', '--json', '--ignore-scripts', '--pack-destination', consumer],
+      root,
+      true,
+    ),
+  );
+  await qualification.artifact(join(consumer, packed.filename));
+  assert.ok(packed.files.some((file) => file.path === 'dist/index.js'));
+  assert.ok(packed.files.every((file) => !/^(src|test|node_modules)\//.test(file.path)));
+  await copyFile(
+    join(root, 'artifacts/atlas-protocol-0.3.0.tgz'),
+    join(consumer, 'artifacts/atlas-protocol-0.3.0.tgz'),
+  );
+  await writeFile(
+    join(consumer, 'package.json'),
+    JSON.stringify({
+      private: true,
+      type: 'module',
+      dependencies: {
+        '@atlas/sdk': `file:${packed.filename}`,
+        '@atlas/protocol': 'file:artifacts/atlas-protocol-0.3.0.tgz',
+        typescript: manifest.devDependencies.typescript,
+      },
+    }),
+  );
+  await npm('install', ['install', '--ignore-scripts', '--no-audit', '--no-fund']);
+  await copyFile(join(root, 'test/browser-workflows.mjs'), join(consumer, 'workflows.mjs'));
+  await copyFile(join(root, 'test/transfers-browser.mjs'), join(consumer, 'transfers-browser.mjs'));
+  await writeFile(
+    join(consumer, 'tsconfig.json'),
+    JSON.stringify({
+      compilerOptions: {
+        target: 'ES2022',
+        module: 'NodeNext',
+        moduleResolution: 'NodeNext',
+        strict: true,
+        exactOptionalPropertyTypes: true,
+        allowJs: true,
+        checkJs: true,
+        noEmit: true,
+        types: [],
+        lib: ['ES2022', 'DOM'],
+      },
+      files: ['workflows.mjs'],
+    }),
+  );
+  await run(
+    'positive-types',
+    [
+      process.execPath,
+      join(consumer, 'node_modules/typescript/bin/tsc'),
+      '-p',
+      join(consumer, 'tsconfig.json'),
+    ],
+    { cwd: consumer },
+  );
+  await run(
+    'bundle',
+    [
+      process.execPath,
+      join(root, 'node_modules/esbuild/bin/esbuild'),
+      'workflows.mjs',
+      '--bundle',
+      '--platform=browser',
+      '--format=esm',
+      '--outfile=browser.mjs',
+      `--metafile=${join(directory, 'browser-metafile.json')}`,
+    ],
+    { cwd: consumer },
+  );
+  const metafile = JSON.parse(await readFile(join(directory, 'browser-metafile.json'), 'utf8'));
+  const inputs = Object.keys(metafile.inputs);
+  assert.ok(inputs.some((path) => path.includes('node_modules/@atlas/sdk/dist/index.js')));
+  assert.ok(
+    inputs.every((path) => !/node:|Atlas Core|@atlas\/core|zod-openapi|\/reference[/.]/.test(path)),
+  );
+  assert.ok(Object.values(metafile.outputs).every((output) => output.imports.length === 0));
+  await qualification.retain(join(directory, 'browser-metafile.json'));
+  await writeFile(
+    join(directory, 'package.json'),
+    JSON.stringify(
+      {
+        node: process.versions.node,
+        command: 'npm run test:browser',
+        platform: `${process.platform}/${process.arch}`,
+        artifact: join(consumer, packed.filename),
+        consumer,
+        typedBrowserWorkflows: true,
+        browserBundle: true,
+        protocol: manifest.atlasBuild.protocol,
+      },
+      null,
+      2,
+    ),
+  );
+  await run('firefox', [process.execPath, '--test', join(root, 'test/browser-runtime.mjs')], {
+    env: { ...process.env, ATLAS_BROWSER_DIRECTORY: directory, TMPDIR: directory },
+  });
+  Object.assign(report, JSON.parse(await readFile(join(directory, 'runtime.json'), 'utf8')));
   report.testProcessExited = true;
-  await writeFile(join(directory, 'qualification.json'), JSON.stringify(report, null, 2) + '\n');
-  console.log(JSON.stringify(report, null, 2));
+  for (const name of ['runtime.json', 'traffic.json', 'profile-trust.txt'])
+    await qualification.retain(join(directory, name));
+} catch (error) {
+  failure = error;
+  console.error(error);
+  process.exitCode = error.exitCode ?? 1;
+} finally {
+  try {
+    await qualification.finish(failure);
+  } catch (error) {
+    console.error('Could not finalize qualification evidence', error);
+    process.exitCode ||= 1;
+  }
 }
-process.exitCode = code;

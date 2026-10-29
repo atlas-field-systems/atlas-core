@@ -25,8 +25,9 @@
     "build": "npm run verify:inputs && tsc -p tsconfig.json",
     "test": "npm run build && node scripts/test.mjs",
     "test:package": "node scripts/package.mjs",
-    "qualify": "npm test && npm run test:package",
-    "test:browser": "npm run build && node scripts/browser.mjs"
+    "qualify": "node scripts/package.mjs --source",
+    "test:browser": "node scripts/browser.mjs",
+    "evidence:verify": "node scripts/verify-evidence.mjs"
   },
   "dependencies": {
     "@atlas/protocol": "file:artifacts/atlas-protocol-0.3.0.tgz",

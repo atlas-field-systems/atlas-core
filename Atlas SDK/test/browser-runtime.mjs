@@ -108,10 +108,7 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
         coreWorkerExited: true,
         serversClosed: true,
       };
-      await writeFile(
-        join(directory, 'qualification.json'),
-        JSON.stringify(report, null, 2) + '\n',
-      );
+      await writeFile(join(directory, 'runtime.json'), JSON.stringify(report, null, 2) + '\n');
     }
   });
   await mkdir(profile);
