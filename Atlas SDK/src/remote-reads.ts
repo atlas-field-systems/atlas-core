@@ -412,6 +412,13 @@ export function createRemoteReads(
                 )
                   owner.endOwner();
                 if (result.kind !== 'response' || result.response.kind !== 'success') return result;
+                const code = owner.invalid();
+                if (code)
+                  return {
+                    kind: 'failed',
+                    code,
+                    context: result.context,
+                  } satisfies WaitResult<HistoryReply>;
                 const pageContext = historyContext(result.response.body.data);
                 if (context && !sameHistory(context, pageContext))
                   return {
@@ -436,11 +443,10 @@ export function createRemoteReads(
                   } satisfies WaitResult<HistoryReply>;
                 }
                 context ??= pageContext;
-                const code = owner.invalid();
-                if (code || abandoned || stopped)
+                if (abandoned || stopped)
                   return {
                     kind: 'failed',
-                    code: code ?? 'closed',
+                    code: 'closed',
                     context: result.context,
                   } satisfies WaitResult<HistoryReply>;
                 return result;

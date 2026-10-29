@@ -57,6 +57,7 @@ Known Reset, capacity loss, required rebuild, token expiry, and close still do.
 All frozen history views are HTTP-owned. Their tokens report authorization-required
 without sending continuation or release. No local view substitutes for them. Already
 downloaded application copies can remain readable, without extending remote expiry.
+Late pages from an expired view cannot retain context or consume its former byte reservation.
 
 Cancelling an HTTP view or snapshot load while unauthorized records local abandonment.
 It does not claim a remote release acknowledgment or queue a hidden release request.
