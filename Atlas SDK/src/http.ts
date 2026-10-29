@@ -57,11 +57,30 @@ export class CleanupFailure extends SdkError {
   }
 }
 
+export function readerCancellation(reader: ReadableStreamDefaultReader<Uint8Array>) {
+  const terminal = reader.closed.then(
+    () => undefined,
+    (error: unknown) => ({ error }),
+  );
+  return async (): Promise<void> => {
+    try {
+      await reader.cancel();
+    } catch (error) {
+      // An errored stream repeats its stored error without invoking source cleanup.
+      const ended = await terminal;
+      if (ended === undefined || !Object.is(ended.error, error)) throw error;
+    }
+  };
+}
+
 async function refuseBody(response: Response, code: LocalCode): Promise<never> {
+  const reader = response.body?.getReader();
   try {
-    await response.body?.cancel();
+    if (reader) await readerCancellation(reader)();
   } catch (cleanup) {
     throw new CleanupFailure(code, failureCode(cleanup));
+  } finally {
+    reader?.releaseLock();
   }
   throw new SdkError(code);
 }
@@ -86,6 +105,7 @@ export async function receive(
   }
   const reader = response.body?.getReader();
   if (!reader) return new Uint8Array();
+  const cancel = readerCancellation(reader);
   // One bounded buffer also bounds chunk metadata for byte-at-a-time responses.
   const storage = new Uint8Array(length === null ? maximum : Number(length));
   let used = 0;
@@ -101,7 +121,7 @@ export async function receive(
     }
   } catch (error) {
     try {
-      await reader.cancel();
+      await cancel();
     } catch (cleanup) {
       throw new CleanupFailure(failureCode(error), failureCode(cleanup));
     }

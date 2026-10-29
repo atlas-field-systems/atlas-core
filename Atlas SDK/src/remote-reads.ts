@@ -124,7 +124,7 @@ export type RemoteReads = Readonly<{
   >;
   assigned: (input: AssignedInstructions['selection']) => AssignedInstructions;
   contact: (selection: ContactSelection) => ContactRequest;
-  close: () => Promise<RemoteCloseResult>;
+  close: (drained?: Promise<void>) => Promise<RemoteCloseResult>;
 }>;
 
 /** One owner per client. Close this owner before closing its shared Session. */
@@ -820,24 +820,22 @@ export function createRemoteReads(
     }),
     assigned,
     contact,
-    close(): Promise<RemoteCloseResult> {
+    close(drained: Promise<void> = Promise.resolve()): Promise<RemoteCloseResult> {
       if (closing) return closing;
       stopped = true;
-      closing = Promise.allSettled(
-        [...reservations].map(async ([identity, reservation]) => ({
-          identity,
-          result: await reservation.close(),
-        })),
-      ).then((settled) => {
+      closing = drained.then(async () => {
+        const results: Array<RemoteCloseResult[number]> = [];
+        const failures: unknown[] = [];
+        for (const [identity, reservation] of reservations) {
+          try {
+            results.push({ identity, result: await reservation.close() });
+          } catch (error) {
+            failures.push(error);
+          }
+        }
         unobserve();
         reservations.clear();
         retainedBytes = 0;
-        const results: Array<RemoteCloseResult[number]> = [];
-        const failures: unknown[] = [];
-        for (const result of settled) {
-          if (result.status === 'fulfilled') results.push(result.value);
-          else failures.push(result.reason);
-        }
         if (failures.length) throw new AggregateError(failures, 'Remote cleanup failed');
         return freeze(results);
       });

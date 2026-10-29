@@ -563,3 +563,38 @@ test('release caller cancellation ends its wait while paging and bounded release
   success(await closing);
   assert.equal(view.releaseEvidence, 'acknowledged');
 });
+
+test('two concurrent first history pages on an idle ready HTTP client', async (t) => {
+  const f = await fixture(t);
+  const { http } = await publicClient(t, f);
+  const asset = registration();
+  sent(await http.assets.register(asset).send());
+  const a = http.assets.history({ entity_id: asset.asset_id, query_id: uuid() });
+  const b = http.assets.history({ entity_id: asset.asset_id, query_id: uuid() });
+  const [ra, rb] = await Promise.all([a.next(), b.next()]);
+  const summary = (r) =>
+    r.kind === 'response' ? `${r.kind}/${r.response.kind}` : `${r.kind}/${r.code}`;
+  await Promise.all([a.close(), b.close()]);
+  assert.equal(summary(ra), 'response/success');
+  assert.equal(summary(rb), 'response/success');
+});
+
+test('history first page concurrent with contact read', async (t) => {
+  const f = await fixture(t);
+  const { http } = await publicClient(t, f);
+  const asset = registration();
+  sent(await http.assets.register(asset).send());
+  const view = http.assets.history({ entity_id: asset.asset_id, query_id: uuid() });
+  const contact = http.assets.contact({
+    asset_id: asset.asset_id,
+    process_generation: asset.process_generation,
+    mode: 'current',
+    request_id: uuid(),
+  });
+  const [rv, rc] = await Promise.all([view.next(), contact.read()]);
+  const summary = (r) =>
+    r.kind === 'response' ? `${r.kind}/${r.response.kind}` : `${r.kind}/${r.code}`;
+  await Promise.all([view.close(), contact.close()]);
+  assert.equal(summary(rv), 'response/success');
+  assert.equal(summary(rc), 'response/success');
+});

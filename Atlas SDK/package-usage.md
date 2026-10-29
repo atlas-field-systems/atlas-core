@@ -85,6 +85,7 @@ Options include attempt deadlines, request/response budgets, prepared evidence,
 16 attempts with a 30-second deadline. Full requires at least two admission slots.
 
 `close(): Promise<ClientCloseResult>` is idempotent and awaits every owner.
+It drains stopped attempts before admitting remote releases within the same limits.
 `result.remote` contains per-handle cleanup outcomes. A fulfilled close proves
 local shutdown; inspect release evidence before claiming a remote acknowledgment.
 Authorization pause permits no release traffic. `ClientCloseError` aggregates

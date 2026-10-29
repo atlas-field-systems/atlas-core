@@ -2,14 +2,14 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { SdkError } from './contracts.js';
 import type { LocalCode } from './contracts.js';
-import { CleanupFailure, failureCode } from './http.js';
+import { CleanupFailure, failureCode, readerCancellation } from './http.js';
 
 // Bound SDK-owned copies and work per pull independently of the complete file size.
 const maximumChunk = 1024 * 1024;
 
 export class TransferReader {
   readonly #reader: ReadableStreamDefaultReader<Uint8Array>;
-  readonly #terminal: Promise<Readonly<{ error: unknown }> | undefined>;
+  readonly #cancel: () => Promise<void>;
   readonly #hash = sha256.create();
   readonly #signal: AbortSignal;
   readonly #length: number;
@@ -28,10 +28,7 @@ export class TransferReader {
     readFailure: LocalCode,
   ) {
     this.#reader = stream.getReader();
-    this.#terminal = this.#reader.closed.then(
-      () => undefined,
-      (error: unknown) => ({ error }),
-    );
+    this.#cancel = readerCancellation(this.#reader);
     this.#signal = signal;
     this.#length = length;
     this.#digest = digest;
@@ -49,11 +46,7 @@ export class TransferReader {
     void this.stop().catch(() => undefined);
   };
   stop(): Promise<void> {
-    this.#stopping ??= this.#reader.cancel().catch(async (error: unknown) => {
-      // Cancelling an errored stream repeats its stored error without invoking source cleanup.
-      const terminal = await this.#terminal;
-      if (terminal === undefined || !Object.is(terminal.error, error)) throw error;
-    });
+    this.#stopping ??= this.#cancel();
     return this.#stopping;
   }
   async read(): Promise<Uint8Array | undefined> {

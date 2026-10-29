@@ -145,6 +145,7 @@ export class Session {
   readonly #observers = new Set<(state: ConnectionState) => void>();
   #cleanupFailure: LocalCode | undefined;
   #closing: Promise<void> | undefined;
+  #drained: Promise<void> | undefined;
   #draining = false;
 
   constructor(options: ClientOptions) {
@@ -626,8 +627,13 @@ export class Session {
       }),
     );
   }
-  #currentDiscovery(recovery: number): boolean {
-    return !this.#draining && this.#state.kind !== 'closed' && recovery === this.#recovery;
+  #currentDiscovery(recovery: number, generation: number): boolean {
+    return (
+      !this.#draining &&
+      this.#state.kind !== 'closed' &&
+      recovery === this.#recovery &&
+      generation === this.#generation
+    );
   }
   async #discover(
     recover: boolean,
@@ -645,7 +651,7 @@ export class Session {
       return denied('authorization_required');
     if (this.#active.size >= this.#maximum || this.#pendingProviders >= this.#maximum)
       return denied('capacity');
-    const recovery = ++this.#recovery;
+    const recovery = recover || this.#state.kind !== 'ready' ? ++this.#recovery : this.#recovery;
     const generation = this.#generation;
     const admission = this.#admit(id, this.timeoutMs);
     try {
@@ -680,7 +686,7 @@ export class Session {
       } catch (error) {
         return denied(failureCode(error));
       }
-      if (!this.#currentDiscovery(recovery)) return denied('superseded');
+      if (!this.#currentDiscovery(recovery, generation)) return denied('superseded');
       if (
         recover &&
         (this.#rejectedCredentials.has(credential) || credential === this.#accepted?.credential)
@@ -706,7 +712,7 @@ export class Session {
         result.response.body.error.code === 'unauthorized'
       )
         this.#rememberRejected(credential);
-      if (!this.#currentDiscovery(recovery)) {
+      if (!this.#currentDiscovery(recovery, generation)) {
         return result.kind === 'not_sent'
           ? result
           : ({
@@ -780,11 +786,16 @@ export class Session {
     return this.discover();
   }
 
-  beginClose(): void {
-    if (this.#draining) return;
+  beginClose(): Promise<void> {
+    if (this.#drained) return this.#drained;
     this.#draining = true;
     this.#recovery++;
+    this.#drained = Promise.resolve().then(async () => {
+      await Promise.allSettled(jobs);
+    });
     this.#stop('closed');
+    const jobs = [...this.#jobs];
+    return this.#drained;
   }
 
   close(): Promise<void> {

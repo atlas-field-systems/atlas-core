@@ -74,6 +74,8 @@ Account for the old picture, new staging, indexes, decoded values, journal, and 
 query data together. Bound explicit HTTP history pages under ordinary response limits;
 Core owns their separate finite view/reference budgets. No retained history cache
 or local history-view budget exists.
+Duplicate-commit fingerprints have the journal's count and byte limits. An older
+unverifiable frame requires recovery; it cannot overwrite the current boundary.
 
 Stop with explicit capacity state rather than evicting resources or repeatedly
 rebuilding. A capacity failure cannot expose partially applied changes as current.

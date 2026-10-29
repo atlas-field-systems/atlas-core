@@ -52,7 +52,7 @@ export class Picture {
   #failures = 0;
   #closing: Promise<void> | undefined;
   #cleanupFailure: unknown;
-  readonly #seen = new Map<string, string>();
+  readonly #seen = new Map<string, Readonly<{ fingerprint: string; bytes: number }>>();
   #seenBytes = 0;
 
   constructor(session: Session, limits: PictureLimits = {}) {
@@ -459,9 +459,20 @@ export class Picture {
   }
   #remember(cursor: string, fingerprint: string): void {
     const bytes = 256 + cursor.length * 2 + fingerprint.length * 2;
+    while (
+      this.#seen.size >= this.#memory.limits.journalCommits ||
+      this.#seenBytes + bytes > this.#memory.limits.journalBytes
+    ) {
+      const oldest = this.#seen.entries().next().value;
+      if (!oldest) break;
+      this.#seen.delete(oldest[0]);
+      this.#seenBytes -= oldest[1].bytes;
+      this.#memory.release(oldest[1].bytes);
+    }
+    if (bytes > this.#memory.limits.journalBytes) throw new SdkError('capacity');
     this.#memory.take(bytes);
     this.#seenBytes += bytes;
-    this.#seen.set(cursor, fingerprint);
+    this.#seen.set(cursor, { fingerprint, bytes });
   }
   #frame(complete: Complete, frame: FeedFrame, handoff: string, fingerprint: string): void {
     if (this.#complete !== complete) return;
@@ -485,7 +496,7 @@ export class Picture {
       return;
     const seen = this.#seen.get(next);
     if (seen !== undefined) {
-      if (seen === fingerprint) return;
+      if (seen.fingerprint === fingerprint) return;
       throw new SdkError('invalid_value');
     }
     if (frame.data.previous_cursor !== complete.cursor) throw new SdkError('invalid_value');
@@ -499,14 +510,15 @@ export class Picture {
     if (frame.type === 'change_batch')
       this.#diagnostic('apply', undefined, performance.now() - started);
   }
-  shutdown(): Promise<void> {
+  shutdown(drained: Promise<void> = Promise.resolve()): Promise<void> {
     if (this.#closing) return this.#closing;
     this.#closed = true;
     this.#unobserve();
     this.#invalidate('stopped', 'closed');
-    this.#closing = Promise.all([this.#lease?.release(), this.#releaseCapture()]).then(
-      () => undefined,
-    );
+    this.#closing = Promise.all([
+      this.#lease?.release(),
+      drained.then(() => this.#releaseCapture()),
+    ]).then(() => undefined);
     return this.#closing;
   }
   async settled(): Promise<void> {

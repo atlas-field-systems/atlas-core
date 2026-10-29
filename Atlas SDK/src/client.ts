@@ -261,9 +261,9 @@ export function createClient(options: ClientOptions): Client {
         return Object.freeze({ remote: remoteResult.value });
       });
       // Publish the close owner before aborting user-owned sources can re-enter it.
-      session.beginClose();
-      const pictureShutdown = picture?.shutdown();
-      const remoteShutdown = remote.close();
+      const drained = session.beginClose();
+      const pictureShutdown = picture?.shutdown(drained);
+      const remoteShutdown = remote.close(drained);
       return closing;
     },
   };

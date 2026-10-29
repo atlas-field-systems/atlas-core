@@ -328,3 +328,90 @@ for (const cleanupFails of [false, true])
     assert.equal((await running.settled).code, 'closed');
     assert.equal(client.state.kind, 'closed');
   });
+
+for (const cause of ['network', 'deadline', 'close'])
+  test(
+    `real partial HTTP response ${cause} must drain without a fabricated cleanup error`,
+    { timeout: 15000 },
+    async (t) => {
+      const f = await fixture(t);
+      const client = createClient({ baseUrl: f.proxyUrl, credentials: () => f.apiKey });
+      t.after(() => client.close());
+      success(await client.connect());
+      const partial = barrier(),
+        release = barrier();
+      t.after(() => release.resolve());
+      f.once('/readiness', async ({ outgoing, headers, body }) => {
+        outgoing.writeHead(200, headers);
+        outgoing.write(body.subarray(0, 1));
+        partial.resolve();
+        await release.promise;
+        outgoing.destroy();
+      });
+      const pending = client.readiness({}, cause === 'deadline' ? { timeoutMs: 500 } : {});
+      await partial.promise;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      let closing;
+      if (cause === 'close') closing = client.close();
+      if (cause === 'network') release.resolve();
+      const attempt = await pending;
+      release.resolve();
+      const [close] = await Promise.allSettled([closing ?? client.close()]);
+
+      assert.equal(attempt.context.cleanupFailure, undefined);
+      assert.equal(attempt.kind, 'failed');
+      assert.equal(attempt.code, cause === 'close' ? 'closed' : cause);
+      assert.ok(
+        attempt.context.receivedBytes > 0,
+        'the body-read failure boundary must actually run',
+      );
+      assert.equal(
+        close.status,
+        'fulfilled',
+        'A completed primary HTTP-body failure must not be reported as failed shutdown cleanup',
+      );
+    },
+  );
+
+for (const mode of ['http', 'full'])
+  test(`close drains saturated ${mode} admission before releasing all history views`, async (t) => {
+    const f = await fixture(t);
+    const client = createClient({
+      baseUrl: f.proxyUrl,
+      credentials: () => f.apiKey,
+      mode,
+      limits: { concurrentAttempts: 2 },
+    });
+    t.after(() => client.close());
+    success(await client.connect());
+    if (mode === 'full') await until(() => client.picture.status.kind === 'synchronized');
+    const asset = registration();
+    sent(await client.assets.register(asset).send());
+    const views = [];
+    for (let i = 0; i < 3; i++) {
+      const view = client.assets.history({ entity_id: asset.asset_id, query_id: uuid() });
+      success(await view.next());
+      views.push(view);
+    }
+    const reached = barrier(),
+      held = barrier();
+    t.after(() => held.resolve());
+    const busy = mode === 'full' ? 1 : 2;
+    let count = 0;
+    const reads = [];
+    for (let i = 0; i < busy; i++) {
+      f.once('/messages/get_asset', async ({ forward }) => {
+        if (++count === busy) reached.resolve();
+        await held.promise;
+        forward();
+      });
+      reads.push(client.http.assets.get({ asset_id: asset.asset_id }));
+    }
+    await reached.promise;
+    const closed = await client.close();
+    held.resolve();
+    for (const result of await Promise.all(reads)) assert.equal(result.code, 'closed');
+    assert.equal(closed.remote.length, 3);
+    for (const view of views) assert.equal(view.releaseEvidence, 'acknowledged');
+    assert.equal(f.traffic.filter((e) => e.path === '/messages/release_history_view').length, 3);
+  });

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createHash } from 'node:crypto';
 import { fixture, uuid, secret, registration, task, barrier } from './harness.mjs';
+import { publicClient, sent, reading, telemetry } from './public-helpers.mjs';
 
 function success(result) {
   assert.equal(result.kind, 'response', JSON.stringify(result));
@@ -953,3 +954,49 @@ test(
     assert.equal(f.traffic.length, count);
   },
 );
+
+test('constant picture and pruned journal stay synchronized after many commits without a rebuild', async (t) => {
+  const f = await fixture(t);
+  const writer = await publicClient(t, f);
+  const publisher_id = uuid(),
+    observation_id = uuid();
+  const { creation, reporter } = writer.reporting.createObservation({
+    request_id: uuid(),
+    publisher_id,
+    observation_id,
+  });
+  const created = sent(await creation.send());
+  const decode = 4194304 * 8 + 262144 * 256 + 4096;
+  const client = await connected(f, {
+    mode: 'full',
+    picture: { bytes: decode + 64 * 1024, journalCommits: 1 },
+  });
+  await ready(client);
+  const generation = client.picture.status.generation;
+  const boundary = client.picture.cursor;
+  const snapshots = f.traffic.filter((e) => e.path === '/messages/read_snapshot').length;
+  const origin = { kind: 'publisher', publisher_id };
+  let committed;
+  for (let sequence = 1; sequence <= 256; sequence++) {
+    committed = success(
+      (
+        await reporter
+          .report(
+            reading(sequence, {
+              telemetry: telemetry(
+                origin,
+                (sequence % 80) + 0.25,
+                new Date(Date.UTC(2026, 9, 21, 12) + sequence * 1000).toISOString(),
+              ),
+            }),
+          )
+          .send()
+      ).attempt,
+    );
+  }
+  await ready(client, committed.commit_cursor);
+  assert.equal(client.picture.status.generation, generation);
+  assert.equal(f.traffic.filter((e) => e.path === '/messages/read_snapshot').length, snapshots);
+  assert.equal(client.picture.changedSince(boundary).kind, 'gap');
+  assert.equal(available(client.tracks.get({ track_id: created.track.id })).id, created.track.id);
+});
