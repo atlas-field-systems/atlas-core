@@ -139,10 +139,7 @@ export function createReporting(session: Session, operations: Operations): Repor
     const facts = component(observationIdentity, identity, session.requestBudget);
     const datasetId = originalDataset(),
       epoch = session.datasetEpoch;
-    const current = () => {
-      if (session.datasetId !== datasetId || session.datasetEpoch !== epoch)
-        throw new SdkError('dataset_invalidated');
-    };
+    const current = () => session.datasetId === datasetId && session.datasetEpoch === epoch;
     return Object.freeze({
       identity: freeze({
         observation_id: facts.id,
@@ -150,7 +147,7 @@ export function createReporting(session: Session, operations: Operations): Repor
         dataset_id: datasetId,
       }),
       report(input: ObservationReading) {
-        current();
+        if (!current()) throw new SdkError('dataset_invalidated');
         const reading = component(observationReading, input, session.requestBudget);
         return report({
           observation_id: facts.id,
@@ -168,17 +165,23 @@ export function createReporting(session: Session, operations: Operations): Repor
         });
       },
       reconcile(options: RequestOptions = {}) {
-        current();
+        if (!current())
+          return session.refuse<ResponseOf<'GetObservation'>>(
+            'GetObservation',
+            'dataset_invalidated',
+          ).settled;
         return getObservation({ observation_id: facts.id }, options);
       },
       async recordedTrack(
         options: RequestOptions = {},
       ): Promise<WaitResult<ResponseOf<'GetTrack'>>> {
-        current();
+        if (!current())
+          return session.refuse<ResponseOf<'GetTrack'>>('GetTrack', 'dataset_invalidated').settled;
         const result = await getObservation({ observation_id: facts.id }, options);
         if (result.kind !== 'response') return result;
         if (result.response.kind === 'error') return { ...result, response: result.response };
-        current();
+        if (!current())
+          return session.refuse<ResponseOf<'GetTrack'>>('GetTrack', 'dataset_invalidated').settled;
         if (options.signal?.aborted)
           return session.refuse<ResponseOf<'GetTrack'>>('GetTrack', 'cancelled').settled;
         return getTrack({ track_id: result.response.body.data.track_id }, options);

@@ -53,6 +53,8 @@ Observations, history, assigned work, contact, content, references, administrati
 - `reporting.register`, `reporting.asset`, `reporting.createObservation` and
   `reporting.observation` retain source identities across section updates/reports.
   Observation reporters offer explicit `reconcile()` and `recordedTrack()` reads.
+  After Dataset invalidation, these reads return `not_sent/dataset_invalidated`;
+  preparing another report through the stale reporter throws `dataset_invalidated`.
 - `component(schema, value)` constructs detached frozen Protocol values.
   `commandCatalog` is the installed local Protocol catalog.
 
