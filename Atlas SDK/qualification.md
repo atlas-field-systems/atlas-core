@@ -70,19 +70,23 @@ Each runner rejects workspace roots, including symlink aliases, before creating 
 mutable fixture. `qualify` records source and installed phases separately in the
 consumer's `qualification.json`; Firefox records its own report. Reports retain
 the tested Git revision and dirty state, SDK archive SHA-256, tool versions,
-command arguments and working directories, expected and actual exits, and bounded
-closed logs outside deleted TLS fixtures. Expected negative type exits are explicit.
+command arguments and working directories, expected and actual exits, and closed
+logs capped at 16 MiB per stream outside deleted TLS fixtures. Expected negative
+type exits are explicit.
 Failures retain logs and a failed or incomplete report; they cannot produce PASS.
 
-Before accepting a handoff, run `npm run evidence:verify -- --revision <full-HEAD>
-<package-qualification.json> <browser-qualification.json>`. The verifier rejects
-dirty or mismatched source, missing or changed archives/logs, truncated or unclosed
+Before accepting a handoff, supply both reports and the expected full commit:
+`npm run evidence:verify -- --revision <HEAD> <package-report> <browser-report>`.
+The verifier rejects dirty or mismatched source, changed archives/logs, unclosed
 logs, and failed or incomplete commands. This is trusted local execution evidence,
 not cryptographic proof that commands ran. Browser facts survive finalization.
 CI uploads reports and referenced logs/artifacts, never whole profiles or fixtures.
 
 CI checks all SDK source, scripts and tests with Protocol's pinned Prettier/config,
 and Core source, scripts and tests changed against a validated comparison base.
+Run `node ../scripts/format.mjs --base <full-ancestor-SHA>` from SDK; add `--write`
+to format. CI fetches full history: PRs use the merge base, pushes the previous
+commit, and manual runs require an explicit ancestor. Invalid bases fail closed.
 Legacy unchanged Core files remain outside this incremental formatter gate.
 
 ## Limits of this evidence

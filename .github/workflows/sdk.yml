@@ -1,0 +1,101 @@
+name: Atlas SDK
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      comparison_base:
+        description: Full ancestor commit SHA to check changed Core formatting against
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualification:
+    name: SDK source, installed package and Firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: Atlas SDK
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - name: Select and validate comparison base
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+          MANUAL_BASE: ${{ inputs.comparison_base }}
+        run: |
+          case "$EVENT_NAME" in
+            pull_request) base="$PR_BASE" ;;
+            push) base="$PUSH_BASE" ;;
+            workflow_dispatch) base="$MANUAL_BASE" ;;
+            *) exit 1 ;;
+          esac
+          [[ "$base" =~ ^[0-9a-f]{40}$ && "$base" != 0000000000000000000000000000000000000000 ]]
+          git cat-file -e "$base^{commit}"
+          if [[ "$EVENT_NAME" == pull_request ]]; then base="$(git merge-base "$base" HEAD)"; fi
+          git merge-base --is-ancestor "$base" HEAD
+          [[ "$base" != "$(git rev-parse HEAD)" ]]
+          echo "ATLAS_FORMAT_BASE=$base" >> "$GITHUB_ENV"
+          echo "ATLAS_TEST_ROOT=$RUNNER_TEMP/atlas-sdk" >> "$GITHUB_ENV"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/atlas-playwright" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/atlas-sdk"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.22.1
+          cache: npm
+          cache-dependency-path: |
+            Atlas Protocol/package-lock.json
+            Atlas Core/package-lock.json
+            Atlas SDK/package-lock.json
+      - run: npm --prefix "../Atlas Core" run build:prepare
+      - run: npm install --global --offline --ignore-scripts --no-audit --no-fund "../Atlas Core/artifacts/npm-11.19.0.tgz"
+      - run: npm run protocol:prepare
+      - run: node ../scripts/format.mjs --base "$ATLAS_FORMAT_BASE"
+      - run: npm --prefix "../Atlas Core" ci --include=dev
+      - run: npm --prefix "../Atlas Core" run build
+      - run: npm ci --include=dev --ignore-scripts
+      - name: Install Firefox and profile trust tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3-tools
+          npx --no-install playwright install --with-deps firefox
+      - name: Qualify source and installed package
+        run: npm run qualify
+      - name: Qualify actual Firefox
+        if: ${{ !cancelled() && success() }}
+        run: npm run test:browser
+      - name: Verify committed evidence
+        run: |
+          shopt -s nullglob
+          package_reports=("$ATLAS_TEST_ROOT"/sdk-consumer-*/qualification.json)
+          browser_reports=("$ATLAS_TEST_ROOT"/sdk-browser-*/qualification.json)
+          [[ ${#package_reports[@]} == 1 && ${#browser_reports[@]} == 1 ]]
+          npm run evidence:verify -- --revision "$(git rev-parse HEAD)" "${package_reports[0]}" "${browser_reports[0]}"
+      - name: Preserve qualification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sdk-qualification
+          path: |
+            ${{ runner.temp }}/atlas-sdk/**/qualification.json
+            ${{ runner.temp }}/atlas-sdk/**/evidence/*.log
+            ${{ runner.temp }}/atlas-sdk/**/atlas-sdk-*.tgz
+            ${{ runner.temp }}/atlas-sdk/**/browser-metafile.json
+            ${{ runner.temp }}/atlas-sdk/**/runtime.json
+            ${{ runner.temp }}/atlas-sdk/**/traffic.json
+            ${{ runner.temp }}/atlas-sdk/**/profile-trust.txt
+          if-no-files-found: warn
+          retention-days: 7
