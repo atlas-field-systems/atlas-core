@@ -10,7 +10,6 @@ export async function runTransferAssertions(client) {
   const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
-  // The owning browser runner supplies a freshly discovered client and records HTTP traffic.
   const facts = {
     object_id: NewId.parse(crypto.randomUUID()),
     request_id: NewId.parse(crypto.randomUUID()),
