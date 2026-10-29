@@ -77,8 +77,9 @@ Failures retain logs and a failed or incomplete report; they cannot produce PASS
 
 Before accepting a handoff, supply both reports and the expected full commit:
 `npm run evidence:verify -- --revision <HEAD> <package-report> <browser-report>`.
-The verifier rejects dirty or mismatched source, changed archives/logs, unclosed
-logs, and failed or incomplete commands. This is trusted local execution evidence,
+The verifier requires distinct stdout/stderr logs, the bundle graph, and Firefox's
+runtime, traffic and profile-trust files. It rejects dirty or mismatched source,
+changed or unclosed evidence, and failed or incomplete commands. This is local evidence,
 not cryptographic proof that commands ran. Browser facts survive finalization.
 CI uploads reports and referenced logs/artifacts, never whole profiles or fixtures.
 

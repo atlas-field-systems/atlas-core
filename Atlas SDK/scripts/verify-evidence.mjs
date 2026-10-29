@@ -70,7 +70,7 @@ for (const path of paths) {
       : [['firefox', 0]]),
   ]);
   assert.equal(evidence.commands.length, expected.size, 'Missing or unexpected commands');
-  for (const command of evidence.commands) {
+  for (const [index, command] of evidence.commands.entries()) {
     assert.ok(expected.has(command.name), `Unexpected command: ${command.name}`);
     assert.equal(command.expectedExit, expected.get(command.name), 'Unexpected exit contract');
     expected.delete(command.name);
@@ -89,6 +89,12 @@ for (const path of paths) {
     );
     assert.ok(typeof command.cwd === 'string' && isAbsolute(command.cwd), 'Missing cwd');
     assert.equal(command.logs.length, 2, 'Missing stdout/stderr evidence');
+    const prefix = `evidence/${String(index + 1).padStart(2, '0')}-${command.name}`;
+    assert.deepEqual(
+      command.logs.map((log) => log.path).sort(),
+      [`${prefix}.stderr.log`, `${prefix}.stdout.log`],
+      'Missing distinct stdout/stderr evidence',
+    );
     for (const log of command.logs) {
       assert.equal(log.closed, true, 'Unclosed log');
       assert.equal(log.truncated, false, 'Truncated log');
@@ -96,7 +102,15 @@ for (const path of paths) {
     }
   }
   assert.equal(report.browserBundle, true);
-  assert.ok(evidence.files.length > 0, 'Missing supporting evidence');
+  const requiredFiles = [
+    'browser-metafile.json',
+    ...(evidence.kind === 'browser' ? ['runtime.json', 'traffic.json', 'profile-trust.txt'] : []),
+  ];
+  assert.deepEqual(
+    evidence.files.map((file) => file.path).sort(),
+    requiredFiles.sort(),
+    'Missing or unexpected supporting evidence',
+  );
   for (const file of evidence.files) await verifyFile(file, 64 * 1024 * 1024);
   if (evidence.kind === 'package') {
     assert.equal(report.sourceHttpsTests, true, 'Source phase not qualified');
