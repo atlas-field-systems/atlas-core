@@ -52,6 +52,7 @@ import {
   selected,
   selectedAlias,
   selectedPage,
+  selection,
 } from './queries.js';
 import { ReadChanges, ReadSnapshot, ReplayPage, SnapshotPage } from './synchronization.js';
 import { messageBudget } from './json.js';
@@ -357,15 +358,7 @@ const ListAssetsExchange = post(
   page(Asset, (value) => value.id),
   (request, { data }) =>
     pageSize(request, data.items) &&
-    selectedPage(
-      request,
-      data.items,
-      (a, f) =>
-        selected(f?.ids, a.id) &&
-        selectedAlias(f?.aliases, a.alias) &&
-        selected(f?.kinds, a.type.kind) &&
-        selected(f?.health, a.communications.health),
-    ),
+    selectedPage(request, data.items, (a, f) => selection.asset(f, a)),
 );
 const GetAssetExchange = post(
   'GetAsset',
@@ -543,14 +536,7 @@ const ListTracksExchange = post(
   page(Track, (value) => value.id),
   (request, { data }) =>
     pageSize(request, data.items) &&
-    selectedPage(
-      request,
-      data.items,
-      (a, f) =>
-        selected(f?.ids, a.id) &&
-        selectedAlias(f?.aliases, a.alias) &&
-        selected(f?.kinds, a.type.state === 'value' ? a.type.value.kind : undefined),
-    ),
+    selectedPage(request, data.items, (a, f) => selection.track(f, a)),
 );
 const GetTrackExchange = post(
   'GetTrack',
@@ -642,14 +628,7 @@ const ListGeofeaturesExchange = post(
   page(Geofeature, (value) => value.id),
   (request, { data }) =>
     pageSize(request, data.items) &&
-    selectedPage(
-      request,
-      data.items,
-      (a, f) =>
-        selected(f?.ids, a.id) &&
-        selectedAlias(f?.aliases, a.alias) &&
-        selected(f?.kinds, a.type.kind),
-    ),
+    selectedPage(request, data.items, (a, f) => selection.geofeature(f, a)),
 );
 const GetGeofeatureExchange = post(
   'GetGeofeature',
@@ -731,18 +710,7 @@ const ListTasksExchange = post(
   page(Task, (value) => value.task_id),
   (request, { data }) =>
     pageSize(request, data.items) &&
-    selectedPage(
-      request,
-      data.items,
-      (a, f) =>
-        selected(f?.ids, a.task_id) &&
-        selected(f?.asset_ids, a.asset_id) &&
-        selected(f?.commands, a.command) &&
-        selected(
-          f?.states,
-          a.cancellation_request_id === null ? a.execution_state : 'cancellation_requested',
-        ),
-    ),
+    selectedPage(request, data.items, (a, f) => selection.task(f, a)),
 );
 const GetTaskExchange = post(
   'GetTask',
@@ -847,11 +815,7 @@ const ListObjectsExchange = post(
   page(ObjectImage, (value) => value.object_id),
   (request, { data }) =>
     pageSize(request, data.items) &&
-    selectedPage(
-      request,
-      data.items,
-      (a, f) => selected(f?.ids, a.object_id) && selected(f?.content_types, a.content_type),
-    ),
+    selectedPage(request, data.items, (a, f) => selection.object(f, a)),
 );
 const GetObjectExchange = post(
   'GetObject',

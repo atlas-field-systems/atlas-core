@@ -159,3 +159,4 @@ export { correlation, readHttp, readHttpRequest } from './http.js';
 export type { ReceivedHttp, HttpContext } from './http.js';
 export { readWssClient, readWssServer, writeWssClient, writeWssServer } from './wss.js';
 export type { WssContext } from './wss.js';
+export { selection } from './queries.js';
