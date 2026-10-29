@@ -107,6 +107,36 @@ test('report helpers retain one Observation, report, reading and Core Track acro
   assert.equal(success(await tracks.next()).items.length, 1);
 });
 
+test('stale reporting reads return Dataset refusals before and after Reset discovery', async (t) => {
+  const f = await fixture(t);
+  const { client, reporting, http } = await publicClient(t, f);
+  const input = { observation_id: uuid(), publisher_id: uuid(), request_id: uuid() };
+  const { creation, reporter } = reporting.createObservation(input);
+  const created = sent(await creation.send());
+  assert.equal(success(await reporter.reconcile()).id, input.observation_id);
+  assert.equal(success(await reporter.recordedTrack()).id, created.track.id);
+  const originalDataset = client.state.datasetId;
+  await f.reset();
+  assert.equal((await client.readiness({})).response.body.error.code, 'dataset_mismatch');
+  assert.equal(client.state.datasetId, originalDataset);
+  for (const reconnected of [false, true]) {
+    if (reconnected) {
+      success(await client.connect());
+      assert.notEqual(client.state.datasetId, originalDataset);
+    }
+    const count = f.traffic.length;
+    for (const result of [await reporter.reconcile(), await reporter.recordedTrack()]) {
+      assert.equal(result.kind, 'not_sent');
+      assert.equal(result.code, 'dataset_invalidated');
+    }
+    assert.throws(() => reporter.report(reading(1, {})), { code: 'dataset_invalidated' });
+    assert.equal(f.traffic.length, count);
+  }
+  const current = await http.observations.get({ observation_id: input.observation_id });
+  assert.equal(current.kind, 'response');
+  assert.equal(current.response.status, 404);
+});
+
 test('Asset helper preserves registration identity, revision conditions, omitted fields and explicit clears', async (t) => {
   const f = await fixture(t);
   const { reporting, http } = await publicClient(t, f);

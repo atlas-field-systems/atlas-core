@@ -188,24 +188,34 @@ test('real Core admission refusal during discovery does not claim a Protocol mis
   assert.equal(state.reason, 'not_connected');
 });
 
-test('exhausted prepared-byte capacity still shares an existing identity and its evidence', async (t) => {
+test('prepared-byte capacity bounds duplicate submissions while preserving shared evidence and retirement', async (t) => {
   const f = await fixture(t);
-  const client = f.client({ limits: { preparedBytes: 16384 } });
+  const budget = 16384;
+  const client = f.client({ limits: { preparedOperations: 1, preparedBytes: budget } });
   assert.equal((await client.connect()).response.kind, 'success');
+  const facts = registration('bounded');
   const retained = [];
   let refusal;
   for (let i = 0; i < 32; i++) {
-    const facts = registration(`bounded-${i}`);
     try {
-      retained.push({ facts, operation: client.assets.register(facts) });
+      retained.push(client.assets.register(facts));
     } catch (error) {
       refusal = error;
       break;
     }
   }
   assert.equal(refusal?.code, 'capacity');
-  assert.ok(retained.length > 0);
+  assert.ok(retained.length > 1);
+  assert.ok(retained.length * Buffer.byteLength(JSON.stringify(facts)) <= budget);
   const first = retained[0];
-  assert.equal((await first.operation.send()).outcome.kind, 'accepted');
-  assert.equal(client.assets.register(first.facts).outcome.kind, 'accepted');
+  assert.equal((await first.send()).outcome.kind, 'accepted');
+  for (const alias of retained) assert.deepEqual(alias.outcome, first.outcome);
+  for (const alias of retained.slice(0, -1)) alias.close();
+  assert.throws(() => client.assets.register(facts), { code: 'capacity' });
+  retained.at(-1).close();
+  const replacement = client.assets.register(facts);
+  assert.equal(replacement.outcome.kind, 'not_submitted');
+  assert.equal((await replacement.send()).outcome.kind, 'accepted');
+  replacement.close();
+  assert.equal(first.outcome.kind, 'accepted');
 });

@@ -108,6 +108,31 @@ test('Debug uses a sliding 100-record rate bound, safe frames, and omission mark
   diagnostics.close();
 });
 
+test('a rate-limited summary retains aggregate counts for its next delivery', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  const events = [];
+  const diagnostics = new Diagnostics({ mode: 'debug', observer: (event) => events.push(event) });
+  t.after(() => diagnostics.close());
+  diagnostics.record(request({ outcome: 'success' }));
+  t.mock.timers.tick(1);
+  now = 29_999;
+  t.mock.timers.tick(29_998);
+  for (let i = 0; i < 100; i++) diagnostics.record(request({ outcome: 'success' }));
+  now = 30_001;
+  t.mock.timers.tick(2);
+  assert.equal(events.filter((event) => event.kind === 'summary').length, 0);
+  assert.equal(events.length, 101);
+  now = 60_001;
+  t.mock.timers.tick(30_000);
+  const summaries = events.filter((event) => event.kind === 'summary');
+  assert.equal(summaries.length, 1);
+  assert.equal(summaries[0].operations.find((entry) => entry.operation === 'GetTask').attempts, 101);
+  assert.equal(summaries[0].omitted, 1);
+  assert.equal(summaries[0].elapsedMs, 60_001);
+});
+
 test('typed picture and transfer hooks aggregate without a second event mechanism', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const events = [],
