@@ -64,6 +64,27 @@ one Object, streamed bytes and digest, reference retrieval, exposed content head
 and generic-stream refusal before opener or HTTP. Evidence records the actual
 artifact, browser version, trust database, wire observations and cleanup.
 
+## Accept qualification evidence
+
+Each runner rejects workspace roots, including symlink aliases, before creating a
+mutable fixture. `qualify` records source and installed phases separately in the
+consumer's `qualification.json`; Firefox records its own report. Reports retain
+the tested Git revision and dirty state, SDK archive SHA-256, tool versions,
+command arguments and working directories, expected and actual exits, and bounded
+closed logs outside deleted TLS fixtures. Expected negative type exits are explicit.
+Failures retain logs and a failed or incomplete report; they cannot produce PASS.
+
+Before accepting a handoff, run `npm run evidence:verify -- --revision <full-HEAD>
+<package-qualification.json> <browser-qualification.json>`. The verifier rejects
+dirty or mismatched source, missing or changed archives/logs, truncated or unclosed
+logs, and failed or incomplete commands. This is trusted local execution evidence,
+not cryptographic proof that commands ran. Browser facts survive finalization.
+CI uploads reports and referenced logs/artifacts, never whole profiles or fixtures.
+
+CI checks all SDK source, scripts and tests with Protocol's pinned Prettier/config,
+and Core source, scripts and tests changed against a validated comparison base.
+Legacy unchanged Core files remain outside this incremental formatter gate.
+
 ## Limits of this evidence
 
 Source and installed Node suites are separate from actual Firefox. Browser bundling
