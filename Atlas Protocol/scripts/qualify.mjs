@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, realpath } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { join } from 'node:path';
 import { build } from 'esbuild';
 import * as protocol from '../dist/index.js';
@@ -49,7 +49,7 @@ const packed = JSON.parse(
 )[0];
 assert.ok(packed.files.some((file) => file.path === 'dist/index.d.ts'));
 assert.ok(packed.files.every((file) => !file.path.startsWith('src/')));
-const consumer = await mkdtemp(join(artifacts, 'consumer-'));
+const consumer = await realpath(await mkdtemp(join(artifacts, 'consumer-')));
 await writeFile(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
 await run(
   'npm',
@@ -257,6 +257,73 @@ const corpora = await Promise.all(
   ),
 );
 const fixtures = corpora.flatMap((corpus) => runFixtures(corpus, protocol));
+const nodeEntry = join(consumer, 'node-entry.mjs');
+await writeFile(
+  nodeEntry,
+  `import * as p from '@atlas/protocol';
+import { readFile } from 'node:fs/promises';
+import { runPortable } from ${JSON.stringify(pathToFileURL(join(root, 'test', 'portable.mjs')).href)};
+import { runFixtures } from ${JSON.stringify(pathToFileURL(join(root, 'test', 'fixture-adapter.mjs')).href)};
+const corpora = await Promise.all(${JSON.stringify(['acceptance', 'independent-cases'].map((name) => pathToFileURL(join(root, 'test', 'fixtures', name + '.json')).href))}.map(async href => JSON.parse(await readFile(new URL(href), 'utf8'))));
+const portable = runPortable(p);
+const fixtures = corpora.flatMap(corpus => runFixtures(corpus, p));
+console.log(JSON.stringify({resolved:import.meta.resolve('@atlas/protocol'),portable,fixtures:{total:fixtures.length,passed:fixtures.filter(result=>result.pass).length,failures:fixtures.filter(result=>!result.pass)}}));
+`,
+);
+let nodeIntegration = { runner: nodeEntry };
+let nodeOutput;
+try {
+  nodeOutput = await run(process.execPath, [nodeEntry], consumer);
+  const result = JSON.parse(nodeOutput.stdout);
+  assert.ok(
+    result && typeof result === 'object' && typeof result.resolved === 'string',
+    'Malformed installed Node integration result',
+  );
+  for (const [section, count] of [
+    [result.portable, 'checks'],
+    [result.fixtures, 'total'],
+  ]) {
+    assert.ok(
+      section &&
+        Number.isSafeInteger(section[count]) &&
+        section[count] >= 0 &&
+        Number.isSafeInteger(section.passed) &&
+        section.passed >= 0 &&
+        section.passed <= section[count] &&
+        Array.isArray(section.failures),
+      'Malformed installed Node integration counts or failures',
+    );
+  }
+  nodeIntegration = {
+    runner: nodeEntry,
+    resolved: result.resolved,
+    portable: result.portable,
+    fixtures: result.fixtures,
+  };
+  assert.ok(
+    result.resolved.startsWith(
+      pathToFileURL(join(consumer, 'node_modules', '@atlas', 'protocol') + '/').href,
+    ),
+    'Node consumer resolved outside the installed package',
+  );
+  assert.ok(result.portable.checks > 0, 'Installed portable suite ran no checks');
+  assert.equal(result.portable.passed, result.portable.checks, 'Installed portable checks failed');
+  assert.equal(result.portable.failures.length, 0, 'Installed portable suite reported failures');
+  assert.equal(
+    result.fixtures.total,
+    corpora.reduce((total, corpus) => total + corpus.cases.length, 0),
+    'Installed fixture suite did not run every expected case',
+  );
+  assert.equal(result.fixtures.passed, result.fixtures.total, 'Installed fixture checks failed');
+  assert.equal(result.fixtures.failures.length, 0, 'Installed fixture suite reported failures');
+} catch (error) {
+  nodeIntegration.error = {
+    message: String(error.message).slice(0, 2000),
+    exitCode: nodeOutput ? 0 : typeof error.code === 'number' ? error.code : null,
+    stderr: String(error.stderr ?? nodeOutput?.stderr ?? '').slice(0, 4000),
+    stdout: String(error.stdout ?? nodeOutput?.stdout ?? '').slice(0, 1000),
+  };
+}
 const report = {
   version: protocol.PROTOCOL_VERSION,
   node: process.version,
@@ -278,6 +345,7 @@ const report = {
     privateImportsBlocked: true,
     browserBundle: true,
     browserEntry: entry,
+    nodeIntegration,
   },
   fixtures: {
     total: fixtures.length,
@@ -288,4 +356,4 @@ const report = {
 };
 await writeFile(join(artifacts, 'qualification.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify(report, null, 2));
-if (report.fixtures.failures.length) process.exitCode = 1;
+if (report.fixtures.failures.length || nodeIntegration.error) process.exitCode = 1;

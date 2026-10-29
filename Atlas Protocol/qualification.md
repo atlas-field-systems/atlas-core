@@ -5,7 +5,6 @@ and its pinned npm version. `npm ci --ignore-scripts` uses the integrity-locked 
 
 ```sh
 npm ci --ignore-scripts
-npm test
 npm run qualify
 ```
 
@@ -17,12 +16,20 @@ That job bundles browser code. Actual browser execution is the separate procedur
 route inventory, stock JSON Schema 2020-12 and host-policy checks. Test inputs
 and expected facts are separate from production schema definitions.
 
-`npm run qualify` also exports in two clean Node processes, compares exact bytes,
-validates OpenAPI with stock Redocly, packs the package, installs an isolated
+`npm run qualify` runs `npm test`, exports in two clean Node processes, compares
+exact bytes, validates OpenAPI with stock Redocly, packs the package, installs an isolated
 consumer, typechecks positive and negative usage, runs imports, and bundles the
-installed runtime for browsers. It records artifacts/qualification.json and the
-OpenAPI lint output. An independent-corpus disagreement makes the command fail;
-the remaining completed checks stay in the report.
+installed runtime for browsers. The consumer's generated node-entry.mjs imports
+`@atlas/protocol` from that installation and runs the unchanged portable checks
+and both maintained corpora against it. The parent requires an import from the
+installed package regardless of its entry filename, nonzero portable coverage,
+every expected fixture, and no failures.
+
+It records artifacts/qualification.json and the OpenAPI lint output. The
+externalConsumer.nodeIntegration result includes the runner path, resolved import,
+portable and fixture counts and failures. A Node runner, import, output, or check
+failure records bounded diagnostics there. A failed installed Node check or local
+corpus disagreement saves the completed report before the command exits nonzero.
 
 Run another frozen corpus through the same public boundary adapter:
 
