@@ -253,8 +253,17 @@ test('Task summaries follow selected evidence through current reads, synchroniza
   assert.equal(cleared.cancellation_request_id, null);
   assert.deepEqual(cleared.execution_summary, summary(later));
   assert.deepEqual((await send(first)).execution_summary, summary(later));
-  const omitted = make('9007199254740996', { event: 'state', state: 'in_progress' }); omitted.generated_at = null;
-  assert.deepEqual((await send(omitted)).execution_summary, summary(omitted));
+  const nextCancellation = { request_id: uuid(), task_id: task.task_id };
+  assert.deepEqual(ok(await f.call('RequestTaskCancellation', nextCancellation)).execution_summary, summary(later));
+  const refusal = make('9007199254740996', { event: 'cancellation_refused', state: 'paused', cancellation_request_id: nextCancellation.request_id,
+    reason: 'unsafe_to_stop', message: 'Braking at the boundary', geometry_revision: '0' });
+  const refused = await send(refusal);
+  const refusalSummary = { origin, report_id: refusal.report_id, sequence: '9007199254740996', generated_at: '2026-10-21T12:00:00.000000123Z',
+    event: 'cancellation_refused', state: 'paused', cancellation_request_id: nextCancellation.request_id,
+    reason: 'unsafe_to_stop', message: 'Braking at the boundary', geometry_revision: '0' };
+  assert.deepEqual(refused.execution_summary, refusalSummary);
+  assert.equal(refused.cancellation_request_id, null);
+  assert.deepEqual(ok(await f.call('GetTask', { task_id: task.task_id })).execution_summary, refusalSummary);
   const readViews = async (expected, active) => {
     assert.deepEqual(ok(await f.call('GetTask', { task_id: task.task_id })).execution_summary, expected);
     assert.deepEqual(ok(await f.call('ListTasks', { filters: { ids: [task.task_id] } })).items[0].execution_summary, expected);
@@ -266,18 +275,89 @@ test('Task summaries follow selected evidence through current reads, synchroniza
     assert.deepEqual(snapshot.items.find(value => value.resource_id === task.task_id).image.execution_summary, expected);
     ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token }));
   };
+  await readViews(refusalSummary, true);
+  const omitted = make('9007199254740997', { event: 'state', state: 'in_progress' }); omitted.generated_at = null;
+  assert.deepEqual((await send(omitted)).execution_summary, { origin, report_id: omitted.report_id, sequence: '9007199254740997', generated_at: null,
+    event: 'state', state: 'in_progress' });
   await readViews(summary(omitted), true);
-  const failed = make('9007199254740997', { event: 'state', state: 'failed', reason: 'target_unreachable', message: 'Fence blocked route', geometry_revision: '0' });
-  const terminal = await send(failed);
+  const failed = make('9007199254740998', { event: 'state', state: 'failed', reason: 'target_unreachable', message: 'Fence blocked route', geometry_revision: '0' });
+  const failedResult = await f.call('ReportTaskExecution', { evidence: failed }), terminal = ok(failedResult).task;
   assert.deepEqual(terminal.execution_summary, summary(failed));
-  const repeated = await send({ ...failed, report_id: uuid(), sequence: '9007199254740998' });
+  const repeated = await send({ ...failed, report_id: uuid(), sequence: '9007199254740999' });
   assert.equal(repeated.version, terminal.version);
   assert.deepEqual(repeated.execution_summary, summary(failed));
   assert.deepEqual((await send(failed)).execution_summary, summary(failed));
+  const terminalChanges = ok(await f.call('ReadChanges', { from_cursor: failedResult.json.commit_cursor, ...limits }));
+  assert.deepEqual(terminalChanges.messages.filter(message => message.type === 'change_batch'), [], 'Repeated terminal evidence must not publish a replacement Task image');
+  const declaration = { object_id: uuid(), required: true };
+  const results = make('1', { declarations: [declaration] });
+  const withResults = ok(await f.call('ReportTaskResults', { evidence: results })).task;
+  assert.deepEqual(withResults.result_declarations, [declaration]);
+  assert.deepEqual(withResults.execution_summary, summary(failed));
+  assert.ok(BigInt(withResults.version) > BigInt(terminal.version));
+  assert.equal(ok(await f.call('ReportTaskResults', { evidence: results })).evidence_disposition, 'duplicate');
   await f.restart();
   await readViews(summary(failed), false);
   const changes = ok(await f.call('ReadChanges', { from_cursor: baseline.baseline_cursor, ...limits }));
   const images = changes.messages.flatMap(message => message.type === 'change_batch' ? message.data.changes.filter(change => change.kind === 'put' && change.resource_id === task.task_id).map(change => change.image) : []);
   assert.ok(images.some(image => image.execution_summary?.report_id === later.report_id));
   assert.deepEqual(images.at(-1).execution_summary, summary(failed));
+});
+test('cancelled Task summary keeps the confirmed request and omissions through results, reads and Restart', async t => {
+  const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
+  const f = await fixture(t), asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const origin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id,
+    command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 0, longitude: 0 } } } }));
+  const evidence = (sequence, payload) => ({ dataset_id: f.core.dataset, asset_id: asset.id, origin, report_id: uuid(), sequence, generated_at: null,
+    payload: { task_id: task.task_id, ...payload } });
+  const cancellation = { task_id: task.task_id, request_id: uuid() };
+  assert.equal(ok(await f.call('RequestTaskCancellation', cancellation)).execution_summary, null);
+  const refusal = evidence('1', { event: 'cancellation_refused', state: 'pending', reason: 'motor_interlock', cancellation_request_id: cancellation.request_id });
+  const refusalSummary = { origin, report_id: refusal.report_id, sequence: '1', generated_at: null, event: 'cancellation_refused', state: 'pending',
+    reason: 'motor_interlock', cancellation_request_id: cancellation.request_id };
+  const refused = ok(await f.call('ReportTaskExecution', { evidence: refusal })).task;
+  assert.deepEqual(refused.execution_summary, refusalSummary);
+  assert.equal(refused.cancellation_request_id, null);
+  const earlyDeclaration = { object_id: uuid(), required: true };
+  const earlyResults = evidence('1', { declarations: [earlyDeclaration] });
+  const withEarlyResults = ok(await f.call('ReportTaskResults', { evidence: earlyResults })).task;
+  assert.deepEqual(withEarlyResults.execution_summary, refusalSummary);
+  assert.deepEqual(withEarlyResults.result_declarations, [earlyDeclaration]);
+  const nextCancellation = { ...cancellation, request_id: uuid() };
+  assert.deepEqual(ok(await f.call('RequestTaskCancellation', nextCancellation)).execution_summary, refusalSummary);
+  const cancelled = evidence('2', { event: 'state', state: 'cancelled', cancellation_request_id: nextCancellation.request_id });
+  const mismatched = { ...cancelled, payload: { ...cancelled.payload, cancellation_request_id: cancellation.request_id } };
+  assert.equal((await f.call('ReportTaskExecution', { evidence: mismatched })).json.error.code, 'cancellation_changed');
+  assert.deepEqual(ok(await f.call('GetTask', { task_id: task.task_id })).execution_summary, refusalSummary);
+  const selected = await f.call('ReportTaskExecution', { evidence: cancelled }), terminal = ok(selected).task;
+  const expected = { origin, report_id: cancelled.report_id, sequence: '2', generated_at: null, event: 'state', state: 'cancelled',
+    cancellation_request_id: nextCancellation.request_id };
+  assert.deepEqual(terminal.execution_summary, expected);
+  assert.equal(terminal.cancellation_request_id, null);
+  const repeated = await f.call('ReportTaskExecution', { evidence: { ...cancelled, report_id: uuid(), sequence: '3' } });
+  assert.equal(ok(repeated).evidence_disposition, 'accepted'); assert.deepEqual(repeated.json.data.task, terminal);
+  const changes = ok(await f.call('ReadChanges', { from_cursor: selected.json.commit_cursor, ...limits }));
+  assert.deepEqual(changes.messages.filter(message => message.type === 'change_batch'), []);
+  assert.deepEqual(ok(await f.call('ReportTaskExecution', { evidence: cancelled })).task, terminal);
+  const declarations = [earlyDeclaration, { object_id: uuid(), required: false }];
+  const results = evidence('2', { declarations });
+  const appended = ok(await f.call('ReportTaskResults', { evidence: results })).task;
+  assert.deepEqual(appended.result_declarations, declarations); assert.deepEqual(appended.execution_summary, expected);
+  assert.equal(ok(await f.call('ReportTaskResults', { evidence: results })).evidence_disposition, 'duplicate');
+  assert.deepEqual(ok(await f.call('ReportTaskResults', { evidence: earlyResults })).task, appended);
+  for (const restart of [false, true]) {
+    if (restart) await f.restart();
+    assert.deepEqual(ok(await f.call('GetTask', { task_id: task.task_id })), appended);
+    assert.deepEqual(ok(await f.call('ListTasks', { filters: { ids: [task.task_id] } })).items, [appended]);
+    const assigned = ok(await f.call('GetAssignedTasks', { asset_id: asset.id, process_generation: asset.process_generation, read_id: uuid() }));
+    assert.deepEqual(assigned.tasks, []); assert.deepEqual(assigned.task_queue.requested_task_ids, []);
+    const health = ok(await f.call('GetHealth'));
+    const snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }));
+    assert.deepEqual(snapshot.items.find(item => item.resource_id === task.task_id).image, appended);
+    ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token }));
+  }
+  const replay = ok(await f.call('ReadChanges', { from_cursor: selected.json.commit_cursor, ...limits }));
+  const images = replay.messages.flatMap(message => message.type === 'change_batch' ? message.data.changes.filter(change => change.kind === 'put' && change.resource_id === task.task_id).map(change => change.image) : []);
+  assert.deepEqual(images, [appended]);
 });
