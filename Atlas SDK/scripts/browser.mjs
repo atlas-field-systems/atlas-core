@@ -113,7 +113,7 @@ await writeFile(
     2,
   ),
 );
-const child = spawn(process.execPath, ['--test', join(root, 'test/browser-http.test.mjs')], {
+const child = spawn(process.execPath, ['--test', join(root, 'test/browser-runtime.mjs')], {
   cwd: root,
   stdio: 'inherit',
   env: { ...process.env, ATLAS_BROWSER_DIRECTORY: directory, TMPDIR: directory },
