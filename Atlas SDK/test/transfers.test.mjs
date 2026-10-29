@@ -408,6 +408,43 @@ test('transfers: oversized source chunks fail without proportional copies or pub
   await client.close();
 });
 
+test('transfers: large network chunks return bounded exact bytes and verify EOF once', async (t) => {
+  const f = await fixture(t);
+  const { client } = await setup(t, f);
+  const bytes = Buffer.alloc(2 * 1024 * 1024 + 17);
+  for (let index = 0; index < bytes.length; index++) bytes[index] = index % 251;
+  const facts = descriptor(bytes);
+  response((await client.objects.upload(facts, new Blob([bytes])).send()).attempt);
+  const nativeFetch = globalThis.fetch;
+  t.mock.method(globalThis, 'fetch', async (...args) => {
+    const result = await nativeFetch(...args);
+    if (!String(args[0]).includes(`/objects/${facts.object_id}/content?`)) return result;
+    const networkBytes = new Uint8Array(await result.arrayBuffer());
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(networkBytes);
+          controller.close();
+        },
+      }),
+      { status: result.status, headers: result.headers },
+    );
+  });
+  const job = client.objects.content({ object_id: facts.object_id, disposition: 'inline' });
+  const opened = response(await job.open(), 'content');
+  let offset = 0;
+  for await (const chunk of opened.stream) {
+    assert.ok(chunk.byteLength <= 1024 * 1024);
+    assert.deepEqual(Buffer.from(chunk), bytes.subarray(offset, offset + chunk.byteLength));
+    offset += chunk.byteLength;
+  }
+  assert.equal(offset, bytes.length);
+  const verified = await job.settled;
+  response(verified, 'content');
+  assert.equal(verified.context.receivedBytes, bytes.length);
+  await client.close();
+});
+
 test('transfers: source and content failures never establish publication', async (t) => {
   const f = await fixture(t);
   const { client } = await setup(t, f, { baseUrl: f.address });

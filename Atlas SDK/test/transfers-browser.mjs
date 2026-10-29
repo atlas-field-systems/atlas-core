@@ -93,6 +93,56 @@ export async function runTransferAssertions(client) {
     'one Object after retry',
   );
   contexts.push(listed.context);
+  const largeBytes = new Uint8Array(4 * 1024 * 1024);
+  for (let index = 0; index < largeBytes.length; index++)
+    largeBytes[index] = (index * 31 + Math.floor(index / 251)) % 256;
+  const largeDigest = '47e5e20766c15177d1707ee0d182dccb271bfb391c1c40ba80a408fb701a0b1a';
+  const largeFacts = {
+    ...facts,
+    object_id: NewId.parse(crypto.randomUUID()),
+    request_id: NewId.parse(crypto.randomUUID()),
+    byte_length: Counter.parse(String(largeBytes.length)),
+    sha256: largeDigest,
+  };
+  const largeUpload = await client.objects.upload(largeFacts, new Blob([largeBytes])).send();
+  check(
+    largeUpload.attempt.kind === 'response' && largeUpload.outcome.kind === 'accepted',
+    'large native Blob publication',
+  );
+  if (largeUpload.attempt.kind !== 'response') throw new Error('missing large upload context');
+  contexts.push(largeUpload.attempt.context);
+  const delayed = client.objects.content({
+    object_id: largeFacts.object_id,
+    disposition: 'inline',
+  });
+  const largeOpened = await delayed.open();
+  if (largeOpened.kind !== 'response' || largeOpened.response.kind !== 'content')
+    throw new Error('large content headers failed');
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const largeReader = largeOpened.response.stream.getReader();
+  let largeOffset = 0;
+  try {
+    for (;;) {
+      const { done, value } = await largeReader.read();
+      if (done) break;
+      check(value.byteLength <= 1024 * 1024, 'bounded SDK download pieces');
+      for (const byte of value)
+        check(byte === largeBytes[largeOffset++], 'exact delayed download byte');
+    }
+  } finally {
+    largeReader.releaseLock();
+  }
+  check(largeOffset === largeBytes.length, 'complete delayed 4 MiB file');
+  const largeVerified = await delayed.settled;
+  check(
+    largeVerified.kind === 'response' &&
+      largeVerified.response.kind === 'content' &&
+      largeVerified.response.descriptor.sha256 === largeDigest,
+    'delayed download EOF and independent SHA-256 verified',
+  );
+  if (largeVerified.kind !== 'response') throw new Error('missing large download context');
+  check(largeVerified.context.receivedBytes === largeBytes.length, 'network bytes counted once');
+  contexts.push(largeVerified.context);
   const reference = await client.reference('text/html');
   check(
     reference.kind === 'response' &&
@@ -106,6 +156,11 @@ export async function runTransferAssertions(client) {
     objectId: facts.object_id,
     digest,
     byteLength: bytes.length,
+    delayedDownload: {
+      objectId: largeFacts.object_id,
+      digest: largeDigest,
+      byteLength: largeBytes.length,
+    },
     contexts,
     refusedAttemptId: refusal.attempt.kind === 'not_sent' ? refusal.attempt.attemptId : null,
     assertions: [
@@ -113,6 +168,7 @@ export async function runTransferAssertions(client) {
       'native Blob and File multipart',
       'exact same-identity retry',
       'content descriptor and full digest verification',
+      'delayed 4 MiB native download with exact bytes and independent digest',
       'bounded typed reference',
       'supplied bytes distinct from unknown transport bytes',
     ],
