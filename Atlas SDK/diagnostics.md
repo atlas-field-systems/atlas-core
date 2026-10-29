@@ -78,6 +78,7 @@ never truncate identifiers.
 Check lengths before copying. Debug emits at most 100 events per second. Summary
 flushes active counters every 30 seconds; idle intervals produce no event.
 Drop excess diagnostic records and expose known omissions in the next summary.
+If a summary cannot enter the queue, retain its counters for the next interval.
 These initial limits need qualification with the planned workload.
 
 The SDK owns its queue and timer. Deliver events outside request and picture commit

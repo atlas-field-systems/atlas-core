@@ -283,16 +283,17 @@ export class Diagnostics {
       ...(this.#generation === undefined ? {} : { generation: this.#generation }),
     };
   }
-  #enqueue(record: DiagnosticEvent): void {
+  #enqueue(record: DiagnosticEvent): boolean {
     const now = performance.now();
     while (this.#recent[0] !== undefined && now - this.#recent[0] >= 1000) this.#recent.shift();
     if (this.#queue.length >= 128 || (this.#mode === 'debug' && this.#recent.length >= 100)) {
       this.#omitted = add(this.#omitted, 1);
-      return;
+      return false;
     }
     if (this.#mode === 'debug') this.#recent.push(now);
     this.#queue.push(Object.freeze(record));
     this.#delivery ??= setTimeout(() => this.#deliver(), 0);
+    return true;
   }
   #deliver(): void {
     this.#delivery = undefined;
@@ -484,6 +485,10 @@ export class Diagnostics {
       pages: this.#pages,
       omitted: this.#omitted,
     };
+    if (!this.#enqueue(record)) {
+      this.#summary = setTimeout(() => this.#flush(), 30_000);
+      return;
+    }
     for (const [operation] of this.#operations) this.#operations.set(operation, counts(operation));
     for (const [reason] of this.#reasons) this.#reasons.set(reason, 0);
     this.#receivedCommits = 0;
@@ -492,11 +497,6 @@ export class Diagnostics {
     this.#omitted = 0;
     this.#active = false;
     this.#started = now;
-    this.#enqueue(record);
-    if (this.#omitted > 0) {
-      this.#active = true;
-      this.#summary = setTimeout(() => this.#flush(), 30_000);
-    }
   }
   close(): void {
     clearTimeout(this.#delivery);

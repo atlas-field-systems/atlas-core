@@ -128,7 +128,10 @@ test('a rate-limited summary retains aggregate counts for its next delivery', (t
   t.mock.timers.tick(30_000);
   const summaries = events.filter((event) => event.kind === 'summary');
   assert.equal(summaries.length, 1);
-  assert.equal(summaries[0].operations.find((entry) => entry.operation === 'GetTask').attempts, 101);
+  assert.equal(
+    summaries[0].operations.find((entry) => entry.operation === 'GetTask').attempts,
+    101,
+  );
   assert.equal(summaries[0].omitted, 1);
   assert.equal(summaries[0].elapsedMs, 60_001);
 });
