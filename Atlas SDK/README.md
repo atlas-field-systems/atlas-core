@@ -1,6 +1,8 @@
 # Atlas SDK
 
 SDK is the IP-specific TypeScript client for Atlas Core.
+The [HTTP package guide](package-usage.md) lists implemented workflows and usage.
+These contract pages define the complete SDK scope, including Full synchronization.
 It consumes the browser-safe [Protocol](../Atlas%20Protocol/README.md) package,
 exchanges HTTP/JSON and WSS messages with Core, and provides ordinary handwritten
 workflows over shared runtime schemas and inferred types. It imports no Core
