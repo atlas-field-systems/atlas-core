@@ -223,9 +223,14 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
     context.setDefaultTimeout(15_000);
     context.on('request', (request) => {
       if (request.method() !== 'POST' || new URL(request.url()).pathname !== '/objects') return;
-      const body = request.postDataBuffer();
-      assert.ok(body && body.length < 8192, 'Bounded native multipart fixture');
-      multipart.push(body.toString('latin1'));
+      const byteLength = Number(request.headers()['content-length']);
+      assert.ok(Number.isSafeInteger(byteLength) && byteLength > 0);
+      assert.ok(byteLength < 4 * 1024 * 1024 + 8192, 'Bounded native multipart fixture');
+      if (byteLength < 8192) {
+        const body = request.postDataBuffer();
+        assert.equal(body?.length, byteLength);
+        multipart.push({ byteLength, body: body.toString('latin1') });
+      } else multipart.push({ byteLength });
     });
     context.on('response', (response) => {
       if (!response.url().startsWith('https:')) return;
@@ -241,6 +246,8 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
             allowedOrigin: headers['access-control-allow-origin'],
             allowedHeaders: headers['access-control-allow-headers'],
             exposedHeaders: headers['access-control-expose-headers'],
+            contentLength: headers['content-length'],
+            contentSha256: headers['atlas-content-sha256'],
           });
         })().catch((error) => {
           failures.push(error);
@@ -420,13 +427,28 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
     traffic.filter((request) => request.attemptId === transfers.refusedAttemptId).length,
     0,
   );
-  assert.equal(multipart.length, 2, 'Blob and File both use native multipart');
-  for (const body of multipart) {
+  assert.equal(multipart.length, 3, 'Two small native retries and one large Blob upload');
+  const captured = multipart.filter((upload) => upload.body !== undefined);
+  assert.equal(captured.length, 2, 'Only the two small multipart bodies are captured');
+  for (const { body } of captured) {
     assert.ok(body.indexOf('name="descriptor"') < body.indexOf('name="file"'));
     assert.match(body, /name="descriptor"[^\r]*\r\nContent-Type: application\/json/i);
     assert.match(body, /name="file"[^\r]*\r\nContent-Type: application\/octet-stream/i);
     assert.ok(!body.includes('private-name.bin'), 'Transport does not expose caller filename');
   }
+  const large = multipart.filter((upload) => upload.body === undefined);
+  assert.equal(large.length, 1);
+  assert.ok(large[0].byteLength > 4 * 1024 * 1024);
+  assert.equal(transfers.delayedDownload.byteLength, 4 * 1024 * 1024);
+  assert.match(transfers.delayedDownload.objectId, uuid);
+  assert.notEqual(transfers.delayedDownload.objectId, transfers.objectId);
+  assert.match(transfers.delayedDownload.digest, /^[0-9a-f]{64}$/);
+  const delayedContent = responses.find(
+    (response) => response.path === `/objects/${transfers.delayedDownload.objectId}/content`,
+  );
+  assert.ok(delayedContent, 'Actual Core response for the delayed large download');
+  assert.equal(delayedContent.contentLength, String(transfers.delayedDownload.byteLength));
+  assert.equal(delayedContent.contentSha256, transfers.delayedDownload.digest);
   for (const attempt of transfers.contexts) {
     const request = traffic.filter((request) => request.attemptId === attempt.attemptId);
     const response = responses.find((response) => response.attemptId === attempt.attemptId);
@@ -526,6 +548,9 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
     sha256: transfers.digest,
     byteLength: transfers.byteLength,
     nativeMultipartRequests: multipart.length,
+    capturedMultipartRequests: captured.length,
+    largeMultipartBytes: large[0].byteLength,
+    delayedDownload: transfers.delayedDownload,
     correlatedAttempts: transfers.contexts.length,
   };
   report.correlatedAttemptContexts =

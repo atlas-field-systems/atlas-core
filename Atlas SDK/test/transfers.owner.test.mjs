@@ -127,13 +127,22 @@ test('transfers: split network streams still reject short EOF and wrong digests'
           controller.close();
         },
       });
-      const owner = new TransferReader(incoming, signal, expected.length, digest(expected), 'download');
+      const owner = new TransferReader(
+        incoming,
+        signal,
+        expected.length,
+        digest(expected),
+        'download',
+      );
       const content = verifiedStream(owner, signal);
       const completed = assert.rejects(content.completed, { code: 'integrity_mismatch' });
       let received = 0;
-      await assert.rejects(async () => {
-        for await (const piece of content.stream) received += piece.length;
-      }, { code: 'integrity_mismatch' });
+      await assert.rejects(
+        async () => {
+          for await (const piece of content.stream) received += piece.length;
+        },
+        { code: 'integrity_mismatch' },
+      );
       await completed;
       assert.equal(received, bytes.length, 'Bytes remain provisional until EOF');
       assert.equal(owner.bytes, bytes.length);
@@ -161,7 +170,13 @@ test('transfers: cancellation and abort discard a pending network remainder with
         },
         { highWaterMark: 0 },
       );
-      const owner = new TransferReader(incoming, abort.signal, bytes.length, digest(bytes), 'download');
+      const owner = new TransferReader(
+        incoming,
+        abort.signal,
+        bytes.length,
+        digest(bytes),
+        'download',
+      );
       const content = verifiedStream(owner, abort.signal);
       const completed = assert.rejects(content.completed, { code: 'cancelled' });
       const reader = content.stream.getReader();
@@ -191,21 +206,26 @@ test('transfers: stopped owners release pending network storage before cleanup s
   if (!globalThis.gc) {
     const environment = { ...process.env };
     delete environment.NODE_TEST_CONTEXT;
-    const result = await promisify(execFile)(process.execPath, [
-      '--expose-gc',
-      '--test',
-      '--test-name-pattern=stopped owners release pending network storage',
-      fileURLToPath(import.meta.url),
-    ], { env: environment, maxBuffer: 1024 * 1024 });
+    const result = await promisify(execFile)(
+      process.execPath,
+      [
+        '--expose-gc',
+        '--test',
+        '--test-name-pattern=stopped owners release pending network storage',
+        fileURLToPath(import.meta.url),
+      ],
+      { env: environment, maxBuffer: 1024 * 1024 },
+    );
     assert.match(result.stdout, /fail 0/);
     return;
   }
   for (const mode of ['stop', 'close', 'abort']) {
     await t.test(mode, async () => {
       const abort = new AbortController();
-      let storage,
-        release;
-      const cleanup = new Promise((resolve) => { release = resolve; });
+      let storage, release;
+      const cleanup = new Promise((resolve) => {
+        release = resolve;
+      });
       const size = 2 * mebibyte + 17;
       const incoming = new ReadableStream(
         {
@@ -220,7 +240,13 @@ test('transfers: stopped owners release pending network storage before cleanup s
         },
         { highWaterMark: 0 },
       );
-      const owner = new TransferReader(incoming, abort.signal, size, digest(Buffer.alloc(size)), 'download');
+      const owner = new TransferReader(
+        incoming,
+        abort.signal,
+        size,
+        digest(Buffer.alloc(size)),
+        'download',
+      );
       const first = await owner.read();
       await setImmediate();
       globalThis.gc();
