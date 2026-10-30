@@ -357,7 +357,8 @@ test('Asset registration keys cannot replay as ordinary key creation', async (t)
 test('ordinary key retries survive Reset and retained Asset credentials keep their context', async (t) => {
   const f = await fixture(t);
   const creation = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
-  const key = ok(await f.call('CreateApiKey', creation));
+  const first = await f.call('CreateApiKey', creation);
+  const key = ok(first);
   const registered = registration();
   ok(await f.call('RegisterAsset', registered));
   await f.core.close();
@@ -385,7 +386,10 @@ test('ordinary key retries survive Reset and retained Asset credentials keep the
   assert.equal(established.established, true);
   await f.restart();
   assert.equal(f.core.dataset, dataset);
-  assert.deepEqual(ok(await f.call('CreateApiKey', creation)), key);
+  const repeated = await f.call('CreateApiKey', creation);
+  assert.deepEqual(ok(repeated), key);
+  assert.equal(repeated.json.dataset_id, dataset);
+  assert.equal(repeated.json.commit_cursor, f.core.dataset + '/00000000000000000000');
   assert.equal(
     (await f.call('GetHealth', {}, { Authorization: `Bearer ${registered.secret}` })).status,
     200,

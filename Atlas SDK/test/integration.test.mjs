@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { fixture, uuid, registration, task, barrier } from './harness.mjs';
+import { fixture, uuid, secret, registration, task, barrier } from './harness.mjs';
 import { success, sent, reading, telemetry } from './public-helpers.mjs';
 const { createClient, ClientCloseError } = await import(
   process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
@@ -15,6 +15,36 @@ async function until(predicate) {
     await delay(10);
   }
 }
+
+test('public setup retry after Reset preserves key identity at the new Dataset boundary', async (t) => {
+  const f = await fixture(t);
+  const client = f.client();
+  success(await client.connect());
+  const facts = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+  const original = client.apiKeys.create(facts);
+  const first = await original.send();
+  const key = sent(first);
+  const dataset = f.datasetId;
+  assert.ok(first.attempt.response.body.commit_cursor);
+  await f.reset();
+  success(await client.connect());
+  assert.notEqual(f.datasetId, dataset);
+  assert.equal((await original.send()).attempt.code, 'dataset_invalidated');
+  const repeated = await client.apiKeys.create(facts).send();
+  assert.deepEqual(sent(repeated), key);
+  assert.equal(repeated.attempt.response.body.dataset_id, f.datasetId);
+  assert.notEqual(
+    repeated.attempt.response.body.commit_cursor,
+    first.attempt.response.body.commit_cursor,
+  );
+  const retainedKeyClient = f.client({ mode: 'full', credentials: () => facts.secret });
+  success(await retainedKeyClient.connect());
+  await until(() => retainedKeyClient.picture.status.kind === 'synchronized');
+  assert.equal(
+    repeated.attempt.response.body.commit_cursor,
+    retainedKeyClient.picture.status.cursor,
+  );
+});
 
 for (const mode of ['http', 'full'])
   test(`public ${mode} retains exact report ordering and atomic history across gateways and Restart`, async (t) => {

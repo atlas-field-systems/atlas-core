@@ -62,8 +62,10 @@ Registration alone is not contact. Reset retains valid setup bindings, but the A
 must register into the new Dataset using fresh request identity, not relabeled reports.
 
 API-key creation uses stable creation IDs. Core stores verifiers, not retrievable
-secrets. Creation identity survives Reset. First-key provisioning and credential
-replacement are local administration.
+secrets. Creation identity survives Reset; its old Dataset's commit cursor does not.
+An exact creation retry after Reset returns the retained identity and the new
+Dataset's establishment cursor, which includes the retained installation setup.
+First-key provisioning and credential replacement are local administration.
 
 ## API-key encoding
 

@@ -86,6 +86,11 @@ An ordinary network outage resumes from the last complete applied cursor when
 Protocol permits it. Expired replay requires replacement. Incomplete captures,
 complete staging, and a published picture are different recovery states; do not
 restart every case from zero or reuse an expired allocation context.
+Transient feed-queue pressure drains the bounded admitted prefix before reconnecting
+from its last complete cursor. It preserves the published picture and generation;
+exhausting the shared picture budget still requires explicit retry.
+An individual frame that cannot fit the ingress queue also pauses maintenance
+until explicit retry.
 Fetch a fresh Core allocation context immediately before each new remote allocation.
 Exact allocation retries retain their original context and identity.
 
