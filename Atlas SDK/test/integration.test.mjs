@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { fixture, uuid, registration, barrier } from './harness.mjs';
+import { fixture, uuid, registration, task, barrier } from './harness.mjs';
 import { success, sent, reading, telemetry } from './public-helpers.mjs';
 const { createClient, ClientCloseError } = await import(
   process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
@@ -15,6 +15,214 @@ async function until(predicate) {
     await delay(10);
   }
 }
+
+test(
+  'operator and Asset SDKs execute assigned work with independent Task evidence across Core Restart',
+  { timeout: 30_000 },
+  async (t) => {
+    const f = await fixture(t);
+    const operator = f.client({ mode: 'full' });
+    success(await operator.connect());
+    const registrationFacts = registration('Mission Asset');
+    sent(await operator.assets.register(registrationFacts).send());
+    const asset = f.client({ credentials: () => registrationFacts.secret });
+    success(await asset.connect());
+    const first = {
+      ...task(registrationFacts.asset_id),
+      task_id: '10000000-0000-4000-8000-000000000001',
+    };
+    const second = {
+      ...task(registrationFacts.asset_id),
+      task_id: '10000000-0000-4000-8000-000000000002',
+    };
+    first.inputs.target.position.latitude = 12;
+    second.inputs.target.position.latitude = 34;
+    sent(await operator.tasks.create(first).send());
+    sent(await operator.tasks.create(second).send());
+    const requestedOrder = [second.task_id, first.task_id];
+    const reordered = sent(
+      await operator.tasks
+        .setOrder({
+          request_id: uuid(),
+          asset_id: registrationFacts.asset_id,
+          expected_queue_revision: '2',
+          task_ids: requestedOrder,
+        })
+        .send(),
+    );
+    assert.deepEqual(reordered.task_queue.requested_task_ids, requestedOrder);
+    assert.equal(reordered.task_queue.revision, '3');
+    const assigned = asset.tasks.assigned({
+      asset_id: registrationFacts.asset_id,
+      process_generation: registrationFacts.process_generation,
+      read_id: uuid(),
+      page_size: 1,
+    });
+    const firstPage = success(await assigned.next()),
+      secondPage = success(await assigned.next());
+    assert.deepEqual(firstPage.task_queue.requested_task_ids, requestedOrder);
+    assert.deepEqual(secondPage.task_queue, firstPage.task_queue);
+    assert.deepEqual(
+      [...firstPage.tasks, ...secondPage.tasks].map((item) => [
+        item.task_id,
+        item.inputs.target.position.latitude,
+      ]),
+      [
+        [first.task_id, 12],
+        [second.task_id, 34],
+      ],
+    );
+    assert.deepEqual(await assigned.next(), { kind: 'end' });
+    assigned.close();
+    const source = {
+      dataset_id: asset.state.datasetId,
+      asset_id: registrationFacts.asset_id,
+      origin: {
+        kind: 'asset_process',
+        process_generation: registrationFacts.process_generation,
+      },
+      generated_at: '2026-10-21T12:00:00.0000001Z',
+    };
+    const adopted = sent(
+      await asset.tasks
+        .confirmOrder({
+          evidence: {
+            ...source,
+            report_id: uuid(),
+            sequence: '1',
+            payload: { queue_revision: firstPage.task_queue.revision },
+          },
+        })
+        .send(),
+    );
+    assert.deepEqual(adopted.asset.task_queue.confirmed, {
+      revision: '3',
+      process_generation: registrationFacts.process_generation,
+    });
+    const reportId = uuid();
+    const acknowledge = (taskId) =>
+      asset.tasks.reportExecution({
+        evidence: {
+          ...source,
+          report_id: reportId,
+          sequence: '1',
+          payload: { task_id: taskId, event: 'state', state: 'acknowledged' },
+        },
+      });
+    const lost = acknowledge(first.task_id);
+    f.once('/messages/report_task_execution', ({ outgoing }) => outgoing.destroy());
+    assert.equal((await lost.send()).outcome.kind, 'unknown_outcome');
+    const other = sent(await acknowledge(second.task_id).send());
+    assert.equal(other.task.task_id, second.task_id);
+    assert.equal(other.task.execution_summary.report_id, reportId);
+    assert.equal(lost.outcome.kind, 'unknown_outcome');
+    assert.equal(sent(await lost.send()).evidence_disposition, 'duplicate');
+    assert.equal(lost.outcome.kind, 'accepted');
+    const cancellation = { request_id: uuid(), task_id: second.task_id };
+    const requested = sent(await operator.tasks.cancel(cancellation).send());
+    assert.equal(requested.cancellation_request_id, cancellation.request_id);
+    assert.equal(requested.execution_state, 'acknowledged');
+    const refused = sent(
+      await asset.tasks
+        .reportExecution({
+          evidence: {
+            ...source,
+            report_id: uuid(),
+            sequence: '2',
+            payload: {
+              task_id: second.task_id,
+              event: 'cancellation_refused',
+              state: 'acknowledged',
+              cancellation_request_id: cancellation.request_id,
+              reason: 'operator_requested_continue',
+            },
+          },
+        })
+        .send(),
+    );
+    assert.equal(refused.task.cancellation_request_id, null);
+    assert.equal(refused.task.execution_state, 'acknowledged');
+    const completionId = uuid();
+    const completed = await asset.tasks
+      .reportExecution({
+        evidence: {
+          ...source,
+          report_id: completionId,
+          sequence: '3',
+          payload: { task_id: second.task_id, event: 'state', state: 'completed' },
+        },
+      })
+      .send();
+    sent(completed);
+    const expectedSummary = {
+      origin: source.origin,
+      report_id: completionId,
+      sequence: '3',
+      generated_at: '2026-10-21T12:00:00.0000001Z',
+      event: 'state',
+      state: 'completed',
+    };
+    const retained = success(await asset.tasks.get({ task_id: second.task_id }));
+    assert.deepEqual(retained.execution_summary, expectedSummary);
+    assert.equal(retained.cancellation_request_id, null);
+    await until(
+      () =>
+        operator.picture.status.kind === 'synchronized' &&
+        operator.picture.status.cursor === completed.attempt.response.body.commit_cursor,
+    );
+    const beforeLocal = f.traffic.length;
+    assert.deepEqual(
+      operator.tasks.get({ task_id: second.task_id }).value.execution_summary,
+      expectedSummary,
+    );
+    assert.deepEqual(
+      operator.assets.get({ asset_id: registrationFacts.asset_id }).value.task_queue
+        .requested_task_ids,
+      [first.task_id],
+    );
+    assert.equal(f.traffic.length, beforeLocal);
+    await operator.close();
+    await f.restart();
+    success(await asset.connect());
+    assert.deepEqual(success(await asset.tasks.get({ task_id: second.task_id })), retained);
+    const remaining = asset.tasks.assigned({
+      asset_id: registrationFacts.asset_id,
+      process_generation: registrationFacts.process_generation,
+      read_id: uuid(),
+    });
+    assert.deepEqual(
+      success(await remaining.next()).tasks.map((item) => item.task_id),
+      [first.task_id],
+    );
+    remaining.close();
+    const rebuilt = f.client({ mode: 'full' });
+    success(await rebuilt.connect());
+    await until(() => rebuilt.picture.status.kind === 'synchronized');
+    const beforeRebuilt = f.traffic.length;
+    assert.deepEqual(rebuilt.tasks.get({ task_id: second.task_id }).value, retained);
+    assert.deepEqual(
+      rebuilt.assets.get({ asset_id: registrationFacts.asset_id }).value.task_queue
+        .requested_task_ids,
+      [first.task_id],
+    );
+    assert.equal(f.traffic.length, beforeRebuilt);
+    t.diagnostic(
+      JSON.stringify({
+        workflow: 'assigned-task-execution',
+        datasetId: asset.state.datasetId,
+        requestedOrder,
+        confirmedRevision: '3',
+        sharedReportId: reportId,
+        lostReplyRetry: 'duplicate',
+        completedTask: second.task_id,
+        completion: expectedSummary,
+        remainingTasks: [first.task_id],
+        restart: 'retained HTTP and rebuilt Full state',
+        localReadHttpRequests: 0,
+      }),
+    );
+  },
+);
 
 for (const mode of ['http', 'full']) {
   test(`public ${mode} composes reporting, explicit HTTP reads, verified content and bounded close`, async (t) => {

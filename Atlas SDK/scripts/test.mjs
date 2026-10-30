@@ -1,5 +1,5 @@
-import { mkdtemp, mkdir, readdir, realpath, rm } from 'node:fs/promises';
-import { spawn, execFileSync } from 'node:child_process';
+import { mkdtemp, mkdir, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
@@ -45,7 +45,47 @@ console.log(
   `${process.env.ATLAS_SDK_ENTRY ? 'Installed public' : 'Source public and internal owner'} suites: ${suites.join(', ')}`,
 );
 if (suites.length === 0) throw new Error('No SDK test suites found');
-const child = spawn(process.execPath, ['--test', ...process.argv.slice(2), ...suites], {
+const evidence = await mkdtemp(join(parent, 'sdk-evidence-'));
+const revision = spawnSync('git', ['rev-parse', 'HEAD'], {
+  cwd: workspace,
+  encoding: 'utf8',
+});
+const changes = spawnSync('git', ['status', '--porcelain', '--untracked-files=normal'], {
+  cwd: workspace,
+  encoding: 'utf8',
+});
+const args = [
+  '--test',
+  ...process.argv.slice(2),
+  '--test-reporter=spec',
+  '--test-reporter-destination=stdout',
+  '--test-reporter=tap',
+  `--test-reporter-destination=${join(evidence, 'results.tap')}`,
+  ...suites,
+];
+const report = {
+  kind: process.env.ATLAS_SDK_ENTRY ? 'installed' : 'source',
+  entry: process.env.ATLAS_SDK_ENTRY ?? new URL('../dist/index.js', import.meta.url).href,
+  revision:
+    process.env.ATLAS_SOURCE_REVISION ?? (revision.status === 0 ? revision.stdout.trim() : null),
+  dirty:
+    process.env.ATLAS_SOURCE_DIRTY === undefined
+      ? changes.status === 0
+        ? changes.stdout.trim().length > 0
+        : null
+      : process.env.ATLAS_SOURCE_DIRTY !== 'false',
+  node: process.versions.node,
+  platform: `${process.platform}/${process.arch}`,
+  command: [process.execPath, ...args],
+  suites,
+  fixtureRoot: root,
+  status: 'running',
+};
+const saveReport = () =>
+  writeFile(join(evidence, 'report.json'), JSON.stringify(report, null, 2) + '\n');
+await saveReport();
+console.log(`SDK test report and TAP: ${evidence}`);
+const child = spawn(process.execPath, args, {
   cwd: new URL('../', import.meta.url),
   stdio: 'inherit',
   env: {
@@ -56,10 +96,18 @@ const child = spawn(process.execPath, ['--test', ...process.argv.slice(2), ...su
     NODE_EXTRA_CA_CERTS: certificate,
   },
 });
-const code = await new Promise((resolve, reject) => {
+const result = await new Promise((resolve, reject) => {
   child.once('error', reject);
-  child.once('close', (code, signal) => resolve(signal ? 1 : (code ?? 1)));
+  child.once('close', (code, signal) => resolve({ code, signal }));
 });
+const code = result.signal ? 1 : (result.code ?? 1);
 if (code === 0) await rm(root, { recursive: true, force: true });
 else console.error(`Retained SDK test evidence at ${root}`);
+Object.assign(report, {
+  status: code === 0 ? 'passed' : 'failed',
+  exitCode: code,
+  signal: result.signal,
+  fixturesRemoved: code === 0,
+});
+await saveReport();
 process.exitCode = code;

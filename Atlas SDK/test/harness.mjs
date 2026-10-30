@@ -211,20 +211,26 @@ export async function fixture(t, options = {}) {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const proxyUrl = `https://127.0.0.1:${server.address().port}`;
   t.after(async () => {
-    await Promise.all([...clients].map((client) => client.close()));
+    const closed = await Promise.allSettled([...clients].map((client) => client.close()));
+    for (const result of closed) {
+      if (result.status === 'rejected') failures.push(result.reason);
+    }
     for (const { upstream, downstream } of feeds) {
       upstream.terminate();
       downstream.terminate();
     }
-    await new Promise((resolve) => websocketServer.close(resolve));
+    await new Promise((resolve, reject) =>
+      websocketServer.close((error) => (error ? reject(error) : resolve())),
+    ).catch((error) => failures.push(error));
     for (const socket of sockets) socket.destroy();
     await new Promise((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
-    );
+    ).catch((error) => failures.push(error));
     await Promise.allSettled(jobs);
-    await core.close();
-    if (failures.length) throw new AggregateError(failures, 'HTTPS proxy failed');
-    await rm(directory, { recursive: true, force: true });
+    await core.close().catch((error) => failures.push(error));
+    if (t.passed && failures.length === 0) await rm(directory, { recursive: true, force: true });
+    else t.diagnostic(`Retained Core fixture: ${directory}`);
+    if (failures.length) throw new AggregateError(failures, 'SDK fixture cleanup failed');
   });
   return {
     directory,
