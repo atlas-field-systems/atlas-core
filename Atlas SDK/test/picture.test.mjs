@@ -40,6 +40,157 @@ async function ready(client, cursor) {
 async function register(client, alias) {
   return success((await client.assets.register(registration(alias)).send()).attempt).data.asset;
 }
+
+for (const recovery of ['live', 'authorization'])
+  test(
+    `bounded feed bursts preserve the picture through repeated ${recovery} replay`,
+    { timeout: 30_000 },
+    async (t) => {
+      const f = await fixture(t),
+        admin = await connected(f),
+        sockets = observeSockets(t);
+      const key = { request_id: uuid(), api_key_id: uuid(), secret: secret() };
+      success((await admin.apiKeys.create(key).send()).attempt);
+      let credential = key.secret;
+      const sentinel = await register(admin, 'before burst');
+      const client = await connected(f, { mode: 'full', credentials: () => credential });
+      await ready(client);
+      const generation = client.picture.status.generation,
+        boundary = client.picture.cursor,
+        snapshots = f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length;
+      const query = available(client.assets.query({})),
+        frozen = available(query.page());
+      if (recovery === 'authorization') {
+        success(
+          (await admin.apiKeys.revoke({ request_id: uuid(), api_key_id: key.api_key_id }).send())
+            .attempt,
+        );
+        await until(
+          () => client.picture.status.kind === 'authorization-required',
+          'No authorization pause',
+        );
+      }
+      const held = barrier(),
+        reached = barrier(),
+        gates = Array.from({ length: 2 }, () => ({ release: barrier(), socket: null }));
+      const digest = crypto.subtle.digest;
+      let lastSocket,
+        gateIndex = 0;
+      crypto.subtle.digest = async function (...args) {
+        const socket = sockets.at(-1);
+        if (socket !== lastSocket && gateIndex < gates.length) {
+          lastSocket = socket;
+          const gate = gates[gateIndex++];
+          gate.socket = socket;
+          await gate.release.promise;
+        }
+        return digest.apply(this, args);
+      };
+      f.wssOnce('change_batch', async ({ send }) => {
+        reached.resolve();
+        await held.promise;
+        send();
+      });
+      const facts = Array.from({ length: 300 }, () => registration());
+      let finalCursor;
+      try {
+        for (const item of facts) {
+          const operation = admin.assets.register(item);
+          const result = await operation.send();
+          finalCursor = success(result.attempt).commit_cursor;
+          operation.close();
+        }
+        if (recovery === 'authorization') {
+          credential = f.apiKey;
+          success(await client.recover());
+        }
+        await until(
+          () =>
+            f.wssTraffic.some(
+              (entry) => entry.direction === 'server' && entry.type === 'change_batch',
+            ),
+          'No burst frame',
+        );
+        await reached.promise;
+        held.resolve();
+        for (const gate of gates) {
+          await until(() => gate.socket !== null, 'No replay digest');
+          await until(
+            () => gate.socket.readyState === WebSocket.CLOSED,
+            'Pressure did not retire the socket',
+          );
+          assert.equal(client.picture.status.generation, generation);
+          assert.deepEqual(available(client.assets.get({ asset_id: sentinel.id })), sentinel);
+          assert.equal(available(query.page()).cursor, frozen.cursor);
+          const cursor = client.picture.status.cursor;
+          gate.release.resolve();
+          await until(() => client.picture.status.cursor !== cursor, 'Replay made no progress');
+        }
+        await ready(client, finalCursor);
+        assert.equal(client.picture.status.generation, generation);
+        assert.equal(
+          f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length,
+          snapshots,
+        );
+        for (const item of facts)
+          assert.equal(available(client.assets.get({ asset_id: item.asset_id })).id, item.asset_id);
+        const journal = available(client.picture.changedSince(boundary, 1000));
+        assert.equal(journal.hasMore, false);
+        const changes = journal.commits.flatMap((commit) => commit.changes);
+        assert.deepEqual(
+          changes.map((change) => change.resource_id).sort(),
+          facts.map((item) => item.asset_id).sort(),
+        );
+        assert.deepEqual(available(query.page()).items, [sentinel]);
+        t.diagnostic(
+          `Drained ${gates.length} pressured connections and retained all ${facts.length} Assets`,
+        );
+      } finally {
+        held.resolve();
+        for (const gate of gates) gate.release.resolve();
+        crypto.subtle.digest = digest;
+        query.close();
+      }
+    },
+  );
+
+test('an over-limit feed frame pauses maintenance until explicit retry', async (t) => {
+  const f = await fixture(t),
+    admin = await connected(f),
+    sockets = observeSockets(t);
+  const sentinel = await register(admin, 'before oversized frame');
+  const client = await connected(f, { mode: 'full' });
+  await ready(client);
+  const query = available(client.assets.query({}));
+  const snapshots = f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length,
+    connections = sockets.length;
+  f.wssOnce('change_batch', ({ to }) => to.send('x'.repeat(4_194_305)));
+  const after = await register(admin, 'after oversized frame');
+  await until(
+    () => client.picture.status.kind === 'resource-limited',
+    'Oversized frame did not pause maintenance',
+  );
+  assert.equal(client.picture.status.reason, 'capacity');
+  assert.equal(client.assets.get({ asset_id: sentinel.id }).kind, 'unavailable');
+  assert.equal(query.page().code, 'invalid_token');
+  await delay(600);
+  assert.equal(sockets.length, connections);
+  assert.equal(
+    f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length,
+    snapshots,
+  );
+  client.picture.retry();
+  await ready(client);
+  assert.deepEqual(available(client.assets.get({ asset_id: sentinel.id })), sentinel);
+  assert.deepEqual(available(client.assets.get({ asset_id: after.id })), after);
+  assert.equal(sockets.length, connections + 1);
+  assert.equal(
+    f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length,
+    snapshots + 1,
+  );
+  query.close();
+});
+
 function observeSockets(t) {
   const Native = globalThis.WebSocket;
   const sockets = [];
