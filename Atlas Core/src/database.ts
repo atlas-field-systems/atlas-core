@@ -166,6 +166,7 @@ export class Store {
         ? 'DELETE FROM retry; DELETE FROM commit_log'
         : "DELETE FROM retry WHERE scope NOT LIKE 'setup/%'; DELETE FROM commit_log",
     );
+    this.db.prepare('UPDATE retry SET cursor=?').run(`${dataset}/${zero.padStart(20, '0')}`);
     this.setMeta('dataset', dataset);
     this.setMeta('sequence', zero);
     this.setMeta('earliest', zero);

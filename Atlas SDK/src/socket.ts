@@ -52,7 +52,7 @@ export function feedSocket(
   let budget: Budget = messageBudget(session.responseBudget, limits);
   let phase: 'authentication' | 'subscription' | 'feed' = 'authentication';
   let handoff = '';
-  let ended = false;
+  let state: 'accepting' | 'draining' | 'ended' = 'accepting';
   let closing: Promise<void> | undefined;
   const queued: { text: string; bytes: number }[] = [];
   let queuedBytes = 0;
@@ -70,8 +70,8 @@ export function feedSocket(
   let subscriptionTimer: ReturnType<typeof setTimeout> | undefined;
 
   function end(result: SocketEnd): void {
-    if (ended) return;
-    ended = true;
+    if (state === 'ended') return;
+    state = 'ended';
     clearTimeout(authenticationTimer);
     clearTimeout(subscriptionTimer);
     for (const item of queued) memory.release(item.bytes);
@@ -109,8 +109,11 @@ export function feedSocket(
     end({ kind: 'stopped', code: 'superseded' });
   }
   lease.signal.addEventListener('abort', aborted, { once: true });
+  function canProcess(): boolean {
+    return lease.current() && state !== 'ended';
+  }
   socket.addEventListener('open', () => {
-    if (!lease.current() || ended) {
+    if (!lease.current() || state === 'ended') {
       aborted();
       return;
     }
@@ -131,12 +134,22 @@ export function feedSocket(
     }
   });
   function message(event: MessageEvent<unknown>): void {
-    if (!lease.current() || ended) return;
+    if (!lease.current() || state !== 'accepting') return;
     try {
       if (typeof event.data !== 'string') throw new SdkError('invalid_value');
       const bytes = event.data.length * 2 + 256;
-      if (queued.length >= 64 || bytes + queuedBytes > budget.maxBytes * 2 + 256)
-        throw new SdkError('capacity');
+      const ceiling = budget.maxBytes * 2 + 256;
+      if (bytes > ceiling) {
+        end({ kind: 'capacity', code: 'payload_too_large' });
+        return;
+      }
+      if (queued.length >= 64 || bytes + queuedBytes > ceiling) {
+        state = 'draining';
+        clearTimeout(authenticationTimer);
+        clearTimeout(subscriptionTimer);
+        if (socket.readyState < WebSocket.CLOSING) socket.close();
+        return;
+      }
       memory.take(bytes);
       queued.push({ text: event.data, bytes });
       queuedBytes += bytes;
@@ -151,7 +164,7 @@ export function feedSocket(
     }
   }
   async function drain(): Promise<void> {
-    while (queued.length && lease.current() && !ended) {
+    while (queued.length && canProcess()) {
       const item = queued.shift();
       if (!item) return;
       queuedBytes -= item.bytes;
@@ -161,9 +174,10 @@ export function feedSocket(
         memory.release(item.bytes);
       }
     }
+    if (state === 'draining') end({ kind: 'transport', code: 'network' });
   }
   async function process(text: string): Promise<void> {
-    if (!lease.current() || ended) return;
+    if (!canProcess()) return;
     let release: (() => void) | undefined;
     try {
       const maximum = phase === 'authentication' ? 16_384 : budget.maxBytes;
@@ -218,6 +232,10 @@ export function feedSocket(
           return;
         }
         clearTimeout(authenticationTimer);
+        if (state === 'draining' || socket.readyState !== WebSocket.OPEN) {
+          end({ kind: 'transport', code: 'network' });
+          return;
+        }
         phase = 'subscription';
         subscriptionTimer = setTimeout(
           () => end({ kind: 'transport', code: 'deadline' }),
@@ -272,7 +290,7 @@ export function feedSocket(
               'SHA-256',
               new TextEncoder().encode(JSON.stringify(canonical)),
             );
-            if (!lease.current() || ended) return;
+            if (!canProcess()) return;
             const fingerprint = Array.from(new Uint8Array(digest), (byte) =>
               byte.toString(16).padStart(2, '0'),
             ).join('');
@@ -300,12 +318,14 @@ export function feedSocket(
     }
   }
   socket.addEventListener('message', message);
-  socket.addEventListener('error', () => end({ kind: 'transport', code: 'network' }));
+  socket.addEventListener('error', () => {
+    if (state !== 'draining') end({ kind: 'transport', code: 'network' });
+  });
   const closed = new Promise<void>((resolve) => {
     socket.addEventListener(
       'close',
       () => {
-        end({ kind: 'transport', code: 'network' });
+        if (state !== 'draining') end({ kind: 'transport', code: 'network' });
         resolve();
       },
       { once: true },
