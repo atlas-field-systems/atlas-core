@@ -16,6 +16,196 @@ async function until(predicate) {
   }
 }
 
+for (const mode of ['http', 'full'])
+  test(`public ${mode} retains exact report ordering and atomic history across gateways and Restart`, async (t) => {
+    const f = await fixture(t);
+    const writer = f.client({ mode });
+    const gateway = f.client();
+    success(await writer.connect());
+    success(await gateway.connect());
+    const publisher_id = uuid();
+    const { creation, reporter } = writer.reporting.createObservation({
+      observation_id: uuid(),
+      publisher_id,
+      request_id: uuid(),
+    });
+    const pair = sent(await creation.send());
+    const origin = { kind: 'publisher', publisher_id };
+    const reports = [
+      reading('9007199254740993', {
+        telemetry: telemetry(origin, 23, '2026-10-21T12:00:01.0000003Z'),
+      }),
+      reading('9007199254740992', {
+        telemetry: telemetry(origin, 22, '2026-10-21T12:00:01.0000002Z'),
+      }),
+      reading(
+        '9007199254740997',
+        { telemetry: telemetry(origin, 21, '2026-10-21T12:00:01.000000250Z') },
+        { mode: 'history_only' },
+      ),
+    ];
+    sent(await reporter.report(reports[0]).send());
+    const older = reporter.report(reports[1]);
+    const relayed = gateway.observations.report(older.submission.facts);
+    f.once('/messages/report_observation', ({ outgoing }) => outgoing.destroy());
+    const raced = await Promise.all([older.send(), relayed.send()]);
+    assert.deepEqual(raced.map((item) => item.outcome.kind).sort(), [
+      'accepted',
+      'unknown_outcome',
+    ]);
+    assert.equal(sent(await older.send()).evidence_disposition, 'duplicate');
+    assert.equal(sent(await relayed.send()).evidence_disposition, 'duplicate');
+    const frozen = writer.observations.history({
+      entity_id: pair.observation.id,
+      query_id: uuid(),
+      page_size: 1,
+      time_groups: ['known'],
+    });
+    const first = success(await frozen.next());
+    assert.equal(first.readings[0].value.latitude, 22);
+    const relay = gateway.reporting.observation({ id: pair.observation.id, publisher_id });
+    sent(await relay.report(reports[2]).send());
+    const original = success(
+      await writer.http.observations.get({
+        observation_id: pair.observation.id,
+      }),
+    );
+    assert.equal(original.telemetry.evidence.sequence, '9007199254740993');
+    assert.equal(original.telemetry.value.position.latitude, 23);
+    const invalid = structuredClone(reports[1]);
+    invalid.report_id = uuid();
+    invalid.sequence = '9007199254740995';
+    invalid.sections.telemetry.value.position.latitude = 24;
+    invalid.sections.telemetry.constituents.position.reading_id = uuid();
+    invalid.sections.telemetry.value.altitude = { metres: 42, reference: 'wgs84_ellipsoid' };
+    invalid.sections.type = {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      value: { kind: 'person' },
+    };
+    const refused = await reporter.report(invalid).send();
+    assert.equal(refused.attempt.response.kind, 'error');
+    assert.equal(refused.attempt.response.body.error.code, 'constituent_conflict');
+    assert.deepEqual(
+      success(
+        await writer.http.observations.get({
+          observation_id: pair.observation.id,
+        }),
+      ),
+      original,
+    );
+    const carried = {
+      ...reports[0],
+      report_id: uuid(),
+      sequence: '9007199254740995',
+    };
+    const admitted = sent(await reporter.report(carried).send());
+    for (const image of [admitted.observation, admitted.track]) {
+      assert.equal(image.telemetry.evidence.sequence, '9007199254740995');
+      assert.equal(image.telemetry.observed_at, '2026-10-21T12:00:01.0000003Z');
+      assert.deepEqual(image.telemetry.value, {
+        position: { latitude: 23, longitude: -1 },
+        altitude: null,
+        ground_speed: 0,
+      });
+      assert.deepEqual(image.telemetry.constituents, reports[0].sections.telemetry.constituents);
+    }
+    assert.deepEqual(admitted.observation.type, original.type);
+    const collision = await reporter.report({ ...carried, report_id: uuid() }).send();
+    assert.equal(collision.attempt.response.kind, 'error');
+    assert.equal(collision.attempt.response.body.error.code, 'section_sequence_conflict');
+    const last = success(await frozen.next());
+    assert.equal(last.view_id, first.view_id);
+    assert.equal(last.baseline_cursor, first.baseline_cursor);
+    assert.equal(last.readings[0].value.latitude, 23);
+    assert.deepEqual(await frozen.next(), { kind: 'end' });
+    success(await frozen.close());
+    if (mode === 'full') {
+      await until(
+        () =>
+          writer.picture.status.kind === 'synchronized' &&
+          writer.tracks.get({ track_id: pair.track.id }).value?.telemetry.evidence.sequence ===
+            '9007199254740995',
+      );
+      const before = f.traffic.length;
+      assert.deepEqual(writer.tracks.get({ track_id: pair.track.id }).value, admitted.track);
+      assert.equal(f.traffic.length, before);
+    }
+    await writer.close();
+    await gateway.close();
+    await f.restart();
+    const rebuilt = f.client({ mode });
+    success(await rebuilt.connect());
+    if (mode === 'full') await until(() => rebuilt.picture.status.kind === 'synchronized');
+    const recovered = rebuilt.reporting.observation({ id: pair.observation.id, publisher_id });
+    assert.equal(sent(await recovered.report(reports[2]).send()).evidence_disposition, 'duplicate');
+    assert.equal(
+      sent(
+        await recovered
+          .report({
+            ...reports[2],
+            report_id: uuid(),
+            sequence: '9007199254740996',
+          })
+          .send(),
+      ).evidence_disposition,
+      'accepted',
+    );
+    const historyCollision = await recovered.report({ ...reports[2], report_id: uuid() }).send();
+    assert.equal(historyCollision.attempt.response.kind, 'error');
+    assert.equal(historyCollision.attempt.response.body.error.code, 'section_sequence_conflict');
+    for (const [kind, entity_id] of [
+      ['observations', pair.observation.id],
+      ['tracks', pair.track.id],
+    ]) {
+      const before = f.traffic.length;
+      const history = rebuilt[kind].history({
+        entity_id,
+        query_id: uuid(),
+        page_size: 1,
+      });
+      const rows = [];
+      for (let page = 0; page < 3; page++) {
+        const result = await history.next();
+        rows.push(...success(result).readings);
+      }
+      assert.deepEqual(await history.next(), { kind: 'end' });
+      success(await history.close());
+      const path = `/messages/get_${kind === 'observations' ? 'observation' : 'track'}_movement_history`;
+      assert.equal(f.traffic.slice(before).filter((entry) => entry.path === path).length, 3);
+      assert.deepEqual(
+        rows.map((row) => [row.value.latitude, row.observed_at]),
+        [
+          [22, '2026-10-21T12:00:01.0000002Z'],
+          [21, '2026-10-21T12:00:01.000000250Z'],
+          [23, '2026-10-21T12:00:01.0000003Z'],
+        ],
+      );
+      assert.deepEqual(
+        rows.map((row) => row.source_entity_id),
+        Array(3).fill(pair.observation.id),
+      );
+      assert.deepEqual(
+        rows.map((row) => row.track_ids),
+        Array(3).fill([pair.track.id]),
+      );
+    }
+    const retained = success(
+      await rebuilt.http.observations.get({
+        observation_id: pair.observation.id,
+      }),
+    );
+    assert.equal(retained.telemetry.evidence.sequence, '9007199254740995');
+    assert.deepEqual(retained, admitted.observation);
+    const before = f.traffic.length;
+    const track = rebuilt.tracks.get({ track_id: pair.track.id });
+    const retainedTrack = mode === 'full' ? track.value : success(await track);
+    assert.equal(retainedTrack.telemetry.evidence.sequence, '9007199254740995');
+    assert.deepEqual(retainedTrack, admitted.track);
+    if (mode === 'full') assert.equal(f.traffic.length, before);
+  });
+
 test(
   'operator and Asset SDKs execute assigned work with independent Task evidence across Core Restart',
   { timeout: 30_000 },

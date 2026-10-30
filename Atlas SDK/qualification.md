@@ -43,6 +43,9 @@ Recovery tests verify missed writes and deletions reach existing subscriptions,
 then live updates resume. Real Core replay expiry invalidates old tokens and rebuilds.
 An operator/Asset workflow verifies task order, independent report identities,
 lost replies, cancellation refusal and completion across Restart.
+Mission simulations combine a direct-IP Asset, two gateway Assets, two operators,
+Pause/Resume, offline cancellation, key rotation, live Tracks and late result files.
+After building, run `node scripts/test.mjs --test-name-pattern='^mission '` to select them.
 
 The Node runner establishes a test CA before a fresh process starts; TLS validation
 stays enabled. A real HTTPS proxy can lose, delay or alter Core responses. Each
