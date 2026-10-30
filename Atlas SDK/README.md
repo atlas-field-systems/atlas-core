@@ -1,6 +1,8 @@
 # Atlas SDK
 
 SDK is the IP-specific TypeScript client for Atlas Core.
+The [package guide](package-usage.md) covers the public HTTP and Full clients, reporting, remote reads and transfers.
+These contract pages define the complete SDK scope, including Full synchronization.
 It consumes the browser-safe [Protocol](../Atlas%20Protocol/README.md) package,
 exchanges HTTP/JSON and WSS messages with Core, and provides ordinary handwritten
 workflows over shared runtime schemas and inferred types. It imports no Core
@@ -10,9 +12,9 @@ Pi 5-class-or-better computers, power, and IP connectivity.
 
 ## Two explicit read modes
 
-| Mode | Behavior |
-| --- | --- |
-| HTTP, default | Read on demand from Core; no maintained replica |
+| Mode                         | Behavior                                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| HTTP, default                | Read on demand from Core; no maintained replica                                                     |
 | Full synchronization, opt-in | Maintain all Assets, Tracks, Geofeatures, Tasks, and ready Object metadata in one in-memory picture |
 
 Ready picture reads, queries, changed-since, and subscriptions use local state.

@@ -24,6 +24,8 @@ network work. A failed or superseded attempt leaves authorization-required in pl
 Do not retry rejected credentials in the background or accept them by elapsed time.
 An identical rejected credential is not a changed candidate.
 Concurrent recovery has one owner; later candidates fence older discovery replies.
+Failed candidate discovery preserves an already-ready accepted generation and its
+pending work. Ordinary requests still validate Protocol version and Dataset.
 
 Accepted new credentials permit read/feed recovery, not replay of mutations, uploads,
 cancellations, or control requests. The caller deliberately retries prepared work
@@ -55,6 +57,7 @@ Known Reset, capacity loss, required rebuild, token expiry, and close still do.
 All frozen history views are HTTP-owned. Their tokens report authorization-required
 without sending continuation or release. No local view substitutes for them. Already
 downloaded application copies can remain readable, without extending remote expiry.
+Late pages from an expired view cannot retain context or consume its former byte reservation.
 
 Cancelling an HTTP view or snapshot load while unauthorized records local abandonment.
 It does not claim a remote release acknowledgment or queue a hidden release request.
@@ -62,3 +65,6 @@ The Core allocation expires at its original deadline. Recovery obeys Protocol's
 allocation/retry rules before replacing it. Discard partial private staging; preserve
 the complete published picture. Retain only bounded allocation identity/expiry facts
 needed to avoid duplicate allocation after lost replies. No persistent SDK cache exists.
+After close, a received contact challenge stops reserving its Asset once it is
+certainly expired. A lost challenge reply retains the original allocation deadline.
+Neither case claims that Core released its allocation receipt.

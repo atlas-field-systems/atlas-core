@@ -1,0 +1,48 @@
+{
+  "name": "@atlas/sdk",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.22.1",
+    "npm": "11.19.0"
+  },
+  "packageManager": "npm@11.19.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "*.md",
+    "package.json"
+  ],
+  "scripts": {
+    "protocol:prepare": "npm --prefix \"../Atlas Core\" run protocol:prepare && node scripts/copy-protocol.mjs",
+    "verify:inputs": "node scripts/verify-inputs.mjs",
+    "build": "npm run verify:inputs && tsc -p tsconfig.json",
+    "test": "npm run build && node scripts/test.mjs",
+    "test:package": "node scripts/package.mjs",
+    "qualify": "node scripts/package.mjs --source",
+    "test:browser": "node scripts/browser.mjs",
+    "evidence:verify": "node scripts/verify-evidence.mjs"
+  },
+  "dependencies": {
+    "@atlas/protocol": "file:artifacts/atlas-protocol-0.3.0.tgz",
+    "@noble/hashes": "2.4.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "6.0.2",
+    "playwright": "1.64.1"
+  },
+  "atlasBuild": {
+    "protocol": {
+      "version": "0.3.0",
+      "sha256": "3413fb959ec214420ae11b0eb293122a4bcf53cf63886a913526d6f967ca198b"
+    }
+  }
+}

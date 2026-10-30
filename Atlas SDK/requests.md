@@ -58,6 +58,17 @@ Same-release Restart retains valid Dataset retries. Reset requires reconciliatio
 Installation-lived API-key creation has its own identity lifetime; it is not
 permission for automatic retry across Dataset changes.
 
+Call `operation.close()` when that handle no longer needs to retry. Close is
+idempotent, disables that handle's `start()` and `send()`, and preserves its effect
+knowledge. Other handles for the same identity remain usable and share evidence.
+Each handle's retained submission counts against the prepared byte budget.
+After all such handles close and their bounded attempts settle, SDK frees the
+record's count and byte capacity. Nothing is evicted automatically at a limit.
+Close does not abort an attempt or undo a commit; late matching replies still
+update the original evidence, and unresolved outcomes remain unknown. Preparing
+a retired identity starts fresh local tracking without its earlier evidence.
+Use the original facts for a deliberate Core retry, never new work under that ID.
+
 Known key rejection pauses network work under [authorization recovery](authorization.md).
 Only authenticated discovery with changed credentials can reopen it. Immediate
 revocation remains in force. Recovery never resubmits prepared writes.
@@ -72,6 +83,8 @@ old Dataset's result into the new Dataset. A later error cannot undo this eviden
 A replayable upload source supplies stable descriptor fields and an `open` function
 returning a fresh stream per attempt, starting at byte zero. A consumed one-shot
 source fails as non-replayable. Do not buffer an arbitrary file or promise resume.
+Source cleanup failure before transmission leaves the operation `not_submitted`;
+SDK close reports that cleanup failure separately.
 Keep transfer progress, Object publication, and Asset completion distinct.
 
 [Next: the local picture](picture.md)

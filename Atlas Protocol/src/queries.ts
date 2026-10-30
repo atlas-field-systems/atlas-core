@@ -5,6 +5,10 @@ import { ContentType } from './objects.js';
 import { GeofeatureKind, Health, SubjectKind } from './components.js';
 import { ExecutionState } from './tasks.js';
 import { Continuation } from './history.js';
+import type { Asset, Track, Geofeature } from './entities.js';
+import type { Task } from './tasks.js';
+import type { ObjectImage } from './objects.js';
+import type { ResourceKind } from './synchronization.js';
 
 const ids = uniqueArray(Uuid).exactOptional();
 const base = { ids, aliases: uniqueArray(Alias).exactOptional() };
@@ -83,3 +87,27 @@ export function selectedPage<Q extends { filters?: unknown }, T>(
     items.every((item) => matches(item, request.filters))
   );
 }
+
+export const selection = {
+  asset: (f: z.output<typeof filters.assets> | undefined, a: Asset): boolean =>
+    selected(f?.ids, a.id) &&
+    selectedAlias(f?.aliases, a.alias) &&
+    selected(f?.kinds, a.type.kind) &&
+    selected(f?.health, a.communications.health),
+  track: (f: z.output<typeof filters.tracks> | undefined, a: Track): boolean =>
+    selected(f?.ids, a.id) &&
+    selectedAlias(f?.aliases, a.alias) &&
+    selected(f?.kinds, a.type.state === 'value' ? a.type.value.kind : undefined),
+  geofeature: (f: z.output<typeof filters.geofeatures> | undefined, a: Geofeature): boolean =>
+    selected(f?.ids, a.id) && selectedAlias(f?.aliases, a.alias) && selected(f?.kinds, a.type.kind),
+  task: (f: z.output<typeof filters.tasks> | undefined, a: Task): boolean =>
+    selected(f?.ids, a.task_id) &&
+    selected(f?.asset_ids, a.asset_id) &&
+    selected(f?.commands, a.command) &&
+    selected(
+      f?.states,
+      a.cancellation_request_id === null ? a.execution_state : 'cancellation_requested',
+    ),
+  object: (f: z.output<typeof filters.objects> | undefined, a: ObjectImage): boolean =>
+    selected(f?.ids, a.object_id) && selected(f?.content_types, a.content_type),
+} satisfies Record<ResourceKind, (filters: never, image: never) => boolean>;

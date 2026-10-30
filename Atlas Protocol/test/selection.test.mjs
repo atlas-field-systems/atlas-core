@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PROTOCOL_VERSION, exchanges, readHttp } from '../dist/index.js';
+import { PROTOCOL_VERSION, exchanges, readHttp, selection } from '../dist/index.js';
 import * as s from './samples.mjs';
 const reply = (name, request, data) =>
   readHttp(
@@ -180,4 +180,31 @@ test('history readers select exact time groups and nanosecond half-open known bo
       read({ ...bounds }, item); // Bounds apply only to the known group.
     }
   }
+});
+
+test('shared picture predicates retain the HTTP filter semantics', () => {
+  const cases = [
+    [selection.asset, { ...s.asset, alias: 'Straße' }, { aliases: ['STRASSE'], kinds: [null] }],
+    [selection.track, s.track, { kinds: [null] }],
+    [selection.geofeature, s.geofeature, { kinds: [null] }],
+    [selection.task, s.task, { commands: ['pause', 'move_to'], states: ['pending'] }],
+    [selection.object, s.object, { content_types: ['application/octet-stream'] }],
+  ];
+  for (const [matches, image, filters] of cases) {
+    assert.equal(matches(undefined, image), true);
+    assert.equal(matches({}, image), true);
+    assert.equal(matches(filters, image), true);
+    assert.equal(matches({ ...filters, ids: [] }, image), false);
+    assert.equal(matches({ ...filters, ids: [s.id] }, image), false);
+  }
+  assert.equal(selection.asset({ aliases: ['é'] }, { ...s.asset, alias: 'e\u0301' }), false);
+  assert.equal(selection.asset({ aliases: ['A'] }, s.asset), false);
+  assert.equal(
+    selection.track({ kinds: [null] }, { ...s.track, type: { state: 'unknown' } }),
+    false,
+  );
+  assert.equal(selection.track(undefined, { ...s.track, type: { state: 'unknown' } }), true);
+  const cancelled = { ...s.task, cancellation_request_id: s.requestId };
+  assert.equal(selection.task({ states: ['pending'] }, cancelled), false);
+  assert.equal(selection.task({ states: ['cancellation_requested'] }, cancelled), true);
 });

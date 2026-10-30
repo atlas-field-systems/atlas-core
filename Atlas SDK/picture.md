@@ -74,6 +74,8 @@ Account for the old picture, new staging, indexes, decoded values, journal, and 
 query data together. Bound explicit HTTP history pages under ordinary response limits;
 Core owns their separate finite view/reference budgets. No retained history cache
 or local history-view budget exists.
+Duplicate-commit fingerprints have the journal's count and byte limits. An older
+unverifiable frame requires recovery; it cannot overwrite the current boundary.
 
 Stop with explicit capacity state rather than evicting resources or repeatedly
 rebuilding. A capacity failure cannot expose partially applied changes as current.
@@ -87,9 +89,15 @@ restart every case from zero or reuse an expired allocation context.
 Fetch a fresh Core allocation context immediately before each new remote allocation.
 Exact allocation retries retain their original context and identity.
 
-Closing SDK stops its connections and recovery and invalidates its local tokens.
-Release remote captures/views while authority permits; absent acknowledgment, retain
-only bounded facts needed to respect original expiry. Close cannot prove remote
-release. Core and physical work continue under their own owners.
+Recovery retains one retiring socket until physical closure is confirmed before
+opening another. Feed end and a close deadline do not confirm transport closure.
+Closing or authorization supersession interrupts recovery's wait. Bounded shutdown
+reports unconfirmed closure as a cleanup failure; later closure does not erase it.
+Shutdown cancels queued recovery before it acquires transport ownership; cancelling
+that pending start is not a cleanup failure.
+
+Closing SDK invalidates local tokens and releases remote captures/views while authority
+permits. Without acknowledgment, retain bounded facts that respect original expiry.
+Close cannot prove remote release. Core and physical work continue under their owners.
 
 [Next: diagnostics](diagnostics.md)
