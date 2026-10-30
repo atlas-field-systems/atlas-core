@@ -62,7 +62,8 @@ remain ordinary handwritten code. Use supported libraries without a custom schem
 compiler, blanket generated client/server layer, or generated database accessors.
 The [build profile](build-profile.md) records exact locks and reproducible exports.
 Protocol supplies its package, dependency lock, and qualification commands.
-Core implements all 66 initial exchanges. SDK workflows remain unimplemented.
+Core implements all 66 initial exchanges. The [SDK qualification](../Atlas%20SDK/qualification.md)
+exercises client workflows against Core.
 
 ## Build and run
 
