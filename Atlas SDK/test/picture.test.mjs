@@ -442,7 +442,7 @@ test(
 );
 
 test(
-  'authorization loss retains stale complete reads and frozen tokens with zero traffic until changed-key recovery',
+  'authorization recovery replays missed writes and deletions to existing subscribers while frozen queries stay local',
   { timeout: 30_000 },
   async (t) => {
     const f = await fixture(t);
@@ -452,10 +452,13 @@ test(
     let credential = key.secret;
     const client = await connected(f, { mode: 'full', credentials: () => credential });
     await ready(client);
-    const a = await register(admin, 'retained');
-    await until(() => client.assets.get({ asset_id: a.id }).value?.id === a.id, 'Asset missing');
+    const a = await register(admin, 'retained'),
+      b = await register(admin, 'removed while paused');
+    await until(() => client.assets.get({ asset_id: b.id }).value?.id === b.id, 'Asset missing');
     const query = available(client.assets.query({})),
       original = available(query.page());
+    const generation = client.picture.status.generation,
+      snapshots = f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length;
     const subscription = client.picture.subscribe();
     await subscription.next();
     success(
@@ -477,11 +480,105 @@ test(
     await delay(600);
     assert.equal(f.traffic.length, count);
     assert.equal(f.wssTraffic.length, sockets);
+    const updated = success(
+      (
+        await admin.assets
+          .update({
+            asset_id: a.id,
+            request_id: uuid(),
+            expected_edit_revision: '0',
+            alias: 'updated while paused',
+          })
+          .send()
+      ).attempt,
+    );
+    const created = success(
+      (await admin.assets.register(registration('created while paused')).send()).attempt,
+    );
+    const removed = success(
+      (await admin.assets.delete({ asset_id: b.id, request_id: uuid() }).send()).attempt,
+    );
+    const pausedTraffic = f.traffic.length;
+    assert.equal(available(client.assets.get({ asset_id: a.id })).alias, 'retained');
+    assert.equal(available(client.assets.get({ asset_id: b.id })).alias, 'removed while paused');
+    assert.equal(available(client.assets.get({ asset_id: created.data.asset.id })), null);
+    assert.deepEqual(available(client.picture.changedSince(original.cursor)).commits, []);
+    assert.deepEqual(
+      available(query.page())
+        .items.map((item) => item.alias)
+        .sort(),
+      ['removed while paused', 'retained'],
+    );
+    assert.equal(f.traffic.length, pausedTraffic);
+    assert.equal(f.wssTraffic.length, sockets);
     credential = f.apiKey;
     success(await client.recover());
-    await ready(client);
+    await ready(client, removed.commit_cursor);
+    const recoveredTraffic = f.traffic.length;
     assert.equal(client.assets.get({ asset_id: a.id }).stale, false);
+    assert.equal(available(client.assets.get({ asset_id: a.id })).alias, 'updated while paused');
+    assert.equal(
+      available(client.assets.get({ asset_id: created.data.asset.id })).alias,
+      'created while paused',
+    );
+    assert.equal(available(client.assets.get({ asset_id: b.id })), null);
+    assert.equal(client.picture.status.generation, generation);
     assert.equal(available(query.page()).cursor, original.cursor);
+    assert.deepEqual(
+      available(query.page())
+        .items.map((item) => item.alias)
+        .sort(),
+      ['removed while paused', 'retained'],
+    );
+    const missed = available(client.picture.changedSince(original.cursor));
+    assert.deepEqual(
+      missed.commits.map((commit) => commit.coreCursor),
+      [updated.commit_cursor, created.commit_cursor, removed.commit_cursor],
+    );
+    assert.deepEqual(
+      missed.commits.map((commit) =>
+        commit.changes.map((change) => [change.kind, change.resource_kind, change.resource_id]),
+      ),
+      [
+        [['put', 'asset', a.id]],
+        [['put', 'asset', created.data.asset.id]],
+        [['delete', 'asset', b.id]],
+      ],
+    );
+    const resumed = await subscription.next();
+    assert.equal(resumed.value.kind, 'status');
+    assert.equal(resumed.value.status.kind, 'synchronized');
+    for (const expected of [updated, created, removed]) {
+      const event = await subscription.next();
+      assert.equal(event.value.kind, 'commit');
+      assert.equal(event.value.commit.coreCursor, expected.commit_cursor);
+      assert.equal(event.value.stale, false);
+    }
+    assert.equal(f.traffic.length, recoveredTraffic);
+    assert.equal(
+      f.traffic.filter((entry) => entry.path === '/messages/read_snapshot').length,
+      snapshots,
+    );
+    const live = success(
+      (
+        await admin.assets
+          .update({
+            asset_id: created.data.asset.id,
+            request_id: uuid(),
+            expected_edit_revision: '0',
+            alias: 'live after recovery',
+          })
+          .send()
+      ).attempt,
+    );
+    await ready(client, live.commit_cursor);
+    const event = await subscription.next();
+    assert.equal(event.value.kind, 'commit');
+    assert.equal(event.value.commit.coreCursor, live.commit_cursor);
+    assert.equal(
+      available(client.assets.get({ asset_id: created.data.asset.id })).alias,
+      'live after recovery',
+    );
     subscription.close();
     query.close();
   },
@@ -826,61 +923,96 @@ test(
 );
 
 test(
-  'required rebuild invalidates tokens immediately and publishes a new generation; Reset changes Dataset',
+  'Core replay expiry rebuilds complete data and invalidates old tokens; Reset changes Dataset',
   { timeout: 30_000 },
   async (t) => {
-    const f = await fixture(t),
-      client = await connected(f, { mode: 'full' });
+    const f = await fixture(t, { replayBytes: 0 }),
+      admin = await connected(f);
+    const a = await register(admin, 'before-reset'),
+      b = await register(admin, 'deleted during outage');
+    const client = await connected(f, { mode: 'full', picture: { pageSize: 1 } });
     await ready(client);
-    const a = await register(client, 'before-reset');
-    await until(() => client.assets.get({ asset_id: a.id }).value?.id === a.id, 'Asset missing');
     const query = available(client.assets.query({}));
     const cursor = client.picture.cursor,
       generation = client.picture.status.generation;
-    const rebuilding = barrier(),
+    const resume = barrier(),
       release = barrier();
-    t.after(() => release.resolve());
+    let reconnecting = false,
+      rebuilding = false;
     f.once('/messages/read_snapshot', async ({ forward }) => {
-      rebuilding.resolve();
+      rebuilding = true;
       await release.promise;
       forward();
     });
-    f.wssOnce('subscribed', ({ frame, send }) => {
+    f.wssOnce('authenticated', async ({ send }) => {
+      reconnecting = true;
+      await resume.promise;
       send();
-      send({
-        type: 'gap',
-        dataset_id: frame.dataset_id,
-        protocol_version: frame.protocol_version,
-        data: {
-          subscription_id: frame.data.subscription_id,
-          reason: 'cursor_expired',
-          earliest_recoverable_cursor: frame.data.handoff_cursor,
-        },
-      });
+    });
+    let refusal;
+    f.wssOnce('error', ({ frame, send }) => {
+      refusal = frame.error.code;
+      send();
     });
     f.closeFeeds();
-    await rebuilding.promise;
-    assert.equal(client.assets.get({ asset_id: a.id }).kind, 'unavailable');
-    assert.equal(query.page().code, 'invalid_token');
-    assert.equal(client.picture.changedSince(cursor).reason, 'invalid_cursor');
-    release.resolve();
+    let c;
+    try {
+      await until(() => reconnecting, 'No reconnect authentication');
+      success(
+        (
+          await admin.assets
+            .update({
+              asset_id: a.id,
+              request_id: uuid(),
+              expected_edit_revision: '0',
+              alias: 'after-outage',
+            })
+            .send()
+        ).attempt,
+      );
+      success((await admin.assets.delete({ asset_id: b.id, request_id: uuid() }).send()).attempt);
+      c = await register(admin, 'created during outage');
+      resume.resolve();
+      await until(() => refusal !== undefined, 'Core did not refuse the expired replay cursor');
+      assert.equal(refusal, 'cursor_expired');
+      await until(() => rebuilding, 'Expired replay did not start a replacement snapshot');
+      assert.equal(client.assets.get({ asset_id: a.id }).kind, 'unavailable');
+      assert.equal(query.page().code, 'invalid_token');
+      assert.equal(client.picture.changedSince(cursor).reason, 'invalid_cursor');
+    } finally {
+      resume.resolve();
+      release.resolve();
+    }
     await ready(client);
     assert.ok(client.picture.status.generation > generation);
+    assert.equal(available(client.assets.get({ asset_id: a.id })).alias, 'after-outage');
+    assert.equal(available(client.assets.get({ asset_id: b.id })), null);
+    assert.equal(available(client.assets.get({ asset_id: c.id })).alias, 'created during outage');
+    const replacement = available(client.assets.query({}));
+    assert.deepEqual(
+      available(replacement.page())
+        .items.map((item) => item.id)
+        .sort(),
+      [a.id, c.id].sort(),
+    );
+    replacement.close();
     const oldDataset = client.picture.status.datasetId;
     const oldQuery = available(client.assets.query({}));
-    const resetCapture = barrier(),
-      releaseReset = barrier();
-    t.after(() => releaseReset.resolve());
+    const releaseReset = barrier();
+    let resetCapture = false;
     f.once('/messages/read_snapshot', async ({ forward }) => {
-      resetCapture.resolve();
+      resetCapture = true;
       await releaseReset.promise;
       forward();
     });
-    await f.reset();
-    await resetCapture.promise;
-    assert.equal(client.assets.get({ asset_id: a.id }).kind, 'unavailable');
-    assert.equal(oldQuery.page().code, 'invalid_token');
-    releaseReset.resolve();
+    try {
+      await f.reset();
+      await until(() => resetCapture, 'Reset did not start a replacement snapshot');
+      assert.equal(client.assets.get({ asset_id: a.id }).kind, 'unavailable');
+      assert.equal(oldQuery.page().code, 'invalid_token');
+    } finally {
+      releaseReset.resolve();
+    }
     await ready(client);
     assert.notEqual(client.picture.status.datasetId, oldDataset);
     assert.equal(available(client.assets.get({ asset_id: a.id })), null);

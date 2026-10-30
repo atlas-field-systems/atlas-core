@@ -39,11 +39,17 @@ lost release evidence, paused release traffic and failure aggregation. Internal
 suites retain allocation-owner timing, Session/socket cleanup, diagnostic bounds,
 and an isolated bounded-memory transfer check.
 
+Recovery tests verify missed writes and deletions reach existing subscriptions,
+then live updates resume. Real Core replay expiry invalidates old tokens and rebuilds.
+An operator/Asset workflow verifies task order, independent report identities,
+lost replies, cancellation refusal and completion across Restart.
+
 The Node runner establishes a test CA before a fresh process starts; TLS validation
 stays enabled. A real HTTPS proxy can lose, delay or alter Core responses. Each
 passing fixture awaits clients, proxy jobs, sockets and Core workers before removal.
-Failed roots remain for inspection. The external package consumer retains
-`qualification.json` and the complete browser dependency graph.
+Failed roots remain for inspection. Every Node run retains `sdk-evidence-*` with
+`results.tap` and `report.json` naming its entry, revision, command and exit.
+The external consumer retains `qualification.json` and the browser dependency graph.
 
 ## Actual Firefox execution
 
@@ -66,9 +72,9 @@ artifact, browser version, trust database, wire observations and cleanup.
 
 ## Accept qualification evidence
 
-Each runner rejects workspace roots, including symlink aliases, before creating a
-mutable fixture. `qualify` records source and installed phases separately in the
-consumer's `qualification.json`; Firefox records its own report. Reports retain
+Runners reject workspace roots and symlink aliases before creating fixtures.
+`qualify` records source and installed phases in the consumer's `qualification.json`;
+Firefox records its own report. Reports retain
 the tested Git revision and dirty state, SDK archive SHA-256, tool versions,
 command arguments and working directories, expected and actual exits, and closed
 logs capped at 16 MiB per stream outside deleted TLS fixtures. Expected negative
@@ -80,8 +86,8 @@ Before accepting a handoff, supply both reports and the expected full commit:
 The verifier requires distinct stdout/stderr logs, the bundle graph, and Firefox's
 runtime, traffic and profile-trust files. It rejects dirty or mismatched source,
 changed or unclosed evidence, and failed or incomplete commands. This is local evidence,
-not cryptographic proof that commands ran. Browser facts survive finalization.
-CI uploads reports and referenced logs/artifacts, never whole profiles or fixtures.
+not cryptographic proof. CI runs both qualifications on PRs and pushes to main,
+and retains reports, TAP, logs and browser artifacts for seven days, never fixtures.
 
 CI checks all SDK source, scripts and tests with Protocol's pinned Prettier/config,
 and Core source, scripts and tests changed against a validated comparison base.
@@ -92,10 +98,9 @@ Legacy unchanged Core files remain outside this incremental formatter gate.
 
 ## Limits of this evidence
 
-Source and installed Node suites are separate from actual Firefox. Browser bundling
-alone proves neither browser execution nor server compatibility. Chromium, WebKit,
-other platforms, sustained workload, container/release validation and power-loss
-durability are unrun here. Core has its own [qualification](../Atlas%20Core/qualification.md).
+Browser bundling alone proves neither browser execution nor server compatibility.
+Chromium, WebKit, other platforms, sustained workload, container/release validation
+and power-loss durability are unrun here. See [Core qualification](../Atlas%20Core/qualification.md).
 Functional tmpfs Restart and bounded-memory checks establish no disk durability or
 supported retained-workload capacity. Independent full-branch review remains a
 separate gate.

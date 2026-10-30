@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { uuid } from './harness.mjs';
-const { createClient } = await import(process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js');
 export function success(result) {
   assert.equal(result.kind, 'response', JSON.stringify(result));
   assert.equal(result.response.kind, 'success', JSON.stringify(result));
@@ -9,14 +8,11 @@ export function success(result) {
 export function sent(result) {
   return success(result.attempt);
 }
-export async function publicClient(t, f, options = {}, remote) {
-  const client = createClient({
-    baseUrl: f.proxyUrl,
-    credentials: () => f.apiKey,
+export async function publicClient(_t, f, options = {}, remote) {
+  const client = f.client({
     ...options,
     ...(remote ? { remote } : {}),
   });
-  t.after(() => client.close());
   success(await client.connect());
   return { client, http: client.http, reporting: client.reporting };
 }

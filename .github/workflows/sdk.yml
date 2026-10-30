@@ -91,6 +91,8 @@ jobs:
           name: sdk-qualification
           path: |
             ${{ runner.temp }}/atlas-sdk/**/qualification.json
+            ${{ runner.temp }}/atlas-sdk/sdk-evidence-*/report.json
+            ${{ runner.temp }}/atlas-sdk/sdk-evidence-*/results.tap
             ${{ runner.temp }}/atlas-sdk/**/evidence/*.log
             ${{ runner.temp }}/atlas-sdk/**/atlas-sdk-*.tgz
             ${{ runner.temp }}/atlas-sdk/**/browser-metafile.json
