@@ -20,8 +20,10 @@ name. Applications can display the Entity ID instead.
 
 Asset descriptions use `UpdateAsset`. Other Entity types use their descriptive
 edit messages. Changes carry `expected_edit_revision` under
-[Entity ownership](../entities.md#data-ownership). An Asset's supplied Description
-replaces the whole section. Description carries neither report timestamps nor errors.
+[Entity ownership](../entities.md#data-ownership) and [Wire edit rules](../wire.md#parsing-and-edits).
+For example, replacing `{"name": "Gate", "description": "North entrance"}` with
+`{"name": "East gate"}` removes the omitted details. A supplied Description always
+requires `name`. Description carries neither report timestamps nor errors.
 
 ## Examples
 

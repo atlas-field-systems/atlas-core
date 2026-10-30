@@ -27,19 +27,22 @@ helpers, generator versions, or wire layouts.
   changed acceptance. Test host format, regex, and uniqueness policies before,
   during, and after Protocol use, including concurrent consumers.
 
-## Remaining evidence
+## Current qualification
 
-The archived fixes and tests cover particular Go and TypeScript paths. They do not
-establish arbitrary schema support, browser compatibility, or deployment capacity.
-Real reconnection, durable queues, concurrent Core consumers, and SDK picture
-application still require the [integration workflows](qualification.md).
-Test against independent expected results, not only runtime/exporter agreement.
+The maintained [Protocol qualification](../Atlas%20Protocol/qualification.md) exercises
+runtime schemas, boundary parsing, stock exports, geometry, and Power against
+independent expected facts. The archived fixes explain why those cases matter;
+they do not establish current implementation coverage or deployment capacity.
+
+[Core workflows](qualification.md) exercise retained server behavior, queues, and
+concurrent consumers. [SDK qualification](../Atlas%20SDK/qualification.md) exercises
+client/server integration, reconnection, and picture application, with a separate
+actual-browser procedure. Each guide owns its commands, coverage, and evidence limits.
 
 Protocol retains the [embedded queue](../Atlas%20Protocol/tasks.md#scheduling-and-controls)
 and [geometry boundary examples](../Atlas%20Protocol/components/geometry.md#boundary-examples).
-Qualify these contracts before expanding implementation. Include queue and adoption
-images in page and whole-commit budgets. Core's selected [limits](limits.md),
-Protocol's geometry/Power bounds, and the [shared schema and export gates](build-profile.md#required-implementation-qualification)
-still require implementation qualification. Historical Plugin payloads create no
+Include queue and adoption images in page and whole-commit budgets under the
+[shared build gates](build-profile.md#required-implementation-qualification).
+Functional checks do not establish sustained workloads under Core's selected
+[limits](limits.md) or power-loss durability. Historical Plugin payloads create no
 current payload or codec requirement.
-Archive regressions do not establish durable behavior or deployment capacity.

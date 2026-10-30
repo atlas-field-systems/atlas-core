@@ -30,16 +30,22 @@ allowlist to local command output; raw exception text is not a diagnostic field.
 
 ## Detail and resource bounds
 
-Default INFO records state changes, active-work summaries every 30 seconds, and one
-completion per non-report mutation attempt with attempt/request IDs, route, commit/refusal,
-and first execution/exact replay. Failed reply delivery stays separate. Asset/Observation
-reports use INFO counts and DEBUG attempts. Summarize normal outages and repeated faults.
-WARN marks actionable degradation; ERROR marks failed work or a broken invariant.
-DEBUG adds rate-limited metadata.
+Default INFO records each non-report HTTP completion, including reads, with available
+attempt/request IDs, route, status, and elapsed time. Mutations also record first
+execution/exact replay and the committed cursor when present. State changes and
+30-second summaries are separate. Asset updates and Observation reports use INFO counts and
+DEBUG attempts. Failed reply delivery stays separate.
 
-Metrics use fixed operation, route, outcome, and reason groups, never resource IDs or
-arbitrary strings. The process owns timers/queues and stops them on shutdown. Diagnostics
-run outside transactions and never control readiness or retries.
+`diagnosticLevel` in the complete Settings JSON selects the minimum severity.
+Keep `INFO` for individual reads and mutations; use `WARN` or `ERROR` to suppress
+routine records, or `DEBUG` for rate-limited detail. Save with
+`settings save --expected-revision N --file FILE`, then `settings apply --restart`
+under [local administration](lifecycle.md#commands). WARN marks actionable degradation;
+ERROR marks failed work or a broken invariant.
+
+Metrics use fixed operation, route, outcome, and reason groups, never resource IDs.
+The process owns and stops timers/queues. Diagnostics run outside transactions
+and never control readiness or retries.
 
 Initial limits: 8 KiB/event, 1 MiB queued output/process, and 100 DEBUG events/second/process.
 Bound before copying/serialization; mark omitted oversized details. Full queues drop
@@ -74,25 +80,23 @@ aggregate ordinary capacity before writing. Writers release reservations after t
 files close or writes finish. A refused release remains owned, with bounded retries
 under worker queue pressure and another attempt before later writes or shutdown.
 Shutdown reports any unresolved release while the worker is still owned.
-Refused log reservations drop events without rejecting
-domain work or readiness. Export refusal creates no output. An interrupted live export
-keeps its reservation until Restart; the installation lock prevents concurrent exports.
-The remaining half bounds a concurrent export. Their total is at most 256 MiB. Include
+Refused log reservations drop events without rejecting domain work or readiness.
+Export refusal creates no output. An interrupted live export keeps its reservation
+until Restart; the installation lock prevents concurrent exports.
+The remaining half bounds a concurrent export. `diagnosticBytes` caps their total at 256 MiB. Include
 transient buffers in [aggregate capacity](storage.md#retention-and-capacity). Target eight hours
 of default-detail history, including a four-hour mission; age is not a hard expiry.
 Expose retained ranges/gaps. Disk bounds and retention
 need [qualification](qualification.md); event limits alone are not proof.
 
-[Lifecycle](lifecycle.md#reset-recovery) owns Restart and Reset semantics.
-Restart retains bounded files. Each local export command owns its staging and holds
-the installation lock. Reset waits for or refuses a conflicting command, then verifies
-Core and export writers stopped before clearing Atlas-owned logs and staging.
-An interrupted command requires explicit recovery; cleanup never continues detached.
-Use supported installation storage/container controls, never Docker-owned file edits or
-unrelated journal cleanup. Unverified cleanup leaves Reset incomplete; its recovery record survives.
+[Lifecycle](lifecycle.md#reset-recovery) owns Restart, Reset, and interrupted-command recovery.
+Restart retains bounded files. Each export command owns staging and holds the installation lock.
+Reset verifies Core and export writers stopped before clearing Atlas-owned logs and staging.
+Unverified cleanup leaves Reset incomplete and preserves its recovery record.
+No detached cleanup, Docker-owned file edits, or unrelated host-log removal is permitted.
 
-Local administration can export a bounded bundle with versions, Dataset/run context, and
-known gaps. Configuration includes only the severity threshold and numeric diagnostic limits;
+Local administration exports a bounded bundle with versions, Dataset/run context, and known gaps.
+Configuration includes only the severity threshold and numeric diagnostic limits;
 paths, destinations, and other values remain excluded. Report partial/failed exports.
 Exports never upload automatically. User-owned exports survive Reset.
 

@@ -63,8 +63,8 @@ memory measurement, or deployment capacity. Tiny nonzero polygons must survive
 robust topology checks even when ordinary area multiplication loses their area.
 
 The [qualification guide](../../qualification.md) defines package and browser checks.
-Core and SDK workflows and capacity remain unqualified. Agreement between two
-tools does not replace the independent expectations stored here.
+These corpora alone do not qualify Core or SDK workflows, durability, or capacity.
+Agreement between two tools does not replace the independent expectations stored here.
 
 The valid multi-resource frame uses a thin polygon scaled by an exact power of two
 to keep latitude in range. A separate rejected frame retains the original
