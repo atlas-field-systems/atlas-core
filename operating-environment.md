@@ -35,7 +35,7 @@ pages own the detailed behavior.
   until Reset. See [deployment](Atlas%20Core/README.md#deployment)
   and [workload targets](Atlas%20Core/qualification.md#workload-targets-not-measured-capability).
 - Deployment supplies correct UTC clocks and certificate trust. See
-  [time](Atlas%20Protocol/reports.md#time-and-contact) and [setup](Atlas%20Core/lifecycle.md#configuration-and-access).
+  [time](Atlas%20Protocol/reports.md#time-and-contact) and [setup](Atlas%20Core/lifecycle.md#retained-state-and-access).
 - Independent integrations use public HTTP and credentials and own their processes.
   Core-managed Plugin discovery, installation, and execution are outside the initial release.
   See [Core scope](Atlas%20Core/README.md#scope).

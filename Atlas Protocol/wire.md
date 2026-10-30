@@ -54,11 +54,11 @@ Typed integer fields accept exact mathematical integers such as `100`, `100.0`,
 and `1e2`, then emit canonical integers. Counter strings use their separate spelling.
 Apply independent [byte, value, depth, and work budgets](limits.md) to full envelopes.
 
-Patches preserve omitted fields, replace scalars/arrays, merge defined objects,
-and use null only for permitted clearing. Validate the complete merged result
-atomically. Never insert defaults, coerce, or discard fields to obtain validity.
-Positions remain complete pairs. Asset updates and Observation reports instead use
-[whole-section replacement](reports.md#shared-context), including on PATCH bindings.
+Edits preserve omitted edit fields and replace each supplied value in full,
+including objects and arrays. Null clears only fields that permit it. Validate
+the complete resulting resource atomically. Never insert defaults, coerce, or
+discard fields to obtain validity. Positions remain complete pairs.
+Asset updates and Observation reports use [whole-section replacement](reports.md#shared-context).
 
 ## Retry and Dataset rules
 

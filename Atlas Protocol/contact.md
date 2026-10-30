@@ -77,6 +77,6 @@ New-process confirmation must distinguish old-process queue/control adoption.
 Restart invalidates challenges and resets proven contact to offline, while retaining
 the registered process and accepted evidence. Reset also invalidates the Dataset.
 The [contact health timers](reports.md#time-and-contact) remain separate from
-challenge lifetime. These selected defaults have no runtime qualification result.
+challenge lifetime.
 
 [Asset messages](messaging/assets.md)

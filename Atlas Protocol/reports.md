@@ -75,7 +75,8 @@ Communications is `healthy` for less than 15 seconds after accepted fresh contac
 `degraded` from 15 seconds until 60 seconds, and `offline` at 60 seconds.
 No proven contact in the current Core run means offline. Core uses monotonic elapsed
 time; source timestamps never reset this timer. Expiry transitions are public
-committed changes without needing a new packet. These defaults remain unqualified.
+committed changes without needing a new packet. These contract thresholds do not
+establish field-link reliability.
 Bandwidth capability is separate. High-bandwidth links can be offline, and gateway
 connectivity proves neither an Asset's health nor its bandwidth. Unknown stays unknown.
 

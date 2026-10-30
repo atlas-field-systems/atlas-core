@@ -49,4 +49,4 @@ active specification.
 Use the [Protocol package](Atlas%20Protocol/package-usage.md) for runtime schemas,
 inferred types, exact boundary validation, and stock OpenAPI export. Its
 [qualification commands](Atlas%20Protocol/qualification.md) check the built artifact.
-Core and SDK must still qualify their own consuming workflows and durable behavior.
+Core and SDK define separate qualification commands for consuming workflows and durable behavior.
