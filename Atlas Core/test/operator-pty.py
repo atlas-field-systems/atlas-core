@@ -234,9 +234,13 @@ class Terminal:
         self.read(0.15)
 
     def menu(self, expected):
-        self.until(expected[-1])
-        self.read(0.2)
-        shown = rows.findall(self.text().rsplit('Atlas Core', 1)[-1])
+        end = time.monotonic() + 15
+        shown = []
+        while time.monotonic() < end:
+            self.read(0.2)
+            shown = rows.findall(self.text().rsplit('Atlas Core', 1)[-1])
+            if shown == expected:
+                return
         assert shown == expected, (self.name, expected, shown)
 
     def press(self, expected, label):
