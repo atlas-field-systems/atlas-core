@@ -64,6 +64,11 @@ const reportId: string = prepared.submission.facts.report.report_id;
 const reportClosed: void = prepared.close();
 const asset = reporting.asset({ id, process_generation: id });
 asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: at, mode: 'current', sections: {}, contact_proof: { challenge_id: id } });
+asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: null, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['simulated'] } } } });
+const localAsset = full.assets.get({ asset_id: id });
+if (localAsset.kind === 'available' && localAsset.value?.tags?.state === 'value') {
+  const presets: ('simulated')[] = localAsset.value.tags.value.presets;
+}
 component(Position, { latitude: 51.5, longitude: -0.1 });
 component(commandCatalog.pause, { command: 'pause', scheduling: 'immediate', inputs: {} });
 
@@ -97,6 +102,9 @@ const failures: unknown[] = failure.errors;
     const positive = compile();
     assert.equal(positive.status, 0, positive.stdout + positive.stderr);
     const invalid = [
+      "asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: null, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['custom'] } } } });",
+      "asset.update({ request_id: newId, tags: { presets: ['simulated'] } });",
+      "reporter.report({ report_id: newId, sequence: Sequence.parse('1'), generated_at: null, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['simulated'] } } } });",
       "client.assets.history({ entity_id: id, query_id: newId, allocation_context: 'foreign' });",
       "client.tracks.history({ entity_id: id, query_id: newId, time_groups: ['local'] });",
       "client.assets.contact({ asset_id: id, process_generation: id, request_id: newId, mode: 'current', expected_process_generation: id });",

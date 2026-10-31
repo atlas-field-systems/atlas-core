@@ -1,7 +1,7 @@
 import { isLosslessNumber } from 'lossless-json';
 import { z } from 'zod';
 
-export const PROTOCOL_VERSION = '0.3.0';
+export const PROTOCOL_VERSION = '0.4.0';
 export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$(?![\s\S])/;
 export const Uuid = z.string().regex(UUID_PATTERN).brand<'Uuid'>().meta({ id: 'Uuid' });
