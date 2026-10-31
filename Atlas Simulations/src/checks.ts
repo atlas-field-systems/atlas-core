@@ -168,7 +168,7 @@ export function checkEvidence(
     );
     let reorderIndex = 0;
     const events: (
-      | { ordinal: number; kind: 'enqueue' | 'start' | 'cancel'; index: number }
+      | { ordinal: number; kind: 'enqueue' | 'start' | 'retire'; index: number }
       | { ordinal: number; kind: 'reorder'; indexes: number[] }
     )[] = [];
     for (const submission of e.submissions) {
@@ -178,6 +178,12 @@ export function checkEvidence(
         const binding = moves.find((m) => m.id === facts.task_id);
         if (binding)
           events.push({ ordinal: submission.ordinal, kind: 'enqueue', index: binding.index });
+      } else if (submission.operation === 'ReportTaskExecution') {
+        const facts = exchanges.ReportTaskExecution.request.schema.parse(submission.facts);
+        const binding = moves.find((m) => m.id === facts.evidence.payload.task_id);
+        const payload = facts.evidence.payload;
+        if (binding && payload.event === 'state' && ['cancelled', 'failed'].includes(payload.state))
+          events.push({ ordinal: submission.ordinal, kind: 'retire', index: binding.index });
       } else if (submission.operation === 'SetTaskOrder') {
         const facts = exchanges.SetTaskOrder.request.schema.parse(submission.facts);
         if (facts.asset_id !== input.assets.get(alias)) continue;
@@ -199,19 +205,23 @@ export function checkEvidence(
     for (const p of e.physical) {
       const binding = moves.find((m) => m.id === p.task);
       if (p.asset === alias && binding && (p.event === 'start' || p.event === 'cancel'))
-        events.push({ ordinal: p.ordinal, kind: p.event, index: binding.index });
+        events.push({
+          ordinal: p.ordinal,
+          kind: p.event === 'cancel' ? 'retire' : 'start',
+          index: binding.index,
+        });
     }
     if (reorderIndex !== reorders.length) failures.order.push(`Missing reorder ${alias}`);
     let pending: number[] = [];
     const started = new Set<number>();
-    const cancelled = new Set<number>();
+    const retired = new Set<number>();
     for (const event of events.sort((a, b) => a.ordinal - b.ordinal)) {
       if (event.kind === 'enqueue') pending.push(event.index);
       else if (event.kind === 'reorder')
-        pending = event.indexes.filter((index) => !started.has(index) && !cancelled.has(index));
-      else if (event.kind === 'cancel') {
+        pending = event.indexes.filter((index) => !started.has(index) && !retired.has(index));
+      else if (event.kind === 'retire') {
         pending = pending.filter((index) => index !== event.index);
-        cancelled.add(event.index);
+        retired.add(event.index);
       } else {
         if (pending[0] !== event.index || started.has(event.index))
           failures.order.push(`Start order ${alias}`);

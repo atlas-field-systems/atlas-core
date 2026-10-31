@@ -345,3 +345,50 @@ test(
     assert.equal(record.verdict, 'passed', JSON.stringify(record));
   },
 );
+
+test(
+  'cancelling the unstarted queue head admits the next move after Resume',
+  { timeout: 60000 },
+  async () => {
+    const { Scenario } = await import('../dist/scenario.js');
+    const scenario = Scenario.parse({
+      name: 'cancel-queued-head',
+      assets: [
+        {
+          alias: 'Drone',
+          position: { latitude: 0, longitude: 0 },
+          cruise_speed: 1000000,
+          detection_radius: 0,
+        },
+      ],
+      subjects: [],
+      timeline: [
+        { at_seconds: 0, action: 'pause', asset: 'Drone' },
+        {
+          at_seconds: 1,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0.002, longitude: 0 },
+        },
+        {
+          at_seconds: 1,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0.001, longitude: 0 },
+        },
+        { at_seconds: 3, action: 'cancel', asset: 'Drone', index: 0 },
+        { at_seconds: 6, action: 'resume', asset: 'Drone' },
+      ],
+      deadline_seconds: 30,
+      expect: {
+        tasks: [
+          { asset: 'Drone', index: 0, state: 'cancelled' },
+          { asset: 'Drone', index: 1, state: 'completed' },
+        ],
+        tracks: 0,
+      },
+    });
+    const record = await evaluate({ scenario, sha256: '3'.repeat(64) });
+    assert.equal(record.verdict, 'passed', JSON.stringify(record));
+  },
+);
