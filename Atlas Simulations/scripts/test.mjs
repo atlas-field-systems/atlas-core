@@ -36,7 +36,7 @@ execFileSync(
   ],
   { stdio: 'ignore', cwd: root },
 );
-const result = spawnSync(process.execPath, ['--test', 'test/*.test.mjs'], {
+const result = spawnSync(process.execPath, ['--test', '--test-concurrency=1', 'test/*.test.mjs'], {
   cwd: root,
   stdio: 'inherit',
   env: { ...process.env, NODE_EXTRA_CA_CERTS: certificate, ATLAS_SIM_TLS_KEY: key },

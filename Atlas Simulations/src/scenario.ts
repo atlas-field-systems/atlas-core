@@ -1,7 +1,15 @@
 import { open } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { Alias, Altitude, Position, ExecutionState, contract, readJson } from '@atlas/protocol';
+import {
+  Float,
+  Alias,
+  Altitude,
+  Position,
+  ExecutionState,
+  contract,
+  readJson,
+} from '@atlas/protocol';
 
 export const faultIds = [
   'reply-lost',
@@ -52,8 +60,8 @@ const alias = Alias.refine(
   (s) => Alias.safeParse(`${s} a1b2`).success,
   'Alias must leave room for run suffix',
 );
-const at = z.number().finite().min(0).max(3600);
-const index = z.number().int().min(0).max(9999);
+const at = Float.refine((n) => n >= 0 && n <= 3600);
+const index = Float.refine((n) => Number.isInteger(n) && n >= 0 && n <= 9999);
 const actionBase = { at_seconds: at, asset: alias };
 const faults = faultIds.map((id) =>
   z.strictObject({
@@ -96,8 +104,8 @@ export const Scenario = z
         z.strictObject({
           alias,
           position: Position,
-          cruise_speed: z.number().positive().max(1e7),
-          detection_radius: z.number().min(0).max(2e7),
+          cruise_speed: Float.refine((n) => n > 0 && n <= 1e7),
+          detection_radius: Float.refine((n) => n >= 0 && n <= 2e7),
         }),
       )
       .min(1)
@@ -107,7 +115,7 @@ export const Scenario = z
         z.strictObject({
           alias,
           route: z.array(Position).min(1).max(1000),
-          speed: z.number().positive().max(1e7),
+          speed: Float.refine((n) => n > 0 && n <= 1e7),
         }),
       )
       .max(1000),
@@ -116,11 +124,11 @@ export const Scenario = z
       .max(1000)
       .optional(),
     timeline: z.array(TimelineAction).max(10000).optional(),
-    deadline_seconds: z.number().positive().max(3600).optional(),
+    deadline_seconds: Float.refine((n) => n > 0 && n <= 3600).optional(),
     expect: z
       .strictObject({
         tasks: z.array(z.strictObject({ asset: alias, index, state: ExecutionState })).max(10000),
-        tracks: z.number().int().min(0).max(100000),
+        tracks: Float.refine((n) => Number.isInteger(n) && n >= 0 && n <= 100000),
         removed_assets: z.array(alias).max(100).optional(),
       })
       .optional(),

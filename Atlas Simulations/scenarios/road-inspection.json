@@ -1,0 +1,95 @@
+{
+  "name": "road-inspection",
+  "assets": [
+    {
+      "alias": "Drone 1",
+      "position": {
+        "latitude": 51.5,
+        "longitude": -0.1
+      },
+      "cruise_speed": 10000,
+      "detection_radius": 300
+    }
+  ],
+  "subjects": [
+    {
+      "alias": "Vehicle 1",
+      "route": [
+        {
+          "latitude": 51.501,
+          "longitude": -0.1
+        },
+        {
+          "latitude": 51.5011,
+          "longitude": -0.1
+        }
+      ],
+      "speed": 8
+    }
+  ],
+  "geofeatures": [
+    {
+      "alias": "Waypoint",
+      "position": {
+        "latitude": 51.5001,
+        "longitude": -0.1
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "at_seconds": 0,
+      "action": "pause",
+      "asset": "Drone 1"
+    },
+    {
+      "at_seconds": 2,
+      "action": "move_to",
+      "asset": "Drone 1",
+      "position": {
+        "latitude": 51.5002,
+        "longitude": -0.1
+      }
+    },
+    {
+      "at_seconds": 2,
+      "action": "move_to",
+      "asset": "Drone 1",
+      "geofeature": "Waypoint",
+      "altitude": {
+        "metres": 30,
+        "reference": "wgs84_ellipsoid"
+      }
+    },
+    {
+      "at_seconds": 3,
+      "action": "reorder",
+      "asset": "Drone 1",
+      "indexes": [
+        1,
+        0
+      ]
+    },
+    {
+      "at_seconds": 4,
+      "action": "resume",
+      "asset": "Drone 1"
+    }
+  ],
+  "deadline_seconds": 30,
+  "expect": {
+    "tasks": [
+      {
+        "asset": "Drone 1",
+        "index": 0,
+        "state": "completed"
+      },
+      {
+        "asset": "Drone 1",
+        "index": 1,
+        "state": "completed"
+      }
+    ],
+    "tracks": 1
+  }
+}

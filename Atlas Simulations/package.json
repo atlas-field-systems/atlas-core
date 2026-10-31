@@ -18,9 +18,9 @@
     "verify:inputs": "node scripts/verify-inputs.mjs",
     "build": "npm run verify:inputs && tsc -p tsconfig.json",
     "test": "npm run build && node scripts/test.mjs",
-    "simulate": "node dist/cli.js simulate",
-    "eval": "node dist/cli.js eval",
-    "eval:compare": "node dist/cli.js compare"
+    "simulate": "node scripts/cli.mjs simulate",
+    "eval": "node scripts/cli.mjs eval",
+    "eval:compare": "node scripts/cli.mjs compare"
   },
   "dependencies": {
     "@atlas/sdk": "file:artifacts/atlas-sdk-0.4.0.tgz",
