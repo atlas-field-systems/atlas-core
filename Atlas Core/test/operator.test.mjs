@@ -30,6 +30,7 @@ import {
 import { checkCompatibility } from '../dist/release.js';
 import { Administration } from '../dist/admin.js';
 import { defaults } from '../dist/settings.js';
+import { installationLock } from '../dist/installation.js';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const run = (...args) =>
   spawnSync(process.execPath, [join(root, 'dist/cli.js'), ...args], { encoding: 'utf8' });
@@ -88,6 +89,86 @@ test('source parser rejects invalid commands without creating installation stora
   assert.equal(run('help').status, 0);
   assert.equal(run('version').status, 0);
   assert.equal(JSON.parse(run('tui').stdout).code, 'terminal_required');
+});
+test('argument JSON rejects FIFO and directory inputs before mutation without a forced kill', async (t) => {
+  const base = await directory(t),
+    selected = join(base, 'absent');
+  const fifo = join(base, 'settings.fifo');
+  execFileSync('mkfifo', [fifo]);
+  for (const file of [fifo, base]) {
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(root, 'dist/cli.js'),
+        'settings',
+        'save',
+        '--expected-revision',
+        '0',
+        '--file',
+        file,
+        '--installation',
+        selected,
+      ],
+      { encoding: 'utf8', timeout: 2000, killSignal: 'SIGKILL' },
+    );
+    assert.equal(result.signal, null, 'Nonregular input must fail without SIGKILL');
+    assert.equal(result.status, 1);
+    assert.equal(JSON.parse(result.stdout).code, 'record_invalid');
+    await assert.rejects(stat(selected), { code: 'ENOENT' });
+  }
+});
+test('operator setup and settings reject port zero before persistence', async (t) => {
+  const base = await directory(t),
+    selected = join(base, 'installation');
+  const settings = { ...defaults, port: 0 };
+  const setup = await perform({
+    root: selected,
+    operation: {
+      effect: 'write',
+      command: {
+        kind: 'setup',
+        certificate: '/unused/certificate.pem',
+        key: '/unused/key.pem',
+        credential: { api_key_id: randomUUID(), request_id: randomUUID(), secret: 's'.repeat(43) },
+        settings,
+      },
+    },
+  });
+  assert.equal(setup.exitCode, 1);
+  assert.equal(setup.envelope.code, 'invalid_arguments');
+  await assert.rejects(stat(selected), { code: 'ENOENT' });
+  await mkdir(join(selected, 'setup'), { recursive: true });
+  const manifest = { format: 1, installation_id: randomUUID(), image: `sha256:${'a'.repeat(64)}` };
+  await writeFile(join(selected, 'setup/installation.json'), JSON.stringify(manifest));
+  const saved = join(selected, 'setup/settings.json');
+  const original = JSON.stringify({
+    revision: '0',
+    saved: defaults,
+    effective: null,
+    last_working: null,
+    apply_failure: null,
+  });
+  await writeFile(saved, original);
+  const draft = join(base, 'settings.json');
+  await writeFile(draft, JSON.stringify(settings));
+  const result = run(
+    'settings',
+    'save',
+    '--expected-revision',
+    '0',
+    '--file',
+    draft,
+    '--installation',
+    selected,
+  );
+  assert.equal(result.status, 1);
+  assert.equal(JSON.parse(result.stdout).code, 'invalid_arguments');
+  assert.equal(await readFile(saved, 'utf8'), original);
+  assert.equal(
+    (await import('../dist/settings.js')).Settings.parse(settings).port,
+    0,
+    'In-process settings still allow an ephemeral port',
+  );
 });
 test('doctor leaves missing and existing installations byte-for-byte unchanged', async (t) => {
   const base = await directory(t),
@@ -379,7 +460,7 @@ test(
       b = await certificate(base, 'replacement');
     await saveTls(installation, a.cert, a.key);
     const original = (await savedTls(installation)).state.saved.generation;
-    for (const phase of ['before-pointer', 'after-pointer']) {
+    for (const phase of ['before-pointer', 'before-pointer-rename', 'after-pointer']) {
       const script = `
       import fs from 'node:fs';
       import { syncBuiltinESMExports } from 'node:module';
@@ -393,6 +474,11 @@ test(
           file.sync = async () => { await sync(); await hold(); };
         }
         return file;
+      };
+      const rename = fs.promises.rename;
+      fs.promises.rename = async (...args) => {
+        if (phase === 'before-pointer-rename' && String(args[1]).endsWith('/tls-state.json')) await hold();
+        return rename(...args);
       };
       const rm = fs.promises.rm;
       fs.promises.rm = async (...args) => {
@@ -418,15 +504,80 @@ test(
       await exited;
       const view = await tlsView(installation);
       assert.equal(view.recoveryRequired, true);
-      assert.equal(view.saved.generation === original, phase === 'before-pointer');
+      assert.equal(view.saved.generation === original, phase !== 'after-pointer');
       await assert.rejects(savedTls(installation), /recovery_required/);
       await recoverTlsAfterWriterExit(installation);
       const saved = await savedTls(installation);
       assert.deepEqual(
         await readFile(saved.certificate),
-        await readFile(phase === 'before-pointer' ? a.cert : b.cert),
+        await readFile(phase !== 'after-pointer' ? a.cert : b.cert),
       );
     }
+    const setup = join(installation, 'setup');
+    const temporary = (await readdir(setup)).filter((name) =>
+      /^tls-state\.json\.[0-9a-f-]+\.tmp$/.test(name),
+    );
+    assert.equal(temporary.length, 1, 'Killed pointer rename leaves a real atomic temporary');
+    const retained = (await savedTls(installation)).state;
+    const manifest = {
+      format: 1,
+      installation_id: randomUUID(),
+      image: `sha256:${'a'.repeat(64)}`,
+    };
+    await writeFile(join(setup, 'installation.json'), JSON.stringify(manifest));
+    await mkdir(join(installation, 'recovery'), { recursive: true });
+    await mkdir(join(installation, 'data'), { recursive: true });
+    await mkdir(join(installation, 'control/exits'), { recursive: true });
+    const ambiguous = [
+      `tls-state.json.${randomUUID()}.tmp`,
+      `settings.json.${randomUUID()}.tmp`,
+      'tls-state.json.not-a-uuid.tmp',
+      `unrelated.json.${randomUUID()}.tmp`,
+    ];
+    await writeFile(join(setup, ambiguous[0]), 'public file', { mode: 0o644 });
+    await symlink('/unrelated/target', join(setup, ambiguous[1]));
+    for (const name of ambiguous.slice(2))
+      await writeFile(join(setup, name), 'retain', { mode: 0o600 });
+    const admin = new Administration(installation);
+    let marker = { exists: false, dataset: null, marker: null };
+    admin.stoppedInstallationContainers = async () => [];
+    admin.offline = async (mode, payload) => {
+      if (mode === 'inspect-marker') return marker;
+      if (mode === 'establish') {
+        marker = {
+          exists: true,
+          dataset: payload.dataset,
+          marker: { dataset: payload.dataset, actionId: payload.action },
+        };
+        return {};
+      }
+      if (mode === 'provision') return {};
+      throw new Error('unexpected_offline_call');
+    };
+    await installationLock(installation, () => admin.destructive('hard-reset'));
+    assert.deepEqual(
+      (await readdir(setup)).sort(),
+      [...ambiguous].sort(),
+      'Only ambiguous files remain after reset',
+    );
+    for (const name of ambiguous) await rm(join(setup, name));
+    await installationLock(installation, () =>
+      admin.setup({
+        image: manifest.image,
+        certificate: a.cert,
+        key: a.key,
+        credential: { api_key_id: randomUUID(), request_id: randomUUID(), secret: 's'.repeat(43) },
+      }),
+    );
+    assert.equal((await admin.settingsShow()).revision, '0');
+    assert.notEqual(
+      (await savedTls(installation)).state.saved.generation,
+      retained.saved.generation,
+    );
+    assert.notEqual(
+      JSON.parse(await readFile(join(setup, 'installation.json'))).installation_id,
+      manifest.installation_id,
+    );
   },
 );
 
