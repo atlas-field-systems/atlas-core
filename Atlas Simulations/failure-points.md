@@ -17,7 +17,7 @@ The proxy sits between every client and Core.
 | `reply-lost` | Drop the reply after Core commits, for each write kind | `unknown_outcome`, then a retry with one durable effect |
 | `reply-delayed` | Hold a reply past the attempt deadline | The late reply updates the same operation with no second effect |
 | `reply-altered` | Corrupt a response body | SDK refuses it and exposes no invalid value |
-| `connections-closed` | Close every open connection | Full recovers, Assets continue, and no write replays automatically |
+| `connections-closed` | Close every open connection | Full recovers, the SDK replays no write by itself, and an Asset's retry of the same prepared operation makes one durable effect |
 | `version-mismatch` | Rewrite the Protocol version in discovery | SDK refuses it before ordinary work |
 | `malformed-request` | Send invalid JSON directly to Core | Core refuses it and state does not change |
 
@@ -28,7 +28,7 @@ The proxy sits between every client and Core.
 | `core-restart` | `restart` under load | Tracks, Tasks, and history remain. Contact returns after check-in |
 | `core-kill` | Kill the container during writes | Accepted writes remain after `start`, and nothing unaccepted appears |
 | `core-drain` | `stop` during writes | Readiness turns false, and every reply is a commit or a known refusal |
-| `core-reset` | `reset` then `start` during a run | Old clients stop with `dataset_invalidated`, and old IDs stay gone |
+| `core-reset` | `reset` then `start` after the [other checks](evals.md#run-an-eval), with Assets still running | Old clients stop with `dataset_invalidated`, and old IDs stay gone |
 
 ## Capacity
 

@@ -86,6 +86,8 @@ does not divert the Asset. Protocol [leaves that choice to the Asset](../mission
 | Core Restart | Keep executing and check in again. The `core_run_id` change starts fresh reads |
 | Dataset invalidated | Stop this Asset's traffic and tell the Run. Never register again by itself |
 | API key rejected | Stop this Asset's traffic and tell the Run. Do not try another key |
+| Position or Observation report refused with `507 storage_limit` | Skip that report and continue with the next reading |
+| Any other write refused | Stop this Asset's traffic and tell the Run |
 
 The Run decides what a stopped Asset means. In an interactive run, it stops the run
 and exits 1. In an eval, an active [failure point](failure-points.md) can expect that

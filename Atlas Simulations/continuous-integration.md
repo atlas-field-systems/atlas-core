@@ -1,8 +1,8 @@
 # Continuous integration
 
-**CI is the main place evals run.** Every commit starts a real Core container and
-real simulated Assets, runs every scenario, and keeps the result permanently.
-Local runs use the same commands, but nothing depends on them.
+**CI is the main place evals run.** Every pull request commit and every push to
+`main` starts a real Core container and real simulated Assets, runs every scenario,
+and records the result. Local runs use the same commands, but nothing depends on them.
 
 ## When it runs
 
@@ -17,10 +17,11 @@ free for this public repository.
 | --- | --- |
 | `build` | Build the pinned Protocol, SDK, Core image, and simulator once, and upload them |
 | `eval` | Load those artifacts, then run one eval group on one runner |
-| `record` | Append the run records, write the job summary, and decide the final result |
+| `publish` | Append the new run records to `eval-history`, except on a fork pull request |
+| `record` | Compare the records, write the job summary, and decide the final result |
 
 `record` always runs. It fails if any group failed, was cancelled, or produced no
-record, so a skipped eval can never look like a pass. `record` is the required check
+record, or if `publish` failed, so a skipped eval can never look like a pass. `record` is the required check
 for evals. `eval` uses `fail-fast: false`, so one failure does not hide others.
 
 Each group runs its scenarios in order, each with a fresh Core installation under
@@ -54,11 +55,15 @@ Eight-hour workload runs do not fit in CI and stay unrun.
 Run records live on the `eval-history` branch, which shares no commits with `main`
 and is never merged. This design needs no external service and no extra secret.
 
-`record` is the only job with write access. It commits the new records and pushes
-them. If another run pushed first, it pulls and retries, and file names cannot clash.
-A pull request from a fork has a read-only token, so its records stay as artifacts.
-Logs and failure evidence stay as artifacts for seven days. A record has a 256 KiB
-limit, so the branch stays small enough to keep forever.
+`publish` is the only job with write access. It checks out only `eval-history`, runs
+no code from the pull request or from an artifact, and treats each record as data.
+It refuses a record above 256 KiB, so the branch stays small enough to keep forever.
+Anyone who can edit the workflow file already has write access, so this boundary
+protects against build and scenario output.
+
+`publish` commits the records and pushes them. If another run pushed first, it pulls
+and retries. A pull request from a fork has a read-only token, so its records stay as
+artifacts for seven days, along with logs and failure evidence.
 
 | Record field | Contents |
 | --- | --- |
@@ -68,8 +73,9 @@ limit, so the branch stays small enough to keep forever.
 | Result | Verdict, every check, and the failure reason |
 | Measurements | The [recorded groups](evals.md#performance-is-recorded) and cleanup evidence |
 
-The file path is `SCENARIO/UTC-TIME-SHORT-SHA.json`. Nothing edits or deletes a
-record, and a failed run also adds one.
+The file path is `SCENARIO/UTC-TIME-SHORT-SHA-RUN-ATTEMPT.json`, with GitHub's run ID
+and attempt number, so paths cannot clash. Nothing edits or deletes a record, and a
+failed run also adds one.
 
 ## Compare versions
 
