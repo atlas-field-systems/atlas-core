@@ -52,27 +52,54 @@ Image builds and manifest generation still require the clean release checkout.
 
 ## Operator package
 
-The intended [CLI and TUI](command-line.md) ship as a compiled npm package.
-This packaging is not implemented yet. The npm name and initial package version
-are deferred until release preparation. Release metadata records that identity
-and the packed tarball's SHA-256. All runtime dependencies are bundled in the
-tarball; the server's native database driver stays inside the Core container.
-Each package identifies its matching immutable image and supported platform through
-release metadata tied to the source revision and artifact hashes. Setup pulls and
-verifies that image, then retains its resolved local identity for lifecycle commands.
-Invalid artifacts fail before setup changes retained state.
+The compiled [CLI and TUI](command-line.md) use a separate `operator/package-lock.json`.
+Ink 5.2.1, React 18.3.1 and Ink UI 2.0.0 are pinned. Server runtime locks stay separate.
+From Core with the pinned Node and npm, run:
 
-Offline installation uses that same local `.tgz` and a preloaded verified image.
-Before installing, compare the tarball's SHA-256 with the release manifest obtained
-from the trusted release publication. A mismatch stops installation. Install the
-verified file with `npm install --global --offline /absolute/package.tgz`.
-An existing npm cache or registry mirror is not required.
+```sh
+npm run operator:prepare
+npm run build
+npm run operator:build
+npm run operator:pack
+npm run test:operator
+npm run test:operator-package
+```
 
-Installing a new CLI neither updates nor resets an existing Core. Unsupported
-package and Core combinations refuse mutation before changing installation state.
-Uninstalling the npm package preserves retained state. Publication uses the exact
-packed artifact and image exercised by [qualification](qualification.md#operator-interface-qualification).
-Each publication result is verified so an interrupted release can be reconciled.
+Packing uses `artifacts/image-id`, or the explicit `ATLAS_OPERATOR_IMAGE` build input.
+`ATLAS_OPERATOR_IMAGE_REFERENCE` optionally supplies `repository@sha256:DIGEST`.
+Setup verifies the exact local image and source label. If absent, it pulls only that
+immutable reference, then verifies the resolved image again. Without a reference,
+it requires a preloaded image. Tags and guessed repositories are never accepted.
+
+`ATLAS_OPERATOR_NPM_NAME` remains an explicit release input. Omitted, the artifact
+is private `@atlas/core-operator-qualification` version 0.4.0 with null publication
+identity. No script publishes. Named builds require clean source. Metadata records
+source revision and tree, dirty status, Core, Protocol, database format, Node, npm,
+platform, and image identity. `ATLAS_OPERATOR_OUT` selects an absolute artifact directory.
+The external `operator-manifest.json` binds tarball SHA-256 and byte length.
+The final release manifest verifies and includes this artifact record.
+
+The tarball bundles runtime JavaScript, licenses, and no installation hooks or
+install-time dependencies. Its audited input graph excludes server database, worker,
+RPC, Object storage, and native addons. Direct commands import no terminal renderer.
+
+Obtain the manifest from a trusted release source. Verify before invoking npm:
+
+```sh
+node /absolute/verify-operator-tarball.mjs /absolute/package.tgz /absolute/trusted-manifest.json
+npm install --global --offline --ignore-scripts --no-audit --no-fund --update-notifier=false /absolute/package.tgz
+```
+
+Packing distributes the standalone verifier beside the tarball and binds its hash
+in the manifest. It requires only Node. Offline qualification uses an empty cache,
+an unreachable registry and syscall tracing to reject network connections. Disabling
+npm's update notifier is required even with `--offline`. No compiler or registry is
+needed to install. Setup additionally needs the preloaded image when offline.
+Package replacement and removal preserve retained installation state. A mismatched
+package refuses mutations before acquiring the installation lock; read operations,
+Stop, and explicit recovery remain available. Update still checks retained format
+before recording destructive intent. See [qualification](qualification.md#operator-interface-qualification)
+for unrun image and container release gates.
 
 ## Contract compatibility
 

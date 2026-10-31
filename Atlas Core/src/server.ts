@@ -737,8 +737,8 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
     dataset: ready.dataset,
     run: ready.run,
     diagnostics,
-    async listen() {
-      return app.listen({ host: settings.host, port: settings.port });
+    async listen(host = settings.host) {
+      return app.listen({ host, port: settings.port });
     },
   };
 }
