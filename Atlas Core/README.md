@@ -18,6 +18,21 @@ projects. Closing the UI does not stop Core. The [operating environment](../oper
 host internet access while allowing interruptions on field links. Local Core work
 does not require a cloud service.
 
+### Planned operator tooling
+
+The planned installation path is `npm install --global <package>`, followed by
+`atlas-core` for guided setup and interactive administration. The package name is
+not selected, and this interface is not implemented yet. The package will supply
+a CLI for scripts and a TUI built with [Ink](https://github.com/vadimdemedes/ink)
+and [Ink UI](https://github.com/vadimdemedes/ink-ui), sharing Core's local
+administration operations. Setup will verify prerequisites and the matching
+immutable container image without requiring a source checkout or compilation.
+
+The tooling will configure Core's installation, credentials, HTTPS endpoint, and
+settings under the existing [lifecycle rules](lifecycle.md). Network exposure,
+DNS, tunnels, proxies, gateway operation, and operator UI hosting remain the
+deployer's responsibility. Core's CLI and TUI will not manage those systems.
+
 ## Ownership inside the server
 
 | Owner | Responsibility |
