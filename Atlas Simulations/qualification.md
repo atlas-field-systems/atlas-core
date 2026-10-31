@@ -2,12 +2,16 @@
 
 **The simulator must prove that it follows Protocol and that its evals can fail.**
 Use Node 24.22.1 and npm 11.19.0. Build Core with the same Protocol artifact first.
-Run every case against real Core HTTPS and the packed SDK.
+Run every case against real Core HTTPS and the packed SDK. From this directory,
+prepare the local package archives, install the locked dependencies, and build:
 
 ```sh
 export ATLAS_TEST_ROOT="$(mktemp -d /var/tmp/atlas-simulations.XXXXXX)"
+npm run inputs:prepare
+npm ci --ignore-scripts
+npm run build
 npm run verify:inputs
-npm test
+npm test >"$ATLAS_TEST_ROOT/suite.log" 2>&1
 ```
 
 `verify:inputs` checks the pinned tools, the lock entries, and the installed SDK
