@@ -314,6 +314,10 @@ export class Entities {
     this.evidence.admit(tx, report, 'asset');
     let changed = false;
     const s = report.sections;
+    if (s.tags && eligible(asset.tags, report)) {
+      asset.tags = this.evidence.sourced(readSections.tags, s.tags, report, 'tags');
+      changed = true;
+    }
     if (s.status && eligible(asset.status, report)) {
       asset.status = this.evidence.sourced(readSections.status, s.status, report, 'status');
       changed = true;

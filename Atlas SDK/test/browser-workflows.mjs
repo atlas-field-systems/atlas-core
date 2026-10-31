@@ -28,7 +28,7 @@ export async function runHttp(config) {
     );
     check(client.state.kind === 'ready', 'Discovery must make the client ready');
     check(client.state.datasetId === config.datasetId, 'Exact discovered Dataset');
-    check(discovery.response.body.data.protocol_version === '0.3.0', 'Exact Protocol version');
+    check(discovery.response.body.data.protocol_version === '0.4.0', 'Exact Protocol version');
     check(discovery.response.body.dataset_id === config.datasetId, 'Discovery body context');
     contexts.push(discovery.context);
     const prepared = client.operators.create({
@@ -303,6 +303,45 @@ export async function startFull(config) {
       'Browser Asset registration',
     );
     contexts.push(registered.attempt.context);
+    const tagged = await registration.reporter
+      .update(
+        { request_id: NewId.parse(crypto.randomUUID()) },
+        {
+          report_id: NewId.parse(crypto.randomUUID()),
+          sequence: Sequence.parse('1'),
+          generated_at: null,
+          mode: 'current',
+          sections: {
+            tags: {
+              state: 'value',
+              classification: 'state_until_changed',
+              observed_at: null,
+              value: { presets: ['simulated'] },
+            },
+          },
+        },
+      )
+      .send();
+    check(
+      tagged.attempt.kind === 'response' && tagged.attempt.response.kind === 'success',
+      'Browser Tags report',
+    );
+    check(
+      tagged.attempt.response.body.data.asset.edit_revision === '0',
+      'Tags preserve authored revision',
+    );
+    contexts.push(tagged.attempt.context);
+    const taggedRead = await admin.assets.get({ asset_id: assetId });
+    check(
+      taggedRead.kind === 'response' && taggedRead.response.kind === 'success',
+      'HTTP Tags read',
+    );
+    check(
+      taggedRead.response.body.data.tags?.state === 'value' &&
+        taggedRead.response.body.data.tags.value.presets[0] === 'simulated',
+      'HTTP retains reported preset',
+    );
+    contexts.push(taggedRead.context);
     const observationId = NewId.parse(crypto.randomUUID());
     const publisherId = NewId.parse(crypto.randomUUID());
     const creation = admin.reporting.createObservation({
@@ -384,6 +423,10 @@ export function readFull() {
     asset.kind === 'available' && asset.value?.alias === 'Firefox Asset',
     'Initial snapshot publication',
   );
+  check(
+    asset.value.tags?.state === 'value' && asset.value.tags.value.presets[0] === 'simulated',
+    'Tags in Full snapshot',
+  );
   const track = full.tracks.get({ track_id: trackId });
   check(track.kind === 'available' && track.value?.id === trackId, 'Track in complete picture');
   const query = full.assets.query({ filters: { aliases: ['Firefox Asset'] }, page_size: 1 });
@@ -404,13 +447,34 @@ export function readFull() {
 export async function updateFull() {
   check(fullRun, 'Full workflow is running');
   const { full, assetId, observationId, trackId } = fullRun;
-  const updated = await full.assets
-    .update({
-      asset_id: assetId,
-      request_id: NewId.parse(crypto.randomUUID()),
-      expected_edit_revision: Counter.parse('0'),
-      alias: 'Firefox WSS update',
-    })
+  const prior = full.assets.get({ asset_id: assetId });
+  check(prior.kind === 'available' && prior.value !== null, 'Asset before live Tags update');
+  const reporter = full.reporting.asset({
+    id: assetId,
+    process_generation: prior.value.process_generation,
+  });
+  const updated = await reporter
+    .update(
+      {
+        request_id: NewId.parse(crypto.randomUUID()),
+        expected_edit_revision: Counter.parse('0'),
+        alias: 'Firefox WSS update',
+      },
+      {
+        report_id: NewId.parse(crypto.randomUUID()),
+        sequence: Sequence.parse('2'),
+        generated_at: null,
+        mode: 'current',
+        sections: {
+          tags: {
+            state: 'value',
+            classification: 'state_until_changed',
+            observed_at: null,
+            value: { presets: [] },
+          },
+        },
+      },
+    )
     .send();
   check(
     updated.attempt.kind === 'response' && updated.attempt.response.kind === 'success',
@@ -422,6 +486,10 @@ export async function updateFull() {
   check(
     read.kind === 'available' && read.value?.alias === 'Firefox WSS update',
     'Authenticated WSS update',
+  );
+  check(
+    read.value.tags?.state === 'value' && read.value.tags.value.presets.length === 0,
+    'Live Tags clear',
   );
   const observation = await full.observations.get({ observation_id: observationId });
   check(

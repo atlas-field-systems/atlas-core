@@ -1059,12 +1059,12 @@ test('startup refuses legacy evidence without retained quantity status', async (
 });
 
 test('incompatible database formats are refused before old evidence can be interpreted', async (t) => {
-  for (const format of ['1', '2', '3']) {
+  for (const format of ['1', '2', '3', '4']) {
     const f = await fixture(t);
     await f.core.close();
     const db = new Database(join(f.directory, 'core.sqlite'));
     try {
-      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '4');
+      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '5');
       db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
     } finally {
       db.close();
@@ -1079,5 +1079,150 @@ test('incompatible database formats are refused before old evidence can be inter
     } finally {
       retained.close();
     }
+  }
+});
+
+test('Asset Tags retain sourced sets, ordering and process scope through Restart', async (t) => {
+  const f = await fixture(t);
+  let asset = ok(await f.call('RegisterAsset', registration())).asset;
+  assert.equal(Object.hasOwn(asset, 'tags'), false);
+  const original = asset;
+  const value = (presets) => ({
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { presets },
+  });
+  const submit = async (sequence, sections, mode = 'current') => {
+    const request = {
+      asset_id: asset.id,
+      request_id: uuid(),
+      report: report(
+        f.core.dataset,
+        asset.id,
+        { kind: 'asset_process', process_generation: asset.process_generation },
+        sequence,
+        sections,
+        mode,
+      ),
+    };
+    const response = await f.call('UpdateAsset', request);
+    asset = ok(response).asset;
+    assert.equal(asset.edit_revision, original.edit_revision);
+    return { request, response };
+  };
+  const first = await submit(100, {
+    tags: {
+      ...value(['simulated']),
+      observed_at: '9999-01-01T00:00:00Z',
+      source_times: { presets: null },
+    },
+  });
+  assert.equal(asset.version, '1');
+  assert.deepEqual(asset.tags.time_status, { presets: 'unknown' });
+  assert.deepEqual(asset.tags.value.presets, ['simulated']);
+  const initialTags = asset.tags;
+  const retry = await f.call('UpdateAsset', { ...first.request, request_id: uuid() });
+  assert.equal(ok(retry).evidence_disposition, 'duplicate');
+  assert.equal(retry.json.commit_cursor, undefined);
+  assert.deepEqual(ok(retry).asset, asset);
+  for (const [sequence, mode] of [
+    [99, 'current'],
+    [101, 'history_only'],
+  ]) {
+    await submit(sequence, { tags: value([]) }, mode);
+    assert.deepEqual(asset.tags, initialTags);
+    assert.equal(asset.version, '1');
+  }
+  await submit(102, {
+    status: {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      value: { condition: 'healthy' },
+    },
+  });
+  assert.deepEqual(asset.tags, initialTags);
+  await f.restart();
+  assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })).tags, initialTags);
+  const health = ok(await f.call('GetHealth'));
+  const replace = async (sections) => {
+    const prior = asset.process_generation,
+      generation = uuid();
+    const challenge = ok(
+      await f.call('BeginAssetContact', {
+        allocation_context: health.allocation_context,
+        request_id: uuid(),
+        asset_id: asset.id,
+        mode: 'replace',
+        expected_process_generation: prior,
+        process_generation: generation,
+      }),
+    );
+    asset = ok(
+      await f.call('ReplaceAssetProcess', {
+        request_id: uuid(),
+        asset_id: asset.id,
+        expected_process_generation: prior,
+        process_generation: generation,
+        challenge_id: challenge.challenge_id,
+        first_report: {
+          ...report(
+            f.core.dataset,
+            asset.id,
+            { kind: 'asset_process', process_generation: generation },
+            1,
+            sections,
+          ),
+          generated_at: challenge.issued_at,
+          contact_proof: { challenge_id: challenge.challenge_id },
+        },
+      }),
+    ).asset;
+  };
+  await replace({});
+  assert.deepEqual(asset.tags, initialTags, 'Omission preserves the original process evidence');
+  await replace({ tags: { ...value([]), observed_at: '2026-10-21T12:00:00Z' } });
+  assert.deepEqual(asset.tags.value.presets, []);
+  assert.equal(asset.tags.evidence.sequence, '1');
+  assert.equal(asset.tags.evidence.origin.process_generation, asset.process_generation);
+  assert.deepEqual(asset.tags.time_status, { presets: 'known' });
+  await submit(2, {
+    tags: {
+      state: 'error',
+      classification: 'dated_measurement',
+      observed_at: null,
+      error: { code: 'unavailable' },
+    },
+  });
+  assert.equal(asset.tags.state, 'error');
+  assert.equal(asset.tags.time_status, 'unknown');
+  await submit(3, {
+    tags: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null },
+  });
+  const retained = asset.tags;
+  await f.restart();
+  asset = ok(await f.call('GetAsset', { asset_id: asset.id }));
+  assert.deepEqual(asset.tags, retained);
+  assert.equal(asset.edit_revision, '0');
+  for (const tags of [
+    null,
+    value(['simulated', 'simulated']),
+    value(['unknown']),
+    { ...value([]), extra: true },
+  ]) {
+    const refused = await f.call('UpdateAsset', {
+      asset_id: asset.id,
+      request_id: uuid(),
+      report: report(
+        f.core.dataset,
+        asset.id,
+        { kind: 'asset_process', process_generation: asset.process_generation },
+        4,
+        { tags },
+      ),
+    });
+    assert.equal(refused.status, 400);
+    assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })).tags, retained);
   }
 });

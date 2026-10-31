@@ -6,7 +6,7 @@ export function runReviewFixes(p) {
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.3.0',
+      'Atlas-Protocol-Version': '0.4.0',
       Authorization: `Bearer ${'A'.repeat(43)}`,
       'Content-Type': 'application/json',
     });

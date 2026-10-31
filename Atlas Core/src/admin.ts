@@ -645,7 +645,7 @@ export class Administration {
         const line =
           JSON.stringify({
             format: 1,
-            release: '0.3.0',
+            release: '0.4.0',
             image: manifest.image,
             context,
             configuration: {

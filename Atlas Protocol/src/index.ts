@@ -30,6 +30,8 @@ export {
   SubjectType,
   GeofeatureKind,
   GeofeatureType,
+  TagPreset,
+  Tags,
   Status,
   Telemetry,
   Attitude,

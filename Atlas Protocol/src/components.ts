@@ -1,5 +1,15 @@
 import { z } from 'zod';
-import { Altitude, Float, numeric, Position, text, Time, Uuid, unique } from './scalars.js';
+import {
+  Altitude,
+  Float,
+  numeric,
+  Position,
+  text,
+  Time,
+  Uuid,
+  unique,
+  uniqueArray,
+} from './scalars.js';
 
 export const Description = z
   .strictObject({ name: text(128, true), description: text(4096).exactOptional() })
@@ -34,6 +44,13 @@ export const GeofeatureKind = z.enum([
 export const GeofeatureType = z
   .strictObject({ kind: GeofeatureKind.nullable() })
   .meta({ id: 'GeofeatureType' });
+export const TagPreset = z.enum(['simulated']).meta({ id: 'TagPreset' });
+export const Tags = z
+  .strictObject({ presets: uniqueArray(TagPreset, TagPreset.options.length) })
+  .meta({ id: 'Tags' });
+export type TagPreset = z.output<typeof TagPreset>;
+export type Tags = z.output<typeof Tags>;
+
 export const Status = z
   .strictObject({
     condition: z.enum(['unknown', 'healthy', 'degraded', 'faulted']),

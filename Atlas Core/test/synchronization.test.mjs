@@ -53,7 +53,7 @@ async function socket(f, credential = f.apiKey, authenticate = true) {
       JSON.stringify({
         type,
         dataset_id: f.core.dataset,
-        protocol_version: '0.3.0',
+        protocol_version: '0.4.0',
         request_id: uuid(),
         data,
       }),
@@ -64,7 +64,7 @@ async function socket(f, credential = f.apiKey, authenticate = true) {
         type: 'authenticate',
         request_id: uuid(),
         dataset_id: f.core.dataset,
-        protocol_version: '0.3.0',
+        protocol_version: '0.4.0',
         api_key: credential,
       }),
     );
@@ -73,13 +73,13 @@ async function socket(f, credential = f.apiKey, authenticate = true) {
   return { ws, take, send, messages };
 }
 test(
-  'WSS refuses API 0.1.0 and 0.2.0 authentication without exposing picture data',
+  'WSS refuses API 0.1.0, 0.2.0 and 0.3.0 authentication without exposing picture data',
   { timeout: 30000 },
   async (t) => {
     const f = await fixture(t);
     const registered = await f.call('RegisterAsset', registration());
     ok(registered);
-    for (const version of ['0.1.0', '0.2.0']) {
+    for (const version of ['0.1.0', '0.2.0', '0.3.0']) {
       const client = await socket(f, f.apiKey, false);
       t.after(() => client.ws.terminate());
       const closed = new Promise((resolve) => client.ws.once('close', (code) => resolve(code)));
@@ -96,10 +96,10 @@ test(
       const frame = await client.take(() => true);
       assert.equal(frame.type, 'error');
       assert.equal(frame.request_id, request_id);
-      assert.equal(frame.protocol_version, '0.3.0');
+      assert.equal(frame.protocol_version, '0.4.0');
       assert.equal(frame.dataset_id, f.core.dataset);
       assert.equal(frame.error.code, 'protocol_mismatch');
-      assert.deepEqual(frame.error.details, { protocol_version: '0.3.0' });
+      assert.deepEqual(frame.error.details, { protocol_version: '0.4.0' });
       assert.equal(await closed, 1008);
       assert.deepEqual(client.messages, []);
     }
@@ -145,6 +145,19 @@ test(
       }),
     );
     const taskOrigin = { kind: 'asset_process', process_generation: asset.process_generation };
+    const tags = {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      value: { presets: ['simulated'] },
+    };
+    const tagged = ok(
+      await f.call('UpdateAsset', {
+        asset_id: asset.id,
+        request_id: uuid(),
+        report: report(f.core.dataset, asset.id, taskOrigin, 1, { tags }),
+      }),
+    ).asset;
     const firstEvidence = {
       dataset_id: f.core.dataset,
       asset_id: asset.id,
@@ -207,6 +220,7 @@ test(
       items.find((item) => item.resource_kind === 'task').image.execution_summary,
       firstSummary,
     );
+    assert.deepEqual(items.find((item) => item.resource_kind === 'asset').image.tags, tagged.tags);
     client.send('release_snapshot', { release_token: snapshot.release_token });
     await client.take((frame) => frame.type === 'snapshot_released');
     const subscription_id = uuid();
@@ -275,10 +289,19 @@ test(
       reason: 'navigation_failed',
       message: 'Position unavailable',
     };
+    const clearedTags = await f.call('UpdateAsset', {
+      asset_id: asset.id,
+      request_id: uuid(),
+      report: report(f.core.dataset, asset.id, taskOrigin, 2, {
+        tags: { ...tags, value: { presets: [] } },
+      }),
+    });
+    ok(clearedTags);
     const expected = [
       { cursor: changedTrack.json.commit_cursor, kind: 'track', id: pair.track.id },
       { cursor: sameState.json.commit_cursor, kind: 'task', id: task.task_id },
       { cursor: terminated.json.commit_cursor, kind: 'task', id: task.task_id },
+      { cursor: clearedTags.json.commit_cursor, kind: 'asset', id: asset.id },
     ];
     const batches = [];
     let cursor = snapshot.baseline_cursor;
@@ -318,6 +341,8 @@ test(
     assert.deepEqual(batches[2].image.execution_summary, terminalSummary);
     assert.equal(batches[2].image.execution_state, 'failed');
     assert.equal(BigInt(batches[2].version), BigInt(batches[1].version) + 1n);
+    assert.deepEqual(batches[3].image.tags.value.presets, []);
+    assert.deepEqual(batches[3].image.tags, clearedTags.json.data.asset.tags);
     const closed = new Promise((resolve) => client.ws.once('close', resolve));
     client.ws.close();
     await closed;

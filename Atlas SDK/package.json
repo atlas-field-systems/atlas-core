@@ -1,6 +1,6 @@
 {
   "name": "@atlas/sdk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -30,7 +30,7 @@
     "evidence:verify": "node scripts/verify-evidence.mjs"
   },
   "dependencies": {
-    "@atlas/protocol": "file:artifacts/atlas-protocol-0.3.0.tgz",
+    "@atlas/protocol": "file:artifacts/atlas-protocol-0.4.0.tgz",
     "@noble/hashes": "2.4.0",
     "zod": "4.6.7"
   },
@@ -41,8 +41,8 @@
   },
   "atlasBuild": {
     "protocol": {
-      "version": "0.3.0",
-      "sha256": "c983e13e039c27c56801858e4bfdfafbb6eb78808bd1c8e6a8cd8fdce65bfb95"
+      "version": "0.4.0",
+      "sha256": "9cf18c45c669320e28423429e81f7b5fa9169d33c145c36aba3f2c5b7756dc7f"
     }
   }
 }
