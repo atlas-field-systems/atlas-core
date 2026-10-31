@@ -17,7 +17,7 @@ import {
 } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { request } from 'node:https';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { root, uuid, secret, registration } from './helpers.mjs';
 import { defaults } from '../dist/settings.js';
 import { installationLock } from '../dist/installation.js';
@@ -28,6 +28,8 @@ import { Administration } from '../dist/admin.js';
 import { diskUsage } from '../dist/capacity.js';
 import Database from 'better-sqlite3';
 const exec = promisify(execFile);
+const cliExecutable = process.env.ATLAS_TEST_CLI ?? join(root, 'dist', 'cli.js');
+assert.ok(isAbsolute(cliExecutable), 'ATLAS_TEST_CLI must select an absolute installed executable');
 test(
   'real CLI and pinned container retain Restart, fence Reset, recover proof and require new Hard Reset setup',
   { timeout: 180000 },
@@ -87,7 +89,7 @@ test(
           (
             await exec(
               process.execPath,
-              [join(root, 'dist', 'cli.js'), ...args, '--installation', directory],
+              [cliExecutable, ...args, '--installation', directory],
               { cwd: root, maxBuffer: 131072, timeout: 90000 },
             )
           ).stdout,
@@ -307,7 +309,7 @@ test(
     );
     const interrupted = spawn(
       process.execPath,
-      [join(root, 'dist', 'cli.js'), 'reset', '--installation', installation],
+      [cliExecutable, 'reset', '--installation', installation],
       { cwd: root, stdio: 'ignore' },
     );
     const exited = new Promise((resolve) =>
