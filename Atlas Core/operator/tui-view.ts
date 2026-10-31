@@ -154,7 +154,7 @@ export const settingRows = (view: SettingsView) =>
 
 const certificateLines = (tls: TlsView) => [
   `Saved certificate expires ${tls.saved?.notAfter ?? 'unavailable'}.`,
-  `Active certificate expires ${tls.active?.notAfter ?? 'unavailable'}.`,
+  `Last verified active certificate expires ${tls.active?.notAfter ?? 'unavailable'}.`,
   ...(tls.pendingActivation ? ['Saved certificate is not active.'] : []),
   ...(tls.activationFailure ? [`Certificate activation failed: ${tls.activationFailure}.`] : []),
 ];
@@ -168,7 +168,7 @@ export const settingsLines = ({ settings, tls }: Pick<View, 'settings' | 'tls'>)
       ]
     : []),
   ...(tls ? certificateLines(tls) : ['Certificate state unavailable.']),
-  'Saving changes nothing until an explicit restart. Other settings use the CLI.',
+  'Saved changes apply on the next start or restart. Advanced settings use the CLI.',
 ];
 
 function recoveryNotes(
