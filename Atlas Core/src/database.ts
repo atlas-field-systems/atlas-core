@@ -6,7 +6,7 @@ import { canonical, id, next, now, zero } from './exact.js';
 import { refuse } from './fault.js';
 import type { Settings } from './settings.js';
 
-export const databaseFormat = '5';
+export const databaseFormat = '4';
 const Meta = z.strictObject({ value: z.string() });
 const Retry = z.strictObject({ facts: z.string(), cursor: z.string().nullable() });
 const LogRow = z.strictObject({ sequence: z.string(), previous: z.string(), message: z.string() });

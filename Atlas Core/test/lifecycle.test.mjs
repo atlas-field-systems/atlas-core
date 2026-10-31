@@ -168,8 +168,19 @@ test('atomic Dataset marker preserves setup, matching recovery regenerates proof
   const f = await fixture(t);
   const old = f.core.dataset;
   const registered = registration();
+  const operator = { operator_id: uuid(), request_id: uuid(), name: 'Retained operator' };
+  assert.equal((await f.call('CreateOperator', operator)).status, 200);
   assert.equal((await f.call('RegisterAsset', registered)).status, 200);
   await f.core.close();
+  const retained = new Database(join(f.directory, 'core.sqlite'));
+  try {
+    retained.prepare("UPDATE core_meta SET value='4' WHERE key='format'").run();
+  } finally {
+    retained.close();
+  }
+  assert.deepEqual(await run({ mode: 'check-update', directory: f.directory }), {
+    compatible: true,
+  });
   const dataset = uuid(),
     actionId = uuid();
   const established = await run({
@@ -219,6 +230,10 @@ test('atomic Dataset marker preserves setup, matching recovery regenerates proof
   await f.restart();
   assert.equal(f.core.dataset, dataset);
   assert.equal((await f.call('GetHealth')).status, 200);
+  const keptOperator = await f.call('GetOperator', { operator_id: operator.operator_id });
+  assert.equal(keptOperator.status, 200);
+  assert.equal(keptOperator.json.data.name, 'Retained operator');
+  assert.deepEqual((await f.call('ListAssets')).json.data.items, []);
   assert.equal(
     (await f.call('ListAssets', {}, { 'Atlas-Dataset-ID': old })).json.error.code,
     'dataset_mismatch',
