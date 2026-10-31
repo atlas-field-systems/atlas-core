@@ -103,6 +103,29 @@ recovery acceptance. Pressure results do not establish supported retained worklo
 The bounded `npm run fixture:retention` does not qualify the sustained workload.
 Neither tuning nor capacity failure permits weaker retention or atomicity.
 
+## Operator-interface qualification
+
+The [intended CLI and TUI](command-line.md) require the following evidence before
+release. These workflows are unrun until the packaged interface exists. Extend the
+existing CLI and container workflows using the exact npm artifact and matching image.
+
+- Install on a clean supported host without a checkout or compiler. Check missing
+  prerequisites, invalid artifacts, preloaded offline setup, and retained-state protection.
+- Complete setup, start, settings changes, credential provisioning, enrollment,
+  export, and certificate replacement through both interfaces with matching outcomes.
+- Exercise keyboard navigation, resize, SSH, noninteractive output, cancellation,
+  terminal loss, concurrent commands, and interrupted destructive work.
+- Verify authenticated HTTP, WebSocket synchronization, and file transfers directly
+  against the configured endpoint, including local use without internet.
+- Verify retained data across stop, restart, and host reboot. Core remains stopped
+  after reboot until explicitly started. Package replacement and removal preserve state.
+- Check safe failure output, partial exports, recovery-required states, and invalid
+  or expired certificates. Neither diagnostics nor cancellation may conceal cleanup failure.
+
+Keep installation and failure evidence outside the workspace. Record package and
+image identities, host configuration, commands, and results. These checks do not
+qualify external deployment services, sustained workload, or power-loss durability.
+
 ## Report honestly
 
 Record revision, actual commands, inputs, environment, and passed/failed/unrun checks.

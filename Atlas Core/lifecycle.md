@@ -22,6 +22,8 @@ Use a fresh installation for that release; Reset does not convert old formats.
 ## Commands
 
 Run `node dist/cli.js COMMAND --installation /absolute/owned/installation` locally.
+This is the current source entry point. The intended packaged interface is specified
+in [command-line administration](command-line.md) and uses these same operations.
 Docker access uses `sudo -n docker`. The image argument is an immutable `sha256:` ID
 from `artifacts/image-id`, never a tag. Setup supplies a valid TLS certificate and private key
 and a mode-0600 credential JSON file containing `api_key_id`, `request_id`, and `secret`.
@@ -117,5 +119,17 @@ Setup flushes both retained TLS files before recording the installation manifest
 A file-flush or close failure stops setup and preserves the failure for repair.
 [Diagnostics](diagnostics.md#collection-and-lifetime) owns log and export lifetime.
 Await diagnostic writers before clearing logs. Unmanaged container or host logs must not escape Reset.
+
+## TLS replacement
+
+Certificate replacement is required by the [intended interface](command-line.md)
+but is not implemented yet. The packaged command is
+`atlas-core tls replace --certificate FILE --key FILE`, with `--restart` for activation.
+The TUI exposes the same operation. It validates the pair before changing retained setup and
+refuses invalid input without disturbing the working service. Activation requires
+an explicit restart. The operation owns its installation lock, durable replacement,
+and cleanup, and retains repair evidence if interrupted. It reports saved and active
+state separately and never reports activation without verified service readiness.
+Certificate issuance and renewal scheduling belong to deployment tooling.
 
 [Next: service readiness](readiness.md)

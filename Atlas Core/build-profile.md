@@ -50,6 +50,23 @@ Git archives omit `.git`. The consumer supplies `ATLAS_SOURCE_REVISION`,
 `ATLAS_SOURCE_TREE` and `ATLAS_SOURCE_DIRTY=false` from verified paired metadata.
 Image builds and manifest generation still require the clean release checkout.
 
+## Operator package
+
+The intended [CLI and TUI](command-line.md) ship as a compiled npm package.
+This packaging is not implemented yet. Its runtime dependencies are complete;
+the server's native database driver stays inside the Core container.
+Each package identifies its matching immutable image and supported platform through
+release metadata tied to the source revision and artifact hashes. Setup pulls and
+verifies that image, then retains its resolved local identity for lifecycle commands.
+Invalid artifacts fail before setup changes retained state. Preloaded verified images
+and packaged dependencies support installation without downloads.
+
+Installing a new CLI neither updates nor resets an existing Core. Unsupported
+package and Core combinations refuse mutation before changing installation state.
+Uninstalling the npm package preserves retained state. Publication uses the exact
+packed artifact and image exercised by [qualification](qualification.md#operator-interface-qualification).
+Each publication result is verified so an interrupted release can be reconciled.
+
 ## Contract compatibility
 
 The required current-result timing metadata changes the strict wire contract.
