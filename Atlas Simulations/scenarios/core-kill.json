@@ -1,0 +1,54 @@
+{
+  "assets": [
+    {
+      "alias": "Probe",
+      "position": {
+        "latitude": 51.5,
+        "longitude": -0.1
+      },
+      "cruise_speed": 20,
+      "detection_radius": 300
+    }
+  ],
+  "subjects": [
+    {
+      "alias": "Vehicle",
+      "route": [
+        {
+          "latitude": 51.50005,
+          "longitude": -0.1
+        }
+      ],
+      "speed": 1
+    }
+  ],
+  "deadline_seconds": 180,
+  "expect": {
+    "tasks": [
+      {
+        "asset": "Probe",
+        "index": 0,
+        "state": "completed"
+      }
+    ],
+    "tracks": 1
+  },
+  "name": "core-kill",
+  "timeline": [
+    {
+      "at_seconds": 0,
+      "action": "move_to",
+      "asset": "Probe",
+      "position": {
+        "latitude": 51.501,
+        "longitude": -0.1
+      }
+    },
+    {
+      "at_seconds": 3,
+      "action": "fault",
+      "id": "core-kill",
+      "asset": "Probe"
+    }
+  ]
+}

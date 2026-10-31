@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
 import { NewId } from '@atlas/protocol';
 import type { WaitResult } from '@atlas/sdk';
+import { randomUUID } from 'node:crypto';
 export const id = () => NewId.parse(randomUUID());
 export function success<T>(
   result: WaitResult<

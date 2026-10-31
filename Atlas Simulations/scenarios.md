@@ -50,7 +50,8 @@ that a fault deletes. A `tasks` entry can name a nonterminal state for a Task th
 fault strands.
 
 A subject follows its route once at a fixed speed and stops at the last point. A
-route holds one to 1,000 points.
+route holds one to 1,000 points. The loader refuses more than 1,000 Asset/subject
+pairs or 10,000 total route points with exit 2 before network work.
 
 ## Detection
 

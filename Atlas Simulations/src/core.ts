@@ -1,8 +1,8 @@
-import { mkdtemp, mkdir, readFile, writeFile, realpath } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, join, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { command } from './process.js';
 import { id } from './sdk.js';
@@ -42,6 +42,9 @@ export class Core {
     secret: randomBytes(32).toString('base64url'),
   };
   baseUrl = '';
+  activeSettingsHash: string | undefined;
+  private pendingSettingsHash: string | undefined;
+  readonly appliedSettingsHashes: string[] = [];
   setupAttempted = false;
   containerId: string | undefined;
   private installationId: string | undefined;
@@ -59,7 +62,21 @@ export class Core {
       '--installation',
       this.installation,
     ]);
-    return reply.parse(JSON.parse(output)).data;
+    const data = reply.parse(JSON.parse(output)).data;
+    if (args[0] === 'settings' && args[1] === 'save') {
+      const path = args[args.indexOf('--file') + 1];
+      if (!path) throw new Error('Saved Settings file absent');
+      this.pendingSettingsHash = createHash('sha256')
+        .update(await readFile(path))
+        .digest('hex');
+    }
+    if (args[0] === 'settings' && args[1] === 'apply' && this.pendingSettingsHash) {
+      if (this.appliedSettingsHashes.length >= 100)
+        throw new Error('Applied Settings record budget');
+      this.activeSettingsHash = this.pendingSettingsHash;
+      this.appliedSettingsHashes.push(this.activeSettingsHash);
+    }
+    return data;
   }
   async setup(): Promise<void> {
     const image = (
@@ -73,15 +90,18 @@ export class Core {
     const key = process.env.ATLAS_SIM_TLS_KEY;
     if (!ca || !key)
       throw new Error('TLS trust and ATLAS_SIM_TLS_KEY must be installed before Node starts');
-    const candidate = JSON.parse(
-      await readFile(new URL('../settings/eval.json', import.meta.url), 'utf8'),
-    );
+    const candidate = z
+      .record(z.string(), z.json())
+      .parse(JSON.parse(await readFile(new URL('../settings/eval.json', import.meta.url), 'utf8')));
     const listenPort = await port();
     candidate.port = listenPort;
     this.baseUrl = `https://localhost:${listenPort}`;
     const settings = join(this.directory, 'settings.json'),
       credential = join(this.directory, 'credential.json');
-    await writeFile(settings, JSON.stringify(candidate), { mode: 0o600 });
+    const settingsBytes = JSON.stringify(candidate);
+    await writeFile(settings, settingsBytes, { mode: 0o600 });
+    this.activeSettingsHash = createHash('sha256').update(settingsBytes).digest('hex');
+    this.appliedSettingsHashes.push(this.activeSettingsHash);
     await writeFile(credential, JSON.stringify(this.credential), { mode: 0o600 });
     this.setupAttempted = true;
     await this.cli([

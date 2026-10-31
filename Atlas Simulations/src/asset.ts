@@ -1,25 +1,25 @@
+import type {
+  Altitude,
+  ExecutionEvidence,
+  ExecutionPayload,
+  Position,
+  Task,
+} from '@atlas/protocol';
+import { Counter, NewId, Sequence, Timestamp, Uuid } from '@atlas/protocol';
+import type {
+  AssetReporter,
+  AssignedInstructions,
+  HttpClient,
+  ObservationReporter,
+} from '@atlas/sdk';
+import { createClient } from '@atlas/sdk';
 import { randomBytes } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { createClient } from '@atlas/sdk';
-import type {
-  HttpClient,
-  AssetReporter,
-  ObservationReporter,
-  AssignedInstructions,
-} from '@atlas/sdk';
-import { Counter, Sequence, Uuid, NewId, Timestamp } from '@atlas/protocol';
-import type {
-  Position,
-  Altitude,
-  Task,
-  ExecutionPayload,
-  ExecutionEvidence,
-} from '@atlas/protocol';
 import type { Scenario } from './scenario.js';
 import { id, success } from './sdk.js';
+import { Truth } from './truth.js';
 import { World } from './world.js';
 import { Writes } from './writes.js';
-import { Truth } from './truth.js';
 
 type Context = NonNullable<AssignedInstructions['context']>;
 type Instructions = { context: Context; tasks: Map<Uuid, Task>; started: number };
@@ -53,11 +53,21 @@ export class AssetRuntime {
   private readonly loops = new Set<Promise<void>>();
   private readonly stopSignal = new AbortController();
   private parked = false;
-  readonly hooks = {
+  readonly hooks: {
+    instructionHoldUntil: number;
+    networkHoldUntil: number;
+    refuseCancellation: boolean;
+    cancellationHoldUntil: number;
+    failResume: boolean;
+    beforeResume?: () => Promise<void>;
+    contactDelayMs: number;
+  } = {
     instructionHoldUntil: 0,
+    networkHoldUntil: 0,
     refuseCancellation: false,
     cancellationHoldUntil: 0,
     failResume: false,
+    contactDelayMs: 0,
   };
   private lastMovement = performance.now();
   private timer: NodeJS.Timeout | undefined;
@@ -95,7 +105,12 @@ export class AssetRuntime {
       position: { ...this.input.world.get(this.alias).position },
     });
   }
-  async start(registrar: HttpClient): Promise<void> {
+  private startup: Promise<void> | undefined;
+  start(registrar: HttpClient): Promise<void> {
+    this.startup = this.initialize(registrar);
+    return this.startup;
+  }
+  private async initialize(registrar: HttpClient): Promise<void> {
     const registration = registrar.reporting.register({
       ...this.identity,
       registration_id: id(),
@@ -109,18 +124,33 @@ export class AssetRuntime {
         ],
       },
     });
-    // Registration contains the new credential and is intentionally excluded from truth.
     try {
-      success((await registration.registration.send()).attempt);
+      let accepted = false;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const result = await registration.registration.send({ timeoutMs: 3000 });
+        if (result.outcome.kind === 'accepted') {
+          accepted = true;
+          break;
+        }
+        if (result.outcome.kind !== 'unknown_outcome') {
+          success(result.attempt);
+          break;
+        }
+        await delay(Math.min(2000, 100 * 2 ** attempt));
+      }
+      if (!accepted) throw new Error('Registration unresolved');
     } finally {
       registration.registration.close();
     }
+    if (this.parked) return;
     success(await this.client.connect());
+    if (this.parked) return;
     this.reporter = this.client.reporting.asset({
       id: this.identity.asset_id,
       process_generation: this.identity.process_generation,
     });
     await this.contact(true);
+    if (this.parked) return;
     this.timer = setInterval(() => {
       try {
         const now = performance.now(),
@@ -160,7 +190,7 @@ export class AssetRuntime {
       try {
         while (!this.stopSignal.signal.aborted) {
           await delay(interval, undefined, { signal: this.stopSignal.signal });
-          if (!this.parked) await callback();
+          if (!this.parked && performance.now() >= this.hooks.networkHoldUntil) await callback();
         }
       } catch (error) {
         if (!(error instanceof Error && error.name === 'AbortError')) this.fail(error);
@@ -171,11 +201,12 @@ export class AssetRuntime {
   }
   private reading(first = false) {
     const source = this.input.world.get(this.alias),
+      sample = this.input.world.reading(this.alias),
       origin = {
         kind: 'asset_process',
         process_generation: this.identity.process_generation,
       } as const;
-    const now = Timestamp.parse(new Date().toISOString());
+    const now = sample.observed_at;
     return {
       report_id: id(),
       sequence: Sequence.parse(String(++this.assetSequence)),
@@ -187,12 +218,12 @@ export class AssetRuntime {
           classification: 'dated_measurement' as const,
           observed_at: now,
           value: {
-            position: { ...source.position },
+            position: sample.position,
             altitude: source.altitude,
             ground_speed: this.execution.kind === 'moving' ? this.input.config.cruise_speed : 0,
           },
           constituents: {
-            position: { origin, reading_id: id() },
+            position: { origin, reading_id: sample.reading_id },
             altitude: { origin, reading_id: id() },
             ground_speed: { origin, reading_id: id() },
           },
@@ -210,6 +241,47 @@ export class AssetRuntime {
       },
     };
   }
+  prepareTags() {
+    if (!this.reporter) throw new Error('Reporter missing');
+    return this.reporter.update({ request_id: id() }, this.reading(true));
+  }
+  async prepareObservation() {
+    const creation = this.client.reporting.createObservation({
+      observation_id: id(),
+      publisher_id: id(),
+      source_asset_id: this.identity.asset_id,
+      request_id: id(),
+    });
+    await this.writes.send(creation.creation);
+    const origin = {
+      kind: 'publisher',
+      publisher_id: creation.reporter.identity.publisher_id,
+    } as const;
+    const now = Timestamp.parse(new Date().toISOString());
+    return creation.reporter.report({
+      mode: 'current',
+      report_id: id(),
+      sequence: Sequence.parse('1'),
+      generated_at: now,
+      sections: {
+        telemetry: {
+          state: 'value',
+          classification: 'dated_measurement',
+          observed_at: now,
+          value: {
+            position: { ...this.input.world.get(this.alias).position },
+            altitude: null,
+            ground_speed: 0,
+          },
+          constituents: {
+            position: { origin, reading_id: id() },
+            altitude: { origin, reading_id: id() },
+            ground_speed: { origin, reading_id: id() },
+          },
+        },
+      },
+    });
+  }
   preparePosition() {
     if (!this.reporter) throw new Error('Reporter missing');
     return this.reporter.update({ request_id: id() }, this.reading());
@@ -219,9 +291,34 @@ export class AssetRuntime {
   }
   async position(): Promise<void> {
     if (!this.reporter) throw new Error('Reporter missing');
-    await this.writes.send(this.reporter.update({ request_id: id() }, this.reading()), true);
+    await this.writes.send(this.reporter.update({ request_id: id() }, this.reading()), 'sample');
   }
-  private async contact(first: boolean): Promise<void> {
+  private contactWork: Promise<void> | undefined;
+  private contact(first: boolean): Promise<void> {
+    if (this.contactWork) return this.contactWork;
+    const work = this.refreshContact(first);
+    this.contactWork = work;
+    const release = () => {
+      if (this.contactWork === work) this.contactWork = undefined;
+    };
+    void work.then(release, release);
+    return work;
+  }
+  private async refreshContact(first: boolean): Promise<void> {
+    for (let refresh = 0; refresh < 3; refresh++) {
+      try {
+        await this.contactOnce(first);
+        return;
+      } catch (error) {
+        if (
+          !(error instanceof Error && /challenge_expired|contact_expired/.test(error.message)) ||
+          refresh === 2
+        )
+          throw error;
+      }
+    }
+  }
+  private async contactOnce(first: boolean): Promise<void> {
     if (!this.reporter) throw new Error('Reporter missing');
     const contact = this.client.assets.contact({
       mode: 'current',
@@ -239,10 +336,13 @@ export class AssetRuntime {
           break;
         }
         if (contact.releaseEvidence === 'expired' || contact.releaseEvidence === 'owner-ended')
-          return;
+          throw new Error('contact_expired');
         await delay(Math.min(2000, 100 * 2 ** retry));
       }
       if (!challenge) throw new Error('Contact allocation unresolved');
+      const contactDelay = this.hooks.contactDelayMs;
+      this.hooks.contactDelayMs = 0;
+      if (contactDelay) await delay(contactDelay);
       report = this.reporter.update(
         { request_id: id() },
         {
@@ -251,7 +351,7 @@ export class AssetRuntime {
           contact_proof: { challenge_id: challenge.challenge_id },
         },
       );
-      await this.writes.send(contact.checkIn(report.submission.facts));
+      await this.writes.send(contact.checkIn(report.submission.facts), 'contact');
     } finally {
       report?.close();
       await contact.close();
@@ -270,8 +370,14 @@ export class AssetRuntime {
       payload,
     };
   }
+  prepareExecution(payload: ExecutionPayload) {
+    return this.client.tasks.reportExecution({ evidence: this.evidence(payload) });
+  }
+  async pollInstructions(): Promise<void> {
+    await this.instructions();
+  }
   async report(payload: ExecutionPayload): Promise<void> {
-    await this.writes.send(this.client.tasks.reportExecution({ evidence: this.evidence(payload) }));
+    await this.writes.send(this.prepareExecution(payload));
     if (payload.event === 'state' && ['completed', 'failed', 'cancelled'].includes(payload.state))
       this.terminal.add(payload.task_id);
   }
@@ -325,7 +431,13 @@ export class AssetRuntime {
     try {
       read = await this.readInstructions();
     } catch (error) {
-      if (error instanceof Error && /queue_changed|network|deadline/.test(error.message)) return;
+      if (
+        error instanceof Error &&
+        /queue_changed|network|deadline|resource_limit|not_connected|invalid_http|superseded/.test(
+          error.message,
+        )
+      )
+        return;
       throw error;
     }
     const { context, tasks } = read;
@@ -345,9 +457,9 @@ export class AssetRuntime {
       if (this.execution === execution) this.execution = { kind: 'idle' };
       return;
     }
-    for (const taskId of context.task_queue.requested_task_ids) {
-      const task = tasks.get(taskId);
-      if (!task?.cancellation_request_id || this.terminal.has(taskId)) continue;
+    for (const task of tasks.values()) {
+      const taskId = task.task_id;
+      if (!task.cancellation_request_id || this.terminal.has(taskId)) continue;
       if (performance.now() < this.hooks.cancellationHoldUntil) return;
       if (this.hooks.refuseCancellation) {
         await this.report({
@@ -372,6 +484,21 @@ export class AssetRuntime {
       return;
     }
     const requested = context.task_control.requested;
+    for (const task of tasks.values()) {
+      if (
+        task.command !== 'move_to' &&
+        task.task_id !== requested?.task_id &&
+        !this.terminal.has(task.task_id) &&
+        !['completed', 'failed', 'cancelled'].includes(task.execution_state)
+      ) {
+        await this.report({
+          task_id: task.task_id,
+          event: 'state',
+          state: 'failed',
+          reason: 'superseded',
+        });
+      }
+    }
     if (requested && !this.terminal.has(requested.task_id)) {
       const control = tasks.get(requested.task_id);
       if (control && !['completed', 'failed', 'cancelled'].includes(control.execution_state)) {
@@ -440,7 +567,7 @@ export class AssetRuntime {
           if (
             !remaining ||
             remaining.cancellation_request_id ||
-            !fresh.context.task_queue.requested_task_ids.includes(remaining.task_id)
+            !['paused', 'in_progress'].includes(remaining.execution_state)
           )
             return;
         }
@@ -462,6 +589,15 @@ export class AssetRuntime {
           });
           return;
         }
+        await this.hooks.beforeResume?.();
+        if (
+          this.parked ||
+          performance.now() - fresh.started >= 10000 ||
+          Date.now() >= Date.parse(fresh.context.instructions_valid_until) ||
+          Date.now() >= Date.parse(latestTask.expires_at) ||
+          latest.revision !== this.highestControlRevision
+        )
+          return;
         this.gate = { kind: 'running' };
         this.physical('resume', control.task_id);
         if (this.execution.kind === 'paused') {
@@ -519,7 +655,14 @@ export class AssetRuntime {
     const task = tasks.get(taskId);
     if (!task || task.command !== 'move_to' || task.cancellation_request_id) return;
     const move = await this.resolveMove(task);
-    if (this.parked) return;
+    if (
+      this.parked ||
+      this.gate.kind !== 'running' ||
+      this.execution.kind !== 'idle' ||
+      this.terminal.has(taskId) ||
+      context.task_control.revision !== this.highestControlRevision
+    )
+      return;
     this.execution = { kind: 'moving', move };
     this.lastMovement = performance.now();
     this.physical('start', taskId);
@@ -551,7 +694,8 @@ export class AssetRuntime {
         kind: 'publisher',
         publisher_id: state.reporter.identity.publisher_id,
       } as const;
-      const now = Timestamp.parse(new Date().toISOString());
+      const sample = this.input.world.reading(subject.alias, 'subject');
+      const now = sample.observed_at;
       await this.writes.send(
         state.reporter.report({
           mode: 'current',
@@ -563,26 +707,40 @@ export class AssetRuntime {
               state: 'value',
               classification: 'dated_measurement',
               observed_at: now,
-              value: { position: subject.position, altitude: null, ground_speed: 0 },
+              value: { position: sample.position, altitude: null, ground_speed: 0 },
               constituents: {
-                position: { origin, reading_id: id() },
+                position: { origin, reading_id: sample.reading_id },
                 altitude: { origin, reading_id: id() },
                 ground_speed: { origin, reading_id: id() },
               },
             },
           },
         }),
-        true,
+        'sample',
       );
     }
   }
-  async park(): Promise<void> {
+  async park(deadline = performance.now() + 30000): Promise<void> {
     this.parked = true;
     this.stopSignal.abort();
     if (this.timer) clearInterval(this.timer);
-    await this.writes.drain();
-    await Promise.all(this.loops);
-    if (this.failure) throw this.failure;
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        Promise.all([
+          this.writes.drain(deadline),
+          Promise.allSettled([this.startup, this.contactWork, ...this.loops]),
+        ]),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(`Unresolved Asset owners ${this.alias}`)),
+            Math.max(0, deadline - performance.now()),
+          );
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
   async close(): Promise<void> {
     await this.client.close();

@@ -52,7 +52,7 @@ reaches each limit.
 | `key-revoked` | Revoke a key during traffic | Traffic stops, and earlier evidence remains |
 | `key-rotated` | Replace an operator's key and call `recover()` | Work continues, and no write replays |
 | `process-obsolete` | Replace a process, then report from the old generation | Core refuses the old process |
-| `challenge-expired` | Check in after the 60-second allocation lifetime | `410 challenge_expired`, and contact stays unchanged |
+| `challenge-expired` | Check in after the ten-second challenge lifetime | `410 challenge_expired`, and contact stays unchanged |
 | `contact-expiry` | Stop one Asset's traffic for 70 seconds | `degraded` at 15 seconds and `offline` at 60, with no new packet |
 
 ## Tasks
@@ -79,7 +79,7 @@ reaches each limit.
 | `sequence-conflict` | Send a new report at an occupied section sequence, then change the facts of an accepted `report_id` | `409 section_sequence_conflict`, then `409 report_identity_conflict`, and nothing commits |
 | `execution-conflict` | Send changed Task execution facts at an occupied sequence | `409 evidence_conflict`, and nothing commits |
 | `late-position` | Send an older unseen reading | History gains it, and current position stays |
-| `future-time` | Send a future-dated reading | Core marks it time-uncertain and never promotes it |
+| `future-time` | Send a future-dated reading | Higher-sequence `current` sections replace current values; source time stays uncertain forever, including after replay and Restart |
 | `tags-refused` | Send `tags` directly to Core in a registration and an authored update, then with an unknown preset and a duplicate | Core refuses each one, and the Asset's Tags do not change |
 | `tags-cleared` | Report `{presets: []}`, then send later reports that omit `tags` | The set stays empty, and omission never restores `simulated` |
 | `tags-history-only` | Send `{presets: []}` in a `history_only` report | The current set stays `simulated` |

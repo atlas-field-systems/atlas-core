@@ -1,15 +1,16 @@
-import { open, mkdtemp } from 'node:fs/promises';
-import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
-import { setTimeout as delay } from 'node:timers/promises';
-import { createClient } from '@atlas/sdk';
 import { Uuid, exchanges } from '@atlas/protocol';
+import { createClient } from '@atlas/sdk';
+import { randomBytes } from 'node:crypto';
+import { mkdtemp, open } from 'node:fs/promises';
+import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+import { AssetRuntime } from './asset.js';
 import { externalRoot } from './core.js';
 import type { Scenario } from './scenario.js';
-import { success, id } from './sdk.js';
-import { World } from './world.js';
+import { id, success } from './sdk.js';
 import { Truth } from './truth.js';
-import { AssetRuntime } from './asset.js';
+import { Shutdown } from './shutdown.js';
+import { World } from './world.js';
 export async function credential(path: string): Promise<string> {
   const file = await open(path, 'r');
   try {
@@ -36,8 +37,9 @@ export async function simulate(input: {
   const runtimes: AssetRuntime[] = [];
   const failures: unknown[] = [];
   const truth = await Truth.create(await mkdtemp(join(await externalRoot(), 'interactive-')));
+  let stopWorld: (() => void) | undefined;
   let fatal: unknown;
-  const world = new World(input.scenario),
+  const world = new World(input.scenario, truth),
     runId = randomBytes(2).toString('hex');
   try {
     success(await registrar.connect());
@@ -55,58 +57,68 @@ export async function simulate(input: {
         },
       });
       runtimes.push(runtime);
-      await runtime.start(registrar);
+      const startup = runtime.start(registrar);
+      let interrupted: (() => void) | undefined;
+      const interruption = new Promise<void>((resolve) => {
+        interrupted = resolve;
+      });
+      const abort = () => interrupted?.();
+      input.signal.addEventListener('abort', abort, { once: true });
+      if (input.signal.aborted) abort();
+      try {
+        await Promise.race([startup, interruption]);
+      } finally {
+        input.signal.removeEventListener('abort', abort);
+      }
+      if (input.signal.aborted) break;
     }
-    let previous = performance.now();
+    stopWorld = world.start();
     while (!input.signal.aborted) {
       if (fatal) throw fatal;
-      const now = performance.now();
-      world.tick((now - previous) / 1000);
-      previous = now;
       await delay(100);
     }
   } catch (e) {
     failures.push(e);
   } finally {
-    let drained = true;
-    for (const runtime of runtimes)
-      try {
-        await runtime.park();
-      } catch (e) {
-        drained = false;
-        failures.push(e);
-      }
+    stopWorld?.();
+    const shutdown = new Shutdown();
+    const drained = (
+      await Promise.all(
+        runtimes.map((runtime) =>
+          shutdown.finish(`writers ${runtime.alias}`, () => runtime.park(shutdown.deadline - 3000)),
+        ),
+      )
+    ).every(Boolean);
     for (const runtime of runtimes) {
-      try {
+      await shutdown.finish(`revoke ${runtime.alias}`, async () => {
         const op = registrar.apiKeys.revoke({
           request_id: id(),
           api_key_id: runtime.identity.api_key_id,
         });
         try {
-          success((await op.send()).attempt);
+          success(
+            (
+              await op.send({
+                timeoutMs: Math.max(1, Math.ceil(shutdown.deadline - performance.now())),
+              })
+            ).attempt,
+          );
         } finally {
           op.close();
         }
-      } catch (e) {
-        failures.push(e);
-      }
-      try {
-        await runtime.close();
-      } catch (e) {
-        failures.push(e);
-      }
+      });
+      await shutdown.finish(`client ${runtime.alias}`, () => runtime.close());
     }
-    try {
+    await shutdown.finish('registrar', async () => {
       await registrar.close();
-    } catch (e) {
-      failures.push(e);
-    }
-    if (drained)
-      try {
-        await truth.close();
-      } catch (e) {
-        failures.push(e);
-      }
+    });
+    if (drained) await shutdown.finish('truth', () => truth.close());
+    failures.push(...shutdown.failures);
   }
-  if (failures.length) throw new AggregateError(failures, 'Simulation or cleanup failed');
+  if (fatal) failures.push(fatal);
+  if (failures.length)
+    throw new AggregateError(
+      failures,
+      `Simulation or cleanup failed ${failures.map((e) => (e instanceof Error ? e.message : String(e))).join('; ')}`,
+    );
 }

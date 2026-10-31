@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { writeFile, rename, mkdir, readFile } from 'node:fs/promises';
+import { link, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { z } from 'zod';
 export const checkNames = [
   'tasks',
   'order',
@@ -50,14 +50,33 @@ export const RunRecord = z.strictObject({
   inputs: z.strictObject({
     scenario: z.string().regex(/^[a-f0-9]{64}$/),
     settings: z.string().regex(/^[a-f0-9]{64}$/),
+    appliedSettings: z
+      .array(z.string().regex(/^[a-f0-9]{64}$/))
+      .max(100)
+      .optional(),
+    actualSettings: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
   }),
+  versions: z
+    .strictObject({
+      protocol: z.string().max(32),
+      sdk: z.string().max(32),
+      core: z.string().max(32),
+    })
+    .optional(),
   checks: CheckResults,
   cleanup: CleanupEvidence,
   verdict: z.enum(['passed', 'failed']),
   failures: z.array(z.string().max(1024)).max(100),
-  measurements: z.record(z.string().max(64), z.number().finite().nullable()),
+  measurements: z
+    .record(z.string().max(64), z.number().finite().nullable())
+    .refine((m) => Object.keys(m).length <= 100, 'Measurement capacity'),
   environment: z.strictObject({
-    node: z.string(),
+    node: z.string().max(32),
+    npm: z.string().max(32).optional(),
+    docker: z.string().max(64).optional(),
     cpu: z.string().max(256),
     cpus: z.number().int(),
     memory: z.number().int(),
@@ -91,16 +110,36 @@ export function passed(checks: CheckResults, cleanup: CleanupEvidence): boolean 
 }
 export async function saveRecord(directory: string, record: RunRecord): Promise<string> {
   RunRecord.parse(record);
+  for (const value of [process.env.GITHUB_RUN_ID, process.env.GITHUB_RUN_ATTEMPT])
+    if (value !== undefined && !/^[0-9]{1,20}$/.test(value))
+      throw new Error('Invalid CI record identity');
   const bytes = JSON.stringify(record) + '\n';
   if (Buffer.byteLength(bytes) > 262144) throw new Error('Record exceeds 256 KiB');
   await mkdir(directory, { recursive: true });
   const path = join(
     directory,
-    `${record.scenario}-${record.at.replaceAll(':', '-')}-${record.source.commit.slice(0, 12)}.json`,
+    `${record.scenario}-${record.at.replaceAll(':', '-')}-${record.source.commit.slice(0, 12)}-${process.env.GITHUB_RUN_ID ?? 'local'}-${process.env.GITHUB_RUN_ATTEMPT ?? '1'}.json`,
   );
   const temporary = `${path}.tmp`;
   await writeFile(temporary, bytes, { flag: 'wx', mode: 0o600 });
-  await rename(temporary, path);
+  let primary: unknown;
+  try {
+    await link(temporary, path);
+  } catch (error) {
+    primary = error;
+    throw error;
+  } finally {
+    try {
+      await unlink(temporary);
+    } catch (error) {
+      if (primary)
+        throw new AggregateError(
+          [primary, error],
+          'Record publication and temporary cleanup failed',
+        );
+      throw error;
+    }
+  }
   return path;
 }
 export async function readRecord(path: string): Promise<RunRecord> {
@@ -108,9 +147,14 @@ export async function readRecord(path: string): Promise<RunRecord> {
   const file = await open(path, 'r');
   try {
     const bytes = Buffer.alloc(262145);
-    const n = await file.read(bytes);
-    if (n.bytesRead > 262144) throw new Error('Record exceeds 256 KiB');
-    return RunRecord.parse(JSON.parse(bytes.subarray(0, n.bytesRead).toString('utf8')));
+    let length = 0;
+    while (length < bytes.length) {
+      const read = await file.read(bytes, length, bytes.length - length, null);
+      if (!read.bytesRead) break;
+      length += read.bytesRead;
+    }
+    if (length > 262144) throw new Error('Record exceeds 256 KiB');
+    return RunRecord.parse(JSON.parse(bytes.subarray(0, length).toString('utf8')));
   } finally {
     await file.close();
   }

@@ -9,6 +9,15 @@
       },
       "cruise_speed": 10000,
       "detection_radius": 300
+    },
+    {
+      "alias": "Drone 2",
+      "position": {
+        "latitude": 51.5,
+        "longitude": -0.1
+      },
+      "cruise_speed": 10000,
+      "detection_radius": 300
     }
   ],
   "subjects": [
@@ -41,6 +50,15 @@
       "at_seconds": 0,
       "action": "pause",
       "asset": "Drone 1"
+    },
+    {
+      "at_seconds": 1,
+      "action": "move_to",
+      "asset": "Drone 2",
+      "position": {
+        "latitude": 51.5003,
+        "longitude": -0.1
+      }
     },
     {
       "at_seconds": 2,
@@ -88,8 +106,13 @@
         "asset": "Drone 1",
         "index": 1,
         "state": "completed"
+      },
+      {
+        "asset": "Drone 2",
+        "index": 0,
+        "state": "completed"
       }
     ],
-    "tracks": 1
+    "tracks": 2
   }
 }

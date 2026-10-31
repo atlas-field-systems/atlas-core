@@ -1,24 +1,40 @@
-import { setTimeout as delay } from 'node:timers/promises';
 import type { Prepared } from '@atlas/sdk';
-import { Truth } from './truth.js';
+import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
+import { Truth } from './truth.js';
 export class Writes {
   private readonly active = new Set<Promise<void>>();
   private readonly owners = new Set<string>();
   constructor(readonly truth: Truth) {}
-  send<R, T>(operation: Prepared<R, T>, sampling = false): Promise<void> {
+  send<R, T>(
+    operation: Prepared<R, T>,
+    policy: 'write' | 'sample' | 'contact' = 'write',
+  ): Promise<void> {
     if (this.active.size >= 64) {
       operation.close();
       throw new Error('Prepared write backlog exhausted');
     }
+    let release: () => void;
+    try {
+      release = this.truth.reserveWriter();
+    } catch (error) {
+      operation.close();
+      throw error;
+    }
     const identity = `${operation.submission.operation}/${operation.submission.identity}`;
-    const facts = z.json().parse(operation.submission.facts);
-    this.truth.append({
-      kind: 'submitted',
-      identity,
-      operation: operation.submission.operation,
-      facts,
-    });
+    try {
+      this.truth.append({
+        kind: 'submitted',
+        source: 'runtime',
+        identity,
+        operation: operation.submission.operation,
+        facts: z.json().parse(operation.submission.facts),
+      });
+    } catch (error) {
+      release();
+      operation.close();
+      throw error;
+    }
     this.owners.add(identity);
     const work = (async () => {
       let backoff = 100;
@@ -30,7 +46,24 @@ export class Writes {
           if (result.outcome.kind === 'accepted') return;
           const attempt = result.attempt;
           if (
-            sampling &&
+            policy === 'contact' &&
+            z
+              .object({
+                kind: z.literal('response'),
+                response: z.object({
+                  kind: z.literal('error'),
+                  body: z.object({
+                    error: z.object({
+                      code: z.enum(['challenge_expired', 'challenge_run_mismatch']),
+                    }),
+                  }),
+                }),
+              })
+              .safeParse(attempt).success
+          )
+            throw new Error('contact_expired');
+          if (
+            policy === 'sample' &&
             attempt.kind === 'response' &&
             typeof attempt.response === 'object' &&
             attempt.response !== null &&
@@ -41,10 +74,12 @@ export class Writes {
             const error = z
               .object({ error: z.object({ code: z.string() }) })
               .parse(attempt.response.body);
-            if (error.error.code === 'storage_limit') return;
+            if (['storage_limit', 'resource_limit'].includes(error.error.code)) return;
           }
           if (result.outcome.kind !== 'unknown_outcome')
-            throw new Error(`Write ${identity} ${result.outcome.kind}`);
+            throw new Error(
+              `Write ${identity} ${result.outcome.kind} ${z.object({ kind: z.literal('response'), response: z.object({ kind: z.literal('error'), body: z.object({ error: z.object({ code: z.string() }) }) }) }).safeParse(attempt).success ? JSON.stringify(attempt) : ''}`,
+            );
           if (
             attempt.kind === 'not_sent' &&
             ['dataset_invalidated', 'authorization_required', 'closed'].includes(attempt.code)
@@ -56,6 +91,7 @@ export class Writes {
         throw new Error(`Write retry budget exhausted ${identity}`);
       } finally {
         operation.close();
+        release();
         this.owners.delete(identity);
       }
     })();
@@ -66,15 +102,15 @@ export class Writes {
     );
     return work;
   }
-  async drain(): Promise<void> {
+  async drain(deadline = performance.now() + 30000): Promise<void> {
     let timer: NodeJS.Timeout | undefined;
     try {
       await Promise.race([
-        Promise.all([...this.active]),
+        Promise.allSettled([...this.active]),
         new Promise<never>((_, reject) => {
           timer = setTimeout(
             () => reject(new Error(`Unresolved writers ${[...this.owners].join(',')}`)),
-            30000,
+            Math.max(0, deadline - performance.now()),
           );
         }),
       ]);

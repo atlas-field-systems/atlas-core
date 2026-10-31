@@ -1,4 +1,7 @@
-import type { Position, Altitude } from '@atlas/protocol';
+import { randomUUID } from 'node:crypto';
+import { Timestamp, NewId } from '@atlas/protocol';
+import type { Truth } from './truth.js';
+import type { Altitude, Position } from '@atlas/protocol';
 import type { Scenario } from './scenario.js';
 const radians = Math.PI / 180,
   radius = 6371008.8;
@@ -51,7 +54,10 @@ export class World {
     position: Position;
   }[];
   private readonly cells = new Map<string, typeof this.subjects>();
-  constructor(scenario: Scenario) {
+  constructor(
+    scenario: Scenario,
+    private readonly truth?: Truth,
+  ) {
     for (const a of scenario.assets)
       this.assets.set(a.alias, { position: { ...a.position }, altitude: null });
     this.subjects = scenario.subjects.map((s) => {
@@ -69,6 +75,25 @@ export class World {
       cell.push(subject);
       this.cells.set(key, cell);
     }
+  }
+  reading(alias: string, kind: 'asset' | 'subject' = 'asset') {
+    const source =
+      kind === 'asset' ? this.get(alias) : this.subjects.find((s) => s.alias === alias);
+    if (!source) throw new Error('World source absent');
+    const reading_id = NewId.parse(randomUUID()),
+      observed_at = Timestamp.parse(new Date().toISOString()),
+      position = { ...source.position };
+    this.truth?.append({ kind: 'world', reading_id, alias, observed_at, position });
+    return { reading_id, observed_at, position };
+  }
+  start(): () => void {
+    let previous = performance.now();
+    const timer = setInterval(() => {
+      const now = performance.now();
+      this.tick((now - previous) / 1000);
+      previous = now;
+    }, 50);
+    return () => clearInterval(timer);
   }
   tick(seconds: number): void {
     for (const s of this.subjects) {

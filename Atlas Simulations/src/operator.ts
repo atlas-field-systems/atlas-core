@@ -1,11 +1,15 @@
-import { createClient } from '@atlas/sdk';
-import type { FullClient } from '@atlas/sdk';
-import { Timestamp } from '@atlas/protocol';
 import type { Uuid } from '@atlas/protocol';
+import { Timestamp } from '@atlas/protocol';
+import type { FullClient, HttpClient } from '@atlas/sdk';
+import { createClient } from '@atlas/sdk';
 import type { Scenario, TimelineAction } from './scenario.js';
-import { success, id } from './sdk.js';
-import { Writes } from './writes.js';
+import { id, success } from './sdk.js';
 import { Truth } from './truth.js';
+import { Writes } from './writes.js';
+type OperatorReads = {
+  assets: Pick<HttpClient['assets'], 'get'>;
+  tasks: Pick<HttpClient['tasks'], 'get'>;
+};
 export type TaskBinding = {
   asset: string;
   index: number;
@@ -18,6 +22,8 @@ export class Operator {
   readonly controls: Uuid[] = [];
   readonly features = new Map<string, Uuid>();
   readonly writes: Writes;
+  private subscription: ReturnType<FullClient['picture']['subscribe']> | undefined;
+  private pictureReader: Promise<void> | undefined;
   constructor(
     readonly input: {
       baseUrl: string;
@@ -25,6 +31,7 @@ export class Operator {
       datasetId: Uuid;
       assets: ReadonlyMap<string, Uuid>;
       truth: Truth;
+      reader: OperatorReads;
     },
   ) {
     this.client = createClient({
@@ -36,7 +43,23 @@ export class Operator {
     this.writes = new Writes(input.truth);
   }
   async start(scenario: Scenario): Promise<void> {
+    const started = performance.now();
     success(await this.client.connect());
+    const deadline = performance.now() + 10000;
+    while (this.client.picture.status.kind !== 'synchronized') {
+      if (performance.now() > deadline) throw new Error('Initial picture deadline');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    this.input.truth.measurements.initialLoadMs = performance.now() - started;
+    const subscription = this.client.picture.subscribe();
+    this.subscription = subscription;
+    this.pictureReader = (async () => {
+      for await (const event of subscription) {
+        if (event.kind !== 'commit') continue;
+        this.input.truth.pictureCommit(event.commit.coreCursor);
+      }
+    })();
+    void this.pictureReader.catch(() => {});
     for (const feature of scenario.geofeatures ?? []) {
       const identifier = id();
       await this.writes.send(
@@ -126,7 +149,7 @@ export class Operator {
         );
         return;
       case 'reorder': {
-        const asset = success(await this.client.http.assets.get({ asset_id }));
+        const asset = success(await this.input.reader.assets.get({ asset_id }));
         await this.writes.send(
           this.client.tasks.setOrder({
             request_id: id(),
@@ -150,6 +173,8 @@ export class Operator {
   }
   async close(): Promise<void> {
     await this.writes.drain();
+    this.subscription?.close();
+    await this.pictureReader;
     await this.client.close();
   }
 }

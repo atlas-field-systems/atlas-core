@@ -1,0 +1,307 @@
+name: Atlas Simulations
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.22.1
+      - run: npm --prefix 'Atlas Core' run build:prepare
+      - run: npm install --global --offline --ignore-scripts --no-audit --no-fund 'Atlas Core/artifacts/npm-11.19.0.tgz'
+      - run: npm --prefix 'Atlas Core' run protocol:prepare
+      - run: npm --prefix 'Atlas Core' ci --no-audit --no-fund
+      - run: npm --prefix 'Atlas Core' run build
+      - run: npm --prefix 'Atlas Core' run image:build
+      - run: npm --prefix 'Atlas Simulations' run inputs:prepare
+      - run: npm --prefix 'Atlas Simulations' ci --ignore-scripts --no-audit --no-fund
+      - run: npm --prefix 'Atlas Simulations' run build
+      - name: Qualify runtime and broken controls
+        env:
+          ATLAS_TEST_ROOT: ${{ runner.temp }}/simulation-tests
+        run: npm --prefix 'Atlas Simulations' test >"$RUNNER_TEMP/simulation-tests.log" 2>&1
+      - name: Package built inputs once
+        run: |
+          docker save "$(cat 'Atlas Core/artifacts/image-id')" -o "$RUNNER_TEMP/core-image.tar"
+          tar -cf "$RUNNER_TEMP/built.tar" 'Atlas Core/dist' 'Atlas Core/artifacts' 'Atlas Core/node_modules' 'Atlas Simulations/dist' 'Atlas Simulations/artifacts' 'Atlas Simulations/node_modules'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: simulation-build
+          path: |
+            ${{ runner.temp }}/built.tar
+            ${{ runner.temp }}/core-image.tar
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: simulation-build-evidence
+          path: |
+            ${{ runner.temp }}/simulation-tests.log
+            ${{ runner.temp }}/simulation-tests
+          retention-days: 7
+  eval:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [missions, ip, core-process, capacity, credentials, tasks, evidence]
+    env:
+      ATLAS_TEST_ROOT: ${{ runner.temp }}/atlas-simulations
+      ATLAS_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.22.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: simulation-build
+          path: ${{ runner.temp }}/built
+      - name: Restore built inputs once
+        run: |
+          tar -xf "$RUNNER_TEMP/built/built.tar"
+          docker load -i "$RUNNER_TEMP/built/core-image.tar"
+          npm install --global --offline --ignore-scripts --no-audit --no-fund 'Atlas Core/artifacts/npm-11.19.0.tgz'
+      - run: npm --prefix 'Atlas Simulations' run verify:inputs
+      - name: Run group
+        working-directory: Atlas Simulations
+        env:
+          GROUP: ${{ matrix.group }}
+        run: node scripts/ci-eval.mjs "$GROUP" >"$RUNNER_TEMP/eval.log" 2>&1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: simulation-records-${{ matrix.group }}
+          path: ${{ runner.temp }}/sim-output
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: simulation-evidence-${{ matrix.group }}
+          path: |
+            ${{ runner.temp }}/eval.log
+            ${{ runner.temp }}/atlas-simulations
+          retention-days: 7
+  publish:
+    needs: [build, eval]
+    if: ${{ always() && needs.build.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Initialize history repository without source checkout
+        env:
+          HISTORY_TOKEN: ${{ github.token }}
+          HISTORY_SERVER: ${{ github.server_url }}
+          HISTORY_REPOSITORY: ${{ github.repository }}
+        run: |
+          git init history
+          git -C history remote add origin "$HISTORY_SERVER/$HISTORY_REPOSITORY.git"
+          auth="$(printf 'x-access-token:%s' "$HISTORY_TOKEN" | base64 -w0)"
+          git -C history config http.extraheader "AUTHORIZATION: basic $auth"
+      - name: Select append-only history or create orphan
+        working-directory: history
+        run: |
+          if git ls-remote --exit-code origin refs/heads/eval-history; then
+            git fetch origin eval-history
+            git checkout -B eval-history FETCH_HEAD
+          else
+            git checkout --orphan eval-history
+            git rm -r --ignore-unmatch .
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: simulation-records-*
+          path: ${{ runner.temp }}/records
+          merge-multiple: true
+      - name: Validate bounded data and append
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          python3 - "$RUNNER_TEMP/records" history "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" <<'PYTHON'
+          import json
+          import math
+          import datetime
+          import os
+          from pathlib import Path
+          import re
+          import sys
+
+
+          def validate(record):
+              if not isinstance(record, dict):
+                  raise ValueError('Record object required')
+              required = {'scenario', 'at', 'source', 'inputs', 'checks', 'cleanup', 'verdict', 'failures', 'measurements', 'environment'}
+              if not required <= record.keys() or record.keys() - required - {'versions'}:
+                  raise ValueError('Record fields')
+              if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', record['scenario']):
+                  raise ValueError('Scenario name')
+              if not re.fullmatch(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z', record['at']):
+                  raise ValueError('Record time')
+              datetime.datetime.fromisoformat(record['at'].replace('Z', '+00:00'))
+              source = record['source']
+              if set(source) != {'branch', 'commit', 'dirty'} or not re.fullmatch('[a-f0-9]{40}', source['commit']) or type(source['dirty']) is not bool:
+                  raise ValueError('Source')
+              if not isinstance(source['branch'], str) or len(source['branch']) > 256 or any(ord(c) < 32 for c in source['branch']):
+                  raise ValueError('Branch')
+              if os.environ.get('EXPECTED_COMMIT') and source['commit'] != os.environ['EXPECTED_COMMIT']:
+                  raise ValueError('Unexpected source commit')
+              if not {'scenario', 'settings'} <= record['inputs'].keys() or record['inputs'].keys() - {'scenario', 'settings', 'actualSettings', 'appliedSettings'} or any(not re.fullmatch('[a-f0-9]{64}', v) for k, v in record['inputs'].items() if k != 'appliedSettings'):
+                  raise ValueError('Input hashes')
+              if 'appliedSettings' in record['inputs'] and (not isinstance(record['inputs']['appliedSettings'], list) or len(record['inputs']['appliedSettings']) > 100 or any(not isinstance(v, str) or not re.fullmatch('[a-f0-9]{64}', v) for v in record['inputs']['appliedSettings'])):
+                  raise ValueError('Applied Settings hashes')
+              if set(record['checks']) != {'tasks', 'order', 'assets', 'positions', 'final_position', 'tracks', 'tags', 'faults'}:
+                  raise ValueError('Checks missing')
+              for check in record['checks'].values():
+                  kind = check.get('kind')
+                  if kind == 'passed' and set(check) == {'kind'}:
+                      continue
+                  if kind == 'failed' and set(check) == {'kind', 'reasons'} and isinstance(check['reasons'], list) and 1 <= len(check['reasons']) <= 100 and all(isinstance(r, str) and len(r) <= 1024 for r in check['reasons']):
+                      continue
+                  if kind == 'unrun' and set(check) == {'kind', 'reason'} and isinstance(check['reason'], str) and len(check['reason']) <= 1024:
+                      continue
+                  raise ValueError('Check result')
+              cleanup = record['cleanup']
+              if set(cleanup) != {'writersDrained', 'createdKeysRevoked', 'clientsClosed', 'coreExit', 'failures'} or any(type(cleanup[k]) is not bool for k in ['writersDrained', 'createdKeysRevoked', 'clientsClosed']) or cleanup['coreExit'] not in ['verified', 'unverified', 'not-owned']:
+                  raise ValueError('Cleanup')
+              for failures in [cleanup['failures'], record['failures']]:
+                  if not isinstance(failures, list) or len(failures) > 100 or any(not isinstance(f, str) or len(f) > 1024 for f in failures):
+                      raise ValueError('Failure list')
+              if record['verdict'] not in ['passed', 'failed']:
+                  raise ValueError('Verdict')
+              if record['verdict'] == 'passed' and (record['failures'] or cleanup['failures'] or cleanup['coreExit'] == 'unverified' or any(not cleanup[k] for k in ['writersDrained', 'createdKeysRevoked', 'clientsClosed']) or any(c['kind'] != 'passed' for c in record['checks'].values())):
+                  raise ValueError('Inconsistent pass')
+              if not isinstance(record['measurements'], dict) or len(record['measurements']) > 100 or any(not isinstance(k, str) or len(k) > 64 or (v is not None and (type(v) not in [int, float] or not math.isfinite(v))) for k, v in record['measurements'].items()):
+                  raise ValueError('Measurements')
+              environment = record['environment']
+              if not {'node', 'cpu', 'cpus', 'memory', 'kernel', 'image'} <= environment.keys() or environment.keys() - {'node', 'cpu', 'cpus', 'memory', 'kernel', 'image', 'npm', 'docker'} or any(not isinstance(environment[k], str) or len(environment[k]) > 256 for k in ['node', 'cpu', 'kernel', 'image']) or any(type(environment[k]) is not int or not 0 <= environment[k] <= 9007199254740991 for k in ['cpus', 'memory']):
+                  raise ValueError('Environment')
+              for key, limit in [('node', 32), ('image', 80), ('npm', 32), ('docker', 64)]:
+                  if key in environment and (not isinstance(environment[key], str) or len(environment[key]) > limit):
+                      raise ValueError('Environment field')
+              if 'versions' in record and (set(record['versions']) != {'protocol', 'sdk', 'core'} or any(not isinstance(v, str) or len(v) > 32 for v in record['versions'].values())):
+                  raise ValueError('Versions')
+              return record
+
+
+          def publish(source, destination, run, attempt):
+              if not re.fullmatch(r'[0-9]{1,20}', run) or not re.fullmatch(r'[0-9]{1,20}', attempt):
+                  raise ValueError('Run identity')
+              entries = 0
+              records = 0
+              total = 0
+              pending = []
+              directories = [Path(source)]
+              while directories:
+                  root = directories.pop()
+                  with os.scandir(root) as children:
+                      for entry in children:
+                          entries += 1
+                          if entries > 2000:
+                              raise ValueError('Artifact entry budget')
+                          if entry.is_symlink():
+                              raise ValueError('Artifact symlink')
+                          path = Path(entry.path)
+                          if entry.is_dir(follow_symlinks=False):
+                              directories.append(path)
+                              continue
+                          if not entry.is_file(follow_symlinks=False) or not entry.name.endswith('.json') or root.name != 'records':
+                              continue
+                          size = path.stat().st_size
+                          total += size
+                          records += 1
+                          if size > 262144 or total > 67108864 or records > 256:
+                              raise ValueError('Record byte budget')
+                          with path.open('rb') as file:
+                              data = file.read(262145)
+                          if len(data) > 262144:
+                              raise ValueError('Record grew')
+                          record = validate(json.loads(data, parse_constant=lambda _: (_ for _ in ()).throw(ValueError('Nonfinite number'))))
+                          target = Path(destination, record['scenario'], record['at'].replace(':', '-') + '-' + record['source']['commit'][:12] + '-' + run + '-' + attempt + '.json')
+                          pending.append((target, data))
+              if not pending:
+                  raise ValueError('No records')
+              for target, data in pending:
+                  if target.parent.is_symlink():
+                      raise ValueError('History directory symlink')
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  with target.open('xb') as file:
+                      file.write(data)
+              return records
+
+
+          if __name__ == '__main__':
+              publish(*sys.argv[1:])
+          PYTHON
+      - name: Push with concurrent append retries
+        working-directory: history
+        run: |
+          git add -- '*.json'
+          git commit -m "Append simulation records $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:refs/heads/eval-history; then exit 0; fi
+            git fetch origin eval-history
+            git rebase FETCH_HEAD || { git rebase --abort; exit 1; }
+          done
+          exit 1
+
+  record:
+    needs: [build, eval, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ATLAS_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+      JOB_RESULTS: ${{ toJSON(needs) }}
+      IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+      RECORD_DIRECTORY: ${{ runner.temp }}/records
+      ATLAS_EVAL_HISTORY: ${{ runner.temp }}/history
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.22.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: simulation-build
+          path: ${{ runner.temp }}/built
+      - run: tar -xf "$RUNNER_TEMP/built/built.tar"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: simulation-records-*
+          path: ${{ runner.temp }}/records
+          merge-multiple: true
+      - name: Read baseline history and include this run
+        run: |
+          mkdir -p "$ATLAS_EVAL_HISTORY"
+          if git ls-remote --exit-code origin refs/heads/eval-history; then
+            git fetch origin eval-history
+            git archive FETCH_HEAD | tar -xf - -C "$ATLAS_EVAL_HISTORY"
+          fi
+          mkdir -p "$ATLAS_EVAL_HISTORY/current"
+          find "$RECORD_DIRECTORY" -path '*/records/*.json' -type f -exec cp '{}' "$ATLAS_EVAL_HISTORY/current/" ';'
+      - name: Aggregate correctness and compare measurements
+        if: always()
+        working-directory: Atlas Simulations
+        run: node scripts/ci-record.mjs

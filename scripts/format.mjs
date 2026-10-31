@@ -37,7 +37,7 @@ const core = [
 ].filter((path) => /^Atlas Core\/(src|scripts|test)\//.test(path) && code.test(path));
 const paths = ['scripts/format.mjs', ...sdk.sort(), ...core.sort()];
 console.log(
-  `Format base ${base}: all ${sdk.length} SDK code files, ${core.length} changed Core code files`,
+  `Format base ${base}: all ${sdk.length} SDK and simulation code files, ${core.length} changed Core code files`,
 );
 const result = spawnSync(
   process.execPath,

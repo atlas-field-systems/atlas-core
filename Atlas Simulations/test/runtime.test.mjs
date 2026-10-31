@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { loadScenario } from '../dist/scenario.js';
 import { evaluate } from '../dist/run.js';
@@ -8,9 +9,46 @@ test(
   'shared runtime moves to points in requested order after idle Pause and fresh Resume',
   { timeout: 90000 },
   async () => {
+    const before = new Set(await readdir(process.env.ATLAS_TEST_ROOT));
     const input = await loadScenario('scenarios/road-inspection.json');
     const record = await evaluate(input);
     assert.equal(record.verdict, 'passed', JSON.stringify(record));
+    const m = record.measurements;
+    assert.ok(
+      m.requests > m.observedAttempts,
+      'HTTP reads and Full bootstrap requests count beyond instrumented writes',
+    );
+    assert.equal(m.latencyCoverage + m.latencyOmissions, m.observedAttempts);
+    assert.ok(m.acceptedReports > 0 && m.pictureLagCoverage > 0 && m.coreSamples > 0);
+    assert.ok(m.databaseBytes > 0 && m.installationBytes >= m.databaseBytes + m.walBytes);
+    const directory = (await readdir(process.env.ATLAS_TEST_ROOT)).find(
+      (n) => n.startsWith('run-') && !before.has(n),
+    );
+    assert.ok(directory);
+    const sizes = execFileSync(
+      'find',
+      [
+        join(process.env.ATLAS_TEST_ROOT, directory, 'installation'),
+        '-type',
+        'f',
+        '-printf',
+        '%s\n',
+      ],
+      { encoding: 'utf8' },
+    )
+      .trim()
+      .split('\n')
+      .map(Number);
+    assert.equal(
+      m.installationBytes,
+      sizes.reduce((sum, n) => sum + n, 0),
+      'Final byte count includes verified writer exit artifacts',
+    );
+    assert.notEqual(
+      record.inputs.actualSettings,
+      record.inputs.settings,
+      'Record actual installed Settings including selected port',
+    );
   },
 );
 test('failed setup still writes a failed complete record', { timeout: 30000 }, async () => {
@@ -73,7 +111,7 @@ test(
         task.execution_state = 'failed';
       },
       order: (i, e) => {
-        const starts = e.physical.filter((p) => p.event === 'start');
+        const starts = e.physical.filter((p) => p.event === 'start' && p.asset === 'Drone 1');
         [starts[0].task, starts[1].task] = [starts[1].task, starts[0].task];
       },
       assets: (i, e) => {
@@ -102,8 +140,34 @@ test(
       mutate(i, e);
       assert.equal(checkEvidence(i, e)[name].kind, 'failed', name);
     }
+    const worldless = decode(structuredClone(capture.evidence));
+    worldless.world = [];
+    assert.equal(checkEvidence(input, worldless).positions.kind, 'failed');
+    for (const entity of [capture.evidence.observations[0][0], capture.evidence.tracks[0].id]) {
+      const missingHistory = decode(structuredClone(capture.evidence));
+      missingHistory.history.set(entity, []);
+      assert.equal(checkEvidence(input, missingHistory).positions.kind, 'failed');
+    }
     const complete = checkEvidence(input, decode(capture.evidence));
     delete complete.positions;
     assert.equal(CheckResults.safeParse(complete).success, false);
+  },
+);
+test(
+  'unwritable history turns a correct mission into a failed recorded run',
+  { timeout: 90000 },
+  async () => {
+    const previous = process.env.ATLAS_EVAL_HISTORY;
+    process.env.ATLAS_EVAL_HISTORY = '/dev/null/atlas-history';
+    try {
+      const record = await evaluate(await loadScenario('scenarios/road-inspection.json'));
+      assert.equal(record.verdict, 'failed');
+      assert.ok(Object.values(record.checks).every((check) => check.kind === 'passed'));
+      assert.match(record.failures.join(' '), /History publication/);
+      assert.equal(record.cleanup.coreExit, 'verified');
+    } finally {
+      if (previous === undefined) delete process.env.ATLAS_EVAL_HISTORY;
+      else process.env.ATLAS_EVAL_HISTORY = previous;
+    }
   },
 );

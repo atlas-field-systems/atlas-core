@@ -1,15 +1,15 @@
-import { open } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import { z } from 'zod';
 import {
-  Float,
   Alias,
   Altitude,
-  Position,
   ExecutionState,
+  Float,
+  Position,
   contract,
   readJson,
 } from '@atlas/protocol';
+import { createHash } from 'node:crypto';
+import { open } from 'node:fs/promises';
+import { z } from 'zod';
 
 export const faultIds = [
   'reply-lost',
@@ -137,6 +137,9 @@ export const Scenario = z
     const fail = (message: string) => ctx.addIssue({ code: 'custom', message });
     const aliases = [...s.assets, ...s.subjects, ...(s.geofeatures ?? [])].map((a) => a.alias);
     if (new Set(aliases).size !== aliases.length) fail('Duplicate alias');
+    if (s.assets.length * s.subjects.length > 1000) fail('Asset/subject pair budget exceeds 1000');
+    if (s.subjects.reduce((sum, subject) => sum + subject.route.length, 0) > 10000)
+      fail('Aggregate route budget exceeds 10000');
     const assets = new Set(s.assets.map((a) => a.alias));
     const features = new Set(s.geofeatures?.map((a) => a.alias));
     const moves = new Map<string, number>();
@@ -156,6 +159,12 @@ export const Scenario = z
           a.indexes.some((j) => j >= (moves.get(a.asset) ?? 0)))
       )
         fail('Invalid reorder indexes');
+      if (
+        a.action === 'fault' &&
+        a.write_kind !== undefined &&
+        !['reply-lost', 'reply-delayed'].includes(a.id)
+      )
+        fail('write_kind applies only to reply loss and delay');
       if (a.action === 'fault' && a.id === 'core-reset' && i !== (s.timeline ?? []).length - 1)
         fail('Reset must be last');
     }
