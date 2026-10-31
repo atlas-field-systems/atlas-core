@@ -136,7 +136,9 @@ expiry, pending activation, and activation failure. Readiness alone permits acti
 
 An interrupted save leaves `tls-journal.json`. Start refuses it. Stop the service,
 then explicitly `recover`; recovery validates pointer and generation evidence,
-proves all writers stopped, and prunes only unreferenced generations. Seven generations
+including intact expired historical pairs. New saves and startup still require
+current certificates; recovery never activates a pair. Recovery proves all writers
+stopped and prunes only unreferenced generations. Seven generations
 bound saves; reaching the bound requires this explicit recovery. Failed activation
 retains the candidate and prior verified evidence without automatic rollback.
 Legacy fixed TLS files require explicit `tls replace` conversion before start.

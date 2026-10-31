@@ -38,6 +38,7 @@ export async function checkCompatibility(
   kind: string,
 ): Promise<void> {
   if (image && release && image !== release.image) throw new Error('incompatible_image');
+  if (kind === 'doctor') return;
   const installed = await optionalJson(join(root, 'setup', 'installation.json'), Manifest);
   if (
     installed &&
