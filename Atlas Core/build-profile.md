@@ -67,7 +67,8 @@ npm run test:operator-package
 
 Packing uses `artifacts/image-id`, or the explicit `ATLAS_OPERATOR_IMAGE` build input.
 `ATLAS_OPERATOR_IMAGE_REFERENCE` optionally supplies `repository@sha256:DIGEST`.
-Setup verifies the exact local image and source label. If absent, it pulls only that
+Doctor and setup use the same image ID, platform, and source-label validation.
+Doctor reports an incompatible image as a failed check. If the image is absent, setup pulls only that
 immutable reference, then verifies the resolved image again. Without a reference,
 it requires a preloaded image. Tags and guessed repositories are never accepted.
 

@@ -148,12 +148,12 @@ else process.exit(1);
       join(diagnostic, 'setup/installation.json'),
       JSON.stringify({ format: 1, installation_id: installation, image: manifest.image }),
     );
-    const saveDiagnosticSettings = (port) =>
+    const saveDiagnosticSettings = (port, host = '127.0.0.1') =>
       writeFile(
         join(diagnostic, 'setup/settings.json'),
         JSON.stringify({
           revision: '1',
-          saved: { ...defaults, host: '127.0.0.1', port, freeDiskBytes: 0, reserveBytes: 0 },
+          saved: { ...defaults, host, port, freeDiskBytes: 0, reserveBytes: 0 },
           effective: null,
           last_working: null,
           apply_failure: null,
@@ -220,6 +220,11 @@ else process.exit(1);
       const active = await probeDoctor({ image, container: running });
       assert.equal(active.status, 0);
       assert.equal(active.data.checks.port.status, 'pass');
+      await saveDiagnosticSettings(activePort, '::ffff:127.0.0.1');
+      const mapped = await probeDoctor({ image, container: running });
+      assert.equal(mapped.status, 0);
+      assert.equal(mapped.data.checks.port.status, 'pass');
+      await saveDiagnosticSettings(activePort);
       const differentHost = {
         ...running,
         NetworkSettings: {
