@@ -22,7 +22,7 @@ import {
   saveTls,
   savedTls,
   tlsView,
-  recoverTls,
+  recoverTlsAfterWriterExit,
   recordTlsActivation,
   validateTls,
 } from '../dist/tls.js';
@@ -188,15 +188,15 @@ test('explicit TLS recovery reconciles both sides of pointer commit and refuses 
   const file = join(setup, 'tls-journal.json');
   await writeFile(file, JSON.stringify(journal));
   await assert.rejects(savedTls(installation), /recovery_required/);
-  await recoverTls(installation);
+  await recoverTlsAfterWriterExit(installation);
   assert.equal((await savedTls(installation)).state.saved.generation, next.saved.generation);
   await writeFile(join(setup, 'tls-state.json'), JSON.stringify(old));
   await writeFile(file, JSON.stringify(journal));
-  await recoverTls(installation);
+  await recoverTlsAfterWriterExit(installation);
   assert.equal((await savedTls(installation)).state.saved.generation, old.saved.generation);
   assert.deepEqual(await readdir(join(setup, 'tls')), [old.saved.generation]);
   await writeFile(file, JSON.stringify({ ...journal, previous: randomUUID() }));
-  await assert.rejects(recoverTls(installation), /repair_required/);
+  await assert.rejects(recoverTlsAfterWriterExit(installation), /repair_required/);
   assert.ok(await readFile(file));
 });
 test('release mismatch refuses mutation before creating a command lock; cancellation before work writes nothing', async (t) => {
@@ -274,7 +274,7 @@ test(
       assert.equal(view.recoveryRequired, true);
       assert.equal(view.saved.generation === original, phase === 'before-pointer');
       await assert.rejects(savedTls(installation), /recovery_required/);
-      await recoverTls(installation);
+      await recoverTlsAfterWriterExit(installation);
       const saved = await savedTls(installation);
       assert.deepEqual(
         await readFile(saved.certificate),
