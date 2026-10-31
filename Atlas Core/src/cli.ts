@@ -11,7 +11,8 @@ try {
   const launch = await parseArgv(process.argv.slice(2));
   if ('screen' in launch) {
     if (launch.screen === 'help') process.stdout.write(help);
-    else if (launch.screen === 'version') process.stdout.write(versionText(await releaseMetadata()));
+    else if (launch.screen === 'version')
+      process.stdout.write(versionText(await releaseMetadata()));
     else {
       if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('terminal_required');
       const { openTui } = await import('./tui.js');

@@ -87,11 +87,11 @@ test(
       try {
         return JSON.parse(
           (
-            await exec(
-              process.execPath,
-              [cliExecutable, ...args, '--installation', directory],
-              { cwd: root, maxBuffer: 131072, timeout: 90000 },
-            )
+            await exec(process.execPath, [cliExecutable, ...args, '--installation', directory], {
+              cwd: root,
+              maxBuffer: 131072,
+              timeout: 90000,
+            })
           ).stdout,
         );
       } catch (error) {
@@ -218,30 +218,73 @@ test(
     let health = await api('/health');
     assert.equal(health.status, 200);
     dataset = health.body.dataset_id;
-    const replacementCert = join(base, 'replacement.pem'), replacementKey = join(base, 'replacement.key');
-    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2', '-subj', '/CN=replacement', '-keyout', replacementKey, '-out', replacementCert], { stdio: 'ignore' });
+    const replacementCert = join(base, 'replacement.pem'),
+      replacementKey = join(base, 'replacement.key');
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'rsa:2048',
+        '-nodes',
+        '-days',
+        '2',
+        '-subj',
+        '/CN=replacement',
+        '-keyout',
+        replacementKey,
+        '-out',
+        replacementCert,
+      ],
+      { stdio: 'ignore' },
+    );
     const tlsBefore = (await cli('tls', 'show')).data;
     assert.equal(tlsBefore.pendingActivation, false);
     const invalidTls = await cli('tls', 'replace', '--certificate', replacementCert, '--key', key);
     assert.equal(invalidTls.ok, false);
     assert.equal(invalidTls.code, 'tls_invalid');
     assert.equal((await cli('tls', 'show')).data.saved.generation, tlsBefore.saved.generation);
-    const stagedTls = await cli('tls', 'replace', '--certificate', replacementCert, '--key', replacementKey);
+    const stagedTls = await cli(
+      'tls',
+      'replace',
+      '--certificate',
+      replacementCert,
+      '--key',
+      replacementKey,
+    );
     assert.equal(stagedTls.ok, true);
     assert.equal(stagedTls.data.active.generation, tlsBefore.saved.generation);
     assert.equal(stagedTls.data.pendingActivation, true);
-    assert.equal((await api('/health')).status, 200, 'Saving TLS must keep the existing verified TLS connection available');
+    assert.equal(
+      (await api('/health')).status,
+      200,
+      'Saving TLS must keep the existing verified TLS connection available',
+    );
     assert.equal((await cli('restart')).ok, true);
     const activeTls = (await cli('tls', 'show')).data;
     assert.equal(activeTls.active.generation, stagedTls.data.saved.generation);
     await new Promise((resolve, reject) => {
-      const req = request({ hostname: '127.0.0.1', port, path: '/health', rejectUnauthorized: false }, (response) => {
-        assert.equal(response.socket.getPeerCertificate().raw.toString('base64'), new X509Certificate(execFileSync('openssl', ['x509', '-in', replacementCert, '-outform', 'DER'])).raw.toString('base64'));
-        response.resume(); response.on('end', resolve);
-      });
-      req.on('error', reject); req.end();
+      const req = request(
+        { hostname: '127.0.0.1', port, path: '/health', rejectUnauthorized: false },
+        (response) => {
+          assert.equal(
+            response.socket.getPeerCertificate().raw.toString('base64'),
+            new X509Certificate(
+              execFileSync('openssl', ['x509', '-in', replacementCert, '-outform', 'DER']),
+            ).raw.toString('base64'),
+          );
+          response.resume();
+          response.on('end', resolve);
+        },
+      );
+      req.on('error', reject);
+      req.end();
     });
-    assert.equal((await cli('tls', 'replace', '--certificate', cert, '--key', key, '--restart')).ok, true);
+    assert.equal(
+      (await cli('tls', 'replace', '--certificate', cert, '--key', key, '--restart')).ok,
+      true,
+    );
     assert.equal((await api('/health')).status, 200);
     const r = registration('Retained');
     assert.equal((await api('/messages/register_asset', r)).status, 200);

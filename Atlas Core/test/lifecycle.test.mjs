@@ -724,7 +724,11 @@ for (const name of ['certificate.pem', 'private.key']) {
           closeFailure = new Error('tls_close_test_failure');
         let handle;
         t.mock.method(prototype, 'sync', async function () {
-          if (!(await readlink(`/proc/self/fd/${this.fd}`)).match(new RegExp(`/setup/tls/[0-9a-f-]+/${name.replace('.', '\\.')}$$`)))
+          if (
+            !(await readlink(`/proc/self/fd/${this.fd}`)).match(
+              new RegExp(`/setup/tls/[0-9a-f-]+/${name.replace('.', '\\.')}$$`),
+            )
+          )
             return sync.call(this);
           handle = this;
           if (failure !== 'sync') {
@@ -780,9 +784,15 @@ for (const name of ['certificate.pem', 'private.key']) {
         });
         const journal = JSON.parse(await readFile(join(installation, 'setup', 'tls-journal.json')));
         const generation = join(installation, 'setup', 'tls', journal.next.generation);
-        assert.deepEqual(await readFile(join(generation, 'certificate.pem')), await readFile(certificate));
-        if (name === 'private.key') assert.deepEqual(await readFile(join(generation, 'private.key')), await readFile(key));
-        await assert.rejects(readFile(join(installation, 'setup', 'tls-state.json')), { code: 'ENOENT' });
+        assert.deepEqual(
+          await readFile(join(generation, 'certificate.pem')),
+          await readFile(certificate),
+        );
+        if (name === 'private.key')
+          assert.deepEqual(await readFile(join(generation, 'private.key')), await readFile(key));
+        await assert.rejects(readFile(join(installation, 'setup', 'tls-state.json')), {
+          code: 'ENOENT',
+        });
       },
     );
 }

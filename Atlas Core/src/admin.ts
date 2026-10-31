@@ -30,7 +30,14 @@ import { maintenance, saveSettings } from './maintenance.js';
 import { defaults, Settings } from './settings.js';
 import { id, zero } from './exact.js';
 import { retainedEvent } from './operator-report.js';
-import { validateTls, saveTls, savedTls, tlsView, recordTlsActivation, recoverTlsAfterWriterExit } from './tls.js';
+import {
+  validateTls,
+  saveTls,
+  savedTls,
+  tlsView,
+  recordTlsActivation,
+  recoverTlsAfterWriterExit,
+} from './tls.js';
 import { diskUsage, hasCapacity } from './capacity.js';
 
 async function requireFreshInstallation(root: string): Promise<void> {
@@ -40,10 +47,12 @@ async function requireFreshInstallation(root: string): Promise<void> {
   });
   if (!directory) return;
   for await (const entry of directory) {
-    if (!entry.isDirectory() || !['setup', 'data', 'control', 'recovery'].includes(entry.name)) throw new Error('already_setup');
+    if (!entry.isDirectory() || !['setup', 'data', 'control', 'recovery'].includes(entry.name))
+      throw new Error('already_setup');
     const child = await opendir(join(root, entry.name));
     for await (const file of child) {
-      if (entry.name !== 'control' || file.name !== 'command.flock' || !file.isFile()) throw new Error('already_setup');
+      if (entry.name !== 'control' || file.name !== 'command.flock' || !file.isFile())
+        throw new Error('already_setup');
     }
   }
 }
@@ -86,7 +95,8 @@ export class Administration {
     exchanges.CreateApiKey.request.schema.parse(input.credential);
     await validateTls(input.certificate, input.key);
     const action = await this.action();
-    if (action && (action.phase !== 'complete' || action.kind !== 'hard-reset')) throw new Error('repair_required');
+    if (action && (action.phase !== 'complete' || action.kind !== 'hard-reset'))
+      throw new Error('repair_required');
     if (!action) await requireFreshInstallation(this.root);
     const existing = await opendir(join(this.root, 'setup')).catch((error) => {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined;
@@ -96,9 +106,17 @@ export class Administration {
       let primary: unknown;
       try {
         if (await existing.read()) throw new Error('already_setup');
-      } catch (error) { primary = error; throw error; }
-      finally {
-        try { await existing.close(); } catch (error) { throw primary === undefined ? error : new AggregateError([primary, error], 'setup_inspection_failed'); }
+      } catch (error) {
+        primary = error;
+        throw error;
+      } finally {
+        try {
+          await existing.close();
+        } catch (error) {
+          throw primary === undefined
+            ? error
+            : new AggregateError([primary, error], 'setup_inspection_failed');
+        }
       }
     }
     await ownedDirectory(this.root);
@@ -374,7 +392,11 @@ export class Administration {
       } catch (bookkeeping) {
         failures.push(bookkeeping);
       }
-      try { await recordTlsActivation(this.root, false); } catch (bookkeeping) { failures.push(bookkeeping); }
+      try {
+        await recordTlsActivation(this.root, false);
+      } catch (bookkeeping) {
+        failures.push(bookkeeping);
+      }
       try {
         if ((await inspectContainer(writer, manifest.installation_id)).State.Running)
           await docker(['kill', '--signal=TERM', writer.container]);
@@ -514,7 +536,14 @@ export class Administration {
         await atomicJson(join(this.root, 'software.json'), { image: action.image });
       }
       if (action.kind === 'hard-reset') {
-        for (const file of ['tls.pem', 'tls.key', 'tls-state.json', 'tls-journal.json', 'settings.json', 'installation.json'])
+        for (const file of [
+          'tls.pem',
+          'tls.key',
+          'tls-state.json',
+          'tls-journal.json',
+          'settings.json',
+          'installation.json',
+        ])
           await rm(join(this.root, 'setup', file), { force: true });
         await rm(join(this.root, 'setup', 'tls'), { recursive: true, force: true });
         await flushDirectory(join(this.root, 'setup'));
@@ -581,9 +610,14 @@ export class Administration {
     return {
       revision: settings.revision,
       saved: settings.saved,
-      effective: settings.effective === null ? null : { revision: settings.effective.revision, value: settings.effective.value },
+      effective:
+        settings.effective === null
+          ? null
+          : { revision: settings.effective.revision, value: settings.effective.value },
       last_working:
-        settings.last_working === null ? null : { revision: settings.last_working.revision, value: settings.last_working.value },
+        settings.last_working === null
+          ? null
+          : { revision: settings.last_working.revision, value: settings.last_working.value },
       apply_failure: settings.apply_failure,
       diagnostics: {
         severity: settings.saved.diagnosticLevel,

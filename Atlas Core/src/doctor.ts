@@ -85,9 +85,16 @@ export async function doctor(
       };
       const advice =
         name === 'docker' && error instanceof Error ? instructions[error.message] : undefined;
-      const invalidTls = name === 'tls' && error instanceof Error &&
-        ['tls_invalid', 'repair_required', 'tls_conversion_required', 'recovery_required'].includes(error.message);
-      checks[name] = { status: invalidTls ? 'fail' : 'unavailable', instruction: advice ?? instruction };
+      const invalidTls =
+        name === 'tls' &&
+        error instanceof Error &&
+        ['tls_invalid', 'repair_required', 'tls_conversion_required', 'recovery_required'].includes(
+          error.message,
+        );
+      checks[name] = {
+        status: invalidTls ? 'fail' : 'unavailable',
+        instruction: advice ?? instruction,
+      };
     }
   };
   checks.runtime_node = {
