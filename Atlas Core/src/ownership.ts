@@ -2,7 +2,7 @@ import { readFile, readlink, open, rename, mkdir, lstat, rm } from 'node:fs/prom
 import { dirname, join, resolve } from 'node:path';
 import { id } from './exact.js';
 import { Uuid } from '@atlas/protocol';
-import { WriterIdentity } from './objects.js';
+import { WriterIdentity } from './writer.js';
 
 export async function processIdentity(pid = process.pid): Promise<WriterIdentity> {
   const [boot, raw, namespace] = await Promise.all([readFile('/proc/sys/kernel/random/boot_id', 'utf8'), readFile(`/proc/${pid}/stat`, 'utf8'), readlink('/proc/self/ns/pid')]);
@@ -36,7 +36,11 @@ export async function atomicJson(path: string, value: unknown): Promise<void> {
   if (Buffer.byteLength(data) > 65_536) throw new Error('record_limit');
   const temporary = `${path}.${id()}.tmp`;
   const file = await open(temporary, 'wx', 0o600);
-  try { await file.writeFile(data); await file.sync(); } finally { await file.close(); }
+  let primary: unknown;
+  try { await file.writeFile(data); await file.sync(); } catch (error) { primary = error; throw error; }
+  finally {
+    try { await file.close(); } catch (error) { throw primary === undefined ? error : new AggregateError([primary, error], 'record_flush_failed'); }
+  }
   try { await rename(temporary, path); await flushDirectory(dirname(path)); }
   catch (error) { await rm(temporary, { force: true }); throw error; }
 }

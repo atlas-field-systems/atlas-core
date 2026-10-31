@@ -5,7 +5,7 @@ import { constants } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { Settings } from './settings.js';
-import { WriterIdentity } from './objects.js';
+import { WriterIdentity } from './writer.js';
 import { readLocalJson } from './local-json.js';
 
 export const ImageId = z.string().regex(/^sha256:[0-9a-f]{64}$/);

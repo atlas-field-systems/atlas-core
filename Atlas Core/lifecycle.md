@@ -22,11 +22,11 @@ Use a fresh installation for that release; Reset does not convert old formats.
 ## Commands
 
 Run `node dist/cli.js COMMAND --installation /absolute/owned/installation` locally.
-This is the current source entry point. The intended packaged interface is specified
-in [command-line administration](command-line.md). It reuses these lifecycle operations
-and adds the bounded read-only `doctor` check defined there.
+Source and packaged commands use the same parser and dispatcher. Omitted installation
+selects `~/.atlas/core`; an explicit path must be absolute. Invalid arguments fail
+before installation writes. See [command-line administration](command-line.md).
 Docker access uses `sudo -n docker`. The image argument is an immutable `sha256:` ID
-from `artifacts/image-id`, never a tag. Setup supplies a valid TLS certificate and private key
+from `artifacts/image-id`, never a tag. Packages supply their recorded image by default. Setup supplies a valid TLS certificate and private key
 and a mode-0600 credential JSON file containing `api_key_id`, `request_id`, and `secret`.
 The secret is a 32-byte random base64url value. Commands never print that secret.
 Local JSON records are limited to 64 KiB before parsing. Readers consume at most
@@ -36,12 +36,14 @@ The limit applies while reading, including when the input continues producing da
 | Command | Required options or result |
 | --- | --- |
 | `setup` | `--image ID --certificate FILE --key FILE --credential-file FILE`; optional `--settings FILE` |
+| `doctor`, `help`, `version`, `tui` | Prerequisites, usage, release identity, or guided terminal interface |
+| `tls show`, `tls replace` | See TLS replacement below |
 | `provision` | `--credential-file FILE`; create another key locally |
 | `start`, `inspect`, `stop`, `restart` | Explicit lifecycle; `stop --force` still verifies writer exit |
 | `reset`, `recover` | Clear operational state, or explicitly finish an interrupted action; leave Core stopped |
 | `hard-reset` | `--confirm-destructive`; leave Core stopped and require setup |
 | `update` | `--image ID --confirm-reset`; leave Core stopped |
-| `settings show` | Saved, effective and last-working revisions, apply failure, diagnostic limits |
+| `settings show` | Saved and effective values, last-working revision, apply failure, diagnostic limits |
 | `settings save` | `--expected-revision N --file FILE`; validate a complete Settings candidate |
 | `settings apply` | `--restart`; no automatic application or fallback |
 | `export` | `--out FILE`; bounded allowlisted JSONL, with partial-export status |
@@ -123,14 +125,21 @@ Await diagnostic writers before clearing logs. Unmanaged container or host logs 
 
 ## TLS replacement
 
-Certificate replacement is required by the [intended interface](command-line.md)
-but is not implemented yet. The packaged command is
-`atlas-core tls replace --certificate FILE --key FILE`, with `--restart` for activation.
-The TUI exposes the same operation. It validates the pair before changing retained setup and
-refuses invalid input without disturbing the working service. Activation requires
-an explicit restart. The operation owns its installation lock, durable replacement,
-and cleanup, and retains repair evidence if interrupted. It reports saved and active
-state separately and never reports activation without verified service readiness.
+`atlas-core tls replace --certificate /absolute/cert.pem --key /absolute/key.pem`
+saves a validated pair. `--restart` explicitly stops and starts Core to activate it.
+Both inputs must be regular files, at most 64 KiB, with a current matching certificate.
+The dispatcher holds one flock. Two mode-0600 files are flushed in an immutable
+`setup/tls/UUID` directory before an atomic `tls-state.json` pointer commit.
+The runtime resolves the saved pointer once per launch. Save leaves the running
+service unchanged. `tls show` reports saved and last verified active fingerprints,
+expiry, pending activation, and activation failure. Readiness alone permits active evidence.
+
+An interrupted save leaves `tls-journal.json`. Start refuses it. Stop the service,
+then explicitly `recover`; recovery validates pointer and generation evidence,
+proves all writers stopped, and prunes only unreferenced generations. Seven generations
+bound saves; reaching the bound requires this explicit recovery. Failed activation
+retains the candidate and prior verified evidence without automatic rollback.
+Legacy fixed TLS files require explicit `tls replace` conversion before start.
 Certificate issuance and renewal scheduling belong to deployment tooling.
 
 [Next: service readiness](readiness.md)

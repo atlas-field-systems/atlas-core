@@ -7,8 +7,8 @@ import { refuse } from './fault.js';
 import type { Store, Transaction } from './database.js';
 
 const Image = z.object({ image: z.string() });
-export const WriterIdentity = z.strictObject({ pid: z.number().int().positive(), boot: z.string().min(1).max(128), start: z.string().regex(/^\d+$/), namespace: z.string().regex(/^pid:\[\d+\]$/), launch: Uuid.exactOptional() });
-export type WriterIdentity = z.infer<typeof WriterIdentity>;
+import { WriterIdentity } from './writer.js';
+export { WriterIdentity };
 export const Attempt = z.strictObject({ id: Uuid, object_id: Uuid, descriptor: z.string(), owner: z.string(), state: z.enum(['active', 'installed', 'published', 'abandoned', 'reclaimed']),
   staging: z.string(), installed: z.string(), bytes: z.number(), key_id: Uuid });
 export type Attempt = z.infer<typeof Attempt>;
