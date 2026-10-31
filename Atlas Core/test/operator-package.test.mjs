@@ -137,7 +137,21 @@ else process.exit(1);
       key = join(base, 'doctor.key');
     execFileSync(
       'openssl',
-      ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2', '-subj', '/CN=localhost', '-keyout', key, '-out', certificate],
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'rsa:2048',
+        '-nodes',
+        '-days',
+        '2',
+        '-subj',
+        '/CN=localhost',
+        '-keyout',
+        key,
+        '-out',
+        certificate,
+      ],
       { stdio: 'ignore' },
     );
     await saveTls(diagnostic, certificate, key);
