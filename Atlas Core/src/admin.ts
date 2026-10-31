@@ -1,4 +1,4 @@
-import { mkdir, rm, open, readdir, opendir, stat } from 'node:fs/promises';
+import { mkdir, rm, open, readdir, opendir, stat, lstat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
@@ -540,15 +540,28 @@ export class Administration {
         await atomicJson(join(this.root, 'software.json'), { image: action.image });
       }
       if (action.kind === 'hard-reset') {
-        for (const file of [
-          'tls.pem',
-          'tls.key',
-          'tls-state.json',
-          'tls-journal.json',
-          'settings.json',
-          'installation.json',
-        ])
+        const records = ['tls-state', 'tls-journal', 'settings', 'installation'];
+        for (const file of ['tls.pem', 'tls.key', ...records.map((name) => `${name}.json`)])
           await rm(join(this.root, 'setup', file), { force: true });
+        for await (const entry of await opendir(join(this.root, 'setup'))) {
+          const match = /^(.+)\.json\.([0-9a-f-]{36})\.tmp$/.exec(entry.name);
+          if (
+            !entry.isFile() ||
+            !match ||
+            !records.includes(match[1] ?? '') ||
+            !Uuid.safeParse(match[2]).success
+          )
+            continue;
+          const path = join(this.root, 'setup', entry.name);
+          const info = await lstat(path);
+          if (
+            info.isFile() &&
+            info.uid === process.getuid?.() &&
+            (info.mode & 0o077) === 0 &&
+            info.nlink === 1
+          )
+            await rm(path);
+        }
         await rm(join(this.root, 'setup', 'tls'), { recursive: true, force: true });
         await flushDirectory(join(this.root, 'setup'));
         for (const container of containers)

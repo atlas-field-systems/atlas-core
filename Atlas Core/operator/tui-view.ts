@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { OperatorPort } from '../src/command.js';
 import type { CommandResult, Operation } from '../src/command.js';
 import { Action, SavedSettings } from '../src/installation.js';
 import { Settings } from '../src/settings.js';
@@ -102,11 +103,11 @@ const commonSettings: Record<
   port: {
     label: 'HTTPS port',
     prompt: 'HTTPS port',
-    problem: 'Enter a port from 0 to 65535.',
+    problem: 'Enter a port from 1 to 65535.',
     show: (settings) => String(settings.port),
     parse: (value) => {
       if (!/^\d{1,5}$/.test(value.trim())) throw new Error('invalid_port');
-      return { port: Number(value) };
+      return { port: OperatorPort.parse(Number(value)) };
     },
   },
   trustedOrigins: {

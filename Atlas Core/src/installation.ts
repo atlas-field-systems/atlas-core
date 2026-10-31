@@ -70,9 +70,10 @@ export async function readJsonFile<S extends z.ZodType>(
   path: string,
   schema: S,
 ): Promise<z.output<S>> {
-  const file = await open(path, 'r');
+  const file = await open(path, constants.O_RDONLY | constants.O_NONBLOCK);
   let primary: unknown;
   try {
+    if (!(await file.stat()).isFile()) throw new Error('record_invalid');
     const buffer = Buffer.alloc(65_537);
     let length = 0;
     while (length < buffer.byteLength) {

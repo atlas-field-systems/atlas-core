@@ -33,7 +33,7 @@ const run = (data) =>
     );
   });
 test(
-  'local JSON reads enforce the byte limit before an input reaches EOF',
+  'local JSON reads bound regular files and reject nonregular inputs without waiting',
   { timeout: 10000 },
   async (t) => {
     const directory = await mkdtemp(join(mutableRoot, 'local-record-'));
@@ -71,24 +71,8 @@ test(
     );
     const fifo = join(directory, 'record.pipe');
     execFileSync('mkfifo', [fifo]);
-    const reading = readJsonFile(fifo, schema).then(
-      () => 'accepted',
-      (error) => error.message,
-    );
-    const writer = await open(fifo, 'w');
-    let outcome;
-    try {
-      await writer.writeFile(Buffer.alloc(65537, 32));
-      outcome = await Promise.race([reading, delay(1500).then(() => 'waiting_for_eof')]);
-    } finally {
-      await writer.close();
-    }
-    await reading;
-    assert.equal(
-      outcome,
-      'record_limit',
-      'Oversized input must be refused while its writer is still open',
-    );
+    await assert.rejects(readJsonFile(fifo, schema), /record_invalid/);
+    await assert.rejects(readJsonFile(directory, schema), /record_invalid/);
   },
 );
 test('update compatibility inspects retained SQLite without opening an Engine or changing data', async (t) => {

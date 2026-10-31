@@ -14,6 +14,8 @@ import type { ReleaseMetadata } from './release.js';
 import { doctor } from './doctor.js';
 import { tlsView, validateTls, tlsBytes } from './tls.js';
 
+export const OperatorPort = Settings.shape.port.min(1);
+
 export type ReadOperation = {
   kind: 'inspect' | 'doctor' | 'settings-show' | 'enrollment-inspect' | 'tls-show';
 };
@@ -243,6 +245,7 @@ const safe = z.enum([
   'offline_operation_failed',
   'incompatible_format',
   'record_limit',
+  'record_invalid',
   'prerequisite_failed',
   'tls_invalid',
   'tls_conversion_required',
@@ -301,6 +304,12 @@ export async function perform(input: Invocation, signal?: AbortSignal): Promise<
     absolute(input.root);
     const release = await releaseMetadata();
     const command = input.operation.command;
+    if (
+      (command.kind === 'setup' || command.kind === 'settings-save') &&
+      command.settings &&
+      !OperatorPort.safeParse(command.settings.port).success
+    )
+      throw new Error('invalid_arguments');
     const admin = new Administration(input.root);
     const run = async (): Promise<unknown> => {
       await checkCompatibility(input.root, release, input.image, command.kind);
