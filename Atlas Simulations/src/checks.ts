@@ -20,6 +20,7 @@ export type VerificationInput = {
   moves: readonly { asset: string; index: number; id: Uuid }[];
 };
 type Submitted = {
+  ordinal: number;
   identity: string;
   source: 'runtime' | 'fault';
   operation: string;
@@ -32,7 +33,7 @@ export type Evidence = {
   tracks: Track[];
   observations: Map<Uuid, Observation>;
   history: Map<string, HistoryReading[]>;
-  physical: Extract<TruthEntry, { kind: 'physical' }>[];
+  physical: (Extract<TruthEntry, { kind: 'physical' }> & { ordinal: number })[];
   world: Extract<TruthEntry, { kind: 'world' }>[];
   submissions: Submitted[];
   faults: string[];
@@ -46,12 +47,14 @@ export async function readTruth(
   const byIdentity = new Map<string, Submitted>();
   const stream = createReadStream(path, { highWaterMark: 65536 });
   const lines = createInterface({ input: stream, crlfDelay: Infinity });
-  let bytes = 0;
+  let bytes = 0,
+    ordinal = 0;
   try {
     for await (const line of lines) {
       bytes += Buffer.byteLength(line) + 1;
       if (bytes > 134217728 || line.length > 1048576) throw new Error('Truth input budget');
       const entry = TruthEntry.parse(JSON.parse(line));
+      ordinal++;
       switch (entry.kind) {
         case 'world':
           if (world.length >= 100000) throw new Error('World reading capacity');
@@ -59,12 +62,12 @@ export async function readTruth(
           break;
         case 'physical':
           if (physical.length >= 100000) throw new Error('Physical index capacity');
-          physical.push(entry);
+          physical.push({ ...entry, ordinal });
           break;
         case 'submitted': {
           if (byIdentity.size >= 100000) throw new Error('Submission index capacity');
           if (!byIdentity.has(entry.identity)) {
-            const item = { ...entry, outcome: 'not_submitted' };
+            const item = { ...entry, ordinal, outcome: 'not_submitted' };
             submissions.push(item);
             byIdentity.set(entry.identity, item);
           }
@@ -97,6 +100,20 @@ function key(
 ): string {
   return `${entity}/${origin.kind}/${origin.process_generation ?? origin.publisher_id}/position/${reading}`;
 }
+function target(
+  input: Pick<VerificationInput, 'scenario'>,
+  asset: string,
+  index: number,
+): Position | undefined {
+  const action = input.scenario.timeline?.filter(
+    (a) => a.action === 'move_to' && a.asset === asset,
+  )[index];
+  return action?.action === 'move_to'
+    ? 'position' in action
+      ? action.position
+      : input.scenario.geofeatures?.find((g) => g.alias === action.geofeature)?.position
+    : undefined;
+}
 export function checkEvidence(
   input: Pick<VerificationInput, 'scenario' | 'assets' | 'moves'>,
   e: Evidence,
@@ -127,6 +144,15 @@ export function checkEvidence(
         effects.filter((p) => p.event === 'arrive').length !== 1
       )
         failures.tasks.push(`Completed without exactly one arrival ${task.task_id}`);
+      if (
+        task.execution_state === 'completed' &&
+        effects.some(
+          (p) =>
+            p.event === 'arrive' &&
+            !isDeepStrictEqual(p.position, target(input, expected.asset, expected.index)),
+        )
+      )
+        failures.tasks.push(`Arrival missed target ${task.task_id}`);
       if (task.execution_state === 'cancelled' && effects.some((p) => p.event === 'arrive'))
         failures.tasks.push(`Cancelled after physical arrival ${task.task_id}`);
     }
@@ -137,16 +163,62 @@ export function checkEvidence(
     if (removed.has(alias) === Boolean(asset)) failures.assets.push(`Asset presence ${alias}`);
     if (removed.has(alias)) continue;
     const moves = input.moves.filter((m) => m.asset === alias);
-    let expectedOrder = moves.map((m) => m.index);
-    for (const action of input.scenario.timeline ?? [])
-      if (action.action === 'reorder' && action.asset === alias) expectedOrder = action.indexes;
-    const starts = e.physical.filter(
-      (p) => p.asset === alias && p.event === 'start' && moves.some((m) => m.id === p.task),
+    const reorders = (input.scenario.timeline ?? []).filter(
+      (a) => a.action === 'reorder' && a.asset === alias,
     );
-    const actualOrder = starts.map((p) => moves.find((m) => m.id === p.task)?.index);
-    const completedOrder = expectedOrder.filter((i) => actualOrder.includes(i));
-    if (!isDeepStrictEqual(actualOrder, completedOrder))
-      failures.order.push(`Start order ${alias}`);
+    let reorderIndex = 0;
+    const events: (
+      | { ordinal: number; kind: 'enqueue' | 'start' | 'cancel'; index: number }
+      | { ordinal: number; kind: 'reorder'; indexes: number[] }
+    )[] = [];
+    for (const submission of e.submissions) {
+      if (submission.outcome !== 'accepted') continue;
+      if (submission.operation === 'CreateTask') {
+        const facts = exchanges.CreateTask.request.schema.parse(submission.facts);
+        const binding = moves.find((m) => m.id === facts.task_id);
+        if (binding)
+          events.push({ ordinal: submission.ordinal, kind: 'enqueue', index: binding.index });
+      } else if (submission.operation === 'SetTaskOrder') {
+        const facts = exchanges.SetTaskOrder.request.schema.parse(submission.facts);
+        if (facts.asset_id !== input.assets.get(alias)) continue;
+        const action = reorders[reorderIndex++];
+        if (
+          !action ||
+          action.action !== 'reorder' ||
+          !isDeepStrictEqual(
+            facts.task_ids,
+            action.indexes.map((index) => moves.find((m) => m.index === index)?.id),
+          )
+        ) {
+          failures.order.push(`Unexpected reorder ${alias}`);
+          continue;
+        }
+        events.push({ ordinal: submission.ordinal, kind: 'reorder', indexes: action.indexes });
+      }
+    }
+    for (const p of e.physical) {
+      const binding = moves.find((m) => m.id === p.task);
+      if (p.asset === alias && binding && (p.event === 'start' || p.event === 'cancel'))
+        events.push({ ordinal: p.ordinal, kind: p.event, index: binding.index });
+    }
+    if (reorderIndex !== reorders.length) failures.order.push(`Missing reorder ${alias}`);
+    let pending: number[] = [];
+    const started = new Set<number>();
+    const cancelled = new Set<number>();
+    for (const event of events.sort((a, b) => a.ordinal - b.ordinal)) {
+      if (event.kind === 'enqueue') pending.push(event.index);
+      else if (event.kind === 'reorder')
+        pending = event.indexes.filter((index) => !started.has(index) && !cancelled.has(index));
+      else if (event.kind === 'cancel') {
+        pending = pending.filter((index) => index !== event.index);
+        cancelled.add(event.index);
+      } else {
+        if (pending[0] !== event.index || started.has(event.index))
+          failures.order.push(`Start order ${alias}`);
+        pending = pending.filter((index) => index !== event.index);
+        started.add(event.index);
+      }
+    }
     let paused = false;
     for (const p of e.physical.filter((p) => p.asset === alias)) {
       if (p.event === 'pause') paused = true;
@@ -252,19 +324,20 @@ export function checkEvidence(
       )
     )
       failures.final_position.push(`Latest position ${alias}`);
-    const lastArrival = e.physical.filter((p) => p.asset === alias && p.event === 'arrive').at(-1);
-    if (lastArrival && moves.some((m) => m.id === lastArrival.task)) {
-      const binding = moves.find((m) => m.id === lastArrival.task);
-      const action = input.scenario.timeline?.filter(
-        (a) => a.action === 'move_to' && a.asset === alias,
-      )[binding?.index ?? -1];
-      const target =
-        action && action.action === 'move_to'
-          ? 'position' in action
-            ? action.position
-            : input.scenario.geofeatures?.find((g) => g.alias === action.geofeature)?.position
-          : undefined;
-      if (!target || !isDeepStrictEqual(lastPosition, target))
+    const lastTerminal = e.submissions
+      .filter((s) => s.operation === 'ReportTaskExecution' && s.outcome === 'accepted')
+      .map((s) => exchanges.ReportTaskExecution.request.schema.parse(s.facts).evidence.payload)
+      .filter(
+        (p) =>
+          p.event === 'state' &&
+          ['completed', 'cancelled', 'failed'].includes(p.state) &&
+          moves.some((m) => m.id === p.task_id),
+      )
+      .at(-1);
+    if (lastTerminal?.event === 'state' && lastTerminal.state === 'completed') {
+      const binding = moves.find((m) => m.id === lastTerminal.task_id);
+      const expectedTarget = binding && target(input, alias, binding.index);
+      if (!expectedTarget || !isDeepStrictEqual(lastPosition, expectedTarget))
         failures.final_position.push(`Target position ${alias}`);
     }
     if (

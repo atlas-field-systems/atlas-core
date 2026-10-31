@@ -171,3 +171,170 @@ test(
     }
   },
 );
+
+test(
+  'a completed move cannot hide an earlier arrival short of its target',
+  { timeout: 60000 },
+  async () => {
+    const { World } = await import('../dist/world.js');
+    const { Scenario } = await import('../dist/scenario.js');
+    const scenario = Scenario.parse({
+      name: 'premature-first-arrival',
+      assets: [
+        {
+          alias: 'Drone',
+          position: { latitude: 0, longitude: 0 },
+          cruise_speed: 100,
+          detection_radius: 0,
+        },
+      ],
+      subjects: [],
+      timeline: [
+        {
+          at_seconds: 0,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0.001, longitude: 0 },
+        },
+        {
+          at_seconds: 0,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0.002, longitude: 0 },
+        },
+      ],
+      deadline_seconds: 30,
+      expect: {
+        tasks: [
+          { asset: 'Drone', index: 0, state: 'completed' },
+          { asset: 'Drone', index: 1, state: 'completed' },
+        ],
+        tracks: 0,
+      },
+    });
+    const move = World.prototype.move;
+    let injected = false;
+    World.prototype.move = function (...args) {
+      if (!injected) {
+        injected = true;
+        return true;
+      }
+      return move.apply(this, args);
+    };
+    try {
+      const record = await evaluate({ scenario, sha256: '1'.repeat(64) });
+      assert.ok(injected);
+      assert.equal(record.verdict, 'failed');
+      assert.equal(record.checks.tasks.kind, 'failed');
+      assert.match(record.checks.tasks.reasons.join(' '), /Arrival missed target/);
+      assert.equal(
+        record.checks.final_position.kind,
+        'passed',
+        'Later correct arrival does not mask the earlier defect',
+      );
+    } finally {
+      World.prototype.move = move;
+    }
+    const baseline = await evaluate({ scenario, sha256: '1'.repeat(64) });
+    assert.equal(baseline.verdict, 'passed', JSON.stringify(baseline));
+  },
+);
+
+test(
+  'cancelling later work keeps its held position after an earlier arrival',
+  { timeout: 60000 },
+  async () => {
+    const { Scenario } = await import('../dist/scenario.js');
+    const scenario = Scenario.parse({
+      name: 'cancel-after-arrival',
+      assets: [
+        {
+          alias: 'Drone',
+          position: { latitude: 0, longitude: 0 },
+          cruise_speed: 10,
+          detection_radius: 0,
+        },
+      ],
+      subjects: [],
+      timeline: [
+        {
+          at_seconds: 0,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0, longitude: 0 },
+        },
+        {
+          at_seconds: 4,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 1, longitude: 0 },
+        },
+        { at_seconds: 8, action: 'cancel', asset: 'Drone', index: 1 },
+      ],
+      deadline_seconds: 30,
+      expect: {
+        tasks: [
+          { asset: 'Drone', index: 0, state: 'completed' },
+          { asset: 'Drone', index: 1, state: 'cancelled' },
+        ],
+        tracks: 0,
+      },
+    });
+    const record = await evaluate({ scenario, sha256: '2'.repeat(64) });
+    assert.equal(record.verdict, 'passed', JSON.stringify(record));
+  },
+);
+
+test(
+  'reordering pending work preserves previously completed execution',
+  { timeout: 60000 },
+  async () => {
+    const { Scenario } = await import('../dist/scenario.js');
+    const scenario = Scenario.parse({
+      name: 'reorder-after-completed',
+      assets: [
+        {
+          alias: 'Drone',
+          position: { latitude: 0, longitude: 0 },
+          cruise_speed: 1000000,
+          detection_radius: 0,
+        },
+      ],
+      subjects: [],
+      timeline: [
+        {
+          at_seconds: 0,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0, longitude: 0 },
+        },
+        { at_seconds: 4, action: 'pause', asset: 'Drone' },
+        {
+          at_seconds: 6,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0.001, longitude: 0 },
+        },
+        {
+          at_seconds: 6,
+          action: 'move_to',
+          asset: 'Drone',
+          position: { latitude: 0.002, longitude: 0 },
+        },
+        { at_seconds: 7, action: 'reorder', asset: 'Drone', indexes: [2, 1] },
+        { at_seconds: 8, action: 'resume', asset: 'Drone' },
+      ],
+      deadline_seconds: 30,
+      expect: {
+        tasks: [
+          { asset: 'Drone', index: 0, state: 'completed' },
+          { asset: 'Drone', index: 1, state: 'completed' },
+          { asset: 'Drone', index: 2, state: 'completed' },
+        ],
+        tracks: 0,
+      },
+    });
+    const record = await evaluate({ scenario, sha256: '2'.repeat(64) });
+    assert.equal(record.verdict, 'passed', JSON.stringify(record));
+  },
+);
