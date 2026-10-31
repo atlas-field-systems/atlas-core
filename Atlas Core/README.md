@@ -18,6 +18,10 @@ projects. Closing the UI does not stop Core. The [operating environment](../oper
 host internet access while allowing interruptions on field links. Local Core work
 does not require a cloud service.
 
+The [command-line interface](command-line.md) defines the intended npm installation,
+CLI, and TUI behavior. Those interfaces are specified but not yet implemented.
+The source entry point remains documented under [local commands](lifecycle.md#commands).
+
 ## Ownership inside the server
 
 | Owner | Responsibility |
