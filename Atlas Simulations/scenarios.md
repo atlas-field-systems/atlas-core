@@ -41,7 +41,7 @@ one file.
 | `assets` | Yes | One to 100 Assets, each with `alias`, `position`, `cruise_speed`, and `detection_radius` |
 | `subjects` | Yes | Up to 1,000 subjects, each with `alias`, `route`, and `speed`. The list can be empty |
 | `timeline` | Eval only | Up to 10,000 actions sorted by `at_seconds` |
-| `deadline_seconds` | Eval only | Longest eval duration, at most 28,800 |
+| `deadline_seconds` | Eval only | Longest eval duration, at most [3,600](continuous-integration.md#runner-limits) |
 | `expect` | Eval only | Hand-written results that [eval checks](evals.md#correctness-decides-pass-or-fail) compare |
 
 A subject follows its route once at a fixed speed and stops at the last point. A

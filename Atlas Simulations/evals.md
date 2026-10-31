@@ -7,20 +7,20 @@ change a verdict.
 
 ## Run an eval
 
-Run these commands from `Atlas Simulations`, with a built Core and its pinned image.
-Both directories stay outside the repository. `ATLAS_EVAL_HISTORY` must outlive the
-run, so use a fixed path.
+[CI](continuous-integration.md) runs every eval on every commit. To run them locally,
+use these commands from `Atlas Simulations`, with a built Core and its pinned image.
+Keep both directories outside the repository.
 
 ```sh
 export ATLAS_TEST_ROOT="$(mktemp -d /var/tmp/atlas-simulations.XXXXXX)"
-export ATLAS_EVAL_HISTORY=/var/lib/atlas-eval-history
+export ATLAS_EVAL_HISTORY="$ATLAS_TEST_ROOT/history"
 npm run eval -- --all
 ```
 
-Use `--scenario FILE` to run one scenario. Each scenario runs in this order:
+Use `--group NAME` or `--scenario FILE` to run less. Each scenario runs in this order:
 
 1. Create a Core installation under `ATLAS_TEST_ROOT` with
-   [`setup` and `start`](../Atlas%20Core/lifecycle.md#commands).
+   [`setup` and `start`](../Atlas%20Core/lifecycle.md#commands) and `settings/eval.json`.
 2. Start every Asset and wait for each first check-in.
 3. Apply the timeline through one operator client in SDK Full mode.
 4. Wait until every Task is terminal and no action remains, or until `deadline_seconds`.
@@ -70,30 +70,7 @@ A `docker stats` sample each second supplies Core CPU and memory. Evals do not r
 [workload qualification](../Atlas%20Core/workload-qualification.md), which fixes its
 own hardware, payloads, and durations.
 
-## Keep and compare runs
-
-A failed run also appends a record. `ATLAS_EVAL_HISTORY` holds one JSON file per run
-at `SCENARIO/UTC-TIME-SHORT-SHA.json`. The eval runner never edits or deletes a
-record, and a run that cannot write its record fails.
-
-| Record field | Contents |
-| --- | --- |
-| Source | Branch, full commit, dirty state, and Protocol, SDK, and Core versions |
-| Environment | Core image ID, Node version, CPU model and count, memory, and kernel |
-| Input | Scenario name and SHA-256 |
-| Result | Verdict, every check, and the failure reason |
-| Measurements | The groups above, and cleanup evidence |
-
-To record a branch, check it out and run the evals there. Then compare any two
-branches, tags, or commits that have records.
-
-```sh
-npm run eval:compare -- main t3/my-branch
-```
-
-The command uses the newest record for each scenario and prints each verdict, each
-measurement, and its percentage change. It marks a pair when the scenario hash or
-environment differs, or when a side was dirty. It exits 1 only if a scenario passed
-on the first side and failed on the second.
+Every run becomes a permanent record. [Continuous integration](continuous-integration.md)
+owns the record format, the history, and version comparison.
 
 [Next: failure points](failure-points.md)

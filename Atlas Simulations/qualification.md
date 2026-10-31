@@ -12,7 +12,8 @@ npm test
 
 `verify:inputs` checks the pinned tools, the lock entries, and the installed SDK
 and Protocol archives against Core's Protocol hash. Keep Core installations and
-logs under `ATLAS_TEST_ROOT`, outside the managed workspace.
+logs under `ATLAS_TEST_ROOT`, outside the managed workspace. Run the shared formatter
+with `node ../scripts/format.mjs --base <full-ancestor-SHA>`.
 
 ## Acceptance checklist
 
@@ -25,6 +26,7 @@ logs under `ATLAS_TEST_ROOT`, outside the managed workspace.
 | Failure points | Every ID in [failure points](failure-points.md) fires in at least one scenario and meets its required result |
 | Run records | A failed run still appends a record, and an unwritable history directory fails the run |
 | Comparison | Two records with known values print the expected change, and a changed scenario hash is marked |
+| CI result | A failed, cancelled, or missing eval group fails `record`, and a fork pull request pushes no history |
 | Shutdown | SIGINT awaits writes, revokes created keys, and exits 1 with any stalled write listed |
 
 ## Prove that evals can fail
@@ -44,14 +46,6 @@ control. A control injects one defect and must fail that check.
 Each failure point also needs one broken control that its check rejects. A separate
 control removes a required check from a run, and that run must fail. Measurements
 get no control, because they never affect a verdict.
-
-## Continuous integration
-
-The `Atlas Simulations` workflow runs on pull requests and pushes to main. It builds
-the pinned Core and SDK, runs `npm test`, and keeps logs for seven days. That window
-is too short for history, so run `npm run eval -- --all` on one fixed host to build
-comparable records. Run the shared formatter with
-`node ../scripts/format.mjs --base <full-ancestor-SHA>`.
 
 ## Limits of this evidence
 

@@ -15,6 +15,7 @@ Both kinds of run use one [Asset runtime](asset-runtime.md) and one
 | Core | An existing installation that you name | A fresh installation that the run owns |
 | Ends | When you stop it | When the timeline settles or its deadline passes |
 | Produces | Live Assets and Tracks in Core | Pass or fail, plus a recorded performance history |
+| Runs in | Wherever you start it | [CI](continuous-integration.md), on every commit |
 
 Task handling never depends on the kind of run. A Move To sent by a person and a
 Move To sent by a timeline reach the same runtime through the same public reads.
@@ -78,7 +79,8 @@ sides agree on one mistake.
 
 [Asset runtime](asset-runtime.md) → [Scenarios](scenarios.md) →
 [Interactive runs](interactive.md) → [Eval runs](evals.md) →
-[Failure points](failure-points.md) → [Qualification](qualification.md).
+[Failure points](failure-points.md) → [Continuous integration](continuous-integration.md) →
+[Qualification](qualification.md).
 
 The [mission example](../mission-example.md) describes the operator workflow that a
 simulated Asset must support. Task, control, and report rules stay in
