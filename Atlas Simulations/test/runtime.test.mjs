@@ -140,6 +140,13 @@ test(
       mutate(i, e);
       assert.equal(checkEvidence(i, e)[name].kind, 'failed', name);
     }
+    const skippedHead = decode(structuredClone(capture.evidence));
+    const firstStart = skippedHead.physical.find(
+      (p) => p.event === 'start' && p.asset === 'Drone 1',
+    );
+    assert.ok(firstStart);
+    skippedHead.physical = skippedHead.physical.filter((p) => p !== firstStart);
+    assert.equal(checkEvidence(input, skippedHead).order.kind, 'failed');
     const worldless = decode(structuredClone(capture.evidence));
     worldless.world = [];
     assert.equal(checkEvidence(input, worldless).positions.kind, 'failed');
