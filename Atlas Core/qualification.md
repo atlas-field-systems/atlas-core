@@ -57,6 +57,8 @@ under `$ATLAS_TEST_ROOT/capture-failures`, with active-reader and fresh-reader c
 Four test-only bundles are capped at 32 MiB each; failed CI runs retain them for seven days.
 `npm run test:container` exercises the pinned image and CLI on fresh installations,
 including command interruption, explicit recovery, settings failures and Hard Reset.
+Set `ATLAS_TEST_CLI` to an absolute installed executable to use the packed operator.
+CI packs and verifies the operator against its built image before this workflow.
 Protocol boundary cases remain in [protocol-qualification.md](protocol-qualification.md).
 
 A test must fail when its required assertion cannot run. Observe the promised
