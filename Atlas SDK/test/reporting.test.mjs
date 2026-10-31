@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
 import { Position, Telemetry, Counter, inputSections, exchanges } from '@atlas/protocol';
 const { component, commandCatalog } = await import(
   process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
@@ -338,3 +339,81 @@ for (const [budget, limits] of [
     }
     assert.equal(success(await http.observations.get({ observation_id })).id, observation_id);
   });
+
+test('Asset Tags report through the existing helper and reach HTTP, Full snapshot and live reads', async (t) => {
+  const f = await fixture(t);
+  const { reporting, http } = await publicClient(t, f);
+  const { registration: operation, reporter } = reporting.register(registration());
+  const registered = sent(await operation.send()).asset;
+  assert.equal(Object.hasOwn(registered, 'tags'), false);
+  const tags = {
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { presets: ['simulated'] },
+  };
+  for (const value of [
+    { presets: ['unknown'] },
+    { presets: ['simulated', 'simulated'] },
+    { presets: null },
+    { presets: [], extra: true },
+  ]) {
+    const count = f.traffic.length;
+    assert.throws(
+      () => reporter.update({ request_id: uuid() }, reading(1, { tags: { ...tags, value } })),
+      { code: 'invalid_value' },
+    );
+    assert.equal(f.traffic.length, count);
+  }
+  const update = reporter.update({ request_id: uuid() }, reading(1, { tags }));
+  const accepted = sent(await update.send()).asset;
+  assert.equal(accepted.edit_revision, registered.edit_revision);
+  assert.deepEqual(success(await http.assets.get({ asset_id: registered.id })).tags.value.presets, [
+    'simulated',
+  ]);
+  const { client: full } = await publicClient(t, f, { mode: 'full' });
+  async function waitFor(predicate) {
+    const deadline = Date.now() + 10000;
+    while (!predicate()) {
+      assert.ok(Date.now() < deadline, 'Tags did not reach the Full picture');
+      await delay(10);
+    }
+  }
+  await waitFor(() => full.picture.status.kind === 'synchronized');
+  const snapshot = full.assets.get({ asset_id: registered.id });
+  assert.equal(snapshot.kind, 'available');
+  assert.deepEqual(snapshot.value.tags, accepted.tags);
+  const clear = reporter.update(
+    { request_id: uuid() },
+    reading(2, { tags: { ...tags, value: { presets: [] } } }),
+  );
+  const cleared = sent(await clear.send()).asset;
+  await waitFor(() => {
+    const local = full.assets.get({ asset_id: registered.id });
+    return local.kind === 'available' && local.value.version === cleared.version;
+  });
+  const count = f.traffic.length;
+  assert.deepEqual(full.assets.get({ asset_id: registered.id }).value.tags.value.presets, []);
+  assert.equal(f.traffic.length, count, 'Full reads remain local');
+  assert.deepEqual(success(await http.assets.get({ asset_id: registered.id })).tags, cleared.tags);
+  for (const corrupt of [
+    (value) => {
+      value.value.presets = ['unknown'];
+    },
+    (value) => {
+      value.time_status = {};
+    },
+    (value) => {
+      value.evidence.entity_id = uuid();
+    },
+  ]) {
+    f.once('/messages/get_asset', ({ body, forward }) => {
+      const response = JSON.parse(body);
+      corrupt(response.data.tags);
+      forward(Buffer.from(JSON.stringify(response)));
+    });
+    const invalid = await http.assets.get({ asset_id: registered.id });
+    assert.equal(invalid.kind, 'failed');
+    assert.equal(invalid.code, 'invalid_value');
+  }
+});

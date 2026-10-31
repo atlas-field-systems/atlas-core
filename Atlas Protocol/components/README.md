@@ -19,6 +19,7 @@ character outside Unicode White_Space. Accepted spelling is retained.
 
 | Section | Purpose | Used by |
 | --- | --- | --- |
+| [Tags](tags.md) | Asset-reported preset set | Assets |
 | [Status](status.md) | Source's overall condition assessment | Assets |
 | [Telemetry](telemetry.md) | Complete location and motion snapshot | Assets, Observations, and derived Tracks |
 | [Attitude](attitude.md) | True-north body heading, pitch, and roll | Assets, Observations, and derived Tracks |

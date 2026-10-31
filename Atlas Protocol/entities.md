@@ -14,7 +14,7 @@ Neither is null or generated when absent. Other fields are exactly the following
 
 | Entity | Required fields beyond the common fields | Optional fields |
 | --- | --- | --- |
-| Asset | Authored `type`, `capabilities`; UUID `process_generation`; reported `status`; `communications`; `heartbeat`; read-only `task_queue`, `task_control` | Reported `telemetry`, `attitude`, `power`, `camera`, `camera_optics`, `gimbal` |
+| Asset | Authored `type`, `capabilities`; UUID `process_generation`; reported `status`; `communications`; `heartbeat`; read-only `task_queue`, `task_control` | Reported [`tags`](components/tags.md), `telemetry`, `attitude`, `power`, `camera`, `camera_optics`, `gimbal` |
 | Observation | UUID `publisher_id`; reported `type`; UUID `track_id` under the default policy | Immutable UUID `source_asset_id`; immutable `publisher_subject`; reported `telemetry`, `attitude`, `geometry` |
 | Track | Reported `type`; read-only `sources` | Reported `telemetry`, `attitude`, `geometry` |
 | Geofeature | Authored `type`, `geometry`; counter string `geometry_revision`, initially `"0"` | None |

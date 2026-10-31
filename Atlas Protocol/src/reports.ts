@@ -9,6 +9,7 @@ import {
   Power,
   PowerTimes,
   Status,
+  Tags,
   SubjectType,
   Telemetry,
 } from './components.js';
@@ -50,6 +51,7 @@ type ConstituentsDefinitionSchema = typeof ConstituentsDefinition;
 export interface ConstituentsSchema extends ConstituentsDefinitionSchema {}
 export const Constituents: ConstituentsSchema = ConstituentsDefinition;
 export const SectionName = z.enum([
+  'tags',
   'status',
   'communications',
   'telemetry',
@@ -143,6 +145,8 @@ function readResult<
       .refine(validTimeStatuses, 'Invalid time status'),
   ]);
 }
+const tagsTimes = z.strictObject({ presets: Time.exactOptional() });
+const tagsStatuses = z.strictObject({ presets: TimeStatus });
 const statusTimes = z.strictObject({ condition: Time.exactOptional() });
 const capacityTimes = z.strictObject({ bandwidth_bps: Time.exactOptional() });
 const telemetryTimes = z.strictObject({
@@ -298,6 +302,7 @@ function telemetryKeys(result: {
   );
 }
 const inputSectionsDefinition = {
+  tags: result(Tags, tagsTimes).meta({ id: 'TagsInput' }),
   status: result(Status, statusTimes).meta({ id: 'StatusInput' }),
   communications: result(Capacity, capacityTimes).meta({ id: 'CapacityInput' }),
   telemetry: z
@@ -318,6 +323,8 @@ const inputSectionsDefinition = {
   type: result(SubjectType, typeTimes).meta({ id: 'SubjectTypeInput' }),
   geometry: result(Geometry, geometryTimes).meta({ id: 'GeometryInput' }),
 };
+type TagsInputDefinitionSchema = typeof inputSectionsDefinition.tags;
+export interface TagsInputSchema extends TagsInputDefinitionSchema {}
 type StatusInputDefinitionSchema = typeof inputSectionsDefinition.status;
 export interface StatusInputSchema extends StatusInputDefinitionSchema {}
 type CapacityInputDefinitionSchema = typeof inputSectionsDefinition.communications;
@@ -339,6 +346,7 @@ export interface SubjectTypeInputSchema extends SubjectTypeInputDefinitionSchema
 type GeometryInputDefinitionSchema = typeof inputSectionsDefinition.geometry;
 export interface GeometryInputSchema extends GeometryInputDefinitionSchema {}
 export const inputSections: {
+  tags: TagsInputSchema;
   status: StatusInputSchema;
   communications: CapacityInputSchema;
   telemetry: TelemetryInputSchema;
@@ -351,6 +359,7 @@ export const inputSections: {
   geometry: GeometryInputSchema;
 } = inputSectionsDefinition;
 const readSectionsDefinition = {
+  tags: readResult('tags', Tags, tagsTimes, tagsStatuses).meta({ id: 'TagsRead' }),
   status: readResult(
     'status',
     Status,
@@ -411,6 +420,8 @@ const readSectionsDefinition = {
     id: 'GeometryRead',
   }),
 };
+type TagsReadDefinitionSchema = typeof readSectionsDefinition.tags;
+export interface TagsReadSchema extends TagsReadDefinitionSchema {}
 type StatusReadDefinitionSchema = typeof readSectionsDefinition.status;
 export interface StatusReadSchema extends StatusReadDefinitionSchema {}
 type CapacityReadDefinitionSchema = typeof readSectionsDefinition.communications;
@@ -432,6 +443,7 @@ export interface SubjectTypeReadSchema extends SubjectTypeReadDefinitionSchema {
 type GeometryReadDefinitionSchema = typeof readSectionsDefinition.geometry;
 export interface GeometryReadSchema extends GeometryReadDefinitionSchema {}
 export const readSections: {
+  tags: TagsReadSchema;
   status: StatusReadSchema;
   communications: CapacityReadSchema;
   telemetry: TelemetryReadSchema;
@@ -444,6 +456,7 @@ export const readSections: {
   geometry: GeometryReadSchema;
 } = readSectionsDefinition;
 const assetSections = z.strictObject({
+  tags: inputSections.tags.exactOptional(),
   status: inputSections.status.exactOptional(),
   communications: inputSections.communications.exactOptional(),
   telemetry: inputSections.telemetry.exactOptional(),

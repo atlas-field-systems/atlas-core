@@ -55,12 +55,17 @@ Image builds and manifest generation still require the clean release checkout.
 The required current-result timing metadata changes the strict wire contract.
 Timing metadata introduced 0.2.0; the required Task execution summary introduces
 0.3.0. Neither reuses an older strict contract version. No product release tag
-exists for 0.1.0. Clients declaring either older version are refused.
+exists for 0.1.0. Clients declaring an older version are refused.
 Existing 0.1.0 operational data lacks retained non-position status;
 startup refuses its evidence format rather than inventing admission facts. Use a
-fresh installation for 0.3.0 with private database format 4. Formats 1, 2 and 3
-are refused before interpreting incompatible images. Older Core builds refuse
-format 4. Operational-data migration remains outside this release.
+fresh installation for 0.3.0 with private database format 4. Formats 1 through 3
+are refused before interpreting images. Asset-reported Tags introduce Protocol
+0.4.0 while retaining database format 4 because the new section is optional.
+The supported [update command](lifecycle.md#commands) resets operational data
+before changing software and retains credentials and operator profiles. Use that
+path for upgrades and downgrades; older readers cannot parse retained tagged
+images. Direct image substitution is unsupported. Operational-data migration
+remains outside this release.
 
 ## Shared schema profile
 

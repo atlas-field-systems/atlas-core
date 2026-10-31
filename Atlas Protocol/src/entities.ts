@@ -80,6 +80,7 @@ const AssetDefinition = z
     type: AssetType,
     capabilities: Capabilities,
     process_generation: Uuid,
+    tags: readSections.tags.exactOptional(),
     status: readSections.status,
     communications: Communications,
     heartbeat: Heartbeat,
@@ -93,6 +94,7 @@ const AssetDefinition = z
   })
   .refine((value) => {
     const sections = [
+      value.tags,
       value.status,
       value.communications.capacity,
       value.telemetry,
