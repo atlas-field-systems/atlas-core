@@ -234,7 +234,7 @@ try {
     process.on('uncaughtException', fatal);
     process.on('unhandledRejection', fatal);
     await core.rpc.call('applied-settings', { revision: settings.revision }, 256, true);
-    await core.listen();
+    await core.listen('0.0.0.0');
     listening = true;
   }
 } catch (error) {

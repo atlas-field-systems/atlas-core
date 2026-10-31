@@ -160,7 +160,7 @@ test(
       manifest.installation_id,
       image,
       'serve',
-      port,
+      settings,
     );
     const writerPath = join(installation, 'control', 'writer.json');
     await writeFile(writerPath, JSON.stringify(created));

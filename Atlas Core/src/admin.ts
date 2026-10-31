@@ -282,10 +282,13 @@ export class Administration {
     if (!result.compatible) throw new Error('incompatible_format');
   }
   async inspect(): Promise<unknown> {
-    const manifest = await this.manifest().catch((error) => {
-      if (error instanceof Error && error.message === 'setup_required') return undefined;
-      throw error;
-    });
+    const installed = await optionalJson(join(this.root, 'setup', 'installation.json'), Manifest);
+    const manifest =
+      installed ??
+      (await this.manifest().catch((error) => {
+        if (error instanceof Error && error.message === 'setup_required') return undefined;
+        throw error;
+      }));
     if (manifest === undefined) {
       return {
         running: false,
@@ -312,6 +315,7 @@ export class Administration {
     }
     return {
       running: false,
+      setup_required: installed === undefined,
       action: await this.action(),
       marker: await this.offline('inspect-marker'),
       settings: await this.settingsShow(),
@@ -353,7 +357,7 @@ export class Administration {
       manifest.installation_id,
       manifest.image,
       'serve',
-      settings.saved.port,
+      settings.saved,
     );
     try {
       await startContainer(this.root, writer, manifest.installation_id);
