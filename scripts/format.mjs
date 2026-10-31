@@ -25,7 +25,10 @@ async function collect(path) {
     else if (entry.isFile() && code.test(child)) sdk.push(child);
   }
 }
-for (const part of ['src', 'scripts', 'test']) await collect(`Atlas SDK/${part}`);
+for (const part of ['src', 'scripts', 'test']) {
+  await collect(`Atlas SDK/${part}`);
+  await collect(`Atlas Simulations/${part}`);
+}
 const core = [
   ...new Set([
     ...git('diff', '--name-only', '-z', '--diff-filter=ACMR', base, '--', 'Atlas Core').split('\0'),

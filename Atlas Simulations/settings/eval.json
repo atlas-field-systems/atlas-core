@@ -1,0 +1,8 @@
+{
+  "host": "0.0.0.0", "port": 7443, "trustedOrigins": [], "openEnrollment": false,
+  "limits": { "max_request_bytes": 1048576, "max_request_json_values": 65536, "max_message_bytes": 4194304, "max_json_values": 262144, "max_changes": 1000, "max_control_bytes": 16384, "max_control_json_values": 4096, "max_json_depth": 32, "max_object_bytes": 2000000000 },
+  "temporary": { "max_snapshot_captures": 8, "max_snapshot_captures_per_key": 2, "max_snapshot_bytes": "536870912", "max_total_snapshot_bytes": "2147483648", "max_history_views": 16, "max_history_views_per_key": 4, "max_history_references_per_view": 100000, "max_total_history_references": 1000000, "max_history_bytes": "134217728", "max_contact_challenges": 1024, "max_allocation_receipts": 4096 },
+  "workerQueueCount": 256, "workerQueueBytes": 16777216, "maxConnections": 32, "maxUploads": 4, "maxDownloads": 4,
+  "resourceImageBytes": 1048576, "outstandingTasks": 1000, "replayBytes": 67108864, "replayMilliseconds": 900000,
+  "storageBytes": 2000000000, "freeDiskBytes": 1000000000, "objectBytes": 500000000, "reserveBytes": 67108864, "diagnosticBytes": 16777216, "diagnosticLevel": "INFO"
+}

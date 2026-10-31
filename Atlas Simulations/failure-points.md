@@ -15,7 +15,7 @@ The proxy sits between every client and Core.
 | ID | Injection | Required result |
 | --- | --- | --- |
 | `reply-lost` | Drop the reply after Core commits, for each write kind | `unknown_outcome`, then a retry with one durable effect |
-| `reply-delayed` | Hold a reply past the attempt deadline | The late reply updates the same operation with no second effect |
+| `reply-delayed` | Hold a reply past the attempt deadline | Timeout stays uncertain; retry the same operation with one effect. Separately cancel a wait and verify late success updates that operation |
 | `reply-altered` | Corrupt a response body | SDK refuses it and exposes no invalid value |
 | `connections-closed` | Close every open connection | Full recovers, the SDK replays no write by itself, and an Asset's retry of the same prepared operation makes one durable effect |
 | `version-mismatch` | Rewrite the Protocol version in discovery | SDK refuses it before ordinary work |
@@ -26,7 +26,7 @@ The proxy sits between every client and Core.
 | ID | Injection | Required result |
 | --- | --- | --- |
 | `core-restart` | `restart` under load | Tracks, Tasks, and history remain. Contact returns after check-in |
-| `core-kill` | Kill the container during writes | Accepted writes remain after `start`, and nothing unaccepted appears |
+| `core-kill` | Kill the container during writes | Accepted writes remain after `start`; uncertain writes may exist once |
 | `core-drain` | `stop` during writes | Readiness turns false, and every reply is a commit or a known refusal |
 | `core-reset` | `reset` then `start` after the [other checks](evals.md#run-an-eval), with Assets still running | Old clients stop with `dataset_invalidated`, and old IDs stay gone |
 
@@ -52,7 +52,7 @@ reaches each limit.
 | `key-revoked` | Revoke a key during traffic | Traffic stops, and earlier evidence remains |
 | `key-rotated` | Replace an operator's key and call `recover()` | Work continues, and no write replays |
 | `process-obsolete` | Replace a process, then report from the old generation | Core refuses the old process |
-| `challenge-expired` | Check in after the ten-second challenge lifetime | `410 challenge_expired`, and contact stays unchanged |
+| `challenge-expired` | Check in after the 60-second allocation lifetime | `410 challenge_expired`, and contact stays unchanged |
 | `contact-expiry` | Stop one Asset's traffic for 70 seconds | `degraded` at 15 seconds and `offline` at 60, with no new packet |
 
 ## Tasks

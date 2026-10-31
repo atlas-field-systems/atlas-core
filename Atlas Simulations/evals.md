@@ -67,12 +67,12 @@ record says why. `npm run eval` exits 0 if every scenario passed and 1 otherwise
 
 ## Performance is recorded
 
-Each record holds these measurements. Timings come from SDK Summary observers.
+Each record holds these measurements. Exchange timings use public attempt `context.elapsedMs`. Summary buckets cannot supply exact percentiles; records identify coverage and omissions.
 
 | Group | Measurements |
 | --- | --- |
 | Run | Duration, requests, and accepted reports |
-| Latency | p50, p95, and p99 for each exchange |
+| Latency | p50, p95, and p99 for observed attempts, with coverage and omissions |
 | Picture | Initial load time and p95 lag behind committed writes |
 | Core resources | CPU time, peak memory, and final SQLite, WAL, and installation bytes |
 | Simulator resources | CPU time and peak memory, so that its own cost stays visible |
