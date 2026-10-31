@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  Asset,
   PROTOCOL_VERSION,
   exchanges,
   readHttp,
@@ -12,6 +13,34 @@ import {
   writeJson,
 } from '../dist/index.js';
 import * as s from './samples.mjs';
+
+test('an Asset read retains reported tags only with its own source evidence', () => {
+  const evidence = {
+    dataset_id: s.asset.dataset_id,
+    entity_id: s.asset.id,
+    origin: s.origin,
+    report_id: s.requestId,
+    sequence: '1',
+    section: 'tags',
+  };
+  const tags = {
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { tags: ['simulated'] },
+    evidence,
+    time_status: { tags: 'unknown' },
+  };
+  assert.deepEqual(Asset.parse({ ...s.asset, tags }).tags, tags);
+  assert.equal(Object.hasOwn(Asset.parse(s.asset), 'tags'), false);
+  for (const [name, invalid] of Object.entries({
+    'source-free value': { ...tags, evidence: null },
+    'another Asset': { ...tags, evidence: { ...evidence, entity_id: s.requestId } },
+    'another section': { ...tags, evidence: { ...evidence, section: 'status' } },
+    'missing status': { ...tags, time_status: {} },
+  }))
+    assert.equal(Asset.safeParse({ ...s.asset, tags: invalid }).success, false, name);
+});
 
 test('current readers require Core-assigned statuses for each effective quantity time', () => {
   const input = {

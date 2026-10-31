@@ -10,6 +10,7 @@ import {
   PowerTimes,
   Status,
   SubjectType,
+  Tags,
   Telemetry,
 } from './components.js';
 import { Geometry } from './geometry.js';
@@ -58,6 +59,7 @@ export const SectionName = z.enum([
   'camera',
   'camera_optics',
   'gimbal',
+  'tags',
   'type',
   'geometry',
 ]);
@@ -169,6 +171,7 @@ const opticsTimes = z.strictObject({
   horizontal_fov: Time.exactOptional(),
   vertical_fov: Time.exactOptional(),
 });
+const tagsTimes = z.strictObject({ tags: Time.exactOptional() });
 const typeTimes = z.strictObject({ kind: Time.exactOptional() });
 const geometryTimes = z.strictObject({ geometry: Time.exactOptional() });
 
@@ -192,6 +195,7 @@ const cameraStatuses = z.strictObject({
   capturing: TimeStatus.exactOptional(),
 });
 const opticsStatuses = z.strictObject({ horizontal_fov: TimeStatus, vertical_fov: TimeStatus });
+const tagsStatuses = z.strictObject({ tags: TimeStatus });
 const typeStatuses = z.strictObject({ kind: TimeStatus });
 const geometryStatuses = z.strictObject({ geometry: TimeStatus });
 const powerStatuses = z.strictObject({
@@ -315,6 +319,7 @@ const inputSectionsDefinition = {
   camera: result(Camera, cameraTimes).meta({ id: 'CameraInput' }),
   camera_optics: result(CameraOptics, opticsTimes).meta({ id: 'CameraOpticsInput' }),
   gimbal: result(Gimbal, gimbalTimes).meta({ id: 'GimbalInput' }),
+  tags: result(Tags, tagsTimes).meta({ id: 'TagsInput' }),
   type: result(SubjectType, typeTimes).meta({ id: 'SubjectTypeInput' }),
   geometry: result(Geometry, geometryTimes).meta({ id: 'GeometryInput' }),
 };
@@ -334,6 +339,8 @@ type CameraOpticsInputDefinitionSchema = typeof inputSectionsDefinition.camera_o
 export interface CameraOpticsInputSchema extends CameraOpticsInputDefinitionSchema {}
 type GimbalInputDefinitionSchema = typeof inputSectionsDefinition.gimbal;
 export interface GimbalInputSchema extends GimbalInputDefinitionSchema {}
+type TagsInputDefinitionSchema = typeof inputSectionsDefinition.tags;
+export interface TagsInputSchema extends TagsInputDefinitionSchema {}
 type SubjectTypeInputDefinitionSchema = typeof inputSectionsDefinition.type;
 export interface SubjectTypeInputSchema extends SubjectTypeInputDefinitionSchema {}
 type GeometryInputDefinitionSchema = typeof inputSectionsDefinition.geometry;
@@ -347,6 +354,7 @@ export const inputSections: {
   camera: CameraInputSchema;
   camera_optics: CameraOpticsInputSchema;
   gimbal: GimbalInputSchema;
+  tags: TagsInputSchema;
   type: SubjectTypeInputSchema;
   geometry: GeometryInputSchema;
 } = inputSectionsDefinition;
@@ -400,6 +408,7 @@ const readSectionsDefinition = {
     id: 'CameraOpticsRead',
   }),
   gimbal: readResult('gimbal', Gimbal, gimbalTimes, gimbalStatuses).meta({ id: 'GimbalRead' }),
+  tags: readResult('tags', Tags, tagsTimes, tagsStatuses).meta({ id: 'TagsRead' }),
   type: readResult(
     'type',
     SubjectType,
@@ -427,6 +436,8 @@ type CameraOpticsReadDefinitionSchema = typeof readSectionsDefinition.camera_opt
 export interface CameraOpticsReadSchema extends CameraOpticsReadDefinitionSchema {}
 type GimbalReadDefinitionSchema = typeof readSectionsDefinition.gimbal;
 export interface GimbalReadSchema extends GimbalReadDefinitionSchema {}
+type TagsReadDefinitionSchema = typeof readSectionsDefinition.tags;
+export interface TagsReadSchema extends TagsReadDefinitionSchema {}
 type SubjectTypeReadDefinitionSchema = typeof readSectionsDefinition.type;
 export interface SubjectTypeReadSchema extends SubjectTypeReadDefinitionSchema {}
 type GeometryReadDefinitionSchema = typeof readSectionsDefinition.geometry;
@@ -440,6 +451,7 @@ export const readSections: {
   camera: CameraReadSchema;
   camera_optics: CameraOpticsReadSchema;
   gimbal: GimbalReadSchema;
+  tags: TagsReadSchema;
   type: SubjectTypeReadSchema;
   geometry: GeometryReadSchema;
 } = readSectionsDefinition;
@@ -452,6 +464,7 @@ const assetSections = z.strictObject({
   camera: inputSections.camera.exactOptional(),
   camera_optics: inputSections.camera_optics.exactOptional(),
   gimbal: inputSections.gimbal.exactOptional(),
+  tags: inputSections.tags.exactOptional(),
 });
 const observationSections = z.strictObject({
   type: inputSections.type.exactOptional(),

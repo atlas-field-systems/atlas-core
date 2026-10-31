@@ -1077,6 +1077,70 @@
       "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{},\"contact_proof\":{\"challenge_id\":\"66666666-6666-4666-8666-666666666666\"}}",
       "expected": "reject",
       "rationale": "A contact proof requires a known original generation time to satisfy its challenge issue and expiry interval."
+    },
+    {
+      "id": "tags-simulated",
+      "schema_name": "AssetReport",
+      "contract": "Atlas Protocol/components/tags.md#examples",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[\"simulated\"]}}}}",
+      "expected": "accept",
+      "rationale": "An Asset reports the supported simulated tag."
+    },
+    {
+      "id": "tags-empty",
+      "schema_name": "AssetReport",
+      "contract": "Atlas Protocol/components/tags.md#fields",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[]}}}}",
+      "expected": "accept",
+      "rationale": "An empty list reports that the Asset has no tags."
+    },
+    {
+      "id": "tags-source-time",
+      "schema_name": "AssetReport",
+      "contract": "Atlas Protocol/components/tags.md#reporting",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[\"simulated\"]},\"source_times\":{\"tags\":null}}}}",
+      "expected": "accept",
+      "rationale": "The only source time key is tags."
+    },
+    {
+      "id": "tags-unsupported",
+      "schema_name": "AssetReport",
+      "contract": "Atlas Protocol/components/tags.md#examples",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[\"training\"]}}}}",
+      "expected": "reject",
+      "rationale": "The tag list is closed."
+    },
+    {
+      "id": "tags-duplicate",
+      "schema_name": "AssetReport",
+      "contract": "Atlas Protocol/components/tags.md#examples",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[\"simulated\",\"simulated\"]}}}}",
+      "expected": "reject",
+      "rationale": "Entries are unique."
+    },
+    {
+      "id": "tags-case-variant",
+      "schema_name": "AssetReport",
+      "contract": "Atlas Protocol/components/tags.md#fields",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[\"Simulated\"]}}}}",
+      "expected": "reject",
+      "rationale": "Tags match the supported spelling exactly."
+    },
+    {
+      "id": "tags-other-source-time",
+      "schema_name": "AssetReport",
+      "contract": "Atlas Protocol/components/tags.md#reporting",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"asset_process\",\"process_generation\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[\"simulated\"]},\"source_times\":{\"kind\":null}}}}",
+      "expected": "reject",
+      "rationale": "No other source time key applies."
+    },
+    {
+      "id": "tags-observation",
+      "schema_name": "ObservationReport",
+      "contract": "Atlas Protocol/components/tags.md#fields",
+      "raw_json": "{\"dataset_id\":\"11111111-1111-4111-8111-111111111111\",\"entity_id\":\"22222222-2222-4222-8222-222222222222\",\"origin\":{\"kind\":\"publisher\",\"publisher_id\":\"33333333-3333-4333-8333-333333333333\"},\"report_id\":\"44444444-4444-4444-8444-444444444444\",\"sequence\":\"1\",\"generated_at\":null,\"mode\":\"current\",\"sections\":{\"tags\":{\"state\":\"value\",\"classification\":\"state_until_changed\",\"observed_at\":null,\"value\":{\"tags\":[\"simulated\"]}}}}",
+      "expected": "reject",
+      "rationale": "Tags apply only to Assets."
     }
   ]
 }

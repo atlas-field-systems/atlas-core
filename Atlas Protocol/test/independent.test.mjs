@@ -14,5 +14,5 @@ for (const name of ['acceptance', 'independent-cases'])
       results.filter((result) => !result.pass),
       [],
     );
-    assert.equal(results.length, name === 'acceptance' ? 122 : 44);
+    assert.equal(results.length, name === 'acceptance' ? 130 : 44);
   });

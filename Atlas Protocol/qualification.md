@@ -37,7 +37,7 @@ Run another frozen corpus through the same public boundary adapter:
 npm run fixtures -- /absolute/path/to/acceptance.json
 ```
 
-The maintained corpora contain 122 contract cases and 44 additional independent
+The maintained corpora contain 130 contract cases and 44 additional independent
 cases. `npm test`, `npm run qualify`, and the browser page execute both.
 
 The adapter in test/fixture-adapter.mjs accepts the fixture format documented by

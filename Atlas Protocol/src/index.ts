@@ -36,6 +36,8 @@ export {
   Gimbal,
   Camera,
   CameraOptics,
+  AssetTag,
+  Tags,
   Capacity,
   Health,
   Heartbeat,

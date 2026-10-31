@@ -590,6 +590,7 @@ test('current time status survives wall-clock passage, carry-forward, new client
 test('component quantity timing survives reads and Restart while replacement removes optional quantities', async (t) => {
   const f = await fixture(t);
   const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  assert.equal(Object.hasOwn(asset, 'tags'), false, 'An unreported Asset has no tags section');
   const origin = { kind: 'asset_process', process_generation: asset.process_generation };
   const past = '2026-10-21T12:00:00.000000001Z',
     future = '9999-12-31T23:59:59.999999999Z';
@@ -631,6 +632,13 @@ test('component quantity timing survives reads and Restart while replacement rem
       value: { bearing: null, elevation: -90 },
       source_times: { bearing: null },
     },
+    tags: {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      value: { tags: ['simulated'] },
+      source_times: { tags: past },
+    },
     power: {
       state: 'value',
       classification: 'dated_measurement',
@@ -668,6 +676,7 @@ test('component quantity timing survives reads and Restart while replacement rem
     camera: { zoom_ratio: 'unknown', recording: 'known', capturing: 'uncertain' },
     camera_optics: { horizontal_fov: 'known', vertical_fov: 'uncertain' },
     gimbal: { bearing: 'unknown', elevation: 'known' },
+    tags: { tags: 'known' },
     power: {
       external_power: 'unknown',
       reserves: {
@@ -787,6 +796,7 @@ test('component quantity timing survives reads and Restart while replacement rem
     accepted.camera_optics,
     'Omitting a section retains all its facts',
   );
+  assert.deepEqual(replaced.tags, accepted.tags, 'Omitting tags retains the reported list');
   const withdrawnAsset = ok(
     await f.call('UpdateAsset', {
       asset_id: asset.id,
@@ -795,6 +805,7 @@ test('component quantity timing survives reads and Restart while replacement rem
         status: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null },
         camera: { state: 'withdrawn', classification: 'state_until_changed', observed_at: past },
         gimbal: { state: 'withdrawn', classification: 'state_until_changed', observed_at: future },
+        tags: { state: 'withdrawn', classification: 'state_until_changed', observed_at: past },
       }),
     }),
   ).asset;
@@ -802,6 +813,7 @@ test('component quantity timing survives reads and Restart while replacement rem
     ['status', 'unknown'],
     ['camera', 'known'],
     ['gimbal', 'uncertain'],
+    ['tags', 'known'],
   ]) {
     assert.equal(withdrawnAsset[name].state, 'withdrawn');
     assert.equal(withdrawnAsset[name].time_status, status);
@@ -1058,13 +1070,51 @@ test('startup refuses legacy evidence without retained quantity status', async (
   }
 });
 
+test('Asset tags replace as a whole, keep section order, and refuse unsupported values', async (t) => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const origin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const tags = (values) => ({
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { tags: values },
+  });
+  const send = (sequence, section) =>
+    f.call('UpdateAsset', {
+      asset_id: asset.id,
+      request_id: uuid(),
+      report: report(f.core.dataset, asset.id, origin, sequence, { tags: section }),
+    });
+  assert.deepEqual(ok(await send(2, tags(['simulated']))).asset.tags.value, {
+    tags: ['simulated'],
+  });
+  assert.deepEqual(
+    ok(await send(1, tags([]))).asset.tags.value,
+    { tags: ['simulated'] },
+    'A late report never replaces a newer list',
+  );
+  for (const invalid of [['training'], ['simulated', 'simulated']]) {
+    const rejected = await send(3, tags(invalid));
+    assert.equal(rejected.status, 400);
+    assert.equal(rejected.json.error.code, 'invalid_request');
+  }
+  assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })).tags.value, {
+    tags: ['simulated'],
+  });
+  assert.deepEqual(
+    ok(await send(3, tags([]))).asset.tags.value,
+    { tags: [] },
+    'A later empty list clears every tag',
+  );
+});
 test('incompatible database formats are refused before old evidence can be interpreted', async (t) => {
-  for (const format of ['1', '2', '3']) {
+  for (const format of ['1', '2', '3', '4']) {
     const f = await fixture(t);
     await f.core.close();
     const db = new Database(join(f.directory, 'core.sqlite'));
     try {
-      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '4');
+      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '5');
       db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
     } finally {
       db.close();

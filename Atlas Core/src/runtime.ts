@@ -252,7 +252,7 @@ try {
       component: 'runtime',
       event: 'runtime_failed',
       at: new Date().toISOString(),
-      release: '0.3.0',
+      release: '0.4.0',
       ...faultFrames(error),
       ...(cleanup === undefined ? {} : { cleanup_failure: 'shutdown_failed' }),
     }) + '\n',

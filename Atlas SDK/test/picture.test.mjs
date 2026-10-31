@@ -211,7 +211,7 @@ async function call(f, operation, data, credential = f.apiKey) {
     headers: {
       authorization: `Bearer ${credential}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.3.0',
+      'atlas-protocol-version': '0.4.0',
       'content-type': 'application/json',
     },
     body: JSON.stringify(data),
@@ -220,6 +220,51 @@ async function call(f, operation, data, credential = f.apiKey) {
   assert.equal(response.status, 200, JSON.stringify(result));
   return result;
 }
+test('Asset-reported tags reach HTTP reads and the Full picture', async (t) => {
+  const f = await fixture(t);
+  const writer = await publicClient(t, f);
+  const client = await connected(f, { mode: 'full' });
+  await ready(client);
+  const { registration: enrollment, reporter } = writer.reporting.register(registration('Sim'));
+  const { id } = sent(await enrollment.send()).asset;
+  const tagged = sent(
+    await reporter
+      .update(
+        { request_id: uuid() },
+        reading(1, {
+          tags: {
+            state: 'value',
+            classification: 'state_until_changed',
+            observed_at: null,
+            value: { tags: ['simulated'] },
+          },
+        }),
+      )
+      .send(),
+  ).asset;
+  assert.deepEqual(tagged.tags.value, { tags: ['simulated'] });
+  assert.equal(tagged.tags.evidence.section, 'tags');
+  assert.deepEqual(success(await writer.http.assets.get({ asset_id: id })).data.tags, tagged.tags);
+  await until(
+    () => available(client.assets.get({ asset_id: id }))?.tags !== undefined,
+    'Picture did not receive the tags section',
+  );
+  assert.deepEqual(available(client.assets.get({ asset_id: id })).tags, tagged.tags);
+  assert.throws(() =>
+    reporter.update(
+      { request_id: uuid() },
+      reading(2, {
+        tags: {
+          state: 'value',
+          classification: 'state_until_changed',
+          observed_at: null,
+          value: { tags: ['training'] },
+        },
+      }),
+    ),
+  );
+});
+
 test('Full Task Objects include the deduplicated ready union of declarations and associations', async (t) => {
   const f = await fixture(t);
   const writer = await connected(f);
@@ -349,7 +394,7 @@ async function object(f, assetId) {
     headers: {
       authorization: `Bearer ${f.apiKey}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.3.0',
+      'atlas-protocol-version': '0.4.0',
     },
     body: form,
   });

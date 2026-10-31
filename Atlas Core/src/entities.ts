@@ -361,6 +361,10 @@ export class Entities {
       asset.gimbal = this.evidence.sourced(readSections.gimbal, s.gimbal, report, 'gimbal');
       changed = true;
     }
+    if (s.tags && eligible(asset.tags, report)) {
+      asset.tags = this.evidence.sourced(readSections.tags, s.tags, report, 'tags');
+      changed = true;
+    }
     if (report.mode === 'current' && report.contact_proof !== undefined) {
       this.prove(tx, asset, report, report.contact_proof.challenge_id);
       changed = true;

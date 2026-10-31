@@ -21,7 +21,7 @@ const Event = z.strictObject({
   severity: z.enum(['INFO', 'WARN', 'ERROR', 'DEBUG']),
   event: z.string().regex(/^[a-z_]{1,64}$/),
   component: z.enum(['http', 'database', 'objects', 'synchronization', 'lifecycle', 'runtime']),
-  release: z.literal('0.3.0'),
+  release: z.literal('0.4.0'),
   dataset: Uuid.optional(),
   run: Uuid.optional(),
   request_id: Uuid.optional(),
@@ -114,7 +114,7 @@ export class Diagnostics {
       this.dropped++;
       return;
     }
-    const event = Event.safeParse({ ...input, at: new Date().toISOString(), release: '0.3.0' });
+    const event = Event.safeParse({ ...input, at: new Date().toISOString(), release: '0.4.0' });
     if (!event.success) {
       this.dropped++;
       return;

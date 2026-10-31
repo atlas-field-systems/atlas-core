@@ -1,6 +1,6 @@
 # Use the Atlas SDK
 
-The package implements Protocol 0.3.0 with HTTP by default and opt-in Full
+The package implements Protocol 0.4.0 with HTTP by default and opt-in Full
 synchronization. Install the packed SDK with its hash-pinned Protocol artifact.
 For a source checkout, prepare Protocol with `npm run protocol:prepare`, install
 with `npm ci --ignore-scripts`, then run `npm run build`.
