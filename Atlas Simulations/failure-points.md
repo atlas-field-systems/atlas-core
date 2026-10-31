@@ -92,4 +92,4 @@ Evals use no Core internals, so these failures stay with the owning suites.
 | Power loss and physical disk faults | Unrun. See [Core qualification](../Atlas%20Core/qualification.md#report-honestly) |
 | Flight, radio, and gateway behavior | Outside Atlas Simulations |
 
-[Next: qualification](qualification.md)
+[Next: continuous integration](continuous-integration.md)
