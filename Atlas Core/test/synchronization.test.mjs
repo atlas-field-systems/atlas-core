@@ -53,7 +53,7 @@ async function socket(f, credential = f.apiKey, authenticate = true) {
       JSON.stringify({
         type,
         dataset_id: f.core.dataset,
-        protocol_version: '0.3.0',
+        protocol_version: '0.4.0',
         request_id: uuid(),
         data,
       }),
@@ -64,7 +64,7 @@ async function socket(f, credential = f.apiKey, authenticate = true) {
         type: 'authenticate',
         request_id: uuid(),
         dataset_id: f.core.dataset,
-        protocol_version: '0.3.0',
+        protocol_version: '0.4.0',
         api_key: credential,
       }),
     );
@@ -73,13 +73,13 @@ async function socket(f, credential = f.apiKey, authenticate = true) {
   return { ws, take, send, messages };
 }
 test(
-  'WSS refuses API 0.1.0 and 0.2.0 authentication without exposing picture data',
+  'WSS refuses API 0.1.0, 0.2.0 and 0.3.0 authentication without exposing picture data',
   { timeout: 30000 },
   async (t) => {
     const f = await fixture(t);
     const registered = await f.call('RegisterAsset', registration());
     ok(registered);
-    for (const version of ['0.1.0', '0.2.0']) {
+    for (const version of ['0.1.0', '0.2.0', '0.3.0']) {
       const client = await socket(f, f.apiKey, false);
       t.after(() => client.ws.terminate());
       const closed = new Promise((resolve) => client.ws.once('close', (code) => resolve(code)));
@@ -96,10 +96,10 @@ test(
       const frame = await client.take(() => true);
       assert.equal(frame.type, 'error');
       assert.equal(frame.request_id, request_id);
-      assert.equal(frame.protocol_version, '0.3.0');
+      assert.equal(frame.protocol_version, '0.4.0');
       assert.equal(frame.dataset_id, f.core.dataset);
       assert.equal(frame.error.code, 'protocol_mismatch');
-      assert.deepEqual(frame.error.details, { protocol_version: '0.3.0' });
+      assert.deepEqual(frame.error.details, { protocol_version: '0.4.0' });
       assert.equal(await closed, 1008);
       assert.deepEqual(client.messages, []);
     }

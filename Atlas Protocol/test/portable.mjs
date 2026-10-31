@@ -12,7 +12,7 @@ export function runPortable(p) {
   const responseHeaders = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.3.0',
+      'Atlas-Protocol-Version': '0.4.0',
       'Atlas-Request-ID': s.requestId,
       'Content-Type': 'application/json',
     });
@@ -39,7 +39,7 @@ export function runPortable(p) {
       const requestHeaders = new Headers({
         Authorization: `Bearer ${'A'.repeat(43)}`,
         'Atlas-Dataset-ID': s.id,
-        'Atlas-Protocol-Version': '0.3.0',
+        'Atlas-Protocol-Version': '0.4.0',
         'Content-Type': 'application/json',
       });
       const request = { method: binding.method, path: binding.path, headers: requestHeaders };
@@ -119,7 +119,7 @@ export function runPortable(p) {
     const frame = {
       type: 'change_batch',
       dataset_id: s.id,
-      protocol_version: '0.3.0',
+      protocol_version: '0.4.0',
       data: {
         subscription_id: s.requestId,
         previous_cursor: 'before',
@@ -164,7 +164,7 @@ export function runPortable(p) {
       const headers = new Headers({
         Authorization: `Bearer ${'A'.repeat(43)}`,
         'Atlas-Dataset-ID': s.id,
-        'Atlas-Protocol-Version': '0.3.0',
+        'Atlas-Protocol-Version': '0.4.0',
         'Content-Type': 'application/json',
       });
       const definition = p.exchanges.CreateGeofeature;
@@ -248,7 +248,7 @@ export function runPortable(p) {
     const frame = {
       type: 'gap',
       dataset_id: s.id,
-      protocol_version: '0.3.0',
+      protocol_version: '0.4.0',
       data: {
         subscription_id: s.requestId,
         reason: 'resource_limit',
@@ -262,6 +262,106 @@ export function runPortable(p) {
       return;
     }
     throw new Error('A server control exceeded 16 KiB');
+  });
+  check('Asset tags have a closed, unique preset vocabulary and complete results', () => {
+    assert(same(p.TagPreset.options, ['simulated']), 'Unexpected tag presets');
+    const tags = {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      value: { presets: ['simulated'] },
+    };
+    const definition = p.contract(p.inputSections.tags);
+    for (const presets of [[], ['simulated']]) {
+      const value = { ...tags, value: { presets } };
+      assert(same(p.readJson(definition, encode(value)), value), 'Tag result changed');
+      assert(
+        same(p.readJson(definition, p.writeJson(definition, value)), value),
+        'Tag roundtrip changed',
+      );
+      p.readJson(p.contract(p.AssetReport), encode({ ...s.report, sections: { tags: value } }));
+    }
+    for (const value of [
+      null,
+      [],
+      { presets: null },
+      { presets: ['demo'] },
+      { presets: ['simulated', 'simulated'] },
+      { presets: [], custom: [] },
+      {},
+    ])
+      refuses(() => p.readJson(definition, encode({ ...tags, value })));
+    for (const extra of [
+      { source_times: { other: null } },
+      { evidence: null },
+      { time_status: { presets: 'unknown' } },
+    ])
+      refuses(() => p.readJson(definition, encode({ ...tags, ...extra })));
+    refuses(() =>
+      p.readJson(p.contract(p.AssetReport), encode({ ...s.report, sections: { tags: null } })),
+    );
+    const observation = {
+      ...s.report,
+      entity_id: s.observationId,
+      origin: { kind: 'publisher', publisher_id: s.processId },
+      sections: { tags },
+    };
+    refuses(() => p.readJson(p.contract(p.ObservationReport), encode(observation)));
+    for (const name of ['RegisterAsset', 'UpdateAsset']) {
+      const [input] = s.examples[name];
+      refuses(() =>
+        p.readJson(
+          p.exchanges[name].request,
+          encode({ ...input, tags: { presets: ['simulated'] } }),
+        ),
+      );
+    }
+  });
+  check('Asset tag reads require complete timing and matching report evidence', () => {
+    const evidence = {
+      dataset_id: s.id,
+      entity_id: s.assetId,
+      origin: s.origin,
+      report_id: s.requestId,
+      sequence: '1',
+      section: 'tags',
+    };
+    const tags = {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      value: { presets: ['simulated'] },
+      evidence,
+      time_status: { presets: 'unknown' },
+    };
+    const definition = p.contract(p.Asset, 'http_response');
+    const image = { ...s.asset, tags };
+    assert(same(p.readJson(definition, encode(image)), image), 'Read tags changed');
+    for (const change of [
+      { evidence: null },
+      { evidence: { ...evidence, entity_id: s.observationId } },
+      { evidence: { ...evidence, dataset_id: s.requestId } },
+      { evidence: { ...evidence, section: 'gimbal' } },
+      { time_status: { presets: 'known' } },
+      { time_status: {} },
+      { time_status: { presets: 'unknown', other: 'unknown' } },
+    ])
+      refuses(() => p.readJson(definition, encode({ ...image, tags: { ...tags, ...change } })));
+    const status = {
+      ...s.report.sections.status,
+      evidence: { ...evidence, section: 'status', sequence: '2' },
+      time_status: { condition: 'unknown' },
+    };
+    refuses(() => p.readJson(definition, encode({ ...image, status })));
+    for (const resource of [s.observation, s.track, s.geofeature]) {
+      const schema =
+        resource.entity_type === 'observation'
+          ? p.Observation
+          : resource.entity_type === 'track'
+            ? p.Track
+            : p.Geofeature;
+      refuses(() => p.readJson(p.contract(schema, 'http_response'), encode({ ...resource, tags })));
+    }
   });
   return result(
     runResponseRegressions(p),

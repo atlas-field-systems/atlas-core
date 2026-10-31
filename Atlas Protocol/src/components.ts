@@ -1,5 +1,15 @@
 import { z } from 'zod';
-import { Altitude, Float, numeric, Position, text, Time, Uuid, unique } from './scalars.js';
+import {
+  Altitude,
+  Float,
+  numeric,
+  Position,
+  text,
+  Time,
+  Uuid,
+  unique,
+  uniqueArray,
+} from './scalars.js';
 
 export const Description = z
   .strictObject({ name: text(128, true), description: text(4096).exactOptional() })
@@ -82,6 +92,10 @@ export const CameraOptics = z
     vertical_fov: numeric({ exclusiveMin: 0, exclusiveMax: 180 }).nullable(),
   })
   .meta({ id: 'CameraOptics' });
+export const TagPreset = z.enum(['simulated']);
+export const Tags = z
+  .strictObject({ presets: uniqueArray(TagPreset, TagPreset.options.length) })
+  .meta({ id: 'Tags' });
 export const Capacity = z
   .strictObject({ bandwidth_bps: numeric({ exclusiveMin: 0 }).nullable() })
   .meta({ id: 'Capacity' });
@@ -138,6 +152,8 @@ export type Status = z.output<typeof Status>;
 export type Gimbal = z.output<typeof Gimbal>;
 export type Camera = z.output<typeof Camera>;
 export type CameraOptics = z.output<typeof CameraOptics>;
+export type TagPreset = z.output<typeof TagPreset>;
+export type Tags = z.output<typeof Tags>;
 export type Capacity = z.output<typeof Capacity>;
 export type Health = z.output<typeof Health>;
 export type Heartbeat = z.output<typeof Heartbeat>;

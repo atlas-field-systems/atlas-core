@@ -1,6 +1,6 @@
 # Use the Atlas SDK
 
-The package implements Protocol 0.3.0 with HTTP by default and opt-in Full
+The package implements Protocol 0.4.0 with HTTP by default and opt-in Full
 synchronization. Install the packed SDK with its hash-pinned Protocol artifact.
 For a source checkout, prepare Protocol with `npm run protocol:prepare`, install
 with `npm ci --ignore-scripts`, then run `npm run build`.
@@ -57,6 +57,12 @@ Observations, history, assigned work, contact, content, references, administrati
   preparing another report through the stale reporter throws `dataset_invalidated`.
 - `component(schema, value)` constructs detached frozen Protocol values.
   `commandCatalog` is the installed local Protocol catalog.
+
+Asset reporters send [Tags](../Atlas%20Protocol/components/tags.md) through
+`reporter.update(changes, reading)` with
+`reading.sections.tags.value: { presets: ['simulated'] }` inside a complete section
+result. Registration leaves Tags unreported. Reads expose the accepted result on
+`asset.tags`; no separate SDK tagging method is required.
 
 All writes use shared frozen preparation and [effect evidence](requests.md).
 `send()` deliberately retries original facts. `start()` separates a caller's wait

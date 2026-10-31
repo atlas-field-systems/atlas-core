@@ -28,7 +28,7 @@ export async function runHttp(config) {
     );
     check(client.state.kind === 'ready', 'Discovery must make the client ready');
     check(client.state.datasetId === config.datasetId, 'Exact discovered Dataset');
-    check(discovery.response.body.data.protocol_version === '0.3.0', 'Exact Protocol version');
+    check(discovery.response.body.data.protocol_version === '0.4.0', 'Exact Protocol version');
     check(discovery.response.body.dataset_id === config.datasetId, 'Discovery body context');
     contexts.push(discovery.context);
     const prepared = client.operators.create({

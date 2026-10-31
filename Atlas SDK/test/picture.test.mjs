@@ -41,6 +41,37 @@ async function register(client, alias) {
   return success((await client.assets.register(registration(alias)).send()).attempt).data.asset;
 }
 
+test('Full picture retains Asset Tags through snapshot and live replacement', async (t) => {
+  const f = await fixture(t);
+  const admin = await connected(f);
+  const asset = await register(admin, 'Simulated camera');
+  const reporter = admin.reporting.asset({
+    id: asset.id,
+    process_generation: asset.process_generation,
+  });
+  const tags = {
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { presets: ['simulated'] },
+  };
+  const first = sent(
+    await reporter.update({ request_id: uuid() }, reading(1, { tags })).send(),
+  ).asset;
+  const client = await connected(f, { mode: 'full' });
+  await ready(client);
+  assert.deepEqual(available(client.assets.get({ asset_id: asset.id })).tags, first.tags);
+  const updated = await reporter
+    .update({ request_id: uuid() }, reading(2, { tags: { ...tags, value: { presets: [] } } }))
+    .send();
+  const cleared = sent(updated).asset;
+  await ready(client, updated.attempt.response.body.commit_cursor);
+  const traffic = f.traffic.length;
+  assert.deepEqual(available(client.assets.get({ asset_id: asset.id })).tags, cleared.tags);
+  assert.deepEqual(cleared.tags.value, { presets: [] });
+  assert.equal(f.traffic.length, traffic, 'Ready Tags are read locally');
+});
+
 for (const recovery of ['live', 'authorization'])
   test(
     `bounded feed bursts preserve the picture through repeated ${recovery} replay`,
@@ -211,7 +242,7 @@ async function call(f, operation, data, credential = f.apiKey) {
     headers: {
       authorization: `Bearer ${credential}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.3.0',
+      'atlas-protocol-version': '0.4.0',
       'content-type': 'application/json',
     },
     body: JSON.stringify(data),
@@ -349,7 +380,7 @@ async function object(f, assetId) {
     headers: {
       authorization: `Bearer ${f.apiKey}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.3.0',
+      'atlas-protocol-version': '0.4.0',
     },
     body: form,
   });

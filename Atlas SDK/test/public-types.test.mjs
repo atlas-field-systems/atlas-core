@@ -46,7 +46,7 @@ test(
   type RemoteAbandonment, type HistoryCloseResult, type ContactSelection, type RemoteLimits,
   type AssetReading, type ObservationReading, type AssetChanges, type ContentOptions, type UploadSource,
 } from '@atlas/sdk';
-import { NewId, Uuid, Sequence, Position, Timestamp, Counter } from '@atlas/protocol';
+import { NewId, Uuid, Sequence, Position, Timestamp, Counter, Tags } from '@atlas/protocol';
 const client: HttpClient = createClient({ baseUrl: 'https://localhost', credentials: () => '', remote: { handles: 4, retainedBytes: 64000 } });
 const full: FullClient = createClient({ baseUrl: 'https://localhost', credentials: () => '', mode: 'full' });
 declare const options: ClientOptions;
@@ -65,6 +65,8 @@ const reportClosed: void = prepared.close();
 const asset = reporting.asset({ id, process_generation: id });
 asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: at, mode: 'current', sections: {}, contact_proof: { challenge_id: id } });
 component(Position, { latitude: 51.5, longitude: -0.1 });
+component(Tags, { presets: ['simulated'] });
+asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: at, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['simulated'] } } } });
 component(commandCatalog.pause, { command: 'pause', scheduling: 'immediate', inputs: {} });
 
 const assetHistory: HistoryView = full.assets.history({ entity_id: id, query_id: newId });
@@ -97,6 +99,8 @@ const failures: unknown[] = failure.errors;
     const positive = compile();
     assert.equal(positive.status, 0, positive.stdout + positive.stderr);
     const invalid = [
+      "component(Tags, { presets: ['demo'] });",
+      "asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: at, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['demo'] } } } });",
       "client.assets.history({ entity_id: id, query_id: newId, allocation_context: 'foreign' });",
       "client.tracks.history({ entity_id: id, query_id: newId, time_groups: ['local'] });",
       "client.assets.contact({ asset_id: id, process_generation: id, request_id: newId, mode: 'current', expected_process_generation: id });",

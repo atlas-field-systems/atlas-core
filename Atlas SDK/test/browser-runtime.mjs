@@ -336,7 +336,7 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
   assert.equal(wrongVersion.status, 409);
   assert.equal(wrongVersion.body.error.code, 'protocol_mismatch');
   assert.equal(wrongVersion.dataset, datasetId);
-  assert.equal(wrongVersion.protocol, '0.3.0');
+  assert.equal(wrongVersion.protocol, '0.4.0');
   assert.equal(wrongVersion.request, wrongVersion.body.error.request_id);
   const denied = await browser.newPage();
   await denied.goto(deniedPage.origin);
@@ -376,10 +376,10 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
     assert.equal(response.requestId, context.requestId);
     assert.equal(requests[0].origin, trustedPage.origin);
     assert.equal(response.datasetId, datasetId);
-    assert.equal(response.protocol, '0.3.0');
+    assert.equal(response.protocol, '0.4.0');
     assert.equal(response.allowedOrigin, trustedPage.origin);
     if (requests[0].path !== '/health') assert.equal(requests[0].datasetId, datasetId);
-    assert.equal(requests[0].protocol, '0.3.0');
+    assert.equal(requests[0].protocol, '0.4.0');
     assert.equal(requests[0].authenticated, requests[0].status !== 401);
   }
   assert.equal(new Set(contexts.map((context) => context.attemptId)).size, contexts.length);
@@ -553,7 +553,7 @@ test('installed SDK runs public HTTPS workflows in Firefox with profile-scoped T
   report.correlatedAttemptContexts =
     contexts.length + transfers.contexts.length + fullContexts.length;
   report.sdkHttpRequests = traffic.filter(
-    (request) => request.attemptId !== undefined && request.protocol === '0.3.0',
+    (request) => request.attemptId !== undefined && request.protocol === '0.4.0',
   ).length;
 
   completed = true;

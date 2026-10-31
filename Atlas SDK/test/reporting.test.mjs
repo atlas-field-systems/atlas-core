@@ -180,8 +180,33 @@ test('Asset helper preserves registration identity, revision conditions, omitted
     observed_at: null,
     value: { condition: 'healthy' },
   });
-  const report = reporter.update({ request_id: uuid() }, reading(1, { status }));
-  assert.equal(sent(await report.send()).asset.status.value.condition, 'healthy');
+  assert.equal(Object.hasOwn(asset, 'tags'), false);
+  const tags = component(inputSections.tags, {
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { presets: ['simulated'] },
+  });
+  const report = reporter.update({ request_id: uuid() }, reading(1, { status, tags }));
+  const tagged = sent(await report.send()).asset;
+  assert.equal(tagged.status.value.condition, 'healthy');
+  assert.deepEqual(tagged.tags.value, { presets: ['simulated'] });
+  assert.equal(tagged.edit_revision, asset.edit_revision);
+  assert.deepEqual(success(await http.assets.get({ asset_id: asset.id })).tags, tagged.tags);
+  const count = f.traffic.length;
+  assert.throws(() =>
+    reporter.update(
+      { request_id: uuid() },
+      reading(2, { tags: { ...tags, value: { presets: ['demo'] } } }),
+    ),
+  );
+  assert.equal(f.traffic.length, count, 'Invalid tags send no traffic');
+  const cleared = sent(
+    await reporter
+      .update({ request_id: uuid() }, reading(2, { tags: { ...tags, value: { presets: [] } } }))
+      .send(),
+  ).asset;
+  assert.deepEqual(cleared.tags.value, { presets: [] });
   const removed = reporter.update({
     request_id: uuid(),
     expected_edit_revision: asset.edit_revision,

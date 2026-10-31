@@ -26,6 +26,7 @@ character outside Unicode White_Space. Accepted spelling is retained.
 | [Gimbal](gimbal.md) | Complete world-relative pointing snapshot | Assets |
 | [Camera](camera.md) | Calibrated zoom and independent capture activities | Assets |
 | [Camera Optics](camera-optics.md) | Baseline rectilinear field of view | Assets |
+| [Tags](tags.md) | Presets the Asset reports about itself | Assets |
 | [Type](type.md#observed-subject-type) | Publisher's subject classification | Observations and derived Tracks |
 | [Geometry](geometry.md) | Reported subject extent | Observations and derived Tracks |
 

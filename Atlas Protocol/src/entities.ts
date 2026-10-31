@@ -90,6 +90,7 @@ const AssetDefinition = z
     camera: readSections.camera.exactOptional(),
     camera_optics: readSections.camera_optics.exactOptional(),
     gimbal: readSections.gimbal.exactOptional(),
+    tags: readSections.tags.exactOptional(),
   })
   .refine((value) => {
     const sections = [
@@ -101,6 +102,7 @@ const AssetDefinition = z
       value.camera,
       value.camera_optics,
       value.gimbal,
+      value.tags,
     ];
     return (
       reportSequencesMatch(sections.map((section) => section?.evidence)) &&

@@ -153,6 +153,25 @@ test(
 test('successful replacement retry precedes generation checks and never reuses a generation', async (t) => {
   const f = await fixture(t);
   const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const tags = {
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { presets: ['simulated'] },
+  };
+  const tagged = ok(
+    await f.call('UpdateAsset', {
+      request_id: uuid(),
+      asset_id: asset.id,
+      report: report(
+        f.core.dataset,
+        asset.id,
+        { kind: 'asset_process', process_generation: asset.process_generation },
+        1,
+        { tags },
+      ),
+    }),
+  ).asset;
   const health = ok(await f.call('GetHealth'));
   const generation = uuid();
   const challenge = ok(
@@ -185,6 +204,7 @@ test('successful replacement retry precedes generation checks and never reuses a
   };
   const first = await f.call('ReplaceAssetProcess', input);
   ok(first);
+  assert.deepEqual(first.json.data.asset.tags, tagged.tags, 'Replacement omission retains Tags');
   const second = await f.call('ReplaceAssetProcess', input);
   assert.equal(ok(second).evidence_disposition, 'duplicate');
   assert.equal(first.json.commit_cursor, second.json.commit_cursor);
@@ -220,7 +240,23 @@ test('successful replacement retry precedes generation checks and never reuses a
       .error.code,
     'generation_mismatch',
   );
+  const cleared = ok(
+    await f.call('UpdateAsset', {
+      request_id: uuid(),
+      asset_id: asset.id,
+      report: report(
+        f.core.dataset,
+        asset.id,
+        { kind: 'asset_process', process_generation: generation },
+        1,
+        { tags: { ...tags, value: { presets: [] } } },
+      ),
+    }),
+  ).asset;
+  assert.deepEqual(cleared.tags.value, { presets: [] });
+  assert.equal(cleared.tags.evidence.origin.process_generation, generation);
 });
+
 test('replacement retries recover the original generation after another replacement and Restart', async (t) => {
   const f = await fixture(t);
   const original = ok(await f.call('RegisterAsset', registration())).asset;

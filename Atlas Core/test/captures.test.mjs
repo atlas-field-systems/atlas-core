@@ -33,7 +33,7 @@ async function local(t, temporary = {}) {
   const context = {
     verifier: digest(key.secret),
     dataset: engine.store.dataset,
-    protocol: '0.3.0',
+    protocol: '0.4.0',
   };
   const call = async (name, request = {}) =>
     (await engine.execute({ name, request }, context)).body.data;
@@ -1337,7 +1337,7 @@ for (const transport of ['HTTP', 'WSS'])
         const control = async (frame) => {
           const response = once(socket, 'message', { signal: AbortSignal.timeout(10000) });
           socket.send(
-            writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.3.0' }),
+            writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.4.0' }),
             { binary: false },
           );
           const [bytes] = await response;

@@ -596,6 +596,13 @@ test('component quantity timing survives reads and Restart while replacement rem
   const fuel = uuid(),
     removedFuel = uuid();
   const sections = {
+    tags: {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      value: { presets: ['simulated'] },
+      source_times: { presets: past },
+    },
     communications: {
       state: 'value',
       classification: 'state_until_changed',
@@ -663,6 +670,7 @@ test('component quantity timing survives reads and Restart while replacement rem
     },
   };
   const expected = {
+    tags: { presets: 'known' },
     communications: { bandwidth_bps: 'known' },
     status: { condition: 'unknown' },
     camera: { zoom_ratio: 'unknown', recording: 'known', capturing: 'uncertain' },
@@ -782,6 +790,7 @@ test('component quantity timing survives reads and Restart while replacement rem
     external_power: 'known',
     reserves: { [fuel]: { remaining_percent: 'known' } },
   });
+  assert.deepEqual(replaced.tags, accepted.tags, 'Omitted Tags retain their evidence');
   assert.deepEqual(
     replaced.camera_optics,
     accepted.camera_optics,
@@ -792,6 +801,7 @@ test('component quantity timing survives reads and Restart while replacement rem
       asset_id: asset.id,
       request_id: uuid(),
       report: report(f.core.dataset, asset.id, origin, 3, {
+        tags: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null },
         status: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null },
         camera: { state: 'withdrawn', classification: 'state_until_changed', observed_at: past },
         gimbal: { state: 'withdrawn', classification: 'state_until_changed', observed_at: future },
@@ -799,6 +809,7 @@ test('component quantity timing survives reads and Restart while replacement rem
     }),
   ).asset;
   for (const [name, status] of [
+    ['tags', 'unknown'],
     ['status', 'unknown'],
     ['camera', 'known'],
     ['gimbal', 'uncertain'],
@@ -842,6 +853,92 @@ test('component quantity timing survives reads and Restart while replacement rem
     ok(await f.call('GetTrack', { track_id: pair.track.id })).geometry,
     ended.track.geometry,
   );
+});
+test('Asset Tags retain ordered assertions and reject invalid reports atomically', async (t) => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  assert.equal(Object.hasOwn(asset, 'tags'), false);
+  const origin = { kind: 'asset_process', process_generation: asset.process_generation };
+  const tags = {
+    state: 'value',
+    classification: 'state_until_changed',
+    observed_at: null,
+    value: { presets: ['simulated'] },
+  };
+  const current = report(f.core.dataset, asset.id, origin, 5, { tags });
+  const submit = (value) =>
+    f.call('UpdateAsset', { asset_id: asset.id, request_id: uuid(), report: value });
+  const first = await submit(current),
+    selected = ok(first).asset;
+  assert.deepEqual(selected.tags.value, { presets: ['simulated'] });
+  assert.deepEqual(selected.tags.time_status, { presets: 'unknown' });
+  assert.equal(selected.edit_revision, asset.edit_revision);
+  assert.equal(selected.tags.evidence.report_id, current.report_id);
+  assert.equal(selected.tags.evidence.section, 'tags');
+  assert.equal(ok(await submit(current)).evidence_disposition, 'duplicate');
+  const empty = { ...tags, value: { presets: [] } };
+  const historical = report(f.core.dataset, asset.id, origin, 7, { tags: empty }, 'history_only');
+  for (const value of [report(f.core.dataset, asset.id, origin, 4, { tags: empty }), historical]) {
+    const result = ok(await submit(value));
+    assert.equal(result.evidence_disposition, 'accepted');
+    assert.deepEqual(result.asset, selected);
+  }
+  assert.equal(ok(await submit(historical)).evidence_disposition, 'duplicate');
+  const conflict = await submit(report(f.core.dataset, asset.id, origin, 5, { tags: empty }));
+  assert.equal(conflict.json.error.code, 'section_sequence_conflict');
+  const changedFacts = structuredClone(current);
+  changedFacts.sections.tags.value.presets = [];
+  assert.equal((await submit(changedFacts)).json.error.code, 'report_identity_conflict');
+  const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => db.close());
+  const counts = () =>
+    Object.fromEntries(
+      ['evidence_reports', 'evidence_sections', 'evidence_positions', 'retry', 'commit_log'].map(
+        (table) => [table, db.prepare(`SELECT count(*) AS n FROM ${table}`).get().n],
+      ),
+    );
+  const before = counts();
+  const invalid = await submit(
+    report(f.core.dataset, asset.id, origin, 8, {
+      status: {
+        state: 'value',
+        classification: 'state_until_changed',
+        observed_at: null,
+        value: { condition: 'healthy' },
+      },
+      tags: { ...tags, value: { presets: ['demo'] } },
+    }),
+  );
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.json.error.code, 'invalid_request');
+  assert.deepEqual(counts(), before);
+  assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })), selected);
+  const changes = ok(
+    await f.call('ReadChanges', { from_cursor: first.json.commit_cursor, ...limits }),
+  );
+  assert.deepEqual(
+    changes.messages.map((message) => message.type),
+    ['progress', 'progress'],
+  );
+  assert.equal(changes.messages[0].data.previous_cursor, first.json.commit_cursor);
+  assert.equal(changes.messages[1].data.previous_cursor, changes.messages[0].data.through_cursor);
+  assert.equal(changes.messages[1].data.through_cursor, changes.through_cursor);
+  const cleared = await submit(report(f.core.dataset, asset.id, origin, 8, { tags: empty }));
+  const clearedAsset = ok(cleared).asset;
+  assert.deepEqual(clearedAsset.tags.value, { presets: [] });
+  const replay = ok(
+    await f.call('ReadChanges', { from_cursor: first.json.commit_cursor, ...limits }),
+  );
+  const images = replay.messages.flatMap((message) =>
+    message.type === 'change_batch'
+      ? message.data.changes
+          .filter((change) => change.kind === 'put' && change.resource_id === asset.id)
+          .map((change) => change.image)
+      : [],
+  );
+  assert.equal(images.length, 1);
+  assert.deepEqual(images[0].tags, clearedAsset.tags);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM evidence_positions').get().n, 0);
 });
 test('history-only first admission keeps a future reading uncertain when later selected as current', async (t) => {
   const f = await fixture(t),
@@ -1059,12 +1156,12 @@ test('startup refuses legacy evidence without retained quantity status', async (
 });
 
 test('incompatible database formats are refused before old evidence can be interpreted', async (t) => {
-  for (const format of ['1', '2', '3']) {
+  for (const format of ['1', '2', '3', '4']) {
     const f = await fixture(t);
     await f.core.close();
     const db = new Database(join(f.directory, 'core.sqlite'));
     try {
-      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '4');
+      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '5');
       db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
     } finally {
       db.close();
