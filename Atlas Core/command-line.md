@@ -65,7 +65,8 @@ renderer. Both interfaces share administration operations and the mutation lock;
 capability parity is not a goal.
 
 Home shows the installation, saved endpoint, plain status, and contextual actions.
-Before setup it offers Set up Core, Check installation, and Exit. Established
+Before setup, including after completed Hard Reset, it offers Set up Core,
+Check installation, and Exit. Established
 installations offer ordinary lifecycle control, Settings, Add credential, Diagnostics,
 and Refresh status. Missing runtime evidence withholds Start and Stop while keeping
 available settings and diagnostics. Ready requires validated service readiness.

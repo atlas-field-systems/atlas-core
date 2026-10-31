@@ -465,6 +465,22 @@ recovery.menu(['Check installation', 'Refresh status', 'Exit'])
 recovery.finish(130)
 assert read_json(recovering, 'recovery', 'action.json') == action, 'the TUI must not start recovery'
 
+reset_root = os.path.join(evidence, 'hard-reset')
+for directory in ['setup', 'data', 'control', 'recovery']:
+    os.makedirs(os.path.join(reset_root, directory), mode=0o700)
+completed_reset = {**action, 'kind': 'hard-reset', 'phase': 'complete'}
+write_json(completed_reset, reset_root, 'recovery', 'action.json')
+reset_core = Core(reset_root)
+reset = Terminal('after-hard-reset', {'ATLAS_PTY_DOCKER': reset_core.path}, existing=True, root=reset_root)
+try:
+    reset.until('Setup required')
+    reset.menu(setup_menu)
+    reset.press(setup_menu, 'Set up Core')
+    reset.until('Absolute certificate PEM path')
+finally:
+    reset.finish(130)
+assert read_json(reset_root, 'recovery', 'action.json') == completed_reset
+
 lost = Terminal('terminal-loss')
 lost.until('Setup required')
 lost.finish(130, close=True)

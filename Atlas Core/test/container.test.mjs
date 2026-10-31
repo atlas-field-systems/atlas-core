@@ -16,6 +16,7 @@ import {
   stat,
 } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { networkInterfaces } from 'node:os';
 import { request } from 'node:https';
 import { isAbsolute, join } from 'node:path';
 import { root, uuid, secret, registration } from './helpers.mjs';
@@ -180,12 +181,13 @@ test(
     });
     const ca = await readFile(cert);
     let dataset;
-    async function api(path, body, credential = apiKey) {
+    async function api(path, body, credential = apiKey, hostname = '127.0.0.1') {
       return new Promise((resolve, reject) => {
         const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
         const req = request(
           {
-            hostname: '127.0.0.1',
+            hostname,
+            servername: 'localhost',
             port,
             path,
             method: body === undefined ? 'GET' : 'POST',
@@ -212,6 +214,7 @@ test(
           },
         );
         req.on('error', reject);
+        req.setTimeout(5000, () => req.destroy(new Error('https_timeout')));
         req.end(bytes);
       });
     }
@@ -451,10 +454,62 @@ test(
     assert.notEqual(afterUpdate.body.dataset_id, dataset);
     dataset = afterUpdate.body.dataset_id;
     assert.equal((await api('/messages/list_assets', {})).body.data.items.length, 0);
+    await t.test(
+      'bind addresses publish reachable HTTPS on the selected host interface',
+      async () => {
+        const lan = Object.values(networkInterfaces())
+          .flat()
+          .find((address) => address?.family === 'IPv4' && !address.internal);
+        assert.ok(lan, 'Container qualification requires a host IPv4 interface');
+        const candidateFile = join(base, 'binding-settings.json');
+        async function bind(host) {
+          const current = await cli('settings', 'show');
+          assert.equal(current.ok, true, JSON.stringify(current));
+          await writeFile(candidateFile, JSON.stringify({ ...current.data.saved, host }));
+          const saved = await cli(
+            'settings',
+            'save',
+            '--expected-revision',
+            current.data.revision,
+            '--file',
+            candidateFile,
+          );
+          assert.equal(saved.ok, true, JSON.stringify(saved));
+          const restarted = await cli('restart');
+          assert.equal(restarted.ok, true, JSON.stringify(restarted));
+        }
+        try {
+          for (const [host, address] of [
+            ['localhost', '127.0.0.1'],
+            ['127.0.0.1', '127.0.0.1'],
+            [lan.address, lan.address],
+            ['::1', '::1'],
+          ]) {
+            await bind(host);
+            const healthy = await api('/health', undefined, apiKey, address);
+            assert.equal(healthy.status, 200, `${host} must serve authenticated HTTPS`);
+            const writer = JSON.parse(await readFile(writerPath));
+            const [container] = JSON.parse(
+              (await exec('sudo', ['-n', 'docker', 'inspect', writer.container])).stdout,
+            );
+            assert.deepEqual(
+              container.HostConfig.PortBindings[`${port}/tcp`],
+              [{ HostIp: address, HostPort: String(port) }],
+              'Publish only the selected host address',
+            );
+          }
+        } finally {
+          await bind(settings.host);
+        }
+      },
+    );
     await writeFile(join(installation, 'unrelated.txt'), 'keep');
     assert.equal((await cli('hard-reset')).code, 'destructive_confirmation_required');
     const reset = await cli('hard-reset', '--confirm-destructive');
     assert.equal(reset.ok, true, JSON.stringify(reset));
+    const resetInspection = await cli('inspect');
+    assert.equal(resetInspection.ok, true, JSON.stringify(resetInspection));
+    assert.equal(resetInspection.data.setup_required, true, 'Hard Reset must offer fresh setup');
     assert.equal(await readFile(join(installation, 'unrelated.txt'), 'utf8'), 'keep');
     await assert.rejects(readFile(join(installation, 'setup', 'tls.key')));
     assert.equal((await cli('start')).code, 'setup_required');
@@ -467,7 +522,13 @@ test(
     const finishHardReset = await cli('recover');
     assert.equal(finishHardReset.ok, true, JSON.stringify(finishHardReset));
     assert.equal((await cli('start')).code, 'setup_required');
-    assert.equal((await cli('inspect')).ok, true);
+    const recoveredInspection = await cli('inspect');
+    assert.equal(recoveredInspection.ok, true, JSON.stringify(recoveredInspection));
+    assert.equal(
+      recoveredInspection.data.setup_required,
+      true,
+      'Recovered Hard Reset must offer fresh setup',
+    );
     const proof = JSON.parse(await readFile(join(installation, 'recovery', 'proof.json')));
     assert.notEqual(proof.dataset, dataset);
     const newKey = secret();

@@ -53,6 +53,10 @@ The limit applies while reading, including when the input continues producing da
 
 All settings apply through explicit Restart. The selected default Settings are
 exported by `dist/settings.js`. Settings use local commands, never public SDK routes.
+The bind address selects the Docker host interface. Numeric IPv4 and IPv6 addresses
+are supported; `localhost` selects `127.0.0.1`. Docker publishes the configured port
+on that address and forwards to Core's IPv4 listener inside the bridge network.
+An unavailable address or occupied port fails Start without reporting readiness.
 Local open enrollment is off by default. Public
 RegisterAsset always requires a valid key; local enrollment adds no permission tier.
 Disabling enrollment prevents new enrollments but does not revoke existing bindings.
@@ -105,6 +109,8 @@ without opening an ordinary writer or trusting phase labels alone.
 Ordinary Start refuses incomplete destructive work. Nothing resumes automatically.
 Hard Reset retains minimal recovery facts until verified completion. Fresh setup retires its
 old exit proofs before accepting new credentials. User-owned diagnostic exports survive.
+After completion, `inspect` reports `setup_required: true` until fresh setup commits.
+Retained recovery facts do not count as installation setup.
 Old requests from independent integrations remain fenced by Dataset.
 
 ## Retained state and access
