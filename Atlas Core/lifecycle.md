@@ -120,6 +120,8 @@ Setup needs no cloud login. Credentials stay out of URLs and diagnostics. Operat
 rules remain in [Protocol identity](../Atlas%20Protocol/identity.md).
 Setup flushes both retained TLS files before recording the installation manifest.
 A file-flush or close failure stops setup and preserves the failure for repair.
+An incomplete first setup has no committed installation identity. It refuses overwrite
+and lifecycle recovery. Preserve that path for repair and select a fresh path for setup.
 [Diagnostics](diagnostics.md#collection-and-lifetime) owns log and export lifetime.
 Await diagnostic writers before clearing logs. Unmanaged container or host logs must not escape Reset.
 
@@ -142,6 +144,8 @@ stopped and prunes only unreferenced generations. Seven generations
 bound saves; reaching the bound requires this explicit recovery. Failed activation
 retains the candidate and prior verified evidence without automatic rollback.
 Legacy fixed TLS files require explicit `tls replace` conversion before start.
+Start on an already ready service retains its loaded TLS and settings. Restart
+activates saved candidates; readiness of an older service cannot activate a new pair.
 Certificate issuance and renewal scheduling belong to deployment tooling.
 
 [Next: service readiness](readiness.md)
