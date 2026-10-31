@@ -1,4 +1,4 @@
-import { copyFile, mkdir, rm, open, readdir, stat, readFile } from 'node:fs/promises';
+import { mkdir, rm, open, readdir, opendir, stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
@@ -29,9 +29,24 @@ import { atomicJson, flushDirectory, ownedDirectory } from './ownership.js';
 import { maintenance, saveSettings } from './maintenance.js';
 import { defaults, Settings } from './settings.js';
 import { id, zero } from './exact.js';
-import { retainedEvent } from './diagnostics.js';
-import { createSecureContext } from 'node:tls';
+import { retainedEvent } from './operator-report.js';
+import { validateTls, saveTls, savedTls, tlsView, recordTlsActivation, recoverTls } from './tls.js';
 import { diskUsage, hasCapacity } from './capacity.js';
+
+async function requireFreshInstallation(root: string): Promise<void> {
+  const directory = await opendir(root).catch((error) => {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined;
+    throw error;
+  });
+  if (!directory) return;
+  for await (const entry of directory) {
+    if (!entry.isDirectory() || !['setup', 'data', 'control', 'recovery'].includes(entry.name)) throw new Error('already_setup');
+    const child = await opendir(join(root, entry.name));
+    for await (const file of child) {
+      if (entry.name !== 'control' || file.name !== 'command.flock' || !file.isFile()) throw new Error('already_setup');
+    }
+  }
+}
 
 export class Administration {
   constructor(readonly root: string) {}
@@ -66,14 +81,31 @@ export class Administration {
     credential: unknown;
     settings?: Settings;
   }): Promise<void> {
+    ImageId.parse(input.image);
+    Settings.parse(input.settings ?? defaults);
+    exchanges.CreateApiKey.request.schema.parse(input.credential);
+    await validateTls(input.certificate, input.key);
+    const action = await this.action();
+    if (action && (action.phase !== 'complete' || action.kind !== 'hard-reset')) throw new Error('repair_required');
+    if (!action) await requireFreshInstallation(this.root);
+    const existing = await opendir(join(this.root, 'setup')).catch((error) => {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined;
+      throw error;
+    });
+    if (existing) {
+      let primary: unknown;
+      try {
+        if (await existing.read()) throw new Error('already_setup');
+      } catch (error) { primary = error; throw error; }
+      finally {
+        try { await existing.close(); } catch (error) { throw primary === undefined ? error : new AggregateError([primary, error], 'setup_inspection_failed'); }
+      }
+    }
     await ownedDirectory(this.root);
     for (const dir of ['setup', 'data', 'control', 'recovery'])
       await ownedDirectory(join(this.root, dir));
     if (await optionalJson(join(this.root, 'setup', 'installation.json'), Manifest))
       throw new Error('already_setup');
-    const action = await this.action();
-    if (action && (action.phase !== 'complete' || action.kind !== 'hard-reset'))
-      throw new Error('repair_required');
     const image = ImageId.parse(input.image);
     const settings: SavedSettings = {
       revision: zero,
@@ -82,27 +114,7 @@ export class Administration {
       last_working: null,
       apply_failure: null,
     };
-    createSecureContext({
-      cert: await readFile(input.certificate),
-      key: await readFile(input.key),
-    });
-    await copyFile(input.certificate, join(this.root, 'setup', 'tls.pem'));
-    await copyFile(input.key, join(this.root, 'setup', 'tls.key'));
-    for (const name of ['tls.pem', 'tls.key']) {
-      const file = await open(join(this.root, 'setup', name), 'r');
-      const failures: unknown[] = [];
-      try {
-        await file.sync();
-      } catch (error) {
-        failures.push(error);
-      }
-      try {
-        await file.close();
-      } catch (error) {
-        failures.push(error);
-      }
-      if (failures.length > 0) throw new AggregateError(failures, 'tls_flush_failed');
-    }
+    await saveTls(this.root, input.certificate, input.key);
     await atomicJson(join(this.root, 'setup', 'settings.json'), settings);
     await atomicJson(join(this.root, 'setup', 'installation.json'), {
       format: 1,
@@ -317,6 +329,7 @@ export class Administration {
       }
       await this.removeStopped(old, manifest.installation_id);
     }
+    await savedTls(this.root);
     const writer = await createContainer(
       this.root,
       manifest.installation_id,
@@ -350,6 +363,7 @@ export class Administration {
         last_working: applied,
         apply_failure: null,
       });
+      await recordTlsActivation(this.root, true);
     } catch (error) {
       const failures: unknown[] = [error];
       try {
@@ -360,6 +374,7 @@ export class Administration {
       } catch (bookkeeping) {
         failures.push(bookkeeping);
       }
+      try { await recordTlsActivation(this.root, false); } catch (bookkeeping) { failures.push(bookkeeping); }
       try {
         if ((await inspectContainer(writer, manifest.installation_id)).State.Running)
           await docker(['kill', '--signal=TERM', writer.container]);
@@ -499,8 +514,9 @@ export class Administration {
         await atomicJson(join(this.root, 'software.json'), { image: action.image });
       }
       if (action.kind === 'hard-reset') {
-        for (const file of ['tls.pem', 'tls.key', 'settings.json', 'installation.json'])
+        for (const file of ['tls.pem', 'tls.key', 'tls-state.json', 'tls-journal.json', 'settings.json', 'installation.json'])
           await rm(join(this.root, 'setup', file), { force: true });
+        await rm(join(this.root, 'setup', 'tls'), { recursive: true, force: true });
         await flushDirectory(join(this.root, 'setup'));
         for (const container of containers)
           if (await this.containerExists(container))
@@ -564,15 +580,32 @@ export class Administration {
     if (settings === undefined) return { setup_required: true };
     return {
       revision: settings.revision,
-      effective: settings.effective === null ? null : { revision: settings.effective.revision },
+      saved: settings.saved,
+      effective: settings.effective === null ? null : { revision: settings.effective.revision, value: settings.effective.value },
       last_working:
-        settings.last_working === null ? null : { revision: settings.last_working.revision },
+        settings.last_working === null ? null : { revision: settings.last_working.revision, value: settings.last_working.value },
       apply_failure: settings.apply_failure,
       diagnostics: {
         severity: settings.saved.diagnosticLevel,
         max_bytes: settings.saved.diagnosticBytes,
       },
     };
+  }
+  async tlsReplace(certificate: string, key: string) {
+    await this.requireComplete();
+    await this.manifest();
+    await saveTls(this.root, certificate, key);
+    return tlsView(this.root);
+  }
+  async tlsRecover(): Promise<void> {
+    const manifest = await this.manifest();
+    const writer = await this.writer();
+    if (writer) {
+      await this.verifyExit(writer, manifest.installation_id);
+      await this.removeStopped(writer, manifest.installation_id);
+    }
+    await this.stoppedInstallationContainers(manifest.installation_id);
+    await recoverTls(this.root);
   }
   async enrollmentInspect(): Promise<unknown> {
     return maintenance(this.root, { operation: 'enrollment-inspect' });
