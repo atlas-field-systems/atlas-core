@@ -1,9 +1,8 @@
 # Command-line interface
 
 **Install Core through npm, then administer one installation through a CLI or TUI.**
-This page defines the intended interface for implementation. The published package,
-TUI, and additional commands below do not exist yet. The current source entry point
-and operation semantics remain in [lifecycle](lifecycle.md).
+The compiled operator package provides this interface. Its npm publication identity
+remains deferred. [Lifecycle](lifecycle.md) owns operation and recovery semantics.
 
 ## Installation and launch
 
@@ -40,7 +39,7 @@ silently install host software or change host permissions.
 
 Setup obtains the verified release image and collects initial credentials, supplied
 TLS files, bind address, port, and trusted browser origins. It explains the resulting
-endpoint before applying setup. Configuration needs no hand-edited files in the TUI.
+endpoint before applying setup. Prerequisite failures include specific host instructions. Configuration needs no hand-edited files in the TUI.
 Direct commands accept the explicit inputs documented in [local commands](lifecycle.md#commands).
 The packaged setup resolves its release image before invoking that operation.
 Secrets use protected files or masked input, never command arguments or ordinary output.
@@ -75,7 +74,7 @@ Atlas supplies its screens and workflows, not a terminal renderer or widget fram
 Direct commands load no TUI renderer. Both interfaces call the same administration
 operations and hold the same installation lock for mutations.
 
-The home screen shows the selected installation and Core state. It offers setup,
+The home screen shows the selected installation, saved endpoint, and Core state. It offers setup,
 lifecycle controls, settings, credentials, enrollment, diagnostics, and explicit recovery.
 Destructive actions show their effects and require confirmation before execution.
 The interface shows progress and the final result, including committed effects and
