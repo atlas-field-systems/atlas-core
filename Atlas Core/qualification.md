@@ -107,10 +107,15 @@ Neither tuning nor capacity failure permits weaker retention or atomicity.
 
 The [intended CLI and TUI](command-line.md) require the following evidence before
 release. These workflows are unrun until the packaged interface exists. Extend the
-existing CLI and container workflows using the exact npm artifact and matching image.
+existing CLI and container workflows using the exact npm artifact and matching image
+identified by the [release metadata](build-profile.md#operator-package).
 
 - Install on a clean supported host without a checkout or compiler. Check missing
-  prerequisites, invalid artifacts, preloaded offline setup, and retained-state protection.
+  prerequisites, invalid artifacts, and retained-state protection.
+- Install the local release tarball offline with an empty npm cache and networking
+  disabled, then set up Core with its preloaded image. Verify the tarball against
+  the trusted manifest before installation. A tampered tarball must fail that check
+  before npm runs; a missing runtime dependency must fail the offline-install test.
 - Complete setup, start, settings changes, credential provisioning, enrollment,
   export, and certificate replacement through both interfaces with matching outcomes.
 - Exercise keyboard navigation, resize, SSH, noninteractive output, cancellation,

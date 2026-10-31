@@ -7,8 +7,9 @@ and operation semantics remain in [lifecycle](lifecycle.md).
 
 ## Installation and launch
 
-The installation flow requires supported Node.js and Docker on a qualified Linux host.
-The npm package name is not selected. `<package>` is a placeholder, not an installable name.
+Installation requires a supported Node.js version and Docker on a qualified Linux host.
+[Release packaging](build-profile.md#operator-package) owns the deferred npm identity.
+`<package>` is a placeholder, not an installable name.
 
 ```sh
 npm install --global <package>

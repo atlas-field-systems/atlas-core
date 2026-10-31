@@ -53,13 +53,20 @@ Image builds and manifest generation still require the clean release checkout.
 ## Operator package
 
 The intended [CLI and TUI](command-line.md) ship as a compiled npm package.
-This packaging is not implemented yet. Its runtime dependencies are complete;
-the server's native database driver stays inside the Core container.
+This packaging is not implemented yet. The npm name and initial package version
+are deferred until release preparation. Release metadata records that identity
+and the packed tarball's SHA-256. All runtime dependencies are bundled in the
+tarball; the server's native database driver stays inside the Core container.
 Each package identifies its matching immutable image and supported platform through
 release metadata tied to the source revision and artifact hashes. Setup pulls and
 verifies that image, then retains its resolved local identity for lifecycle commands.
-Invalid artifacts fail before setup changes retained state. Preloaded verified images
-and packaged dependencies support installation without downloads.
+Invalid artifacts fail before setup changes retained state.
+
+Offline installation uses that same local `.tgz` and a preloaded verified image.
+Before installing, compare the tarball's SHA-256 with the release manifest obtained
+from the trusted release publication. A mismatch stops installation. Install the
+verified file with `npm install --global --offline /absolute/package.tgz`.
+An existing npm cache or registry mirror is not required.
 
 Installing a new CLI neither updates nor resets an existing Core. Unsupported
 package and Core combinations refuse mutation before changing installation state.

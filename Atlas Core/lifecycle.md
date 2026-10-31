@@ -23,7 +23,8 @@ Use a fresh installation for that release; Reset does not convert old formats.
 
 Run `node dist/cli.js COMMAND --installation /absolute/owned/installation` locally.
 This is the current source entry point. The intended packaged interface is specified
-in [command-line administration](command-line.md) and uses these same operations.
+in [command-line administration](command-line.md). It reuses these lifecycle operations
+and adds the bounded read-only `doctor` check defined there.
 Docker access uses `sudo -n docker`. The image argument is an immutable `sha256:` ID
 from `artifacts/image-id`, never a tag. Setup supplies a valid TLS certificate and private key
 and a mode-0600 credential JSON file containing `api_key_id`, `request_id`, and `secret`.
