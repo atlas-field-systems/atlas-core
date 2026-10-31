@@ -5,7 +5,11 @@ import { Uuid } from '@atlas/protocol';
 import { WriterIdentity } from './writer.js';
 
 export async function processIdentity(pid = process.pid): Promise<WriterIdentity> {
-  const [boot, raw, namespace] = await Promise.all([readFile('/proc/sys/kernel/random/boot_id', 'utf8'), readFile(`/proc/${pid}/stat`, 'utf8'), readlink('/proc/self/ns/pid')]);
+  const [boot, raw, namespace] = await Promise.all([
+    readFile('/proc/sys/kernel/random/boot_id', 'utf8'),
+    readFile(`/proc/${pid}/stat`, 'utf8'),
+    readlink('/proc/self/ns/pid'),
+  ]);
   const start = raw.slice(raw.lastIndexOf(')') + 2).split(' ')[19];
   return WriterIdentity.parse({ pid, boot: boot.trim(), start, namespace });
 }
@@ -26,9 +30,17 @@ export async function exited(identity: WriterIdentity): Promise<boolean> {
     throw new Error('writer_exit_unverified');
   }
 }
-export async function flushDirectory(directory: string): Promise<void> { const handle = await open(directory, 'r'); try { await handle.sync(); } finally { await handle.close(); } }
+export async function flushDirectory(directory: string): Promise<void> {
+  const handle = await open(directory, 'r');
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
 export async function removeCapture(directory: string, capture: Uuid): Promise<void> {
-  for (const suffix of ['', '-journal', '-wal', '-shm']) await rm(join(directory, `${capture}.sqlite${suffix}`), { force: true });
+  for (const suffix of ['', '-journal', '-wal', '-shm'])
+    await rm(join(directory, `${capture}.sqlite${suffix}`), { force: true });
   await flushDirectory(directory);
 }
 export async function atomicJson(path: string, value: unknown): Promise<void> {
@@ -37,12 +49,28 @@ export async function atomicJson(path: string, value: unknown): Promise<void> {
   const temporary = `${path}.${id()}.tmp`;
   const file = await open(temporary, 'wx', 0o600);
   let primary: unknown;
-  try { await file.writeFile(data); await file.sync(); } catch (error) { primary = error; throw error; }
-  finally {
-    try { await file.close(); } catch (error) { throw primary === undefined ? error : new AggregateError([primary, error], 'record_flush_failed'); }
+  try {
+    await file.writeFile(data);
+    await file.sync();
+  } catch (error) {
+    primary = error;
+    throw error;
+  } finally {
+    try {
+      await file.close();
+    } catch (error) {
+      throw primary === undefined
+        ? error
+        : new AggregateError([primary, error], 'record_flush_failed');
+    }
   }
-  try { await rename(temporary, path); await flushDirectory(dirname(path)); }
-  catch (error) { await rm(temporary, { force: true }); throw error; }
+  try {
+    await rename(temporary, path);
+    await flushDirectory(dirname(path));
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
 }
 export async function ownedDirectory(path: string): Promise<string> {
   const absolute = resolve(path);

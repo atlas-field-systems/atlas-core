@@ -23,7 +23,10 @@ export const TlsState = z.strictObject({
 const Journal = z.strictObject({ previous: Uuid.nullable(), next: Pin });
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 export async function tlsBytes(path: string, privateFile = false): Promise<Buffer> {
-  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK).catch((error: unknown) => {
+  const file = await open(
+    path,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+  ).catch((error: unknown) => {
     if (error instanceof Error && 'code' in error && error.code === 'ELOOP')
       throw new Error('tls_invalid');
     throw error;
