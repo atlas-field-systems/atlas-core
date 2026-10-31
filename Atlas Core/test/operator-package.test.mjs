@@ -4,7 +4,9 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, writeFile, mkdir, readdir, rename, stat, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { createServer } from 'node:net';
 import { defaults } from '../dist/settings.js';
+import { saveTls } from '../dist/tls.js';
 import { mutableRoot } from './paths.mjs';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const npm = process.env.npm_execpath;
@@ -111,6 +113,123 @@ test(
     assert.equal(JSON.parse(mismatch.stdout).code, 'incompatible_image');
     await assert.rejects(stat(join(retained, 'control')), { code: 'ENOENT' });
     assert.deepEqual(await readFile(join(retained, 'setup/installation.json')), before);
+    const diagnostic = join(base, 'doctor'),
+      dockerBin = join(base, 'docker-bin'),
+      dockerFixture = join(base, 'doctor-docker.json');
+    await mkdir(join(diagnostic, 'setup'), { recursive: true, mode: 0o700 });
+    await mkdir(dockerBin);
+    await writeFile(
+      join(dockerBin, 'sudo'),
+      `#!${process.execPath}
+import { readFileSync } from 'node:fs';
+const args = process.argv.slice(2);
+if (args[0] !== '-n' || args[1] !== 'docker') process.exit(1);
+const fixture = JSON.parse(readFileSync(process.env.ATLAS_DOCTOR_FIXTURE));
+if (args[2] === 'info') process.stdout.write('fixture');
+else if (args[2] === 'image' && args[3] === 'inspect')
+  process.stdout.write(JSON.stringify([fixture.image]));
+else if (args[2] === 'inspect') process.stdout.write(JSON.stringify([fixture.container]));
+else process.exit(1);
+`,
+      { mode: 0o700 },
+    );
+    const certificate = join(base, 'doctor.pem'),
+      key = join(base, 'doctor.key');
+    execFileSync(
+      'openssl',
+      ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2', '-subj', '/CN=localhost', '-keyout', key, '-out', certificate],
+      { stdio: 'ignore' },
+    );
+    await saveTls(diagnostic, certificate, key);
+    const installation = 'c5d23a5c-d7d6-443a-9b97-ebf37a1a41bc',
+      launch = 'd875d9fa-5d77-41f0-83df-9febcc0f34c9',
+      container = 'e'.repeat(64);
+    await writeFile(
+      join(diagnostic, 'setup/installation.json'),
+      JSON.stringify({ format: 1, installation_id: installation, image: manifest.image }),
+    );
+    const saveDiagnosticSettings = (port) =>
+      writeFile(
+        join(diagnostic, 'setup/settings.json'),
+        JSON.stringify({
+          revision: '1',
+          saved: { ...defaults, host: '127.0.0.1', port, freeDiskBytes: 0, reserveBytes: 0 },
+          effective: null,
+          last_working: null,
+          apply_failure: null,
+        }),
+      );
+    await saveDiagnosticSettings(0);
+    const image = {
+      Id: manifest.image,
+      Os: 'linux',
+      Architecture: 'amd64',
+      Config: { Labels: { 'org.opencontainers.image.revision': manifest.sourceRevision } },
+    };
+    const probeDoctor = async (fixture) => {
+      await writeFile(dockerFixture, JSON.stringify(fixture));
+      const result = spawnSync(process.execPath, [cli, 'doctor', '--installation', diagnostic], {
+        encoding: 'utf8',
+        env: {
+          ...offlineEnv,
+          PATH: `${dockerBin}:${process.env.PATH}`,
+          ATLAS_DOCTOR_FIXTURE: dockerFixture,
+        },
+      });
+      return { status: result.status, ...JSON.parse(result.stdout) };
+    };
+    await t.test('Doctor rejects the same incompatible image evidence as setup', async () => {
+      assert.equal((await probeDoctor({ image })).status, 0);
+      for (const invalid of [
+        { ...image, Config: { Labels: { 'org.opencontainers.image.revision': '0'.repeat(40) } } },
+        { ...image, Config: { Labels: null } },
+        { ...image, Id: `sha256:${'b'.repeat(64)}` },
+        { ...image, Architecture: 'arm64' },
+      ]) {
+        const result = await probeDoctor({ image: invalid });
+        assert.equal(result.status, 1);
+        assert.equal(result.code, 'prerequisite_failed');
+        assert.equal(result.data.checks.image.status, 'fail');
+      }
+    });
+    await t.test('Doctor checks the saved binding while another binding is active', async (t) => {
+      const listeners = [createServer(), createServer()];
+      for (const listener of listeners) {
+        await new Promise((resolve) => listener.listen({ host: '127.0.0.1', port: 0 }, resolve));
+        t.after(() => new Promise((resolve) => listener.close(resolve)));
+      }
+      const [activePort, occupiedPort] = listeners.map((listener) => listener.address().port);
+      await mkdir(join(diagnostic, 'control'), { mode: 0o700 });
+      await writeFile(
+        join(diagnostic, 'control/writer.json'),
+        JSON.stringify({ container, launch, kind: 'service', host: null }),
+      );
+      const running = {
+        Id: container,
+        State: { Running: true },
+        Config: { Labels: { 'atlas.installation': installation, 'atlas.launch': launch } },
+        NetworkSettings: {
+          Ports: { [`${activePort}/tcp`]: [{ HostIp: '127.0.0.1', HostPort: String(activePort) }] },
+        },
+      };
+      await saveDiagnosticSettings(occupiedPort);
+      const occupied = await probeDoctor({ image, container: running });
+      assert.equal(occupied.status, 1);
+      assert.equal(occupied.data.checks.port.status, 'fail');
+      await saveDiagnosticSettings(activePort);
+      const active = await probeDoctor({ image, container: running });
+      assert.equal(active.status, 0);
+      assert.equal(active.data.checks.port.status, 'pass');
+      const differentHost = {
+        ...running,
+        NetworkSettings: {
+          Ports: { [`${activePort}/tcp`]: [{ HostIp: '127.0.0.2', HostPort: String(activePort) }] },
+        },
+      };
+      const wrongAddress = await probeDoctor({ image, container: differentHost });
+      assert.equal(wrongAddress.status, 1);
+      assert.equal(wrongAddress.data.checks.port.status, 'fail');
+    });
     const settingsFixture = join(base, 'settings-fixture.json');
     await writeFile(
       settingsFixture,
