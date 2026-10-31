@@ -29,7 +29,8 @@ Docker access uses `sudo -n docker`. The image argument is an immutable `sha256:
 from `artifacts/image-id`, never a tag. Packages supply their recorded image by default. Setup supplies a valid TLS certificate and private key
 and a mode-0600 credential JSON file containing `api_key_id`, `request_id`, and `secret`.
 The secret is a 32-byte random base64url value. Commands never print that secret.
-Local JSON records are limited to 64 KiB before parsing. Readers consume at most
+Local JSON inputs must resolve to regular files; nonregular inputs fail without waiting
+for a producer. Records are limited to 64 KiB before parsing. Readers consume at most
 one extra byte to detect excess, then close the input and return `record_limit`.
 The limit applies while reading, including when the input continues producing data.
 
@@ -54,7 +55,8 @@ The limit applies while reading, including when the input continues producing da
 All settings apply through explicit Restart. The selected default Settings are
 exported by `dist/settings.js`. Settings use local commands, never public SDK routes.
 The bind address selects the Docker host interface. Numeric IPv4 and IPv6 addresses
-are supported; `localhost` selects `127.0.0.1`. Docker publishes the configured port
+are supported; `localhost` selects `127.0.0.1`. Operator setup and settings require
+port 1–65535; port zero remains available only to in-process server callers. Docker publishes the configured port
 on that address and forwards to Core's IPv4 listener inside the bridge network.
 An unavailable address or occupied port fails Start without reporting readiness.
 Local open enrollment is off by default. Public
@@ -107,7 +109,9 @@ without opening an ordinary writer or trusting phase labels alone.
   establishment: refuse for repair. Never wipe ambiguous state.
 
 Ordinary Start refuses incomplete destructive work. Nothing resumes automatically.
-Hard Reset retains minimal recovery facts until verified completion. Fresh setup retires its
+Hard Reset removes recognized private Atlas atomic setup temporaries only after writer
+exit is verified. Unrelated or ambiguous files remain. It retains minimal recovery
+facts until verified completion. Fresh setup retires its
 old exit proofs before accepting new credentials. User-owned diagnostic exports survive.
 After completion, `inspect` reports `setup_required: true` until fresh setup commits.
 Retained recovery facts do not count as installation setup.
