@@ -116,9 +116,9 @@ TLS tests kill the actual saver on both sides of the pointer commit and require
 explicit journal reconciliation. Flush tests retain both sync and close failures.
 
 The private package tests use an explicitly marked fixture image ID. They do not
-qualify a release image. Docker is unavailable on the implementation host. Image
-build, release-manifest generation, preloaded/pulled-image setup, container TLS
-activation, host reboot, SSH, and complete interactive server workflows remain unrun.
+qualify a release image. Release qualification requires image build, release-manifest
+generation, preloaded/pulled-image setup, container TLS activation, host reboot,
+SSH, and complete interactive server workflows against the release artifact.
 The container workflow includes save-only TLS continuity, mismatch refusal, restart
 activation and the externally locked Start test. Run it with the actual packed
 artifact and matching image before release. The remaining release gates are:
