@@ -159,12 +159,16 @@ test(
       assert.equal(refused.status, 1);
       assert.equal(refused.code, 'destructive_confirmation_required');
     }
-    for (const args of [['reset'], ['recover'], ['enrollment', 'inspect']]) {
+    for (const args of [['reset'], ['enrollment', 'inspect']]) {
       const unavailable = json(...args);
       assert.equal(unavailable.status, 1);
       assert.equal(unavailable.event, 'command_failed');
       assert.match(unavailable.code, /^[a-z_]+$/);
     }
+    const recovered = json('recover');
+    assert.equal(recovered.status, 0);
+    assert.equal(recovered.event, 'command_completed');
+    assert.deepEqual(recovered.data, { recovered: true, running: false });
     const saveDraft = join(base, 'cli-settings.json');
     await writeFile(saveDraft, JSON.stringify({ ...show.data.saved, maxConnections: 30 }));
     const advanced = json(
