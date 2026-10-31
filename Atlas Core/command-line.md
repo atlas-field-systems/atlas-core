@@ -1,8 +1,8 @@
 # Command-line interface
 
-**Install Core through npm, then administer one installation through a CLI or TUI.**
-The compiled operator package provides this interface. Its npm publication identity
-remains deferred. [Lifecycle](lifecycle.md) owns operation and recovery semantics.
+**Install Core through npm. Agents and scripts use the full CLI; people use a smaller TUI.**
+The compiled operator package provides both. Its npm publication identity remains
+deferred. [Lifecycle](lifecycle.md) owns operation and recovery semantics.
 
 ## Installation and launch
 
@@ -39,21 +39,20 @@ silently install host software or change host permissions.
 
 Setup obtains the verified release image and collects initial credentials, supplied
 TLS files, bind address, port, and trusted browser origins. It explains the resulting
-endpoint before applying setup. Prerequisite failures include specific host instructions. Configuration needs no hand-edited files in the TUI.
-Direct commands accept the explicit inputs documented in [local commands](lifecycle.md#commands).
+endpoint before applying setup. Prerequisite failures include specific host instructions.
+Guided setup needs no hand-edited files. Direct commands accept the explicit inputs documented in [local commands](lifecycle.md#commands).
 The packaged setup resolves its release image before invoking that operation.
 Secrets use protected files or masked input, never command arguments or ordinary output.
 Repeated setup refuses to overwrite an existing or ambiguous installation.
 Setup leaves Core stopped. Starting it is a separate explicit action.
 
-Settings display saved and effective values and any apply failure. Saving settings
-does not activate them. Applying settings requires the explicit restart defined by
-lifecycle. Certificate replacement follows [TLS replacement](lifecycle.md#tls-replacement).
+Saving settings or a certificate activates nothing. [Lifecycle](lifecycle.md#tls-replacement)
+defines the explicit restart that applies them.
 
 ## Direct commands and results
 
-The CLI exposes all [local operations](lifecycle.md#commands) without interactive
-prompts. Missing inputs or confirmations fail before the requested mutation begins.
+The CLI is the complete scriptable interface. It exposes all
+[local operations](lifecycle.md#commands) without interactive prompts. Missing inputs or confirmations fail before the requested mutation begins.
 Administrative commands retain the structured JSON result envelope and safe failure
 codes. Help and version produce text. Successful commands exit 0 and failures exit 1.
 
@@ -74,15 +73,35 @@ Atlas supplies its screens and workflows, not a terminal renderer or widget fram
 Direct commands load no TUI renderer. Both interfaces call the same administration
 operations and hold the same installation lock for mutations.
 
-The home screen shows the selected installation, saved endpoint, and Core state. It offers setup,
-lifecycle controls, settings, credentials, enrollment, diagnostics, and explicit recovery.
-Destructive actions show their effects and require confirmation before execution.
-The interface shows progress and the final result, including committed effects and
-cleanup failures. It never claims an uncertain operation left the installation unchanged.
+The TUI is a curated interface for common human workflows, not a second CLI. It has
+no parity requirement. Home shows the installation, saved endpoint, one plain status,
+and only the actions that status allows: Set up Core, Check installation, and Exit
+before setup; ordinary lifecycle control, Settings, Add credential, Diagnostics, and
+Refresh status afterward. Unavailable runtime evidence withholds Start and Stop but
+keeps Settings and Diagnostics. Only validated `service.ready` evidence shows ready.
+
+Settings edits bind address, HTTPS port, comma-separated trusted browser origins, and
+diagnostic level through plain inputs. Each save validates complete Settings, keeps
+other saved values, and requires the displayed revision. The page shows saved, last
+verified effective, and last-working evidence and any apply failure. Certificate
+replacement only saves. Restart, or Start when stopped, is a separate confirmed action.
+Setup and Add credential take a masked secret, generate their identifiers once per
+draft, and show the API key ID.
+
+Other settings, chosen or operator-bound credentials, `stop --force`, reset, Hard
+Reset, update, enrollment, and recovery are CLI tasks. Pending recovery replaces
+ordinary actions with the exact `recover` command and its effects. Every mutation
+requires default-No confirmation.
+
+Compact receipts keep safe codes, primary and cleanup failures, every bounded failure,
+partial exports, Doctor instructions, and saved-versus-active TLS evidence. A failed
+write says committed effects may remain. "Cancelled before any change" requires an
+explicit uncommitted result; a normal result with exit 130 says cancellation arrived
+after the operation finished.
 
 Ctrl-C requests cancellation. Escape returns when no operation is active, or requests
 return after active work settles. Terminal loss also awaits owned work and cleanup.
-Escape keeps the settled result visible on the home screen before the next action.
+Escape keeps the settled receipt visible on the home screen before the next action.
 A completed cancellation exits 130 when exiting the process. Committed work remains
 committed, and operation or cleanup failures take precedence over cancellation.
 The TUI refreshes state after each operation without automatically retrying mutations.

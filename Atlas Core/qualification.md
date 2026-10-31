@@ -112,8 +112,11 @@ Run `npm run operator:prepare`, `npm run build`, `npm run operator:build`,
 Package tests require Linux, Python 3, OpenSSL, tar, and strace. They retain evidence
 under `ATLAS_TEST_ROOT`, outside the checkout. They verify hash refusal, empty-cache
 installation without network connections, dependency closure, lazy TUI loading,
-retained-state compatibility, replacement/removal, masked setup, settings editing,
-resize, Ctrl-C, terminal loss, and failure precedence in a real PTY.
+retained-state compatibility, and replacement/removal. A real PTY against a recording
+Docker stand-in proves the contextual menu, masked setup with hidden generated IDs,
+plain settings edits that preserve advanced values, cancellation without mutation,
+narrow terminals, retained failures, Ctrl-C, terminal loss, and failure precedence.
+The same installed command proves CLI-only capabilities keep their JSON results.
 TLS tests kill the actual saver on both sides of the pointer commit and require
 explicit journal reconciliation. Flush tests retain both sync and close failures.
 
@@ -131,8 +134,10 @@ artifact and matching image before release. The remaining release gates are:
   disabled, then set up Core with its preloaded image. Verify the tarball against
   the trusted manifest before installation. A tampered tarball must fail that check
   before npm runs; a missing runtime dependency must fail the offline-install test.
-- Complete setup, start, settings changes, credential provisioning, enrollment,
-  export, and certificate replacement through both interfaces with matching outcomes.
+- Complete setup, start, common settings changes, credential provisioning, export,
+  and certificate saving through the TUI and the CLI with matching outcomes.
+  Complete advanced settings, enrollment, and recovery through the CLI. Parity
+  between the interfaces is not a requirement.
 - Exercise keyboard navigation, resize, SSH, noninteractive output, cancellation,
   terminal loss, concurrent commands, and interrupted destructive work.
 - Verify authenticated HTTP, WebSocket synchronization, and file transfers directly
