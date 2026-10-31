@@ -21,7 +21,12 @@
     "test:container": "node --test test/container.test.mjs",
     "fixture:retention": "node scripts/retention.mjs",
     "release:source": "node scripts/export-source.mjs",
-    "release:consume": "node scripts/consume-source.mjs"
+    "release:consume": "node scripts/consume-source.mjs",
+    "operator:prepare": "node scripts/prepare-operator.mjs",
+    "operator:build": "tsc -p operator/tsconfig.json && node scripts/build-operator-ui.mjs",
+    "operator:pack": "node scripts/pack-operator.mjs",
+    "test:operator": "node --test test/operator.test.mjs",
+    "test:operator-package": "node --test test/operator-package.test.mjs"
   },
   "dependencies": {
     "@atlas/protocol": "file:artifacts/atlas-protocol-0.4.0.tgz",

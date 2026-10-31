@@ -57,6 +57,8 @@ under `$ATLAS_TEST_ROOT/capture-failures`, with active-reader and fresh-reader c
 Four test-only bundles are capped at 32 MiB each; failed CI runs retain them for seven days.
 `npm run test:container` exercises the pinned image and CLI on fresh installations,
 including command interruption, explicit recovery, settings failures and Hard Reset.
+Set `ATLAS_TEST_CLI` to an absolute installed executable to use the packed operator.
+CI packs and verifies the operator against its built image before this workflow.
 Protocol boundary cases remain in [protocol-qualification.md](protocol-qualification.md).
 
 A test must fail when its required assertion cannot run. Observe the promised
@@ -105,10 +107,26 @@ Neither tuning nor capacity failure permits weaker retention or atomicity.
 
 ## Operator-interface qualification
 
-The [intended CLI and TUI](command-line.md) require the following evidence before
-release. These workflows are unrun until the packaged interface exists. Extend the
-existing CLI and container workflows using the exact npm artifact and matching image
-identified by the [release metadata](build-profile.md#operator-package).
+Run `npm run operator:prepare`, `npm run build`, `npm run operator:build`,
+`npm run test:operator`, and `npm run test:operator-package` with the pinned toolchain.
+Package tests require Linux, Python 3, OpenSSL, tar, and strace. They retain evidence
+under `ATLAS_TEST_ROOT`, outside the checkout. They verify hash refusal, empty-cache
+installation without network connections, dependency closure, lazy TUI loading,
+retained-state compatibility, and replacement/removal. A real PTY against a recording
+Docker stand-in proves the contextual menu, masked setup with hidden generated IDs,
+plain settings edits that preserve advanced values, cancellation without mutation,
+narrow terminals, retained failures, Ctrl-C, terminal loss, and failure precedence.
+The same installed command proves CLI-only capabilities keep their JSON results.
+TLS tests kill the actual saver on both sides of the pointer commit and require
+explicit journal reconciliation. Flush tests retain both sync and close failures.
+
+The private package tests use an explicitly marked fixture image ID. They do not
+qualify a release image. Release qualification requires image build, release-manifest
+generation, preloaded/pulled-image setup, container TLS activation, host reboot,
+SSH, and complete interactive server workflows against the release artifact.
+The container workflow includes save-only TLS continuity, mismatch refusal, restart
+activation and the externally locked Start test. Run it with the actual packed
+artifact and matching image before release. The remaining release gates are:
 
 - Install on a clean supported host without a checkout or compiler. Check missing
   prerequisites, invalid artifacts, and retained-state protection.
@@ -116,8 +134,10 @@ identified by the [release metadata](build-profile.md#operator-package).
   disabled, then set up Core with its preloaded image. Verify the tarball against
   the trusted manifest before installation. A tampered tarball must fail that check
   before npm runs; a missing runtime dependency must fail the offline-install test.
-- Complete setup, start, settings changes, credential provisioning, enrollment,
-  export, and certificate replacement through both interfaces with matching outcomes.
+- Complete setup, start, common settings changes, credential provisioning, export,
+  and certificate saving through the TUI and the CLI with matching outcomes.
+  Complete advanced settings, enrollment, and recovery through the CLI. Parity
+  between the interfaces is not a requirement.
 - Exercise keyboard navigation, resize, SSH, noninteractive output, cancellation,
   terminal loss, concurrent commands, and interrupted destructive work.
 - Verify authenticated HTTP, WebSocket synchronization, and file transfers directly

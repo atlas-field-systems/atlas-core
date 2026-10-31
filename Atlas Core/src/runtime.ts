@@ -1,3 +1,4 @@
+import { savedTls } from './tls.js';
 import { Worker } from 'node:worker_threads';
 import { open, unlink, opendir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -109,11 +110,12 @@ try {
         exitedLaunches.push(proof.launch);
         verified.push({ file, launch: proof.launch });
       }
+    const tls = await savedTls(root);
     const core = await createCore({
       directory: join(root, 'data'),
       accountingRoot: root,
-      certificate: join(root, 'setup', 'tls.pem'),
-      key: join(root, 'setup', 'tls.key'),
+      certificate: tls.certificate,
+      key: tls.key,
       settings: settings.saved,
       exitedLaunches,
     });
@@ -232,7 +234,7 @@ try {
     process.on('uncaughtException', fatal);
     process.on('unhandledRejection', fatal);
     await core.rpc.call('applied-settings', { revision: settings.revision }, 256, true);
-    await core.listen();
+    await core.listen('0.0.0.0');
     listening = true;
   }
 } catch (error) {

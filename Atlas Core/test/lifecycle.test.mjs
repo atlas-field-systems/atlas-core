@@ -33,7 +33,7 @@ const run = (data) =>
     );
   });
 test(
-  'local JSON reads enforce the byte limit before an input reaches EOF',
+  'local JSON reads bound regular files and reject nonregular inputs without waiting',
   { timeout: 10000 },
   async (t) => {
     const directory = await mkdtemp(join(mutableRoot, 'local-record-'));
@@ -71,24 +71,8 @@ test(
     );
     const fifo = join(directory, 'record.pipe');
     execFileSync('mkfifo', [fifo]);
-    const reading = readJsonFile(fifo, schema).then(
-      () => 'accepted',
-      (error) => error.message,
-    );
-    const writer = await open(fifo, 'w');
-    let outcome;
-    try {
-      await writer.writeFile(Buffer.alloc(65537, 32));
-      outcome = await Promise.race([reading, delay(1500).then(() => 'waiting_for_eof')]);
-    } finally {
-      await writer.close();
-    }
-    await reading;
-    assert.equal(
-      outcome,
-      'record_limit',
-      'Oversized input must be refused while its writer is still open',
-    );
+    await assert.rejects(readJsonFile(fifo, schema), /record_invalid/);
+    await assert.rejects(readJsonFile(directory, schema), /record_invalid/);
   },
 );
 test('update compatibility inspects retained SQLite without opening an Engine or changing data', async (t) => {
@@ -676,7 +660,7 @@ test(
   },
 );
 
-for (const name of ['tls.pem', 'tls.key']) {
+for (const name of ['certificate.pem', 'private.key']) {
   for (const failure of ['sync', 'close', 'both'])
     test(
       `setup ${name} ${failure} failure prevents a completed manifest and preserves failures`,
@@ -724,7 +708,11 @@ for (const name of ['tls.pem', 'tls.key']) {
           closeFailure = new Error('tls_close_test_failure');
         let handle;
         t.mock.method(prototype, 'sync', async function () {
-          if ((await readlink(`/proc/self/fd/${this.fd}`)) !== join(installation, 'setup', name))
+          if (
+            !(await readlink(`/proc/self/fd/${this.fd}`)).match(
+              new RegExp(`/setup/tls/[0-9a-f-]+/${name.replace('.', '\\.')}$$`),
+            )
+          )
             return sync.call(this);
           handle = this;
           if (failure !== 'sync') {
@@ -778,14 +766,17 @@ for (const name of ['tls.pem', 'tls.key']) {
         await assert.rejects(readFile(join(installation, 'setup', 'settings.json')), {
           code: 'ENOENT',
         });
+        const journal = JSON.parse(await readFile(join(installation, 'setup', 'tls-journal.json')));
+        const generation = join(installation, 'setup', 'tls', journal.next.generation);
         assert.deepEqual(
-          await readFile(join(installation, 'setup', 'tls.pem')),
+          await readFile(join(generation, 'certificate.pem')),
           await readFile(certificate),
         );
-        assert.deepEqual(
-          await readFile(join(installation, 'setup', 'tls.key')),
-          await readFile(key),
-        );
+        if (name === 'private.key')
+          assert.deepEqual(await readFile(join(generation, 'private.key')), await readFile(key));
+        await assert.rejects(readFile(join(installation, 'setup', 'tls-state.json')), {
+          code: 'ENOENT',
+        });
       },
     );
 }

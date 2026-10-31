@@ -1,0 +1,20 @@
+{
+  "name": "@atlas/core-operator-build",
+  "private": true,
+  "version": "0.4.0",
+  "type": "module",
+  "engines": {
+    "node": "24.22.1",
+    "npm": "11.19.0"
+  },
+  "dependencies": {
+    "@inkjs/ui": "2.0.0",
+    "ink": "5.2.1",
+    "react": "18.3.1",
+    "react-devtools-core": "4.28.5"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.28",
+    "esbuild": "0.25.12"
+  }
+}
