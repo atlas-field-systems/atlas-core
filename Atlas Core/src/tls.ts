@@ -52,7 +52,10 @@ export async function tlsBytes(path: string, privateFile = false): Promise<Buffe
     }
   }
 }
-export async function validateTls(certificate: string, key: string) {
+export function validateTls(certificate: string, key: string) {
+  return readTlsPair(certificate, key, 'current');
+}
+async function readTlsPair(certificate: string, key: string, validity: 'current' | 'historical') {
   const [certRead, keyRead] = await Promise.allSettled([
     tlsBytes(certificate),
     tlsBytes(key, true),
@@ -68,8 +71,8 @@ export async function validateTls(certificate: string, key: string) {
   try {
     const parsed = new X509Certificate(cert);
     if (
-      Date.parse(parsed.validFrom) > Date.now() ||
-      Date.parse(parsed.validTo) <= Date.now() ||
+      (validity === 'current' &&
+        (Date.parse(parsed.validFrom) > Date.now() || Date.parse(parsed.validTo) <= Date.now())) ||
       !parsed.checkPrivateKey(createPrivateKey(privateKey))
     )
       throw new Error('tls_invalid');
@@ -193,7 +196,7 @@ export async function recoverTlsAfterWriterExit(root: string): Promise<void> {
   const journal = await optionalJson(journalPath(root), Journal);
   if (state) {
     const pair = paths(root, state.saved.generation);
-    const checked = await validateTls(pair.certificate, pair.key);
+    const checked = await readTlsPair(pair.certificate, pair.key, 'historical');
     if (
       checked.certificateSha256 !== state.saved.certificateSha256 ||
       checked.notAfter !== state.saved.notAfter
@@ -203,7 +206,7 @@ export async function recoverTlsAfterWriterExit(root: string): Promise<void> {
   if (journal) {
     if (state?.saved.generation === journal.next.generation) {
       const pair = paths(root, journal.next.generation);
-      const checked = await validateTls(pair.certificate, pair.key);
+      const checked = await readTlsPair(pair.certificate, pair.key, 'historical');
       if (checked.certificateSha256 !== journal.next.certificateSha256)
         throw new Error('repair_required');
     } else if ((state?.saved.generation ?? null) !== journal.previous)

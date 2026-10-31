@@ -199,6 +199,41 @@ test('explicit TLS recovery reconciles both sides of pointer commit and refuses 
   await assert.rejects(recoverTlsAfterWriterExit(installation), /repair_required/);
   assert.ok(await readFile(file));
 });
+test('TLS recovery accepts intact expired history while startup still requires a current pair', async (t) => {
+  const base = await directory(t), installation = join(base, 'installation');
+  await mkdir(join(installation, 'setup'), { recursive: true });
+  const oldPair = await certificate(base, 'old'), nextPair = await certificate(base, 'next');
+  await saveTls(installation, oldPair.cert, oldPair.key);
+  const old = (await savedTls(installation)).state;
+  await writeFile(join(installation, 'setup', 'tls-journal.json'), JSON.stringify({
+    previous: old.saved.generation,
+    next: { ...old.saved, generation: randomUUID() },
+  }));
+  const clock = t.mock.method(Date, 'now', () => Date.parse(old.saved.notAfter) + 1000);
+  await recoverTlsAfterWriterExit(installation);
+  assert.equal((await tlsView(installation)).recoveryRequired, false);
+  assert.equal((await tlsView(installation)).saved.generation, old.saved.generation);
+  assert.equal((await tlsView(installation)).active, null);
+  await assert.rejects(savedTls(installation), /tls_invalid/);
+  clock.mock.restore();
+  await saveTls(installation, nextPair.cert, nextPair.key);
+  assert.notEqual((await savedTls(installation)).state.saved.generation, old.saved.generation);
+});
+test('doctor rejects a FIFO installation record within its read-only probe budget', async (t) => {
+  const base = await directory(t), installation = join(base, 'installation');
+  await mkdir(join(installation, 'setup'), { recursive: true });
+  const fifo = join(installation, 'setup', 'installation.json');
+  execFileSync('mkfifo', ['--mode=0600', fifo]);
+  const result = spawnSync(process.execPath, [join(root, 'dist/cli.js'), 'doctor', '--installation', installation], {
+    encoding: 'utf8', timeout: 12_000, killSignal: 'SIGKILL',
+  });
+  assert.equal(result.status, 1, 'Doctor must report nonregular records instead of waiting for a producer');
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.code, 'prerequisite_failed');
+  assert.notEqual(report.data.checks.compatibility.status, 'pass');
+  assert.equal((await lstat(fifo)).isFIFO(), true);
+  await assert.rejects(stat(join(installation, 'control')), { code: 'ENOENT' });
+});
 test('release mismatch refuses mutation before creating a command lock; cancellation before work writes nothing', async (t) => {
   const base = await directory(t),
     selected = join(base, 'installation');
