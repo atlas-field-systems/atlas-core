@@ -44,6 +44,10 @@ one file.
 | `deadline_seconds` | Eval only | Longest eval duration, at most [3,600](continuous-integration.md#runner-limits) |
 | `expect` | Eval only | Hand-written results that [eval checks](evals.md#correctness-decides-pass-or-fail) compare |
 
+`expect` holds `tasks`, `tracks`, and an optional `removed_assets` list of the Assets
+that a fault deletes. A `tasks` entry can name a nonterminal state for a Task that a
+fault strands.
+
 A subject follows its route once at a fixed speed and stops at the last point. A
 route holds one to 1,000 points.
 
@@ -71,9 +75,11 @@ Assets finish their first check-in.
 | `pause` | `asset` | The operator client creates a Pause Task |
 | `resume` | `asset` | The operator client creates a Resume Task that expires in 30 seconds |
 | `cancel` | `asset`, `index` | The operator client requests cancellation of that Asset's Task at `index` |
+| `reorder` | `asset`, `indexes` | The operator client sends `tasks.setOrder` with those Tasks in that order |
 | `fault` | `id`, plus any fields its [failure point](failure-points.md) needs | The fault injector applies that failure point |
 
-`index` counts `move_to` actions for one Asset, from zero.
+`index` counts `move_to` actions for one Asset, from zero. A `core-reset` fault must
+be the last action, and it runs [after the checks](evals.md#run-an-eval), not at its time.
 
 ## Time
 
@@ -86,8 +92,8 @@ and `speed`, not the clock.
 
 The loader reads at most 1 MiB, parses the JSON, and validates it with a closed
 schema before any network work. An unknown field, an unknown failure point, an
-out-of-range value, a duplicate alias, or an action that names an unknown Asset
-stops the run with exit code 2. Scenarios contain no randomness, so a correctness
+out-of-range value, a duplicate alias, an action that names an unknown Asset, or a
+`core-reset` before the last action stops the run with exit code 2. Scenarios contain no randomness, so a correctness
 difference between two runs comes from the software.
 
 [Next: interactive runs](interactive.md)

@@ -24,9 +24,9 @@ with `node ../scripts/format.mjs --base <full-ancestor-SHA>`.
 | Task execution | Move To by position and by Geofeature, two queued Tasks in order, and reordering before start |
 | Pause and Resume | Every [required control example](../Atlas%20Protocol/task-controls.md#required-examples) |
 | Failure points | Every ID in [failure points](failure-points.md) fires in at least one scenario and meets its required result |
-| Run records | A failed run still appends a record, and an unwritable history directory fails the run |
+| Run records | A failed setup or run still writes a record, and an unwritable history directory fails the run |
 | Comparison | Two records with known values print the expected change, and a changed scenario hash is marked |
-| CI result | A failed, cancelled, or missing eval group fails `record`, and a fork pull request pushes no history |
+| CI result | A failed, cancelled, or missing eval group fails `record`, a fork pull request pushes no history, and `publish` refuses an oversized record |
 | Shutdown | SIGINT awaits writes, revokes created keys, and exits 1 with any stalled write listed |
 
 ## Prove that evals can fail
@@ -38,6 +38,7 @@ control. A control injects one defect and must fail that check.
 | --- | --- |
 | Report the wrong final Task state | `tasks` |
 | Start the second Task first | `order` |
+| Keep an Asset that `expect.removed_assets` names | `assets` |
 | Omit one reading from Core | `positions` |
 | Stop one report short of the target | `final_position` |
 | Expect one Track too many | `tracks` |
