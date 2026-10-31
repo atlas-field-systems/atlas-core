@@ -188,8 +188,7 @@ export async function recordTlsActivation(root: string, success: boolean): Promi
     activationFailure: success ? null : 'start_failed',
   });
 }
-// The caller proves every installation writer stopped before pruning generations.
-export async function recoverTls(root: string): Promise<void> {
+export async function recoverTlsAfterWriterExit(root: string): Promise<void> {
   const state = await optionalJson(statePath(root), TlsState);
   const journal = await optionalJson(journalPath(root), Journal);
   if (state) {

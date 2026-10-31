@@ -30,7 +30,7 @@ import { maintenance, saveSettings } from './maintenance.js';
 import { defaults, Settings } from './settings.js';
 import { id, zero } from './exact.js';
 import { retainedEvent } from './operator-report.js';
-import { validateTls, saveTls, savedTls, tlsView, recordTlsActivation, recoverTls } from './tls.js';
+import { validateTls, saveTls, savedTls, tlsView, recordTlsActivation, recoverTlsAfterWriterExit } from './tls.js';
 import { diskUsage, hasCapacity } from './capacity.js';
 
 async function requireFreshInstallation(root: string): Promise<void> {
@@ -605,7 +605,7 @@ export class Administration {
       await this.removeStopped(writer, manifest.installation_id);
     }
     await this.stoppedInstallationContainers(manifest.installation_id);
-    await recoverTls(this.root);
+    await recoverTlsAfterWriterExit(this.root);
   }
   async enrollmentInspect(): Promise<unknown> {
     return maintenance(this.root, { operation: 'enrollment-inspect' });

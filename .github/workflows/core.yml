@@ -32,11 +32,20 @@ jobs:
           cache-dependency-path: |
             Atlas Protocol/package-lock.json
             Atlas Core/package-lock.json
+            Atlas Core/operator/package-lock.json
       - run: npm run build:prepare
       - run: npm install --global --offline --ignore-scripts --no-audit --no-fund ./artifacts/npm-11.19.0.tgz
       - run: npm run protocol:prepare
       - run: npm ci --include=dev
       - run: npm test
+      - name: Install operator qualification tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes strace python3 openssl
+      - run: npm run operator:prepare
+      - run: npm run operator:build
+      - run: npm run test:operator
+      - run: npm run test:operator-package
       - run: npm run image:build
       - run: npm run test:container
       - run: npm run fixture:retention

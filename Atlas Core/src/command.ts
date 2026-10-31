@@ -378,7 +378,6 @@ export async function perform(input: Invocation, signal?: AbortSignal): Promise<
     };
     await checkCompatibility(input.root, release, input.image, command.kind);
     if (signal?.aborted) return cancelled();
-    // Setup prerequisites run before the flock creates installation storage.
     if (command.kind === 'setup') {
       const image = input.image ?? release?.image;
       if (!image) throw new Error('release_metadata_missing');
