@@ -20,8 +20,8 @@ free for this public repository.
 | `record` | Append the run records, write the job summary, and decide the final result |
 
 `record` always runs. It fails if any group failed, was cancelled, or produced no
-record, so a skipped eval can never look like a pass. `record` is the one required
-check for merging. `eval` uses `fail-fast: false`, so one failure does not hide others.
+record, so a skipped eval can never look like a pass. `record` is the required check
+for evals. `eval` uses `fail-fast: false`, so one failure does not hide others.
 
 Each group runs its scenarios in order, each with a fresh Core installation under
 `$RUNNER_TEMP`. Groups run in parallel on separate runners.
