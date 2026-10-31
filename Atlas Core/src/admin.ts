@@ -568,6 +568,7 @@ export class Administration {
           if (await this.containerExists(container))
             await this.removeStopped(container, manifest.installation_id);
         const exits = join(this.root, 'control', 'exits');
+        await mkdir(exits, { recursive: true, mode: 0o700 });
         for (const file of await readdir(exits))
           if (file !== `${action.writer?.container}.json`)
             await rm(join(exits, file), { force: true });
