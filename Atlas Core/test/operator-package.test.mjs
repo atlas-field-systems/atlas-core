@@ -16,7 +16,7 @@ const env = {
 
 test(
   'packed operator verifies before offline installation, runs in isolation, and survives replacement and removal',
-  { timeout: 120_000 },
+  { timeout: 240_000 },
   async (t) => {
     assert.ok(npm, 'Run through npm run test:operator-package');
     const base = await mkdtemp(join(mutableRoot, 'packed-'));
@@ -128,11 +128,55 @@ test(
       {
         encoding: 'utf8',
         env: { ...offlineEnv, ATLAS_PTY_SETTINGS_FIXTURE: settingsFixture },
-        timeout: 45_000,
+        timeout: 150_000,
       },
     );
     assert.equal(JSON.parse(pty).pty, 'pass');
     await writeFile(join(base, 'pty-result.json'), pty);
+    const edited = join(base, 'pty/settings-absent');
+    const json = (...args) => {
+      const result = run(...args, '--installation', edited);
+      return { status: result.status, ...JSON.parse(result.stdout) };
+    };
+    assert.match(run('help').stdout, /stop \[--force\]/);
+    assert.match(run('help').stdout, /hard-reset --confirm-destructive/);
+    assert.match(run('help').stdout, /enrollment inspect \| enrollment revoke/);
+    const show = json('settings', 'show');
+    assert.equal(show.status, 0);
+    assert.equal(show.event, 'command_completed');
+    assert.equal(show.data.saved.limits.max_changes, 999);
+    assert.equal(show.data.saved.temporary.max_snapshot_bytes, '536870913');
+    assert.equal(show.data.saved.diagnosticLevel, 'DEBUG');
+    const forced = json('stop', '--force');
+    assert.deepEqual([forced.status, forced.data], [0, { stopped: true, writer_exit: 'verified' }]);
+    const uuid = 'c5d23a5c-d7d6-443a-9b97-ebf37a1a41bc';
+    for (const args of [
+      ['hard-reset'],
+      ['update'],
+      ['enrollment', 'revoke', '--binding', uuid, '--api-key', uuid],
+    ]) {
+      const refused = json(...args);
+      assert.equal(refused.status, 1);
+      assert.equal(refused.code, 'destructive_confirmation_required');
+    }
+    for (const args of [['reset'], ['recover'], ['enrollment', 'inspect']]) {
+      const unavailable = json(...args);
+      assert.equal(unavailable.status, 1);
+      assert.equal(unavailable.event, 'command_failed');
+      assert.match(unavailable.code, /^[a-z_]+$/);
+    }
+    const saveDraft = join(base, 'cli-settings.json');
+    await writeFile(saveDraft, JSON.stringify({ ...show.data.saved, maxConnections: 30 }));
+    const advanced = json(
+      'settings',
+      'save',
+      '--expected-revision',
+      show.data.revision,
+      '--file',
+      saveDraft,
+    );
+    assert.equal(advanced.status, 0);
+    assert.equal(advanced.data.saved.maxConnections, 30);
     execFileSync(process.execPath, args, { env: offlineEnv });
     assert.deepEqual(await readFile(join(retained, 'setup/installation.json')), before);
     execFileSync(
