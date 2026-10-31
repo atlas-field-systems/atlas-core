@@ -41,6 +41,7 @@ control. A control injects one defect and must fail that check.
 | Omit one reading from Core | `positions` |
 | Stop one report short of the target | `final_position` |
 | Expect one Track too many | `tracks` |
+| Send the first report with no `tags` | `tags` |
 | Name a failure point that never fires | `faults` |
 
 Each failure point also needs one broken control that its check rejects. A separate
