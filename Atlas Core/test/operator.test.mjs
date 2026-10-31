@@ -527,7 +527,6 @@ test(
     await writeFile(join(setup, 'installation.json'), JSON.stringify(manifest));
     await mkdir(join(installation, 'recovery'), { recursive: true });
     await mkdir(join(installation, 'data'), { recursive: true });
-    await mkdir(join(installation, 'control/exits'), { recursive: true });
     const ambiguous = [
       `tls-state.json.${randomUUID()}.tmp`,
       `settings.json.${randomUUID()}.tmp`,
