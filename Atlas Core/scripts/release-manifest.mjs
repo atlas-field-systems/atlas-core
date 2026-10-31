@@ -26,10 +26,21 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 assert.equal(hash(reference), inputs.openapiSha256);
 const archive = await readFile(join(root, 'artifacts', 'source.tar'));
 assert.equal(hash(archive), hash(execFileSync('git', ['archive', '--format=tar', '--prefix=atlas/', 'HEAD'], { cwd: repository, maxBuffer: 33_554_432 })), 'Source archive must match this exact committed tree');
+const operator = JSON.parse(await readFile(join(root, 'artifacts', 'operator-manifest.json')));
+assert.equal(operator.sourceRevision, revision); assert.equal(operator.sourceTree, tree); assert.equal(operator.sourceDirty, false);
+assert.equal(operator.image, image); assert.equal(operator.platform, source.atlasBuild.container.platform);
+const operatorBytes = await readFile(join(root, 'artifacts', operator.operatorPackage.file));
+assert.equal(hash(operatorBytes), operator.operatorPackage.sha256);
+assert.equal(operatorBytes.byteLength, operator.operatorPackage.bytes);
+const verifierBytes = await readFile(join(root, 'artifacts', operator.verifier.file));
+assert.equal(hash(verifierBytes), operator.verifier.sha256);
+assert.equal(verifierBytes.byteLength, operator.verifier.bytes);
+assert.equal(operator.release, source.version);
+assert.equal(operator.protocol, source.atlasBuild.protocol.version);
 const manifest = { release: source.version, sourceRevision: revision, sourceTree: tree,
   sourceArchive: { file: 'source.tar', sha256: hash(archive), bytes: archive.byteLength },
   protocol: source.atlasBuild.protocol, container: source.atlasBuild.container, npmArtifact: source.atlasBuild.npm,
-  inputs, image, reference: { file: 'openapi.json', sha256: hash(reference) },
+  inputs, image, operatorPackage: operator.operatorPackage, operatorRelease: operator, reference: { file: 'openapi.json', sha256: hash(reference) },
   qualification: { functional: 'Run npm test, npm run test:container and npm run fixture:retention; this input manifest does not certify their results', sustainedEightHours: 'unrun', powerLoss: 'unrun' } };
 await writeFile(join(root, 'artifacts', 'release-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 console.log('Release manifest matches committed source, image inputs, native engine and stock reference');

@@ -105,10 +105,23 @@ Neither tuning nor capacity failure permits weaker retention or atomicity.
 
 ## Operator-interface qualification
 
-The [intended CLI and TUI](command-line.md) require the following evidence before
-release. These workflows are unrun until the packaged interface exists. Extend the
-existing CLI and container workflows using the exact npm artifact and matching image
-identified by the [release metadata](build-profile.md#operator-package).
+Run `npm run operator:prepare`, `npm run build`, `npm run operator:build`,
+`npm run test:operator`, and `npm run test:operator-package` with the pinned toolchain.
+Package tests require Linux, Python 3, OpenSSL, tar, and strace. They retain evidence
+under `ATLAS_TEST_ROOT`, outside the checkout. They verify hash refusal, empty-cache
+installation without network connections, dependency closure, lazy TUI loading,
+retained-state compatibility, replacement/removal, masked setup, settings editing,
+resize, Ctrl-C, terminal loss, and failure precedence in a real PTY.
+TLS tests kill the actual saver on both sides of the pointer commit and require
+explicit journal reconciliation. Flush tests retain both sync and close failures.
+
+The private package tests use an explicitly marked fixture image ID. They do not
+qualify a release image. Docker is unavailable on the implementation host. Image
+build, release-manifest generation, preloaded/pulled-image setup, container TLS
+activation, host reboot, SSH, and complete interactive server workflows remain unrun.
+The container workflow includes save-only TLS continuity, mismatch refusal, restart
+activation and the externally locked Start test. Run it with the actual packed
+artifact and matching image before release. The remaining release gates are:
 
 - Install on a clean supported host without a checkout or compiler. Check missing
   prerequisites, invalid artifacts, and retained-state protection.

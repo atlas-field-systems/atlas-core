@@ -9,7 +9,7 @@ drone or turn a network acknowledgment into physical success.
 Core is one TypeScript server on Node.js, with ordinary internal modules,
 one SQLite database, and local Object files. Fastify supplies the HTTP adapter;
 the [database worker](database.md) owns SQLite, transactions, and checkpoints.
-Core runs in a Docker container on Linux. Explicit local TypeScript commands
+Core runs in a Docker container on Linux. The packaged CLI and guided terminal interface
 control its lifecycle and settings. Protocol remains independent of these choices.
 
 Operators and independent integrations connect over adequate IP using the SDK or
@@ -18,9 +18,9 @@ projects. Closing the UI does not stop Core. The [operating environment](../oper
 host internet access while allowing interruptions on field links. Local Core work
 does not require a cloud service.
 
-The [command-line interface](command-line.md) defines the intended npm installation,
-CLI, and TUI behavior. Those interfaces are specified but not yet implemented.
-The source entry point remains documented under [local commands](lifecycle.md#commands).
+The [command-line interface](command-line.md) supplies direct commands and a guided
+Ink interface. The npm name remains a release input; private qualification tarballs
+are available through [release packaging](build-profile.md#operator-package).
 
 ## Ownership inside the server
 
