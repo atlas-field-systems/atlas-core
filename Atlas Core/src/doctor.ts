@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { lstat, statfs, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { createServer, isIP } from 'node:net';
+import { BlockList, createServer, isIP } from 'node:net';
 import { z } from 'zod';
 import {
   Action,
@@ -15,6 +15,7 @@ import { defaults } from './settings.js';
 import type { Settings } from './settings.js';
 import { savedTls, tlsView } from './tls.js';
 import type { ReleaseMetadata } from './release.js';
+import { validateImageInspection } from './release.js';
 
 async function optionalJson<S extends z.ZodType>(
   path: string,
@@ -91,8 +92,10 @@ export async function doctor(
         ['tls_invalid', 'repair_required', 'tls_conversion_required', 'recovery_required'].includes(
           error.message,
         );
+      const invalidImage =
+        name === 'image' && error instanceof Error && error.message === 'incompatible_image';
       checks[name] = {
-        status: invalidTls ? 'fail' : 'unavailable',
+        status: invalidTls || invalidImage ? 'fail' : 'unavailable',
         instruction: advice ?? instruction,
       };
     }
@@ -175,31 +178,46 @@ export async function doctor(
   );
   await check(
     'image',
-    'Preload the exact release image with docker load. Setup can pull only the immutable registry reference recorded by the release.',
+    'Use the exact release image and source revision. Preload it with docker load. Setup can pull only the recorded immutable registry reference.',
     async () => {
       const manifest = await optionalJson(join(root, 'setup', 'installation.json'), Manifest);
       const image = suppliedImage ?? release?.image ?? manifest?.image;
       if (!image) return false;
-      const result = z
-        .array(z.object({ Id: z.string(), Os: z.string(), Architecture: z.string() }))
-        .length(1)
-        .parse(JSON.parse(await probe('sudo', ['-n', 'docker', 'image', 'inspect', image])))[0];
-      return result?.Id === image && result.Os === 'linux' && result.Architecture === 'amd64';
+      validateImageInspection(
+        await probe('sudo', ['-n', 'docker', 'image', 'inspect', image]),
+        image,
+        release,
+      );
+      return true;
     },
   );
   await check(
     'port',
     'Use a numeric bind address with a free port, or localhost. Do not stop unrelated services.',
     async () => {
+      const host = settings.host === 'localhost' ? '127.0.0.1' : settings.host;
+      const version = isIP(host);
+      if (!version) return false;
+      const family = version === 6 ? 'ipv6' : 'ipv4';
       const writer = await optionalJson(join(root, 'control', 'writer.json'), ContainerWriter);
-      if (writer && !setup) {
+      if (writer?.kind === 'service' && !setup) {
         const manifest = await optionalJson(join(root, 'setup', 'installation.json'), Manifest);
+        const bindingAddress = new BlockList();
+        bindingAddress.addAddress(host, family);
         const records = z
           .array(
             z.object({
               Id: z.string(),
               State: z.object({ Running: z.boolean() }),
               Config: z.object({ Labels: z.record(z.string(), z.string()).nullable() }),
+              NetworkSettings: z.object({
+                Ports: z
+                  .record(
+                    z.string(),
+                    z.array(z.object({ HostIp: z.string(), HostPort: z.string() })).nullable(),
+                  )
+                  .nullable(),
+              }),
             }),
           )
           .length(1)
@@ -209,12 +227,15 @@ export async function doctor(
           actual?.State.Running &&
           actual.Id === writer.container &&
           actual.Config.Labels?.['atlas.installation'] === manifest?.installation_id &&
-          actual.Config.Labels?.['atlas.launch'] === writer.launch
+          actual.Config.Labels?.['atlas.launch'] === writer.launch &&
+          actual.NetworkSettings.Ports?.[`${settings.port}/tcp`]?.some(
+            (binding) =>
+              binding.HostPort === String(settings.port) &&
+              bindingAddress.check(binding.HostIp, isIP(binding.HostIp) === 6 ? 'ipv6' : 'ipv4'),
+          )
         )
           return true;
       }
-      const host = settings.host === 'localhost' ? '127.0.0.1' : settings.host;
-      if (!isIP(host)) return false;
       return new Promise<boolean>((resolve) => {
         const server = createServer();
         const timer = setTimeout(() => {

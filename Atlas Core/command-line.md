@@ -55,6 +55,9 @@ Running does not imply ready. [Readiness](readiness.md) defines service health.
 Unavailable evidence never becomes healthy. `doctor` performs bounded, read-only
 prerequisite and installation checks, gives actionable results, and exits 1 when a
 required check fails. Neither command repairs, starts Core, or resumes actions.
+Doctor checks the saved bind address and port. A running service satisfies that
+check only when its verified published binding matches. A different occupied
+saved binding fails without stopping either service.
 `export` preserves the bounded format and partial results in [diagnostics](diagnostics.md).
 
 ## Interactive administration

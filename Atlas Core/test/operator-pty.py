@@ -49,7 +49,12 @@ elif verb == 'create':
     container = format(state['next'], '064x')
     state['next'] += 1
     labels = dict(value.split('=', 1) for flag, value in zip(args, args[1:]) if flag == '--label')
-    containers[container] = {'labels': labels, 'running': False, 'pid': 0}
+    ports = {}
+    published = next((value for flag, value in zip(args, args[1:]) if flag == '--publish'), None)
+    if published:
+        address, host_port, container_port = published.rsplit(':', 2)
+        ports[container_port + '/tcp'] = [{'HostIp': address.strip('[]'), 'HostPort': host_port}]
+    containers[container] = {'labels': labels, 'running': False, 'pid': 0, 'ports': ports}
     save()
     print(container)
 elif verb == 'start' and '--attach' in args:
@@ -62,7 +67,8 @@ elif verb == 'start':
 elif verb == 'inspect':
     entry = containers[args[1]]
     print(json.dumps([{'Id': args[1], 'State': {'Running': entry['running'], 'Pid': entry['pid'], 'ExitCode': 0},
-        'Config': {'Labels': entry['labels']}, 'HostConfig': {'LogConfig': {'Type': 'none'}, 'RestartPolicy': {'Name': 'no'}}}]))
+        'Config': {'Labels': entry['labels']}, 'HostConfig': {'LogConfig': {'Type': 'none'}, 'RestartPolicy': {'Name': 'no'}},
+        'NetworkSettings': {'Ports': entry.get('ports', {})}}]))
 elif verb == 'ps':
     wanted = next(value[3:] for value in args if value.startswith('id='))
     print(wanted if wanted in containers else '')
