@@ -41,6 +41,9 @@ Atlas Mission, Core, and external Assets work together within the initial scope.
 2. [Core](Atlas%20Core/README.md): how the server provides those promises.
 3. [SDK](Atlas%20SDK/README.md): how other programs use them.
 
+[Atlas Simulations](Atlas%20Simulations/README.md) defines simulated Assets that use
+SDK against a real Core. It is a consumer of these layers, not a fourth layer.
+
 Each folder's README gives its short reading order. Contributors also read
 [AGENTS.md](AGENTS.md). There is no separate glossary, decision archive, or audit
 folder to reconcile. Earlier explanations remain in Git history, not as a second
