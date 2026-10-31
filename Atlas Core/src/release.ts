@@ -71,6 +71,13 @@ export async function verifyImage(
     await docker(['pull', '--quiet', '--platform', release.platform, release.imageReference]);
     raw = await docker(['image', 'inspect', image]);
   }
+  validateImageInspection(raw, image, release);
+}
+export function validateImageInspection(
+  raw: string,
+  image: string,
+  release: ReleaseMetadata | undefined,
+): void {
   const inspected = z
     .array(
       z.object({
