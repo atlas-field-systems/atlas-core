@@ -34,7 +34,7 @@ Each check compares three separate sources.
 | Source | Contents | Owner |
 | --- | --- | --- |
 | `expect` and `timeline` | Hand-written results and targets | The scenario author |
-| Truth log | Every reading and Task report that the simulator produced | The World and the Asset runtime |
+| Truth log | Every reading, `tags` report, and Task report that the simulator produced | The World and the Asset runtime |
 | Core reads | Tasks, Assets, Tracks, Observations, and position history | Core, read after the run |
 
 Write `expect` by reasoning about the scenario. Never copy it from a run's output,
@@ -48,6 +48,7 @@ no tolerance.
 | `positions` | Every produced reading appears exactly once in Core history |
 | `final_position` | Core's position equals the last truth-log reading, and equals the target when the Asset's last Task completed |
 | `tracks` | The Track count matches `expect`, and each Track names its source Observation |
+| `tags` | Each Asset's first report carried `simulated`, and each Asset that Core still holds has the Tags from its last `current` `tags` report |
 | `faults` | Every `fault` action fired and its [required result](failure-points.md) held |
 
 A scenario passes only when every check ran and passed and cleanup is verified. A

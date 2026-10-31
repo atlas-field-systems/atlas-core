@@ -7,8 +7,7 @@ come from the [World](README.md#ownership) instead of sensors and motors.
 ## Identity
 
 Each simulated Asset owns one SDK HTTP client and its own API key. The runtime
-prepares registration through `reporting.register`, adds the `simulator` tag, and
-advertises these capabilities:
+prepares registration through `reporting.register` and advertises these capabilities:
 
 | Command | Scheduling |
 | --- | --- |
@@ -20,6 +19,11 @@ Core keeps aliases unique, and Assets from earlier runs stay until Reset. The ru
 therefore adds its four-character run ID to each alias, so `Drone 1` becomes
 `Drone 1 a1b2`. Scenarios and eval records use the scenario alias.
 
+Core refuses [Tags](../Atlas%20Protocol/components/tags.md) in registration, so the
+Asset has none until its first report. The runtime sends that `current` report
+through `reporting.asset` with the start position and `{presets: ["simulated"]}`,
+classified `state_until_changed`. Later reports omit `tags`, which keeps the set.
+
 ## State lives in memory
 
 An Asset's identity, sequences, control revision, gate, active Task, and position
@@ -29,7 +33,8 @@ because a simulated Asset never outlives its process. A new run registers new As
 
 ## Timers
 
-The runtime owns these timers and stops them before it closes its client.
+The runtime starts these timers after Core accepts the first report, so no Asset
+takes a Task untagged. It stops them before it closes its client.
 
 | Timer | Interval | Work |
 | --- | --- | --- |

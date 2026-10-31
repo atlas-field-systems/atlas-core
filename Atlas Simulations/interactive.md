@@ -25,7 +25,7 @@ npm run simulate -- \
 ## What you see
 
 For the example scenario, Mission shows `Drone 1` and its run ID at the start
-position, with the `simulator` tag and `healthy` communications.
+position, with `healthy` communications. The Asset's `tags` section holds `simulated`.
 
 1. Queue a Move To. Core accepts the Task, and the Asset reports `in_progress`
    within about one second.
@@ -43,8 +43,10 @@ listed otherwise. A second signal does not skip cleanup. The run reports a stall
 write and exits 1 after 30 seconds.
 
 Stopping deletes no Asset. Assets stay registered, reach `offline` after 60 seconds,
-and keep their Tasks in the last reported state until Reset. Filter them by the
-`simulator` tag. Each new run registers new Assets.
+and keep their Tasks in the last reported state until Reset. Core has no tag filter,
+so a client that hides simulated Assets reads `tags` on each Asset. An Asset that
+stopped before its first report has no Tags, and only its alias suffix identifies it.
+Each new run registers new Assets.
 
 ## Refusals
 

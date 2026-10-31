@@ -42,10 +42,10 @@ helper, or SDK test harness. Eval runs reach Core only through public HTTPS and
 WSS, the documented [local commands](../Atlas%20Core/lifecycle.md#commands), and
 Docker control of the Core container.
 
-Simulated Assets carry the `simulator` Asset tag. Tags are a general Asset feature
-that Protocol will own, and they do not exist yet. Core gives this tag no special
-behavior. There is no development mode, and Core never skips a rule for a simulated
-Asset. If a simulation needs a behavior that Protocol lacks, change Protocol first.
+Each simulated Asset reports the `simulated` [Tag](../Atlas%20Protocol/components/tags.md).
+The Tag describes the Asset and changes nothing else. There is no development mode,
+and Core never skips a rule for a simulated Asset. If a simulation needs a behavior
+that Protocol lacks, change Protocol first.
 
 ## Ownership
 

@@ -79,6 +79,9 @@ reaches each limit.
 | `sequence-conflict` | Send changed facts at an occupied sequence | `409 evidence_conflict`, and nothing commits |
 | `late-position` | Send an older unseen reading | History gains it, and current position stays |
 | `future-time` | Send a future-dated reading | Core marks it time-uncertain and never promotes it |
+| `tags-refused` | Send `tags` directly to Core in a registration and an authored update, then with an unknown preset and a duplicate | Core refuses each one, and the Asset's Tags do not change |
+| `tags-cleared` | Report `{presets: []}`, then send later reports that omit `tags` | The set stays empty, and omission never restores `simulated` |
+| `tags-history-only` | Send `{presets: []}` in a `history_only` report | The current set stays `simulated` |
 
 ## What evals cannot reach
 
