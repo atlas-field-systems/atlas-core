@@ -7,342 +7,861 @@ import { join } from 'node:path';
 import { setImmediate as yieldToLoop } from 'node:timers/promises';
 import { QueuePressure } from '../dist/rpc.js';
 import { readWssServer } from '@atlas/protocol';
-const ok = r => { assert.equal(r.status, 200, JSON.stringify(r.json)); return r.json.data; };
+const ok = (r) => {
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  return r.json.data;
+};
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 async function socket(f, credential = f.apiKey, authenticate = true) {
   const ws = new WebSocket(f.address.replace('https:', 'wss:') + '/changes', { ca: f.ca });
-  const messages = []; const waiters = new Set();
-  ws.on('message', raw => { const frame = JSON.parse(raw.toString()); messages.push(frame); for (const waiter of waiters) waiter(); });
-  await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-  const take = async predicate => {
-    const found = () => { const index = messages.findIndex(predicate); return index < 0 ? undefined : messages.splice(index, 1)[0]; };
-    const initial = found(); if (initial) return initial;
-    return new Promise((resolve, reject) => { const timer = setTimeout(() => { waiters.delete(check); reject(new Error('Required WSS event was not delivered')); }, 10000); const check = () => { const value = found(); if (value) { clearTimeout(timer); waiters.delete(check); resolve(value); } }; waiters.add(check); });
+  const messages = [];
+  const waiters = new Set();
+  ws.on('message', (raw) => {
+    const frame = JSON.parse(raw.toString());
+    messages.push(frame);
+    for (const waiter of waiters) waiter();
+  });
+  await new Promise((resolve, reject) => {
+    ws.once('open', resolve);
+    ws.once('error', reject);
+  });
+  const take = async (predicate) => {
+    const found = () => {
+      const index = messages.findIndex(predicate);
+      return index < 0 ? undefined : messages.splice(index, 1)[0];
+    };
+    const initial = found();
+    if (initial) return initial;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        waiters.delete(check);
+        reject(new Error('Required WSS event was not delivered'));
+      }, 10000);
+      const check = () => {
+        const value = found();
+        if (value) {
+          clearTimeout(timer);
+          waiters.delete(check);
+          resolve(value);
+        }
+      };
+      waiters.add(check);
+    });
   };
-  const send = (type, data) => ws.send(JSON.stringify({ type, dataset_id: f.core.dataset, protocol_version: '0.3.0', request_id: uuid(), data }));
+  const send = (type, data) =>
+    ws.send(
+      JSON.stringify({
+        type,
+        dataset_id: f.core.dataset,
+        protocol_version: '0.3.0',
+        request_id: uuid(),
+        data,
+      }),
+    );
   if (authenticate) {
-    ws.send(JSON.stringify({ type: 'authenticate', request_id: uuid(), dataset_id: f.core.dataset, protocol_version: '0.3.0', api_key: credential }));
-    await take(frame => frame.type === 'authenticated');
+    ws.send(
+      JSON.stringify({
+        type: 'authenticate',
+        request_id: uuid(),
+        dataset_id: f.core.dataset,
+        protocol_version: '0.3.0',
+        api_key: credential,
+      }),
+    );
+    await take((frame) => frame.type === 'authenticated');
   }
   return { ws, take, send, messages };
 }
-test('WSS refuses API 0.1.0 and 0.2.0 authentication without exposing picture data', { timeout: 30000 }, async t => {
-  const f = await fixture(t);
-  const registered = await f.call('RegisterAsset', registration()); ok(registered);
-  for (const version of ['0.1.0', '0.2.0']) {
-    const client = await socket(f, f.apiKey, false); t.after(() => client.ws.terminate());
-    const closed = new Promise(resolve => client.ws.once('close', code => resolve(code)));
-    const request_id = uuid();
-    client.ws.send(JSON.stringify({ type: 'authenticate', request_id, dataset_id: f.core.dataset, protocol_version: version, api_key: f.apiKey }));
-    const frame = await client.take(() => true);
-    assert.equal(frame.type, 'error');
-    assert.equal(frame.request_id, request_id);
-    assert.equal(frame.protocol_version, '0.3.0');
-    assert.equal(frame.dataset_id, f.core.dataset);
-    assert.equal(frame.error.code, 'protocol_mismatch');
-    assert.deepEqual(frame.error.details, { protocol_version: '0.3.0' });
-    assert.equal(await closed, 1008);
-    assert.deepEqual(client.messages, []);
-  }
-  const current = await socket(f); t.after(() => current.ws.terminate());
-  current.send('read_changes', { from_cursor: registered.json.commit_cursor, ...limits });
-  assert.deepEqual((await current.take(frame => frame.type === 'read_changes_result')).data.messages, []);
-});
-
-test('WSS preserves Track time status and selected Task summaries through snapshot, live commits and reconnect replay', { timeout: 30000 }, async t => {
-  const f = await fixture(t);
-  const asset = ok(await f.call('RegisterAsset', registration())).asset;
-  const publisher_id = uuid(), observation_id = uuid(), origin = { kind: 'publisher', publisher_id };
-  const initialTelemetry = { ...telemetry(origin, 51), source_times: { altitude: null, ground_speed: '9999-01-01T00:00:00Z' } };
-  const pair = ok(await f.call('CreateObservation', { request_id: uuid(), observation_id, publisher_id,
-    report: report(f.core.dataset, observation_id, origin, 1, { telemetry: initialTelemetry }) }));
-  const task = ok(await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'move_to', scheduling: 'queued', inputs: { target: { kind: 'position', position: { latitude: 51, longitude: -1 } } } }));
-  const taskOrigin = { kind: 'asset_process', process_generation: asset.process_generation };
-  const firstEvidence = { dataset_id: f.core.dataset, asset_id: asset.id, origin: taskOrigin, report_id: uuid(), sequence: '9007199254740993', generated_at: '2026-10-21T12:00:00.000000123Z',
-    payload: { task_id: task.task_id, event: 'state', state: 'in_progress', message: 'Started' } };
-  const started = await f.call('ReportTaskExecution', { evidence: firstEvidence }); ok(started);
-  const firstSummary = { origin: taskOrigin, report_id: firstEvidence.report_id, sequence: firstEvidence.sequence, generated_at: firstEvidence.generated_at, event: 'state', state: 'in_progress', message: 'Started' };
-  const client = await socket(f); t.after(() => client.ws.terminate());
-  client.send('read_snapshot', { load_id: uuid(), allocation_context: ok(await f.call('GetHealth')).allocation_context, page_size: 1, ...limits });
-  const snapshotFrame = await client.take(frame => frame.type === 'read_snapshot_result');
-  readWssServer(Buffer.from(JSON.stringify(snapshotFrame)), { datasetId: f.core.dataset });
-  const snapshot = snapshotFrame.data;
-  assert.equal(snapshot.baseline_cursor, started.json.commit_cursor);
-  const items = [...snapshot.items];
-  let page = snapshot;
-  while (page.next_page_token !== null) {
-    assert.ok(items.length < 3, 'The snapshot must contain exactly Asset, Track and Task');
-    client.send('read_snapshot', { page_token: page.next_page_token });
-    const frame = await client.take(frame => frame.type === 'read_snapshot_result');
-    readWssServer(Buffer.from(JSON.stringify(frame)), { datasetId: f.core.dataset });
-    page = frame.data;
-    assert.equal(page.baseline_cursor, snapshot.baseline_cursor);
-    assert.equal(page.capture_id, snapshot.capture_id);
-    assert.equal(page.release_token, snapshot.release_token);
-    assert.equal(page.items.length, 1);
-    items.push(...page.items);
-  }
-  assert.deepEqual(items.map(item => [item.resource_kind, item.resource_id]), [['asset', asset.id], ['task', task.task_id], ['track', pair.track.id]]);
-  assert.deepEqual(items.find(item => item.resource_kind === 'track').image.telemetry.time_status, { position: 'known', altitude: 'unknown', ground_speed: 'uncertain' });
-  assert.deepEqual(items.find(item => item.resource_kind === 'task').image.execution_summary, firstSummary);
-  client.send('release_snapshot', { release_token: snapshot.release_token });
-  await client.take(frame => frame.type === 'snapshot_released');
-  const subscription_id = uuid();
-  client.send('subscribe_changes', { subscription_id, from_cursor: snapshot.baseline_cursor, ...limits });
-  assert.equal((await client.take(frame => frame.type === 'subscribed')).data.handoff_cursor, snapshot.baseline_cursor);
-  assert.equal((await client.take(frame => frame.type === 'handoff_complete')).data.handoff_cursor, snapshot.baseline_cursor);
-
-  const updateReport = report(f.core.dataset, observation_id, origin, 2, { telemetry: { ...telemetry(origin, 52, null), source_times: { altitude: '2026-10-21T12:00:01Z', ground_speed: '9999-01-01T00:00:00Z' } } });
-  const changedTrack = await f.call('ReportObservation', { observation_id, publisher_id, report: updateReport }); ok(changedTrack);
-  const sameEvidence = { ...firstEvidence, report_id: uuid(), sequence: '9007199254740994', generated_at: null, payload: { task_id: task.task_id, event: 'state', state: 'in_progress' } };
-  const sameState = await f.call('ReportTaskExecution', { evidence: sameEvidence }); ok(sameState);
-  const sameSummary = { origin: taskOrigin, report_id: sameEvidence.report_id, sequence: sameEvidence.sequence, generated_at: null, event: 'state', state: 'in_progress' };
-  const terminalEvidence = { ...sameEvidence, report_id: uuid(), sequence: '9007199254740995', payload: { task_id: task.task_id, event: 'state', state: 'failed', reason: 'navigation_failed', message: 'Position unavailable' } };
-  const terminated = await f.call('ReportTaskExecution', { evidence: terminalEvidence }); ok(terminated);
-  const terminalSummary = { ...sameSummary, report_id: terminalEvidence.report_id, sequence: terminalEvidence.sequence, state: 'failed', reason: 'navigation_failed', message: 'Position unavailable' };
-  const expected = [
-    { cursor: changedTrack.json.commit_cursor, kind: 'track', id: pair.track.id },
-    { cursor: sameState.json.commit_cursor, kind: 'task', id: task.task_id },
-    { cursor: terminated.json.commit_cursor, kind: 'task', id: task.task_id },
-  ];
-  const batches = [];
-  let cursor = snapshot.baseline_cursor;
-  for (const change of expected) {
-    const frame = await client.take(frame => ['change_batch', 'progress', 'gap', 'error'].includes(frame.type));
-    assert.equal(frame.type, 'change_batch', JSON.stringify(frame));
-    readWssServer(Buffer.from(JSON.stringify(frame)), { datasetId: f.core.dataset, subscriptionId: subscription_id });
-    assert.equal(frame.data.previous_cursor, cursor);
-    assert.equal(frame.data.commit_cursor, change.cursor);
-    assert.deepEqual(frame.data.changes.map(item => [item.kind, item.resource_kind, item.resource_id]), [['put', change.kind, change.id]]);
-    cursor = change.cursor; batches.push(frame.data.changes[0]);
-  }
-  assert.deepEqual(batches[0].image.telemetry.time_status, { position: 'unknown', altitude: 'known', ground_speed: 'uncertain' });
-  assert.deepEqual(batches[0].image.telemetry.evidence, { dataset_id: f.core.dataset, entity_id: observation_id, origin, report_id: updateReport.report_id, sequence: '2', section: 'telemetry' });
-  assert.deepEqual(batches[1].image.execution_summary, sameSummary);
-  assert.equal(batches[1].image.execution_state, 'in_progress');
-  assert.deepEqual(batches[2].image.execution_summary, terminalSummary);
-  assert.equal(batches[2].image.execution_state, 'failed');
-  assert.equal(BigInt(batches[2].version), BigInt(batches[1].version) + 1n);
-  const closed = new Promise(resolve => client.ws.once('close', resolve)); client.ws.close(); await closed;
-
-  const reconnected = await socket(f); t.after(() => reconnected.ws.terminate());
-  reconnected.send('subscribe_changes', { subscription_id: uuid(), from_cursor: snapshot.baseline_cursor, ...limits });
-  assert.equal((await reconnected.take(frame => frame.type === 'subscribed')).data.handoff_cursor, cursor);
-  let replayCursor = snapshot.baseline_cursor;
-  for (const [i, change] of expected.entries()) {
-    const frame = await reconnected.take(frame => ['change_batch', 'progress', 'gap', 'error', 'handoff_complete'].includes(frame.type));
-    assert.equal(frame.type, 'change_batch', JSON.stringify(frame));
-    assert.equal(frame.data.previous_cursor, replayCursor);
-    assert.equal(frame.data.commit_cursor, change.cursor);
-    assert.deepEqual(frame.data.changes, [batches[i]]);
-    replayCursor = change.cursor;
-  }
-  const handoff = await reconnected.take(frame => ['change_batch', 'progress', 'gap', 'error', 'handoff_complete'].includes(frame.type));
-  assert.equal(handoff.type, 'handoff_complete'); assert.equal(handoff.data.handoff_cursor, cursor);
-  reconnected.send('read_changes', { from_cursor: cursor, ...limits });
-  const empty = await reconnected.take(frame => ['change_batch', 'progress', 'gap', 'error', 'read_changes_result'].includes(frame.type));
-  assert.equal(empty.type, 'read_changes_result'); assert.equal(empty.data.through_cursor, cursor); assert.deepEqual(empty.data.messages, []);
-});
-test('WSS fixed snapshot handoff, whole commits, ordered progress and revocation', { timeout: 30000 }, async t => {
-  const f = await fixture(t);
-  const key = { api_key_id: uuid(), request_id: uuid(), secret: secret() }; ok(await f.call('CreateApiKey', key));
-  const s = await socket(f, key.secret); t.after(() => s.ws.terminate());
-  const health = ok(await f.call('GetHealth'));
-  s.send('read_snapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1, ...limits });
-  const captured = await s.take(frame => frame.type === 'read_snapshot_result');
-  assert.equal(captured.data.items.length, 0);
-  const publisher = uuid(), entity = uuid(), origin = { kind: 'publisher', publisher_id: publisher };
-  const pair = await f.call('CreateObservation', { request_id: uuid(), observation_id: entity, publisher_id: publisher,
-    report: report(f.core.dataset, entity, origin, 11, { telemetry: telemetry(origin, 51.001) }) }); ok(pair);
-  const subscription = uuid(); s.send('subscribe_changes', { subscription_id: subscription, from_cursor: captured.data.baseline_cursor, ...limits });
-  const subscribed = await s.take(frame => frame.type === 'subscribed');
-  assert.equal(subscribed.data.handoff_cursor, pair.json.commit_cursor);
-  const batch = await s.take(frame => frame.type === 'change_batch');
-  assert.equal(batch.data.previous_cursor, captured.data.baseline_cursor);
-  assert.equal(batch.data.changes.length, 1); assert.equal(batch.data.changes[0].resource_kind, 'track');
-  const handoff = await s.take(frame => frame.type === 'handoff_complete'); assert.equal(handoff.data.handoff_cursor, pair.json.commit_cursor);
-  const history = await f.call('ReportObservation', { observation_id: entity, publisher_id: publisher,
-    report: report(f.core.dataset, entity, origin, 10, { telemetry: telemetry(origin, 51) }, 'history_only') }); ok(history);
-  const progress = await s.take(frame => frame.type === 'progress');
-  assert.equal(progress.data.previous_cursor, pair.json.commit_cursor); assert.equal(progress.data.through_cursor, history.json.commit_cursor);
-  s.send('release_snapshot', { release_token: captured.data.release_token }); await s.take(frame => frame.type === 'snapshot_released');
-  const closure = new Promise(resolve => s.ws.once('close', (code) => resolve(code)));
-  ok(await f.call('RevokeApiKey', { api_key_id: key.api_key_id, request_id: uuid() }));
-  assert.equal(await closure, 1008);
-});
-test('concurrent WSS subscriptions drain multi-commit handoff and live backlog within ten seconds', { timeout: 30000 }, async t => {
-  const f = await fixture(t);
-  const asset = ok(await f.call('RegisterAsset', registration())).asset;
-  const health = ok(await f.call('GetHealth'));
-  const captured = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }));
-  ok(await f.call('ReleaseSnapshot', { release_token: captured.release_token }));
-  const expected = new Map();
-  async function feature() {
-    const geofeature_id = uuid();
-    const response = await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id, geometry: { type: 'Point', coordinates: [0, 0] } }); ok(response);
-    expected.set(response.json.commit_cursor, [geofeature_id]); return response.json.commit_cursor;
-  }
-  for (let i = 0; i < 48; i++) await feature();
-  const created = await f.call('CreateTask', { request_id: uuid(), task_id: uuid(), asset_id: asset.id, command: 'pause', scheduling: 'immediate', inputs: {} });
-  const task = ok(created); expected.set(created.json.commit_cursor, [asset.id, task.task_id]);
-  const clients = await Promise.all(Array.from({ length: 8 }, () => socket(f)));
-  t.after(() => { for (const client of clients) client.ws.terminate(); });
-  for (const client of clients) client.send('subscribe_changes', { subscription_id: uuid(), from_cursor: captured.baseline_cursor, ...limits });
-  const subscribed = await Promise.all(clients.map(client => client.take(frame => frame.type === 'subscribed')));
-  for (const frame of subscribed) assert.equal(frame.data.handoff_cursor, created.json.commit_cursor);
-  let failedDeadline;
-  const expired = new Promise((_, reject) => { failedDeadline = setTimeout(() => reject(new Error('Committed backlog did not reach fixed handoff and live boundary within ten seconds')), 10000); });
-  const final = await feature();
-  for (let i = 0; i < 47; i++) await feature();
-  const boundary = [...expected.keys()].at(-1); assert.notEqual(boundary, final);
-  try {
-    await Promise.race([Promise.all(clients.map(async client => {
-      let cursor = captured.baseline_cursor, handoff = false;
-      const seen = new Set();
-      while (cursor !== boundary || !handoff) {
-        const frame = await client.take(frame => ['change_batch', 'progress', 'handoff_complete', 'gap', 'error'].includes(frame.type));
-        assert.ok(frame.type !== 'gap' && frame.type !== 'error', JSON.stringify(frame));
-        if (frame.type === 'handoff_complete') { assert.equal(cursor, created.json.commit_cursor); assert.equal(frame.data.handoff_cursor, cursor); handoff = true; continue; }
-        assert.equal(frame.data.previous_cursor, cursor);
-        cursor = frame.type === 'change_batch' ? frame.data.commit_cursor : frame.data.through_cursor;
-        assert.equal(seen.has(cursor), false); seen.add(cursor);
-        assert.equal(frame.type, 'change_batch');
-        assert.deepEqual(frame.data.changes.map(change => change.resource_id).sort(), expected.get(cursor)?.toSorted());
-      }
-      assert.equal(seen.size, expected.size);
-    })), expired]);
-  } finally { clearTimeout(failedDeadline); }
-});
-test('unsubscribe ends delivery while polling awaits the worker', { timeout: 30000 }, async t => {
-  for (const boundary of ['authorization', 'empty handoff']) await t.test(boundary, async t => {
+test(
+  'WSS refuses API 0.1.0 and 0.2.0 authentication without exposing picture data',
+  { timeout: 30000 },
+  async (t) => {
     const f = await fixture(t);
-    const health = ok(await f.call('GetHealth'));
-    const snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }));
-    ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token }));
-    if (boundary === 'authorization') ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: uuid(), geometry: { type: 'Point', coordinates: [0, 0] } }));
-    const client = await socket(f); t.after(() => client.ws.terminate());
-    const paused = Promise.withResolvers(), resume = Promise.withResolvers();
-    const call = f.core.rpc.call.bind(f.core.rpc);
-    let authorizingBatch = false, held = false;
-    // Keep real worker results, but let unsubscribe cross the in-flight polling wait.
-    f.core.rpc.call = async (...args) => {
-      const result = await call(...args);
-      const pause = !held && (boundary === 'empty handoff' ? args[0] === 'feed' : args[0] === 'authorize' && authorizingBatch);
-      if (args[0] === 'feed') authorizingBatch = true;
-      if (pause) { held = true; paused.resolve(); await resume.promise; }
-      return result;
+    const registered = await f.call('RegisterAsset', registration());
+    ok(registered);
+    for (const version of ['0.1.0', '0.2.0']) {
+      const client = await socket(f, f.apiKey, false);
+      t.after(() => client.ws.terminate());
+      const closed = new Promise((resolve) => client.ws.once('close', (code) => resolve(code)));
+      const request_id = uuid();
+      client.ws.send(
+        JSON.stringify({
+          type: 'authenticate',
+          request_id,
+          dataset_id: f.core.dataset,
+          protocol_version: version,
+          api_key: f.apiKey,
+        }),
+      );
+      const frame = await client.take(() => true);
+      assert.equal(frame.type, 'error');
+      assert.equal(frame.request_id, request_id);
+      assert.equal(frame.protocol_version, '0.3.0');
+      assert.equal(frame.dataset_id, f.core.dataset);
+      assert.equal(frame.error.code, 'protocol_mismatch');
+      assert.deepEqual(frame.error.details, { protocol_version: '0.3.0' });
+      assert.equal(await closed, 1008);
+      assert.deepEqual(client.messages, []);
+    }
+    const current = await socket(f);
+    t.after(() => current.ws.terminate());
+    current.send('read_changes', { from_cursor: registered.json.commit_cursor, ...limits });
+    assert.deepEqual(
+      (await current.take((frame) => frame.type === 'read_changes_result')).data.messages,
+      [],
+    );
+  },
+);
+
+test(
+  'WSS preserves Track time status and selected Task summaries through snapshot, live commits and reconnect replay',
+  { timeout: 30000 },
+  async (t) => {
+    const f = await fixture(t);
+    const asset = ok(await f.call('RegisterAsset', registration())).asset;
+    const publisher_id = uuid(),
+      observation_id = uuid(),
+      origin = { kind: 'publisher', publisher_id };
+    const initialTelemetry = {
+      ...telemetry(origin, 51),
+      source_times: { altitude: null, ground_speed: '9999-01-01T00:00:00Z' },
     };
+    const pair = ok(
+      await f.call('CreateObservation', {
+        request_id: uuid(),
+        observation_id,
+        publisher_id,
+        report: report(f.core.dataset, observation_id, origin, 1, { telemetry: initialTelemetry }),
+      }),
+    );
+    const task = ok(
+      await f.call('CreateTask', {
+        request_id: uuid(),
+        task_id: uuid(),
+        asset_id: asset.id,
+        command: 'move_to',
+        scheduling: 'queued',
+        inputs: { target: { kind: 'position', position: { latitude: 51, longitude: -1 } } },
+      }),
+    );
+    const taskOrigin = { kind: 'asset_process', process_generation: asset.process_generation };
+    const firstEvidence = {
+      dataset_id: f.core.dataset,
+      asset_id: asset.id,
+      origin: taskOrigin,
+      report_id: uuid(),
+      sequence: '9007199254740993',
+      generated_at: '2026-10-21T12:00:00.000000123Z',
+      payload: { task_id: task.task_id, event: 'state', state: 'in_progress', message: 'Started' },
+    };
+    const started = await f.call('ReportTaskExecution', { evidence: firstEvidence });
+    ok(started);
+    const firstSummary = {
+      origin: taskOrigin,
+      report_id: firstEvidence.report_id,
+      sequence: firstEvidence.sequence,
+      generated_at: firstEvidence.generated_at,
+      event: 'state',
+      state: 'in_progress',
+      message: 'Started',
+    };
+    const client = await socket(f);
+    t.after(() => client.ws.terminate());
+    client.send('read_snapshot', {
+      load_id: uuid(),
+      allocation_context: ok(await f.call('GetHealth')).allocation_context,
+      page_size: 1,
+      ...limits,
+    });
+    const snapshotFrame = await client.take((frame) => frame.type === 'read_snapshot_result');
+    readWssServer(Buffer.from(JSON.stringify(snapshotFrame)), { datasetId: f.core.dataset });
+    const snapshot = snapshotFrame.data;
+    assert.equal(snapshot.baseline_cursor, started.json.commit_cursor);
+    const items = [...snapshot.items];
+    let page = snapshot;
+    while (page.next_page_token !== null) {
+      assert.ok(items.length < 3, 'The snapshot must contain exactly Asset, Track and Task');
+      client.send('read_snapshot', { page_token: page.next_page_token });
+      const frame = await client.take((frame) => frame.type === 'read_snapshot_result');
+      readWssServer(Buffer.from(JSON.stringify(frame)), { datasetId: f.core.dataset });
+      page = frame.data;
+      assert.equal(page.baseline_cursor, snapshot.baseline_cursor);
+      assert.equal(page.capture_id, snapshot.capture_id);
+      assert.equal(page.release_token, snapshot.release_token);
+      assert.equal(page.items.length, 1);
+      items.push(...page.items);
+    }
+    assert.deepEqual(
+      items.map((item) => [item.resource_kind, item.resource_id]),
+      [
+        ['asset', asset.id],
+        ['task', task.task_id],
+        ['track', pair.track.id],
+      ],
+    );
+    assert.deepEqual(
+      items.find((item) => item.resource_kind === 'track').image.telemetry.time_status,
+      { position: 'known', altitude: 'unknown', ground_speed: 'uncertain' },
+    );
+    assert.deepEqual(
+      items.find((item) => item.resource_kind === 'task').image.execution_summary,
+      firstSummary,
+    );
+    client.send('release_snapshot', { release_token: snapshot.release_token });
+    await client.take((frame) => frame.type === 'snapshot_released');
+    const subscription_id = uuid();
+    client.send('subscribe_changes', {
+      subscription_id,
+      from_cursor: snapshot.baseline_cursor,
+      ...limits,
+    });
+    assert.equal(
+      (await client.take((frame) => frame.type === 'subscribed')).data.handoff_cursor,
+      snapshot.baseline_cursor,
+    );
+    assert.equal(
+      (await client.take((frame) => frame.type === 'handoff_complete')).data.handoff_cursor,
+      snapshot.baseline_cursor,
+    );
+
+    const updateReport = report(f.core.dataset, observation_id, origin, 2, {
+      telemetry: {
+        ...telemetry(origin, 52, null),
+        source_times: { altitude: '2026-10-21T12:00:01Z', ground_speed: '9999-01-01T00:00:00Z' },
+      },
+    });
+    const changedTrack = await f.call('ReportObservation', {
+      observation_id,
+      publisher_id,
+      report: updateReport,
+    });
+    ok(changedTrack);
+    const sameEvidence = {
+      ...firstEvidence,
+      report_id: uuid(),
+      sequence: '9007199254740994',
+      generated_at: null,
+      payload: { task_id: task.task_id, event: 'state', state: 'in_progress' },
+    };
+    const sameState = await f.call('ReportTaskExecution', { evidence: sameEvidence });
+    ok(sameState);
+    const sameSummary = {
+      origin: taskOrigin,
+      report_id: sameEvidence.report_id,
+      sequence: sameEvidence.sequence,
+      generated_at: null,
+      event: 'state',
+      state: 'in_progress',
+    };
+    const terminalEvidence = {
+      ...sameEvidence,
+      report_id: uuid(),
+      sequence: '9007199254740995',
+      payload: {
+        task_id: task.task_id,
+        event: 'state',
+        state: 'failed',
+        reason: 'navigation_failed',
+        message: 'Position unavailable',
+      },
+    };
+    const terminated = await f.call('ReportTaskExecution', { evidence: terminalEvidence });
+    ok(terminated);
+    const terminalSummary = {
+      ...sameSummary,
+      report_id: terminalEvidence.report_id,
+      sequence: terminalEvidence.sequence,
+      state: 'failed',
+      reason: 'navigation_failed',
+      message: 'Position unavailable',
+    };
+    const expected = [
+      { cursor: changedTrack.json.commit_cursor, kind: 'track', id: pair.track.id },
+      { cursor: sameState.json.commit_cursor, kind: 'task', id: task.task_id },
+      { cursor: terminated.json.commit_cursor, kind: 'task', id: task.task_id },
+    ];
+    const batches = [];
+    let cursor = snapshot.baseline_cursor;
+    for (const change of expected) {
+      const frame = await client.take((frame) =>
+        ['change_batch', 'progress', 'gap', 'error'].includes(frame.type),
+      );
+      assert.equal(frame.type, 'change_batch', JSON.stringify(frame));
+      readWssServer(Buffer.from(JSON.stringify(frame)), {
+        datasetId: f.core.dataset,
+        subscriptionId: subscription_id,
+      });
+      assert.equal(frame.data.previous_cursor, cursor);
+      assert.equal(frame.data.commit_cursor, change.cursor);
+      assert.deepEqual(
+        frame.data.changes.map((item) => [item.kind, item.resource_kind, item.resource_id]),
+        [['put', change.kind, change.id]],
+      );
+      cursor = change.cursor;
+      batches.push(frame.data.changes[0]);
+    }
+    assert.deepEqual(batches[0].image.telemetry.time_status, {
+      position: 'unknown',
+      altitude: 'known',
+      ground_speed: 'uncertain',
+    });
+    assert.deepEqual(batches[0].image.telemetry.evidence, {
+      dataset_id: f.core.dataset,
+      entity_id: observation_id,
+      origin,
+      report_id: updateReport.report_id,
+      sequence: '2',
+      section: 'telemetry',
+    });
+    assert.deepEqual(batches[1].image.execution_summary, sameSummary);
+    assert.equal(batches[1].image.execution_state, 'in_progress');
+    assert.deepEqual(batches[2].image.execution_summary, terminalSummary);
+    assert.equal(batches[2].image.execution_state, 'failed');
+    assert.equal(BigInt(batches[2].version), BigInt(batches[1].version) + 1n);
+    const closed = new Promise((resolve) => client.ws.once('close', resolve));
+    client.ws.close();
+    await closed;
+
+    const reconnected = await socket(f);
+    t.after(() => reconnected.ws.terminate());
+    reconnected.send('subscribe_changes', {
+      subscription_id: uuid(),
+      from_cursor: snapshot.baseline_cursor,
+      ...limits,
+    });
+    assert.equal(
+      (await reconnected.take((frame) => frame.type === 'subscribed')).data.handoff_cursor,
+      cursor,
+    );
+    let replayCursor = snapshot.baseline_cursor;
+    for (const [i, change] of expected.entries()) {
+      const frame = await reconnected.take((frame) =>
+        ['change_batch', 'progress', 'gap', 'error', 'handoff_complete'].includes(frame.type),
+      );
+      assert.equal(frame.type, 'change_batch', JSON.stringify(frame));
+      assert.equal(frame.data.previous_cursor, replayCursor);
+      assert.equal(frame.data.commit_cursor, change.cursor);
+      assert.deepEqual(frame.data.changes, [batches[i]]);
+      replayCursor = change.cursor;
+    }
+    const handoff = await reconnected.take((frame) =>
+      ['change_batch', 'progress', 'gap', 'error', 'handoff_complete'].includes(frame.type),
+    );
+    assert.equal(handoff.type, 'handoff_complete');
+    assert.equal(handoff.data.handoff_cursor, cursor);
+    reconnected.send('read_changes', { from_cursor: cursor, ...limits });
+    const empty = await reconnected.take((frame) =>
+      ['change_batch', 'progress', 'gap', 'error', 'read_changes_result'].includes(frame.type),
+    );
+    assert.equal(empty.type, 'read_changes_result');
+    assert.equal(empty.data.through_cursor, cursor);
+    assert.deepEqual(empty.data.messages, []);
+  },
+);
+test(
+  'WSS fixed snapshot handoff, whole commits, ordered progress and revocation',
+  { timeout: 30000 },
+  async (t) => {
+    const f = await fixture(t);
+    const key = { api_key_id: uuid(), request_id: uuid(), secret: secret() };
+    ok(await f.call('CreateApiKey', key));
+    const s = await socket(f, key.secret);
+    t.after(() => s.ws.terminate());
+    const health = ok(await f.call('GetHealth'));
+    s.send('read_snapshot', {
+      load_id: uuid(),
+      allocation_context: health.allocation_context,
+      page_size: 1,
+      ...limits,
+    });
+    const captured = await s.take((frame) => frame.type === 'read_snapshot_result');
+    assert.equal(captured.data.items.length, 0);
+    const publisher = uuid(),
+      entity = uuid(),
+      origin = { kind: 'publisher', publisher_id: publisher };
+    const pair = await f.call('CreateObservation', {
+      request_id: uuid(),
+      observation_id: entity,
+      publisher_id: publisher,
+      report: report(f.core.dataset, entity, origin, 11, { telemetry: telemetry(origin, 51.001) }),
+    });
+    ok(pair);
+    const subscription = uuid();
+    s.send('subscribe_changes', {
+      subscription_id: subscription,
+      from_cursor: captured.data.baseline_cursor,
+      ...limits,
+    });
+    const subscribed = await s.take((frame) => frame.type === 'subscribed');
+    assert.equal(subscribed.data.handoff_cursor, pair.json.commit_cursor);
+    const batch = await s.take((frame) => frame.type === 'change_batch');
+    assert.equal(batch.data.previous_cursor, captured.data.baseline_cursor);
+    assert.equal(batch.data.changes.length, 1);
+    assert.equal(batch.data.changes[0].resource_kind, 'track');
+    const handoff = await s.take((frame) => frame.type === 'handoff_complete');
+    assert.equal(handoff.data.handoff_cursor, pair.json.commit_cursor);
+    const history = await f.call('ReportObservation', {
+      observation_id: entity,
+      publisher_id: publisher,
+      report: report(
+        f.core.dataset,
+        entity,
+        origin,
+        10,
+        { telemetry: telemetry(origin, 51) },
+        'history_only',
+      ),
+    });
+    ok(history);
+    const progress = await s.take((frame) => frame.type === 'progress');
+    assert.equal(progress.data.previous_cursor, pair.json.commit_cursor);
+    assert.equal(progress.data.through_cursor, history.json.commit_cursor);
+    s.send('release_snapshot', { release_token: captured.data.release_token });
+    await s.take((frame) => frame.type === 'snapshot_released');
+    const closure = new Promise((resolve) => s.ws.once('close', (code) => resolve(code)));
+    ok(await f.call('RevokeApiKey', { api_key_id: key.api_key_id, request_id: uuid() }));
+    assert.equal(await closure, 1008);
+  },
+);
+test(
+  'concurrent WSS subscriptions drain multi-commit handoff and live backlog within ten seconds',
+  { timeout: 30000 },
+  async (t) => {
+    const f = await fixture(t);
+    const asset = ok(await f.call('RegisterAsset', registration())).asset;
+    const health = ok(await f.call('GetHealth'));
+    const captured = ok(
+      await f.call('ReadSnapshot', {
+        load_id: uuid(),
+        allocation_context: health.allocation_context,
+        page_size: 100,
+        ...limits,
+      }),
+    );
+    ok(await f.call('ReleaseSnapshot', { release_token: captured.release_token }));
+    const expected = new Map();
+    async function feature() {
+      const geofeature_id = uuid();
+      const response = await f.call('CreateGeofeature', {
+        request_id: uuid(),
+        geofeature_id,
+        geometry: { type: 'Point', coordinates: [0, 0] },
+      });
+      ok(response);
+      expected.set(response.json.commit_cursor, [geofeature_id]);
+      return response.json.commit_cursor;
+    }
+    for (let i = 0; i < 48; i++) await feature();
+    const created = await f.call('CreateTask', {
+      request_id: uuid(),
+      task_id: uuid(),
+      asset_id: asset.id,
+      command: 'pause',
+      scheduling: 'immediate',
+      inputs: {},
+    });
+    const task = ok(created);
+    expected.set(created.json.commit_cursor, [asset.id, task.task_id]);
+    const clients = await Promise.all(Array.from({ length: 8 }, () => socket(f)));
+    t.after(() => {
+      for (const client of clients) client.ws.terminate();
+    });
+    for (const client of clients)
+      client.send('subscribe_changes', {
+        subscription_id: uuid(),
+        from_cursor: captured.baseline_cursor,
+        ...limits,
+      });
+    const subscribed = await Promise.all(
+      clients.map((client) => client.take((frame) => frame.type === 'subscribed')),
+    );
+    for (const frame of subscribed)
+      assert.equal(frame.data.handoff_cursor, created.json.commit_cursor);
+    let failedDeadline;
+    const expired = new Promise((_, reject) => {
+      failedDeadline = setTimeout(
+        () =>
+          reject(
+            new Error(
+              'Committed backlog did not reach fixed handoff and live boundary within ten seconds',
+            ),
+          ),
+        10000,
+      );
+    });
+    const final = await feature();
+    for (let i = 0; i < 47; i++) await feature();
+    const boundary = [...expected.keys()].at(-1);
+    assert.notEqual(boundary, final);
     try {
-      const subscription_id = uuid();
-      client.send('subscribe_changes', { subscription_id, from_cursor: snapshot.baseline_cursor, ...limits });
-      await client.take(frame => frame.type === 'subscribed');
-      await paused.promise;
-      client.send('unsubscribe_changes', { subscription_id });
-      assert.equal((await client.take(frame => frame.type === 'unsubscribed')).data.subscription_id, subscription_id);
-      resume.resolve();
-      client.send('read_changes', { from_cursor: snapshot.baseline_cursor, ...limits });
-      const next = await client.take(frame => ['change_batch', 'progress', 'handoff_complete', 'gap', 'error', 'read_changes_result'].includes(frame.type));
-      assert.equal(next.type, 'read_changes_result', 'No subscription events may follow its unsubscribe acknowledgment');
-      client.send('unsubscribe_changes', { subscription_id });
-      await client.take(frame => frame.type === 'unsubscribed');
-    } finally { resume.resolve(); f.core.rpc.call = call; }
-  });
+      await Promise.race([
+        Promise.all(
+          clients.map(async (client) => {
+            let cursor = captured.baseline_cursor,
+              handoff = false;
+            const seen = new Set();
+            while (cursor !== boundary || !handoff) {
+              const frame = await client.take((frame) =>
+                ['change_batch', 'progress', 'handoff_complete', 'gap', 'error'].includes(
+                  frame.type,
+                ),
+              );
+              assert.ok(frame.type !== 'gap' && frame.type !== 'error', JSON.stringify(frame));
+              if (frame.type === 'handoff_complete') {
+                assert.equal(cursor, created.json.commit_cursor);
+                assert.equal(frame.data.handoff_cursor, cursor);
+                handoff = true;
+                continue;
+              }
+              assert.equal(frame.data.previous_cursor, cursor);
+              cursor =
+                frame.type === 'change_batch'
+                  ? frame.data.commit_cursor
+                  : frame.data.through_cursor;
+              assert.equal(seen.has(cursor), false);
+              seen.add(cursor);
+              assert.equal(frame.type, 'change_batch');
+              assert.deepEqual(
+                frame.data.changes.map((change) => change.resource_id).sort(),
+                expected.get(cursor)?.toSorted(),
+              );
+            }
+            assert.equal(seen.size, expected.size);
+          }),
+        ),
+        expired,
+      ]);
+    } finally {
+      clearTimeout(failedDeadline);
+    }
+  },
+);
+test('unsubscribe ends delivery while polling awaits the worker', { timeout: 30000 }, async (t) => {
+  for (const boundary of ['authorization', 'empty handoff'])
+    await t.test(boundary, async (t) => {
+      const f = await fixture(t);
+      const health = ok(await f.call('GetHealth'));
+      const snapshot = ok(
+        await f.call('ReadSnapshot', {
+          load_id: uuid(),
+          allocation_context: health.allocation_context,
+          page_size: 100,
+          ...limits,
+        }),
+      );
+      ok(await f.call('ReleaseSnapshot', { release_token: snapshot.release_token }));
+      if (boundary === 'authorization')
+        ok(
+          await f.call('CreateGeofeature', {
+            request_id: uuid(),
+            geofeature_id: uuid(),
+            geometry: { type: 'Point', coordinates: [0, 0] },
+          }),
+        );
+      const client = await socket(f);
+      t.after(() => client.ws.terminate());
+      const paused = Promise.withResolvers(),
+        resume = Promise.withResolvers();
+      const call = f.core.rpc.call.bind(f.core.rpc);
+      let authorizingBatch = false,
+        held = false;
+      // Keep real worker results, but let unsubscribe cross the in-flight polling wait.
+      f.core.rpc.call = async (...args) => {
+        const result = await call(...args);
+        const pause =
+          !held &&
+          (boundary === 'empty handoff'
+            ? args[0] === 'feed'
+            : args[0] === 'authorize' && authorizingBatch);
+        if (args[0] === 'feed') authorizingBatch = true;
+        if (pause) {
+          held = true;
+          paused.resolve();
+          await resume.promise;
+        }
+        return result;
+      };
+      try {
+        const subscription_id = uuid();
+        client.send('subscribe_changes', {
+          subscription_id,
+          from_cursor: snapshot.baseline_cursor,
+          ...limits,
+        });
+        await client.take((frame) => frame.type === 'subscribed');
+        await paused.promise;
+        client.send('unsubscribe_changes', { subscription_id });
+        assert.equal(
+          (await client.take((frame) => frame.type === 'unsubscribed')).data.subscription_id,
+          subscription_id,
+        );
+        resume.resolve();
+        client.send('read_changes', { from_cursor: snapshot.baseline_cursor, ...limits });
+        const next = await client.take((frame) =>
+          [
+            'change_batch',
+            'progress',
+            'handoff_complete',
+            'gap',
+            'error',
+            'read_changes_result',
+          ].includes(frame.type),
+        );
+        assert.equal(
+          next.type,
+          'read_changes_result',
+          'No subscription events may follow its unsubscribe acknowledgment',
+        );
+        client.send('unsubscribe_changes', { subscription_id });
+        await client.take((frame) => frame.type === 'unsubscribed');
+      } finally {
+        resume.resolve();
+        f.core.rpc.call = call;
+      }
+    });
 });
-test('finite allocations retain charged receipts after release and never resurrect captures', async t => {
-  const f = await fixture(t, { temporary: { ...((await import('../dist/settings.js')).defaults.temporary), max_allocation_receipts: 2 } });
+test('finite allocations retain charged receipts after release and never resurrect captures', async (t) => {
+  const f = await fixture(t, {
+    temporary: {
+      ...(await import('../dist/settings.js')).defaults.temporary,
+      max_allocation_receipts: 2,
+    },
+  });
   const health = ok(await f.call('GetHealth'));
-  const firstRequest = { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits };
+  const firstRequest = {
+    load_id: uuid(),
+    allocation_context: health.allocation_context,
+    page_size: 100,
+    ...limits,
+  };
   const first = ok(await f.call('ReadSnapshot', firstRequest));
   const second = ok(await f.call('ReadSnapshot', { ...firstRequest, load_id: uuid() }));
   assert.notEqual(first.capture_id, second.capture_id);
   ok(await f.call('ReleaseSnapshot', { release_token: first.release_token }));
   ok(await f.call('ReleaseSnapshot', { release_token: first.release_token }));
   assert.equal((await f.call('ReadSnapshot', firstRequest)).json.error.code, 'allocation_expired');
-  assert.equal((await f.call('ReadSnapshot', { ...firstRequest, load_id: uuid() })).json.error.code, 'resource_limit');
+  assert.equal(
+    (await f.call('ReadSnapshot', { ...firstRequest, load_id: uuid() })).json.error.code,
+    'resource_limit',
+  );
 });
-test('transient worker queue pressure defers WSS polling without ending its subscription', async t => {
+test('transient worker queue pressure defers WSS polling without ending its subscription', async (t) => {
   const f = await fixture(t, { workerQueueCount: 8, workerQueueBytes: 1_048_576 });
   const health = ok(await f.call('GetHealth'));
-  const captured = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits }));
+  const captured = ok(
+    await f.call('ReadSnapshot', {
+      load_id: uuid(),
+      allocation_context: health.allocation_context,
+      page_size: 100,
+      ...limits,
+    }),
+  );
   ok(await f.call('ReleaseSnapshot', { release_token: captured.release_token }));
-  const client = await socket(f); t.after(() => client.ws.terminate());
-  client.send('subscribe_changes', { subscription_id: uuid(), from_cursor: captured.baseline_cursor, ...limits });
-  await client.take(frame => frame.type === 'subscribed'); await client.take(frame => frame.type === 'handoff_complete');
+  const client = await socket(f);
+  t.after(() => client.ws.terminate());
+  client.send('subscribe_changes', {
+    subscription_id: uuid(),
+    from_cursor: captured.baseline_cursor,
+    ...limits,
+  });
+  await client.take((frame) => frame.type === 'subscribed');
+  await client.take((frame) => frame.type === 'handoff_complete');
   let refused = 0;
   const until = performance.now() + 1000;
   while (performance.now() < until) {
-    await Promise.all(Array.from({ length: 12 }, () => f.core.rpc.call('inspect', {}, 1024).catch(error => {
-      assert.ok(error instanceof QueuePressure); refused++;
-    })));
+    await Promise.all(
+      Array.from({ length: 12 }, () =>
+        f.core.rpc.call('inspect', {}, 1024).catch((error) => {
+          assert.ok(error instanceof QueuePressure);
+          refused++;
+        }),
+      ),
+    );
     await yieldToLoop();
   }
   assert.ok(refused > 0, 'The real worker queue must have reached its admission bound');
   const geofeature_id = uuid();
-  const created = await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id, geometry: { type: 'Point', coordinates: [0, 0] } }); ok(created);
-  const frame = await client.take(frame => ['change_batch', 'gap', 'error'].includes(frame.type));
+  const created = await f.call('CreateGeofeature', {
+    request_id: uuid(),
+    geofeature_id,
+    geometry: { type: 'Point', coordinates: [0, 0] },
+  });
+  ok(created);
+  const frame = await client.take((frame) => ['change_batch', 'gap', 'error'].includes(frame.type));
   assert.equal(frame.type, 'change_batch', JSON.stringify(frame));
-  assert.equal(frame.data.previous_cursor, captured.baseline_cursor); assert.equal(frame.data.commit_cursor, created.json.commit_cursor);
-  assert.deepEqual(frame.data.changes.map(change => change.resource_id), [geofeature_id]);
+  assert.equal(frame.data.previous_cursor, captured.baseline_cursor);
+  assert.equal(frame.data.commit_cursor, created.json.commit_cursor);
+  assert.deepEqual(
+    frame.data.changes.map((change) => change.resource_id),
+    [geofeature_id],
+  );
 });
-test('failed capture admission publishes no partial file or commit and retains its finite receipt', async t => {
-  const f = await fixture(t, { temporary: { ...((await import('../dist/settings.js')).defaults.temporary), max_snapshot_bytes: '32768', max_allocation_receipts: 1 } });
-  const registered = await f.call('RegisterAsset', registration()); const asset = ok(registered).asset;
+test('failed capture admission publishes no partial file or commit and retains its finite receipt', async (t) => {
+  const f = await fixture(t, {
+    temporary: {
+      ...(await import('../dist/settings.js')).defaults.temporary,
+      max_snapshot_bytes: '32768',
+      max_allocation_receipts: 1,
+    },
+  });
+  const registered = await f.call('RegisterAsset', registration());
+  const asset = ok(registered).asset;
   const health = ok(await f.call('GetHealth'));
-  const input = { load_id: uuid(), allocation_context: health.allocation_context, page_size: 100, ...limits };
+  const input = {
+    load_id: uuid(),
+    allocation_context: health.allocation_context,
+    page_size: 100,
+    ...limits,
+  };
   assert.equal((await f.call('ReadSnapshot', input)).json.error.code, 'resource_limit');
   assert.deepEqual(await readdir(join(f.directory, 'captures')), []);
   assert.equal((await f.call('ReadSnapshot', input)).json.error.code, 'resource_limit');
-  assert.equal((await f.call('ReadSnapshot', { ...input, page_size: 1 })).json.error.code, 'allocation_conflict');
-  assert.equal((await f.call('ReadSnapshot', { ...input, load_id: uuid() })).json.error.code, 'resource_limit');
+  assert.equal(
+    (await f.call('ReadSnapshot', { ...input, page_size: 1 })).json.error.code,
+    'allocation_conflict',
+  );
+  assert.equal(
+    (await f.call('ReadSnapshot', { ...input, load_id: uuid() })).json.error.code,
+    'resource_limit',
+  );
   assert.equal(ok(await f.call('GetAsset', { asset_id: asset.id })).id, asset.id);
-  assert.deepEqual(ok(await f.call('ReadChanges', { from_cursor: registered.json.commit_cursor, ...limits })).messages, []);
+  assert.deepEqual(
+    ok(await f.call('ReadChanges', { from_cursor: registered.json.commit_cursor, ...limits }))
+      .messages,
+    [],
+  );
   ok(await f.call('DeleteAsset', { asset_id: asset.id, request_id: uuid() }));
   assert.equal((await f.call('ReadSnapshot', input)).json.error.code, 'resource_limit');
   await f.restart();
   assert.equal((await f.call('ReadSnapshot', input)).json.error.code, 'allocation_expired');
 });
-test('geometry work shortens complete list, snapshot and replay pages without skipping resources', { timeout: 30000 }, async t => {
-  const f = await fixture(t);
-  const health = ok(await f.call('GetHealth'));
-  const initial = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1000, ...limits }));
-  ok(await f.call('ReleaseSnapshot', { release_token: initial.release_token }));
-  const coordinates = Array.from({ length: 1023 }, (_, i) => [Math.cos(i * 2 * Math.PI / 1023), Math.sin(i * 2 * Math.PI / 1023)]);
-  coordinates.push(coordinates[0]);
-  const ids = [];
-  for (let i = 0; i < 7; i++) { const id = uuid(); ids.push(id); ok(await f.call('CreateGeofeature', { geofeature_id: id, request_id: uuid(), geometry: { type: 'Polygon', coordinates: [coordinates] } })); }
-  let page = ok(await f.call('ListGeofeatures', { page_size: 1000 }));
-  assert.ok(page.items.length < ids.length);
-  const listed = [];
-  while (true) { listed.push(...page.items.map(item => item.id)); if (page.next_page_token === null) break; page = ok(await f.call('ListGeofeatures', { page_token: page.next_page_token })); }
-  assert.deepEqual(listed.sort(), ids.sort());
-  let snapshot = ok(await f.call('ReadSnapshot', { load_id: uuid(), allocation_context: health.allocation_context, page_size: 1000, ...limits }));
-  const captured = [], token = snapshot.release_token;
-  while (true) { captured.push(...snapshot.items.map(item => item.resource_id)); if (snapshot.next_page_token === null) break; snapshot = ok(await f.call('ReadSnapshot', { page_token: snapshot.next_page_token })); }
-  assert.deepEqual(captured.sort(), ids.sort()); ok(await f.call('ReleaseSnapshot', { release_token: token }));
-  let replay = ok(await f.call('ReadChanges', { from_cursor: initial.baseline_cursor, ...limits }));
-  const changes = [];
-  while (true) { for (const message of replay.messages) if (message.type === 'change_batch') changes.push(...message.data.changes.map(change => change.resource_id)); if (replay.next_page_token === null) break; replay = ok(await f.call('ReadChanges', { page_token: replay.next_page_token })); }
-  assert.deepEqual(changes.sort(), ids.sort());
-});
-test('list admission refuses queries whose complete continuation exceeds the request budget', { timeout: 30000 }, async t => {
-  const { defaults } = await import('../dist/settings.js');
-  for (const max_request_bytes of [defaults.limits.max_request_bytes, 65536]) await t.test(String(max_request_bytes), async t => {
-    const f = await fixture(t, { limits: { ...defaults.limits, max_request_bytes } });
-    const count = max_request_bytes === defaults.limits.max_request_bytes ? 1000 : 80;
-    const aliases = Array.from({ length: count }, (_, i) => '\0'.repeat(124) + i.toString(36).padStart(4, '0'));
-    const ids = Array.from({ length: count }, uuid);
-    for (let i = 0; i < 2; i++) ok(await f.call('CreateGeofeature', { request_id: uuid(), geofeature_id: ids[i], alias: aliases[i], geometry: { type: 'Point', coordinates: [i, i] } }));
-    const query = { page_size: 1, filters: { aliases, ids } };
-    assert.ok(Buffer.byteLength(JSON.stringify(query)) < max_request_bytes, 'The initial query must fit the effective HTTP budget');
-    const response = await f.call('ListGeofeatures', query);
-    assert.equal(response.status, 429, JSON.stringify({ status: response.status, tokenBytes: response.json?.data?.next_page_token?.length }));
-    assert.equal(response.json.error.code, 'resource_limit');
-    const complete = ok(await f.call('ListGeofeatures', { filters: query.filters }));
-    assert.deepEqual(complete.items.map(item => item.id).sort(), ids.slice(0, 2).sort());
-    assert.equal(complete.next_page_token, null);
-    const smaller = ok(await f.call('ListGeofeatures', { page_size: 1, filters: { aliases: aliases.slice(0, 2), ids: ids.slice(0, 2) } }));
-    const continued = ok(await f.call('ListGeofeatures', { page_token: smaller.next_page_token }));
-    assert.deepEqual([...smaller.items, ...continued.items].map(item => item.id).sort(), ids.slice(0, 2).sort());
-    assert.equal(continued.next_page_token, null);
-  });
-});
+test(
+  'geometry work shortens complete list, snapshot and replay pages without skipping resources',
+  { timeout: 30000 },
+  async (t) => {
+    const f = await fixture(t);
+    const health = ok(await f.call('GetHealth'));
+    const initial = ok(
+      await f.call('ReadSnapshot', {
+        load_id: uuid(),
+        allocation_context: health.allocation_context,
+        page_size: 1000,
+        ...limits,
+      }),
+    );
+    ok(await f.call('ReleaseSnapshot', { release_token: initial.release_token }));
+    const coordinates = Array.from({ length: 1023 }, (_, i) => [
+      Math.cos((i * 2 * Math.PI) / 1023),
+      Math.sin((i * 2 * Math.PI) / 1023),
+    ]);
+    coordinates.push(coordinates[0]);
+    const ids = [];
+    for (let i = 0; i < 7; i++) {
+      const id = uuid();
+      ids.push(id);
+      ok(
+        await f.call('CreateGeofeature', {
+          geofeature_id: id,
+          request_id: uuid(),
+          geometry: { type: 'Polygon', coordinates: [coordinates] },
+        }),
+      );
+    }
+    let page = ok(await f.call('ListGeofeatures', { page_size: 1000 }));
+    assert.ok(page.items.length < ids.length);
+    const listed = [];
+    while (true) {
+      listed.push(...page.items.map((item) => item.id));
+      if (page.next_page_token === null) break;
+      page = ok(await f.call('ListGeofeatures', { page_token: page.next_page_token }));
+    }
+    assert.deepEqual(listed.sort(), ids.sort());
+    let snapshot = ok(
+      await f.call('ReadSnapshot', {
+        load_id: uuid(),
+        allocation_context: health.allocation_context,
+        page_size: 1000,
+        ...limits,
+      }),
+    );
+    const captured = [],
+      token = snapshot.release_token;
+    while (true) {
+      captured.push(...snapshot.items.map((item) => item.resource_id));
+      if (snapshot.next_page_token === null) break;
+      snapshot = ok(await f.call('ReadSnapshot', { page_token: snapshot.next_page_token }));
+    }
+    assert.deepEqual(captured.sort(), ids.sort());
+    ok(await f.call('ReleaseSnapshot', { release_token: token }));
+    let replay = ok(
+      await f.call('ReadChanges', { from_cursor: initial.baseline_cursor, ...limits }),
+    );
+    const changes = [];
+    while (true) {
+      for (const message of replay.messages)
+        if (message.type === 'change_batch')
+          changes.push(...message.data.changes.map((change) => change.resource_id));
+      if (replay.next_page_token === null) break;
+      replay = ok(await f.call('ReadChanges', { page_token: replay.next_page_token }));
+    }
+    assert.deepEqual(changes.sort(), ids.sort());
+  },
+);
+test(
+  'list admission refuses queries whose complete continuation exceeds the request budget',
+  { timeout: 30000 },
+  async (t) => {
+    const { defaults } = await import('../dist/settings.js');
+    for (const max_request_bytes of [defaults.limits.max_request_bytes, 65536])
+      await t.test(String(max_request_bytes), async (t) => {
+        const f = await fixture(t, { limits: { ...defaults.limits, max_request_bytes } });
+        const count = max_request_bytes === defaults.limits.max_request_bytes ? 1000 : 80;
+        const aliases = Array.from(
+          { length: count },
+          (_, i) => '\0'.repeat(124) + i.toString(36).padStart(4, '0'),
+        );
+        const ids = Array.from({ length: count }, uuid);
+        for (let i = 0; i < 2; i++)
+          ok(
+            await f.call('CreateGeofeature', {
+              request_id: uuid(),
+              geofeature_id: ids[i],
+              alias: aliases[i],
+              geometry: { type: 'Point', coordinates: [i, i] },
+            }),
+          );
+        const query = { page_size: 1, filters: { aliases, ids } };
+        assert.ok(
+          Buffer.byteLength(JSON.stringify(query)) < max_request_bytes,
+          'The initial query must fit the effective HTTP budget',
+        );
+        const response = await f.call('ListGeofeatures', query);
+        assert.equal(
+          response.status,
+          429,
+          JSON.stringify({
+            status: response.status,
+            tokenBytes: response.json?.data?.next_page_token?.length,
+          }),
+        );
+        assert.equal(response.json.error.code, 'resource_limit');
+        const complete = ok(await f.call('ListGeofeatures', { filters: query.filters }));
+        assert.deepEqual(complete.items.map((item) => item.id).sort(), ids.slice(0, 2).sort());
+        assert.equal(complete.next_page_token, null);
+        const smaller = ok(
+          await f.call('ListGeofeatures', {
+            page_size: 1,
+            filters: { aliases: aliases.slice(0, 2), ids: ids.slice(0, 2) },
+          }),
+        );
+        const continued = ok(
+          await f.call('ListGeofeatures', { page_token: smaller.next_page_token }),
+        );
+        assert.deepEqual(
+          [...smaller.items, ...continued.items].map((item) => item.id).sort(),
+          ids.slice(0, 2).sort(),
+        );
+        assert.equal(continued.next_page_token, null);
+      });
+  },
+);
