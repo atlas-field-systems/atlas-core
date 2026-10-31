@@ -82,6 +82,7 @@ cleanup failures. It never claims an uncertain operation left the installation u
 
 Ctrl-C requests cancellation. Escape returns when no operation is active, or requests
 return after active work settles. Terminal loss also awaits owned work and cleanup.
+Escape keeps the settled result visible on the home screen before the next action.
 A completed cancellation exits 130 when exiting the process. Committed work remains
 committed, and operation or cleanup failures take precedence over cancellation.
 The TUI refreshes state after each operation without automatically retrying mutations.
