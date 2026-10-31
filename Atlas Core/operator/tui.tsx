@@ -92,7 +92,9 @@ function App({
   const [state, setState] = useState('Inspecting installation');
   const [endpoint, setEndpoint] = useState('Endpoint unavailable before setup');
   const [problem, setProblem] = useState('');
+  const [lastResult, setLastResult] = useState<CommandResult>();
   const owned = useRef<Promise<void> | undefined>(undefined);
+  const operationController = useRef<AbortController>();
   const failed = useRef(false);
   const refresh = async () => {
     const result = await perform({
@@ -124,6 +126,7 @@ function App({
     const settle = () => {
       if (closing) return;
       closing = true;
+      operationController.current?.abort();
       void (async () => {
         try {
           await owned.current;
@@ -140,21 +143,41 @@ function App({
   }, []);
   const run = (operation: Operation) => {
     if (controller.signal.aborted) return;
+    const active = new AbortController();
+    operationController.current = active;
     setScreen({ kind: 'busy' });
     owned.current = (async () => {
-      const result = await perform({ root, operation }, controller.signal);
+      const result = await perform({ root, operation }, active.signal);
+      setLastResult(result);
       if (result.exitCode === 1) failed.current = true;
       await refresh();
       if (!controller.signal.aborted) setScreen({ kind: 'result', result });
     })().catch((error: unknown) => {
       failed.current = true;
-      setScreen({ kind: 'result', result: failure(error) });
+      const result = failure(error);
+      setLastResult(result);
+      setScreen({ kind: 'result', result });
+    }).finally(() => {
+      if (operationController.current === active) operationController.current = undefined;
     });
   };
   useInput((input, key) => {
     if (key.ctrl && input === 'c') controller.abort();
     if (key.escape) {
-      if (screen.kind === 'busy') controller.abort();
+      if (screen.kind === 'busy') {
+        operationController.current?.abort();
+        void owned.current?.then(
+          () => {
+            if (!controller.signal.aborted) setScreen({ kind: 'home' });
+          },
+          (error: unknown) => {
+            failed.current = true;
+            const result = failure(error);
+            setLastResult(result);
+            if (!controller.signal.aborted) setScreen({ kind: 'result', result });
+          },
+        );
+      }
       else {
         setProblem('');
         setScreen({ kind: 'home' });
@@ -509,6 +532,12 @@ function App({
         Escape returns. Ctrl-C waits for owned work before exit. Closing leaves Core running.
       </Text>
       {problem ? <StatusMessage variant="error">{problem}</StatusMessage> : null}
+      {screen.kind === 'home' && lastResult ? (
+        <Box flexDirection="column">
+          <Text>Last operation result</Text>
+          <Text>{JSON.stringify(lastResult.envelope, null, 2)}</Text>
+        </Box>
+      ) : null}
       {content}
     </Box>
   );
