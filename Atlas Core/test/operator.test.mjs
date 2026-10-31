@@ -11,6 +11,7 @@ import {
   lstat,
   rm,
   symlink,
+  chmod,
 } from 'node:fs/promises';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -153,7 +154,7 @@ test('TLS validates bounded regular files, matching keys and certificate lifetim
   await assert.rejects(validateTls(large, a.key), /record_limit/);
   const link = join(base, 'link');
   await symlink(a.key, link);
-  await assert.rejects(validateTls(a.cert, link));
+  await assert.rejects(validateTls(a.cert, link), /tls_invalid/);
   await saveTls(installation, a.cert, a.key);
   const first = await savedTls(installation);
   assert.equal((await stat(first.key)).mode & 0o777, 0o600);
@@ -233,6 +234,64 @@ test('doctor rejects a FIFO installation record within its read-only probe budge
   assert.notEqual(report.data.checks.compatibility.status, 'pass');
   assert.equal((await lstat(fifo)).isFIFO(), true);
   await assert.rejects(stat(join(installation, 'control')), { code: 'ENOENT' });
+});
+test('TLS admission precedes inspecting a recorded writer during Start', async (t) => {
+  const base = await directory(t), installation = join(base, 'installation');
+  await mkdir(join(installation, 'setup'), { recursive: true });
+  await mkdir(join(installation, 'control'));
+  const pair = await certificate(base, 'admission');
+  await saveTls(installation, pair.cert, pair.key);
+  const state = (await savedTls(installation)).state;
+  await writeFile(join(installation, 'setup', 'installation.json'), JSON.stringify({
+    format: 1, installation_id: randomUUID(), image: `sha256:${'a'.repeat(64)}`,
+  }));
+  await writeFile(join(installation, 'setup', 'settings.json'), JSON.stringify({
+    revision: '0', saved: defaults, effective: null, last_working: null, apply_failure: null,
+  }));
+  await writeFile(join(installation, 'control', 'writer.json'), JSON.stringify({
+    container: 'f'.repeat(64), launch: randomUUID(), kind: 'service', host: null,
+  }));
+  await writeFile(join(installation, 'setup', 'tls-journal.json'), JSON.stringify({
+    previous: null, next: state.saved,
+  }));
+  await assert.rejects(new Administration(installation).start(), /recovery_required/);
+  await rm(join(installation, 'setup', 'tls-journal.json'));
+  await rm(join(installation, 'setup', 'tls-state.json'));
+  await assert.rejects(new Administration(installation).start(), /tls_conversion_required/);
+});
+test('same-certificate replacement supersedes damaged retained key material', async (t) => {
+  const base = await directory(t), installation = join(base, 'installation');
+  await mkdir(join(installation, 'setup'), { recursive: true });
+  const pair = await certificate(base, 'replacement');
+  await saveTls(installation, pair.cert, pair.key);
+  for (const damage of ['permissions', 'bytes']) {
+    const before = await savedTls(installation);
+    if (damage === 'permissions') await chmod(before.key, 0o644);
+    else await writeFile(before.key, 'not a private key');
+    await saveTls(installation, pair.cert, pair.key);
+    const after = await savedTls(installation);
+    assert.notEqual(after.state.saved.generation, before.state.saved.generation);
+    assert.equal(after.state.saved.certificateSha256, before.state.saved.certificateSha256);
+    assert.equal((await stat(after.key)).mode & 0o777, 0o600);
+    assert.deepEqual(await readFile(after.key), await readFile(pair.key));
+  }
+});
+test('doctor distinguishes incomplete TLS setup and evaluated invalid certificates from unavailable probes', async (t) => {
+  const base = await directory(t), installation = join(base, 'installation');
+  await mkdir(join(installation, 'setup'), { recursive: true });
+  const pair = await certificate(base, 'doctor-invalid');
+  await saveTls(installation, pair.cert, pair.key);
+  const partial = await perform({ root: installation, operation: { effect: 'read', command: { kind: 'doctor' } } });
+  assert.equal(partial.envelope.data.checks.tls.status, 'fail');
+  assert.match(partial.envelope.data.checks.recovery.instruction, /fresh installation path/);
+  await writeFile(join(installation, 'setup', 'installation.json'), JSON.stringify({
+    format: 1, installation_id: randomUUID(), image: `sha256:${'a'.repeat(64)}`,
+  }));
+  const saved = await savedTls(installation);
+  await writeFile(saved.certificate, 'not a certificate');
+  const invalid = await perform({ root: installation, operation: { effect: 'read', command: { kind: 'doctor' } } });
+  assert.equal(invalid.exitCode, 1);
+  assert.equal(invalid.envelope.data.checks.tls.status, 'fail');
 });
 test('release mismatch refuses mutation before creating a command lock; cancellation before work writes nothing', async (t) => {
   const base = await directory(t),

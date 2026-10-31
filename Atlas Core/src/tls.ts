@@ -23,7 +23,11 @@ export const TlsState = z.strictObject({
 const Journal = z.strictObject({ previous: Uuid.nullable(), next: Pin });
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 export async function tlsBytes(path: string, privateFile = false): Promise<Buffer> {
-  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK).catch((error: unknown) => {
+    if (error instanceof Error && 'code' in error && error.code === 'ELOOP')
+      throw new Error('tls_invalid');
+    throw error;
+  });
   let primary: unknown;
   try {
     const info = await file.stat();
@@ -139,10 +143,6 @@ export async function saveTls(root: string, certificate: string, key: string): P
   const checked = await validateTls(certificate, key);
   if (await optionalJson(journalPath(root), Journal)) throw new Error('recovery_required');
   const previous = await optionalJson(statePath(root), TlsState);
-  if (previous?.saved.certificateSha256 === checked.certificateSha256) {
-    await savedTls(root);
-    return;
-  }
   await ownedDirectory(join(root, 'setup', 'tls'));
   if ((await generations(root)).length >= 7) throw new Error('tls_generation_limit');
   const next = {

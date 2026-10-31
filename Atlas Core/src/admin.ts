@@ -312,6 +312,7 @@ export class Administration {
     await this.requireComplete();
     const manifest = await optionalJson(join(this.root, 'setup', 'installation.json'), Manifest);
     if (!manifest) throw new Error('setup_required');
+    await savedTls(this.root);
     const settings = await this.settings(),
       old = await this.writer();
     if (old) {
@@ -329,7 +330,6 @@ export class Administration {
       }
       await this.removeStopped(old, manifest.installation_id);
     }
-    await savedTls(this.root);
     const writer = await createContainer(
       this.root,
       manifest.installation_id,

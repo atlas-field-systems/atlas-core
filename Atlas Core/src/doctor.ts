@@ -85,7 +85,9 @@ export async function doctor(
       };
       const advice =
         name === 'docker' && error instanceof Error ? instructions[error.message] : undefined;
-      checks[name] = { status: 'unavailable', instruction: advice ?? instruction };
+      const invalidTls = name === 'tls' && error instanceof Error &&
+        ['tls_invalid', 'repair_required', 'tls_conversion_required', 'recovery_required'].includes(error.message);
+      checks[name] = { status: invalidTls ? 'fail' : 'unavailable', instruction: advice ?? instruction };
     }
   };
   checks.runtime_node = {
@@ -230,16 +232,19 @@ export async function doctor(
     'Supply a current matching PEM certificate and private key. Convert legacy files explicitly with tls replace.',
     async () => {
       const manifest = await optionalJson(join(root, 'setup', 'installation.json'), Manifest);
-      if (!manifest) return true;
       await optionalJson(join(root, 'setup', 'tls-state.json'), z.unknown());
       await optionalJson(join(root, 'setup', 'tls-journal.json'), z.unknown());
+      if (!manifest) {
+        const tls = await tlsView(root);
+        return tls.conversionRequired && !tls.recoveryRequired;
+      }
       await savedTls(root);
       return true;
     },
   );
   await check(
     'recovery',
-    'Inspect pending work and use explicit recover with the matching package after all writers have stopped.',
+    'Inspect pending work and use explicit recover with the matching package after all writers have stopped. For incomplete first setup, preserve its evidence for repair and select a fresh installation path.',
     async () => {
       const action = await optionalJson(join(root, 'recovery', 'action.json'), Action);
       await optionalJson(join(root, 'setup', 'tls-state.json'), z.unknown());
