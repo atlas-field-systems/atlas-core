@@ -16,7 +16,7 @@ Neither is null or generated when absent. Other fields are exactly the following
 | Resource | Required fields beyond the common fields | Optional fields |
 | --- | --- | --- |
 | Asset | Authored `type`, `capabilities`; UUID `process_generation`; reported `status`; `communications`; `heartbeat`; read-only `task_queue`, `task_control` | Reported [`tags`](components/tags.md), `telemetry`, `attitude`, `power`, `camera`, `camera_optics`, `gimbal` |
-| Observation | Immutable UUID `source_asset_id`; UUID `publisher_id`; reported `type`; UUID `track_id` under the default policy | Immutable `publisher_subject`; reported `telemetry`, `attitude`, `geometry` |
+| Observation | Immutable UUID `source_asset_id`; UUID `publisher_id`; reported `type`; UUID `track_id` under the default policy | Immutable `publisher_subject`; reported `telemetry`, `attitude`, `geometry`, [`bearing_measurement`](components/bearing-measurement.md) |
 | Track | Reported `type`; read-only `sources` | Reported `telemetry`, `attitude`, `geometry` |
 | Geofeature | Authored `type`, `geometry`; counter string `geometry_revision`, initially `"0"` | None |
 
@@ -37,9 +37,10 @@ Queue/control fields follow [Task rules](tasks.md#scheduling-and-controls).
 
 There is at most one Camera, Camera Optics, and Gimbal section per Asset. The
 [Asset runtime owns coherence](components/camera.md#exposed-hardware-ownership).
-Military-display metadata, sensor metadata or references, uncertainty fields, and
-multi-camera collections are unsupported initially. Files use [Object associations](objects.md),
-not an inline media component or untyped extension dictionary.
+Military-display metadata, sensor metadata or references, uncertainty fields other
+than Bearing Measurement intervals, and multi-camera collections are unsupported
+initially. Files use [Object associations](objects.md), not an inline media component
+or untyped extension dictionary.
 
 ## Initial states
 
@@ -52,8 +53,8 @@ to `{"commands": []}` when not supplied. Asset and Geofeature Type defaults to
 Observation creation may supply any permitted reported sections using the
 [report envelope](report-format.md). If Type is absent, initialize it to
 `{"kind": null}`. Other absent reported sections remain absent. Creation need not
-have a position. The default Track mirrors all permitted Observation section
-results immediately. Its Description and alias initially remain absent.
+have a position. The default Track mirrors its permitted Observation sections
+immediately. Its Description and alias initially remain absent.
 
 Each source-free initial reported value uses `state: "value"`, classification
 `state_until_changed`, `observed_at: null`, and read `evidence: null`.

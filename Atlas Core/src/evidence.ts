@@ -117,8 +117,10 @@ export class Evidence {
             return [reserve.id, { remaining_percent: at('remaining_percent'), ...(reserve.kind === 'battery' ? { voltage_volts: at('voltage_volts'), current_amperes: at('current_amperes') } : {}) }];
           })) };
       }
+      case 'bearing_measurement':
+        return this.classify(value.observed_at, admittedAt);
       default: {
-        const times = value.source_times ?? {};
+        const times = 'source_times' in value ? value.source_times ?? {} : {};
         const keys = section === 'geometry' ? ['geometry'] : Object.keys(value.value).filter(key => key !== 'explanation');
         return quantities(keys, QuantityTimes.parse(times));
       }

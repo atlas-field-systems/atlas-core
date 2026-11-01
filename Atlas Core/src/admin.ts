@@ -730,7 +730,7 @@ export class Administration {
         const line =
           JSON.stringify({
             format: 1,
-            release: '0.5.0',
+            release: '0.6.0',
             image: manifest.image,
             context,
             configuration: {

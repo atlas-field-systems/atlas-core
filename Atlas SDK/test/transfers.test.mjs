@@ -95,7 +95,7 @@ test('transfers: native Blob publication, verified binary content, empty content
   assert.equal(html.media, 'text/html');
   assert.match(html.document, /<html/i);
   const schema = response(await client.reference('application/vnd.oai.openapi+json'), 'reference');
-  assert.equal(JSON.parse(schema.document).info.version, '0.5.0');
+  assert.equal(JSON.parse(schema.document).info.version, '0.6.0');
   await client.close();
 });
 

@@ -1,6 +1,6 @@
 # Use the Atlas SDK
 
-The package implements Protocol 0.5.0 with HTTP by default and opt-in Full
+The package implements Protocol 0.6.0 with HTTP by default and opt-in Full
 synchronization. Install the packed SDK with its hash-pinned Protocol artifact.
 For a source checkout, prepare Protocol with `npm run protocol:prepare`, install
 with `npm ci --ignore-scripts`, then run `npm run build`.
@@ -36,6 +36,8 @@ const cleanup = await client.close();
 ```
 
 [Tags](../Atlas%20Protocol/components/tags.md) defines preset meaning and refusal.
+Observation reporters send a source direction the same way, as one
+[Bearing Measurement](../Atlas%20Protocol/components/bearing-measurement.md) section.
 
 ## Choose read behavior
 

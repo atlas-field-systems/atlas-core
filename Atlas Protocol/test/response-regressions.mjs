@@ -6,7 +6,7 @@ export function runResponseRegressions(p) {
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.5.0',
+      'Atlas-Protocol-Version': '0.6.0',
       'Content-Type': 'application/json',
     });
   const reply = (name, data, request, extra = {}) =>
@@ -30,14 +30,14 @@ export function runResponseRegressions(p) {
   const frame = (type, data) => ({
     type,
     dataset_id: s.id,
-    protocol_version: '0.5.0',
+    protocol_version: '0.6.0',
     request_id: s.requestId,
     data,
   });
   const batch = (geometry) => ({
     type: 'change_batch',
     dataset_id: s.id,
-    protocol_version: '0.5.0',
+    protocol_version: '0.6.0',
     data: {
       subscription_id: s.requestId,
       previous_cursor: 'before',

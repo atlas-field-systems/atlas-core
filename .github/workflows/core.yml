@@ -52,8 +52,8 @@ jobs:
           ATLAS_OPERATOR_OUT: ${{ runner.temp }}/atlas-release-operator
         run: |
           npm run operator:pack
-          node "$RUNNER_TEMP/atlas-release-operator/verify-operator-tarball.mjs" "$RUNNER_TEMP/atlas-release-operator/atlas-core-operator-qualification-0.5.0.tgz" "$RUNNER_TEMP/atlas-release-operator/operator-manifest.json"
-          npm install --global --offline --ignore-scripts --no-audit --no-fund --update-notifier=false --cache "$RUNNER_TEMP/atlas-release-cache" --prefix "$RUNNER_TEMP/atlas-operator-install" "$RUNNER_TEMP/atlas-release-operator/atlas-core-operator-qualification-0.5.0.tgz"
+          node "$RUNNER_TEMP/atlas-release-operator/verify-operator-tarball.mjs" "$RUNNER_TEMP/atlas-release-operator/atlas-core-operator-qualification-0.6.0.tgz" "$RUNNER_TEMP/atlas-release-operator/operator-manifest.json"
+          npm install --global --offline --ignore-scripts --no-audit --no-fund --update-notifier=false --cache "$RUNNER_TEMP/atlas-release-cache" --prefix "$RUNNER_TEMP/atlas-operator-install" "$RUNNER_TEMP/atlas-release-operator/atlas-core-operator-qualification-0.6.0.tgz"
       - run: npm run test:container
         env:
           ATLAS_TEST_CLI: ${{ runner.temp }}/atlas-operator-install/bin/atlas-core

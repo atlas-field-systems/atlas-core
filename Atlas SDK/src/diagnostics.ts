@@ -109,7 +109,7 @@ export type OperationSummary = Readonly<{
 }>;
 type DiagnosticContext = Readonly<{
   timestamp: string;
-  release: '0.5.0';
+  release: '0.6.0';
   instanceId: string;
   mode: 'http' | 'full';
   detail: 'summary' | 'debug';
@@ -275,7 +275,7 @@ export class Diagnostics {
   #context(detail: 'summary' | 'debug'): DiagnosticContext {
     return {
       timestamp: new Date().toISOString(),
-      release: '0.5.0' satisfies '0.5.0',
+      release: '0.6.0' satisfies '0.6.0',
       instanceId: this.#instance,
       mode: this.#readMode,
       detail,

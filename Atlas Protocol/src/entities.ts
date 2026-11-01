@@ -125,6 +125,7 @@ const ObservationDefinition = z
     type: readSections.type,
     ...commonReported,
     geometry: readSections.geometry.exactOptional(),
+    bearing_measurement: readSections.bearing_measurement.exactOptional(),
   })
   .refine(
     (value) =>
@@ -134,7 +135,13 @@ const ObservationDefinition = z
     'Observation Entity identities overlap',
   )
   .refine((value) => {
-    const sections = [value.type, value.telemetry, value.attitude, value.geometry];
+    const sections = [
+      value.type,
+      value.telemetry,
+      value.attitude,
+      value.geometry,
+      value.bearing_measurement,
+    ];
     return (
       reportSequencesMatch(sections.map((section) => section?.evidence)) &&
       sections.every(

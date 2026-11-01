@@ -67,7 +67,8 @@ Withdrawal ends a section assertion, not the Observation record.
 ## State, files, and lifetime
 
 [Entity composition](entities.md#component-composition) gives the exact permitted
-fields and initial state. Telemetry, Attitude, Type, and Geometry are source facts.
+fields and initial state. Telemetry, Attitude, Type, Geometry, and
+[Bearing Measurement](components/bearing-measurement.md) are source facts.
 Descriptions are authored separately. Source photographs are [Objects](objects.md)
 associated with the Observation. A successful report does not publish their bytes.
 Sensor references and military-display metadata are unsupported initially.

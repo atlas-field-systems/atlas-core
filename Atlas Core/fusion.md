@@ -5,7 +5,8 @@ Keep that policy behind a small internal interface. Core owns persistence and
 publication. The policy owns association decisions and derived Track state.
 The initial implementation needs no separate process or generic pipeline.
 
-`fuseOneToOne` returns source attribution and mirrored reported sections.
+`fuseOneToOne` returns source attribution and mirrored target-state sections.
+A raw Bearing Measurement stays on the Observation.
 The Entities owner assembles Track identity, versions, and authored metadata.
 The policy receives neither Track edit state nor persistence access.
 

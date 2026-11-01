@@ -17,7 +17,7 @@ export const Event = z.strictObject({
   severity: z.enum(['INFO', 'WARN', 'ERROR', 'DEBUG']),
   event: z.string().regex(/^[a-z_]{1,64}$/),
   component: z.enum(['http', 'database', 'objects', 'synchronization', 'lifecycle', 'runtime']),
-  release: z.literal('0.5.0'),
+  release: z.literal('0.6.0'),
   dataset: Uuid.optional(),
   run: Uuid.optional(),
   request_id: Uuid.optional(),

@@ -60,7 +60,7 @@ Otherwise valid future-dated measurements are time-uncertain, without usable fre
 age. Null time is unknown; other accepted times are known. Retain this classification
 with the scoped reading through retries, carry-forward, fusion, and Restart.
 Elapsed time never promotes an uncertain reading to known. Source time stays unchanged.
-Current Asset, Observation, and Track results expose per-quantity `time_status`
+Current Asset, Observation, and Track results expose `time_status`
 under [report format](report-format.md). History exposes the same reading status;
 frozen views, new queries, and new clients agree. Clock-uncertainty metadata adds no offset calculation.
 

@@ -86,6 +86,45 @@ export const Gimbal = z
     'Singular gimbal',
   )
   .meta({ id: 'Gimbal' });
+const bearingDegrees = numeric({ min: 0, exclusiveMax: 360 });
+const elevationDegrees = numeric({ min: -90, max: 90 });
+function onArc(bearing: number, { start, end }: { start: number; end: number }) {
+  return start <= end ? start <= bearing && bearing <= end : bearing >= start || bearing <= end;
+}
+export const BearingMeasurement = z
+  .strictObject({
+    sensor_origin: z.strictObject({
+      position: Position.nullable(),
+      altitude: Altitude.nullable(),
+    }),
+    bearing: bearingDegrees.nullable(),
+    elevation: elevationDegrees.nullable(),
+    bearing_interval: z
+      .strictObject({ start: bearingDegrees, end: bearingDegrees })
+      .exactOptional(),
+    elevation_interval: z
+      .strictObject({ lower: elevationDegrees, upper: elevationDegrees })
+      .exactOptional(),
+  })
+  .refine((value) => value.bearing !== null || value.elevation !== null, 'No usable angle')
+  .refine(
+    ({ bearing, elevation, sensor_origin: { position } }) =>
+      bearing === null ||
+      (Math.abs(elevation ?? 0) !== 90 && Math.abs(position?.latitude ?? 0) !== 90),
+    'Undefined bearing',
+  )
+  .refine(
+    ({ bearing, bearing_interval: interval }) =>
+      interval === undefined || (bearing !== null && onArc(bearing, interval)),
+    'Bearing outside interval',
+  )
+  .refine(
+    ({ elevation, elevation_interval: interval }) =>
+      interval === undefined ||
+      (elevation !== null && interval.lower <= elevation && elevation <= interval.upper),
+    'Elevation outside interval',
+  )
+  .meta({ id: 'BearingMeasurement' });
 export const Camera = z
   .strictObject({
     zoom_ratio: numeric({ min: 1 }).nullable(),
@@ -153,6 +192,7 @@ export type SubjectType = z.output<typeof SubjectType>;
 export type GeofeatureType = z.output<typeof GeofeatureType>;
 export type Status = z.output<typeof Status>;
 export type Gimbal = z.output<typeof Gimbal>;
+export type BearingMeasurement = z.output<typeof BearingMeasurement>;
 export type Camera = z.output<typeof Camera>;
 export type CameraOptics = z.output<typeof CameraOptics>;
 export type Capacity = z.output<typeof Capacity>;

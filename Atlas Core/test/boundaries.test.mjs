@@ -11,9 +11,9 @@ const ok = (result) => {
   assert.equal(result.status, 200, JSON.stringify(result.json));
   return result.json.data;
 };
-test('HTTP refuses API 0.1.0 through 0.4.0 before reserving registration identities', async (t) => {
+test('HTTP refuses API 0.1.0 through 0.5.0 before reserving registration identities', async (t) => {
   const f = await fixture(t);
-  for (const version of ['0.1.0', '0.2.0', '0.3.0', '0.4.0']) {
+  for (const version of ['0.1.0', '0.2.0', '0.3.0', '0.4.0', '0.5.0']) {
     const request = registration(`Version ${version}`);
     for (const [name, input] of [
       ['GetReadiness', {}],
@@ -260,7 +260,7 @@ test('a lost response retains the commit and concurrent structural retries creat
         headers: {
           Authorization: `Bearer ${f.apiKey}`,
           'Atlas-Dataset-ID': f.core.dataset,
-          'Atlas-Protocol-Version': '0.5.0',
+          'Atlas-Protocol-Version': '0.6.0',
           'Content-Type': 'application/json',
           'Content-Length': body.length,
         },
