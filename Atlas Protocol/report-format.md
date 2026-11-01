@@ -30,7 +30,7 @@ Unknown fields, null containers, and inapplicable fields are refused.
 | Field | Presence and exact meaning |
 | --- | --- |
 | `state` | Required, exactly `value`, `error`, or `withdrawn` |
-| `classification` | Required, exactly `state_until_changed` or `dated_measurement` |
+| `classification` | Required, exactly `state_until_changed` or `dated_measurement`; [Bearing Measurement](components/bearing-measurement.md#section-result) permits only `dated_measurement` |
 | `observed_at` | Required original default quantity timestamp or null when unknown |
 | `source_times` | Optional only with `value`; keys and nested structure are closed by the [component reference](components/README.md#shared-section-results); leaves are timestamps or null |
 | `value` | Required only with `state: "value"`; complete component payload |
@@ -49,8 +49,9 @@ with one `known`, `unknown`, or `uncertain` leaf for every supplied quantity in
 `source_times`' vocabulary, including quantities using the default `observed_at`.
 Geometry uses `geometry`. Power includes `external_power` and `reserves`, keyed
 by every reserve ID with its applicable quantity leaves. Optional quantities
-have a status exactly when present in the value. Error and withdrawn results use
-one status string for `observed_at`. Source-free initial quantities are `unknown`.
+have a status exactly when present in the value. Error and withdrawn results, and
+every Bearing Measurement result, use one status string for `observed_at`.
+Source-free initial quantities are `unknown`.
 A status is `unknown` exactly when its effective source time is null. Core retains
 first-admission status under the [time rule](reports.md#time-and-contact).
 Publishers cannot supply or override it; invalid or incomplete metadata is refused.

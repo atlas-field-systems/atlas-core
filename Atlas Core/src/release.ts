@@ -10,8 +10,8 @@ export const RegistryReference = z
   .regex(/^[a-z0-9][a-z0-9._:/-]*@sha256:[0-9a-f]{64}$/);
 export const ReleaseMetadata = z.strictObject({
   format: z.literal(1),
-  release: z.literal('0.5.0'),
-  protocol: z.literal('0.5.0'),
+  release: z.literal('0.6.0'),
+  protocol: z.literal('0.6.0'),
   databaseFormat: z.literal('6'),
   platform: z.literal('linux/amd64'),
   node: z.literal('24.22.1'),

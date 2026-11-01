@@ -15,7 +15,7 @@ test('all 66 routes match the independent inventory and stock exported schemas',
   assert.equal(document.openapi, '3.1.0');
   assert.equal(document.paths['/messages/subscribe_changes'], undefined);
   assert.equal(document.paths['/messages/unsubscribe_changes'], undefined);
-  assert.equal(document.info.version, '0.5.0');
+  assert.equal(document.info.version, '0.6.0');
   assert.equal(Object.keys(document.paths).length, 66);
   const ajv = new Ajv2020({
     strict: false,
@@ -97,7 +97,7 @@ test('all 66 routes match the independent inventory and stock exported schemas',
     ['SubscribeChanges', 'subscribe_changes', 'subscribed'],
     ['UnsubscribeChanges', 'unsubscribe_changes', 'unsubscribed'],
   ]) {
-    const context = { dataset_id: id, protocol_version: '0.5.0', request_id: requestId };
+    const context = { dataset_id: id, protocol_version: '0.6.0', request_id: requestId };
     const request = { type, ...context, data: wssExamples[name][0] };
     const response = { type: replyType, ...context, data: wssExamples[name][1] };
     assert.equal(clientFrame(request), true, ajv.errorsText(clientFrame.errors));
@@ -120,6 +120,53 @@ test('all 66 routes match the independent inventory and stock exported schemas',
   assert.equal(counter('18446744073709551616'), false);
   assert.equal(counter('00'), false);
   assert.equal(counter('1\n'), false);
+  const bearingInput = ajv.compile({ $ref: 'atlas#/components/schemas/BearingMeasurementInput' });
+  const bearingRead = ajv.compile({ $ref: 'atlas#/components/schemas/BearingMeasurementRead' });
+  const sighting = {
+    state: 'value',
+    classification: 'dated_measurement',
+    observed_at: null,
+    value: {
+      sensor_origin: { position: null, altitude: null },
+      bearing: 0,
+      elevation: null,
+      bearing_interval: { start: 350, end: 10 },
+    },
+  };
+  const withValue = (changes) => ({ ...sighting, value: { ...sighting.value, ...changes } });
+  const { bearing: _omittedBearing, ...withoutBearing } = sighting.value;
+  assert.equal(bearingInput(sighting), true, ajv.errorsText(bearingInput.errors));
+  for (const [name, invalid] of Object.entries({
+    'empty source_times': { ...sighting, source_times: {} },
+    'state until changed': { ...sighting, classification: 'state_until_changed' },
+    'omitted angle': { ...sighting, value: withoutBearing },
+    'null interval': withValue({ bearing_interval: null }),
+    'bearing 360': withValue({ bearing: 360 }),
+    'confidence field': withValue({ confidence: 0.9 }),
+    'null origin': withValue({ sensor_origin: null }),
+    'open origin': withValue({ sensor_origin: { position: null, altitude: null, range: 1 } }),
+  }))
+    assert.equal(bearingInput(invalid), false, name);
+  const bearingEvidence = {
+    dataset_id: id,
+    entity_id: requestId,
+    origin: { kind: 'publisher', publisher_id: id },
+    report_id: requestId,
+    sequence: '1',
+    section: 'bearing_measurement',
+  };
+  const sourced = { ...sighting, evidence: bearingEvidence, time_status: 'unknown' };
+  assert.equal(bearingRead(sourced), true, ajv.errorsText(bearingRead.errors));
+  assert.equal(bearingRead({ ...sourced, time_status: { bearing: 'unknown' } }), false);
+  assert.equal(bearingRead({ ...sourced, evidence: null }), false);
+  assert.equal(
+    bearingRead({ ...sourced, evidence: { ...bearingEvidence, section: 'gimbal' } }),
+    false,
+  );
+  const schemas = document.components.schemas;
+  assert.ok(schemas.Observation.properties.bearing_measurement);
+  assert.equal(schemas.Asset.properties.bearing_measurement, undefined);
+  assert.equal(schemas.Track.properties.bearing_measurement, undefined);
   const times = ajv.compile({ $ref: 'atlas#/components/schemas/PowerTimes' });
   assert.equal(times({ reserves: { [id]: { remaining_percent: null } } }), true);
   assert.equal(times({ reserves: { bad: { remaining_percent: null } } }), false);

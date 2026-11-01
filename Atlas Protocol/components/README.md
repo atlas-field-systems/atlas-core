@@ -29,6 +29,7 @@ character outside Unicode White_Space. Accepted spelling is retained.
 | [Camera Optics](camera-optics.md) | Baseline rectilinear field of view | Assets |
 | [Type](type.md#observed-subject-type) | Publisher's subject classification | Observations and derived Tracks |
 | [Geometry](geometry.md) | Reported subject extent | Observations and derived Tracks |
+| [Bearing Measurement](bearing-measurement.md) | One dated direction from a sensor toward a subject | Observations |
 
 ## Contact and reusable values
 
@@ -39,9 +40,10 @@ character outside Unicode White_Space. Accepted spelling is retained.
 | [Geometry](geometry.md) | Authored point, line, or polygon | Geofeatures |
 
 [Telemetry](telemetry.md) also defines reusable Position and Altitude values.
-Commands can use those values without adopting Telemetry. Position uncertainty,
-military-display metadata, sensor references, and collections of independently
-exposed cameras are unsupported initially. No untyped extension fields replace them.
+Commands and Bearing Measurement use those values without adopting Telemetry.
+Position uncertainty, military-display metadata, sensor references, and collections
+of independently exposed cameras are unsupported initially. No untyped extension
+fields replace them.
 
 ## Shared section results
 
@@ -59,8 +61,9 @@ specified nulls. Failures use an error result. Withdrawal ends an assertion.
 replaces that default for its named quantity. Explicit null means unknown time.
 Each component page lists all allowed keys. Keys for absent optional quantities
 and undeclared nested reserves are refused. No wildcard or arbitrary path is allowed.
-Descriptions, Capabilities, authored Type and Geometry, Heartbeat, and derived
-contact health do not accept `source_times`.
+Descriptions, Capabilities, authored Type and Geometry, Heartbeat, derived contact
+health, and [Bearing Measurement](bearing-measurement.md#section-result) do not
+accept `source_times`.
 
 Examples on component pages show payloads without their enclosing report evidence.
 Track copies retain original Observation scopes, IDs, and quantity times

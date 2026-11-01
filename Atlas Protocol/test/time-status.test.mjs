@@ -111,6 +111,78 @@ test('current readers require Core-assigned statuses for each effective quantity
   read(withoutAirspeed);
 });
 
+test('Bearing Measurement keeps one status while timed sections keep their own vocabulary', () => {
+  const publisher = { kind: 'publisher', publisher_id: s.processId };
+  const evidence = (section, overrides = {}) => ({
+    dataset_id: s.id,
+    entity_id: s.observationId,
+    origin: publisher,
+    report_id: s.requestId,
+    sequence: '1',
+    section,
+    ...overrides,
+  });
+  const bearing = {
+    state: 'value',
+    classification: 'dated_measurement',
+    observed_at: '2099-10-21T12:00:00.0000001Z',
+    value: { sensor_origin: { position: null, altitude: null }, bearing: 10, elevation: null },
+    evidence: evidence('bearing_measurement'),
+    time_status: 'uncertain',
+  };
+  const read = (bearing_measurement, geometry) =>
+    readHttp(
+      exchanges.GetObservation,
+      {
+        status: 200,
+        headers: new Headers({
+          'Content-Type': 'application/json',
+          'Atlas-Dataset-ID': s.id,
+          'Atlas-Protocol-Version': PROTOCOL_VERSION,
+        }),
+        body: new TextEncoder().encode(
+          JSON.stringify({
+            dataset_id: s.id,
+            data: { ...s.observation, bearing_measurement, ...(geometry ? { geometry } : {}) },
+          }),
+        ),
+      },
+      { datasetId: s.id, request: { observation_id: s.observationId } },
+    );
+  assert.deepEqual(read(bearing).body.data.bearing_measurement, bearing);
+  const geometry = {
+    state: 'value',
+    classification: 'dated_measurement',
+    observed_at: null,
+    value: s.geometry,
+    source_times: { geometry: s.time },
+    evidence: evidence('geometry'),
+    time_status: { geometry: 'known' },
+  };
+  assert.deepEqual(read(bearing, geometry).body.data.geometry, geometry);
+  assert.throws(() =>
+    read(bearing, { ...geometry, evidence: evidence('geometry', { sequence: '2' }) }),
+  );
+  for (const invalid of [
+    { dataset_id: s.assetId },
+    { entity_id: s.assetId },
+    { origin: { kind: 'publisher', publisher_id: s.requestId } },
+    { origin: { kind: 'asset_process', process_generation: s.processId } },
+  ])
+    assert.throws(() => read({ ...bearing, evidence: evidence('bearing_measurement', invalid) }));
+  const gimbal = {
+    state: 'value',
+    classification: 'dated_measurement',
+    observed_at: s.time,
+    source_times: { elevation: null },
+    value: { bearing: 10, elevation: 0 },
+    evidence: { ...evidence('gimbal'), entity_id: s.assetId, origin: s.origin },
+    time_status: { bearing: 'known', elevation: 'unknown' },
+  };
+  assert.equal(readSections.gimbal.safeParse(gimbal).success, true);
+  assert.equal(readSections.gimbal.safeParse({ ...gimbal, time_status: 'known' }).success, false);
+});
+
 test('nested Power and section failures preserve complete time metadata', () => {
   const evidence = (section) => ({
     dataset_id: s.id,

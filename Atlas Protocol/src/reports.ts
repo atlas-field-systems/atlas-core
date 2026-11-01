@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { NewId, Sequence, text, Time, Uuid } from './scalars.js';
 import {
   Attitude,
+  BearingMeasurement,
   Camera,
   CameraOptics,
   Capacity,
@@ -62,6 +63,7 @@ export const SectionName = z.enum([
   'gimbal',
   'type',
   'geometry',
+  'bearing_measurement',
 ]);
 const evidenceFields = {
   dataset_id: Uuid,
@@ -92,6 +94,19 @@ function applicable(value: unknown, times: unknown): boolean {
 }
 const errorFields = { state: z.literal('error'), ...metadata, error: SectionError };
 const withdrawnFields = { state: z.literal('withdrawn'), ...metadata };
+const datedMeasurement = { classification: z.literal('dated_measurement') };
+const bearingValueFields = {
+  state: z.literal('value'),
+  ...metadata,
+  ...datedMeasurement,
+  value: BearingMeasurement,
+};
+const bearingErrorFields = { ...errorFields, ...datedMeasurement };
+const bearingWithdrawnFields = { ...withdrawnFields, ...datedMeasurement };
+const bearingReadFields = {
+  evidence: SectionEvidence.extend({ section: z.literal('bearing_measurement') }),
+  time_status: TimeStatus,
+};
 function valueResult<V extends z.ZodType, T extends z.ZodType>(value: V, times: T) {
   return z
     .strictObject({
@@ -222,7 +237,8 @@ function validTimeStatuses(result: {
   source_times?: unknown;
 }): boolean {
   const matches = (status: unknown, time: unknown) => (status === 'unknown') === (time === null);
-  if (result.state !== 'value') return matches(result.time_status, result.observed_at);
+  if (result.state !== 'value' || typeof result.time_status === 'string')
+    return matches(result.time_status, result.observed_at);
   const statuses = quantityRecord.parse(result.time_status);
   const times = result.source_times === undefined ? {} : quantityRecord.parse(result.source_times);
   const value = quantityRecord.parse(result.value);
@@ -322,6 +338,13 @@ const inputSectionsDefinition = {
   gimbal: result(Gimbal, gimbalTimes).meta({ id: 'GimbalInput' }),
   type: result(SubjectType, typeTimes).meta({ id: 'SubjectTypeInput' }),
   geometry: result(Geometry, geometryTimes).meta({ id: 'GeometryInput' }),
+  bearing_measurement: z
+    .discriminatedUnion('state', [
+      z.strictObject(bearingValueFields),
+      z.strictObject(bearingErrorFields),
+      z.strictObject(bearingWithdrawnFields),
+    ])
+    .meta({ id: 'BearingMeasurementInput' }),
 };
 type TagsInputDefinitionSchema = typeof inputSectionsDefinition.tags;
 export interface TagsInputSchema extends TagsInputDefinitionSchema {}
@@ -345,6 +368,8 @@ type SubjectTypeInputDefinitionSchema = typeof inputSectionsDefinition.type;
 export interface SubjectTypeInputSchema extends SubjectTypeInputDefinitionSchema {}
 type GeometryInputDefinitionSchema = typeof inputSectionsDefinition.geometry;
 export interface GeometryInputSchema extends GeometryInputDefinitionSchema {}
+type BearingMeasurementInputDefinitionSchema = typeof inputSectionsDefinition.bearing_measurement;
+export interface BearingMeasurementInputSchema extends BearingMeasurementInputDefinitionSchema {}
 export const inputSections: {
   tags: TagsInputSchema;
   status: StatusInputSchema;
@@ -357,6 +382,7 @@ export const inputSections: {
   gimbal: GimbalInputSchema;
   type: SubjectTypeInputSchema;
   geometry: GeometryInputSchema;
+  bearing_measurement: BearingMeasurementInputSchema;
 } = inputSectionsDefinition;
 const readSectionsDefinition = {
   tags: readResult('tags', Tags, tagsTimes, tagsStatuses).meta({ id: 'TagsRead' }),
@@ -419,6 +445,19 @@ const readSectionsDefinition = {
   geometry: readResult('geometry', Geometry, geometryTimes, geometryStatuses).meta({
     id: 'GeometryRead',
   }),
+  bearing_measurement: z
+    .discriminatedUnion('state', [
+      z
+        .strictObject({ ...bearingValueFields, ...bearingReadFields })
+        .refine(validTimeStatuses, 'Invalid time status'),
+      z
+        .strictObject({ ...bearingErrorFields, ...bearingReadFields })
+        .refine(validTimeStatuses, 'Invalid time status'),
+      z
+        .strictObject({ ...bearingWithdrawnFields, ...bearingReadFields })
+        .refine(validTimeStatuses, 'Invalid time status'),
+    ])
+    .meta({ id: 'BearingMeasurementRead' }),
 };
 type TagsReadDefinitionSchema = typeof readSectionsDefinition.tags;
 export interface TagsReadSchema extends TagsReadDefinitionSchema {}
@@ -442,6 +481,8 @@ type SubjectTypeReadDefinitionSchema = typeof readSectionsDefinition.type;
 export interface SubjectTypeReadSchema extends SubjectTypeReadDefinitionSchema {}
 type GeometryReadDefinitionSchema = typeof readSectionsDefinition.geometry;
 export interface GeometryReadSchema extends GeometryReadDefinitionSchema {}
+type BearingMeasurementReadDefinitionSchema = typeof readSectionsDefinition.bearing_measurement;
+export interface BearingMeasurementReadSchema extends BearingMeasurementReadDefinitionSchema {}
 export const readSections: {
   tags: TagsReadSchema;
   status: StatusReadSchema;
@@ -454,6 +495,7 @@ export const readSections: {
   gimbal: GimbalReadSchema;
   type: SubjectTypeReadSchema;
   geometry: GeometryReadSchema;
+  bearing_measurement: BearingMeasurementReadSchema;
 } = readSectionsDefinition;
 const assetSections = z.strictObject({
   tags: inputSections.tags.exactOptional(),
@@ -471,6 +513,7 @@ const observationSections = z.strictObject({
   telemetry: inputSections.telemetry.exactOptional(),
   attitude: inputSections.attitude.exactOptional(),
   geometry: inputSections.geometry.exactOptional(),
+  bearing_measurement: inputSections.bearing_measurement.exactOptional(),
 });
 const reportFields = {
   dataset_id: Uuid,

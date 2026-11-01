@@ -1364,3 +1364,250 @@ test('Asset Tags retain sourced sets, ordering and process scope through Restart
     assert.deepEqual(ok(await f.call('GetAsset', { asset_id: asset.id })).tags, retained);
   }
 });
+test('Bearing Measurements keep one source sighting apart from target state and position history', async (t) => {
+  const f = await fixture(t);
+  const source = ok(
+    await f.call('RegisterAsset', { ...registration(), capabilities: { commands: [] } }),
+  ).asset;
+  const sourceOrigin = { kind: 'asset_process', process_generation: source.process_generation };
+  const moveSource = async (sequence, latitude) =>
+    ok(
+      await f.call('UpdateAsset', {
+        request_id: uuid(),
+        asset_id: source.id,
+        report: report(f.core.dataset, source.id, sourceOrigin, sequence, {
+          telemetry: telemetry(sourceOrigin, latitude),
+        }),
+      }),
+    );
+  await moveSource(1, 60);
+  const publisherId = uuid(),
+    observationId = uuid(),
+    origin = { kind: 'publisher', publisher_id: publisherId };
+  const sighting = (bearing, observedAt = '2026-10-21T12:00:00.0000001Z') => ({
+    state: 'value',
+    classification: 'dated_measurement',
+    observed_at: observedAt,
+    value: {
+      sensor_origin: {
+        position: { latitude: 51, longitude: -1 },
+        altitude: { metres: 0, reference: 'wgs84_ellipsoid' },
+      },
+      bearing,
+      elevation: null,
+      bearing_interval: { start: 350, end: 10 },
+    },
+  });
+  const sourced = (accepted, time_status, entity = observationId) => ({
+    ...accepted.sections.bearing_measurement,
+    evidence: {
+      dataset_id: f.core.dataset,
+      entity_id: entity,
+      origin: accepted.origin,
+      report_id: accepted.report_id,
+      sequence: accepted.sequence,
+      section: 'bearing_measurement',
+    },
+    time_status,
+  });
+  const reportOf = (sequence, section, mode) =>
+    report(f.core.dataset, observationId, origin, sequence, { bearing_measurement: section }, mode);
+  const submit = (accepted, credentials) =>
+    f.call(
+      'ReportObservation',
+      { observation_id: observationId, publisher_id: publisherId, report: accepted },
+      credentials,
+    );
+  const positions = async (name, entity_id) => {
+    const { allocation_context } = ok(await f.call('GetHealth'));
+    return ok(await f.call(name, { entity_id, query_id: uuid(), allocation_context })).readings;
+  };
+
+  const first = reportOf(1, sighting(0));
+  const creation = {
+    source_asset_id: source.id,
+    request_id: uuid(),
+    observation_id: observationId,
+    publisher_id: publisherId,
+    report: first,
+  };
+  const pair = ok(await f.call('CreateObservation', creation));
+  assert.deepEqual(pair.observation.bearing_measurement, sourced(first, 'known'));
+  const trackId = pair.track.id;
+  const directionOnly = {
+    dataset_id: f.core.dataset,
+    id: trackId,
+    entity_type: 'track',
+    version: '0',
+    edit_revision: '0',
+    sources: [
+      { observation_id: observationId, publisher_id: publisherId, source_asset_id: source.id },
+    ],
+    type: {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      evidence: null,
+      time_status: { kind: 'unknown' },
+      value: { kind: null },
+    },
+  };
+  assert.deepEqual(pair.track, directionOnly);
+  for (const field of ['telemetry', 'attitude', 'geometry'])
+    assert.equal(Object.hasOwn(pair.observation, field), false, field);
+  assert.deepEqual(await positions('GetObservationMovementHistory', observationId), []);
+  assert.deepEqual(await positions('GetTrackMovementHistory', trackId), []);
+
+  await moveSource(2, 61);
+  assert.deepEqual(
+    ok(await f.call('GetObservation', { observation_id: observationId })).bearing_measurement,
+    sourced(first, 'known'),
+    'Later source movement leaves the measured origin in place',
+  );
+  const vertical = {
+    state: 'value',
+    classification: 'dated_measurement',
+    observed_at: null,
+    value: { sensor_origin: { position: null, altitude: null }, bearing: null, elevation: 90 },
+  };
+  const unlocatedId = uuid();
+  const unlocated = report(f.core.dataset, unlocatedId, origin, 1, {
+    bearing_measurement: vertical,
+  });
+  assert.deepEqual(
+    ok(
+      await f.call('CreateObservation', {
+        source_asset_id: source.id,
+        request_id: uuid(),
+        observation_id: unlocatedId,
+        publisher_id: publisherId,
+        report: unlocated,
+      }),
+    ).observation.bearing_measurement,
+    sourced(unlocated, 'unknown', unlocatedId),
+    'Unknown location and time stay null despite current source Telemetry',
+  );
+
+  const relayKey = registration();
+  ok(
+    await f.call('CreateApiKey', {
+      request_id: uuid(),
+      api_key_id: relayKey.api_key_id,
+      secret: relayKey.secret,
+    }),
+  );
+  const relay = { Authorization: `Bearer ${relayKey.secret}` };
+  const future = new Date(Date.now() + 1500).toISOString();
+  const current = reportOf(3, sighting(355, future));
+  const accepted = ok(await submit(current));
+  assert.equal(accepted.evidence_disposition, 'accepted');
+  assert.deepEqual(accepted.observation.bearing_measurement, sourced(current, 'uncertain'));
+  assert.equal(accepted.observation.version, '1');
+  assert.deepEqual(accepted.track, { ...directionOnly, version: '1' });
+  await new Promise((resolve) =>
+    setTimeout(resolve, Math.max(0, Date.parse(future) - Date.now() + 20)),
+  );
+  assert.ok(Date.now() > Date.parse(future), 'The original future time has actually passed');
+  await f.restart();
+  for (const retry of [await submit(current, relay), await submit(current)]) {
+    const replay = ok(retry);
+    assert.equal(replay.evidence_disposition, 'duplicate');
+    assert.deepEqual(replay.observation, accepted.observation);
+    assert.deepEqual(replay.track, accepted.track);
+  }
+  const lostCreationReply = ok(await f.call('CreateObservation', creation, relay));
+  assert.deepEqual(lostCreationReply.observation, accepted.observation);
+  assert.deepEqual(lostCreationReply.track, accepted.track);
+
+  const changedFacts = structuredClone(current);
+  changedFacts.sections.bearing_measurement.value.bearing = 356;
+  assert.equal((await submit(changedFacts)).json.error.code, 'report_identity_conflict');
+  const occupied = reportOf(3, sighting(357));
+  assert.equal((await submit(occupied)).json.error.code, 'section_sequence_conflict');
+  const older = ok(await submit(reportOf(2, sighting(1))));
+  assert.equal(older.evidence_disposition, 'accepted');
+  const historical = ok(await submit(reportOf(9, sighting(2), 'history_only')));
+  assert.equal(historical.evidence_disposition, 'accepted');
+  for (const unchanged of [older, historical]) {
+    assert.deepEqual(unchanged.observation, accepted.observation);
+    assert.deepEqual(unchanged.track, accepted.track);
+  }
+
+  const failure = reportOf(5, {
+    state: 'error',
+    classification: 'dated_measurement',
+    observed_at: '2026-10-21T12:00:05.5Z',
+    error: { code: 'sensor_fault' },
+  });
+  const failed = ok(await submit(failure));
+  assert.deepEqual(failed.observation.bearing_measurement, sourced(failure, 'known'));
+  const withdrawal = reportOf(6, {
+    state: 'withdrawn',
+    classification: 'dated_measurement',
+    observed_at: null,
+  });
+  const withdrawn = ok(await submit(withdrawal));
+  assert.deepEqual(withdrawn.observation.bearing_measurement, sourced(withdrawal, 'unknown'));
+  assert.deepEqual(withdrawn.track, { ...directionOnly, version: '3' });
+
+  const database = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  t.after(() => database.close());
+  const counts = () =>
+    ['evidence_reports', 'evidence_sections', 'evidence_readings', 'evidence_positions'].map(
+      (table) => database.prepare(`SELECT count(*) AS n FROM ${table}`).get().n,
+    );
+  const invalidReport = (section, extra = {}) =>
+    report(f.core.dataset, observationId, origin, 7, { bearing_measurement: section, ...extra });
+  const refusals = {
+    'empty source times': invalidReport({ ...sighting(0), source_times: {} }),
+    'state until changed': invalidReport({
+      ...sighting(0),
+      classification: 'state_until_changed',
+    }),
+    'publisher time status': invalidReport({ ...sighting(0), time_status: 'known' }),
+    'whole report with bearing outside its arc': invalidReport(sighting(180), {
+      telemetry: telemetry(origin, 40),
+    }),
+  };
+  for (const [name, invalid] of Object.entries(refusals)) {
+    const before = counts();
+    const refused = await submit(invalid);
+    assert.equal(refused.status, 400, name);
+    assert.equal(refused.json.error.code, 'invalid_request', name);
+    assert.deepEqual(counts(), before, name);
+  }
+  const assetSighting = await f.call('UpdateAsset', {
+    request_id: uuid(),
+    asset_id: source.id,
+    report: report(f.core.dataset, source.id, sourceOrigin, 3, {
+      bearing_measurement: sighting(0),
+    }),
+  });
+  assert.equal(assetSighting.json.error.code, 'invalid_request');
+  assert.equal(
+    Object.hasOwn(ok(await f.call('GetAsset', { asset_id: source.id })), 'bearing_measurement'),
+    false,
+  );
+  assert.deepEqual(
+    ok(await f.call('GetObservation', { observation_id: observationId })),
+    withdrawn.observation,
+  );
+
+  const mixed = report(f.core.dataset, observationId, origin, 7, {
+    bearing_measurement: sighting(3),
+    telemetry: telemetry(origin, 52),
+  });
+  const located = ok(await submit(mixed));
+  assert.deepEqual(located.observation.bearing_measurement, sourced(mixed, 'known'));
+  assert.equal(located.track.telemetry.value.position.latitude, 52);
+  assert.equal(Object.hasOwn(located.track, 'bearing_measurement'), false);
+  for (const readings of [
+    await positions('GetObservationMovementHistory', observationId),
+    await positions('GetTrackMovementHistory', trackId),
+  ])
+    assert.deepEqual(
+      readings.map((reading) => reading.value.latitude),
+      [52],
+      'Only reported Telemetry becomes position history',
+    );
+});

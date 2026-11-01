@@ -28,7 +28,7 @@ export async function runHttp(config) {
     );
     check(client.state.kind === 'ready', 'Discovery must make the client ready');
     check(client.state.datasetId === config.datasetId, 'Exact discovered Dataset');
-    check(discovery.response.body.data.protocol_version === '0.5.0', 'Exact Protocol version');
+    check(discovery.response.body.data.protocol_version === '0.6.0', 'Exact Protocol version');
     check(discovery.response.body.dataset_id === config.datasetId, 'Discovery body context');
     contexts.push(discovery.context);
     const prepared = client.operators.create({
@@ -188,8 +188,10 @@ export async function refusals(config) {
 }
 
 export * from '@atlas/sdk';
-import { Counter, Sequence, Secret } from '@atlas/protocol';
+import { Counter, Sequence, Secret, Timestamp } from '@atlas/protocol';
 import { runTransferAssertions } from './transfers-browser.mjs';
+
+const sightingTime = '2026-10-21T12:00:00.0000001Z';
 
 /** @param {Configuration} config */
 export async function runTransfers(config) {
@@ -383,6 +385,17 @@ export async function startFull(config) {
               },
             },
           },
+          bearing_measurement: {
+            state: 'value',
+            classification: 'dated_measurement',
+            observed_at: Timestamp.parse(sightingTime),
+            value: {
+              sensor_origin: { position: { latitude: 52, longitude: -1 }, altitude: null },
+              bearing: 0,
+              elevation: null,
+              bearing_interval: { start: 350, end: 10 },
+            },
+          },
         },
       })
       .send();
@@ -430,6 +443,7 @@ export function readFull() {
   );
   const track = full.tracks.get({ track_id: trackId });
   check(track.kind === 'available' && track.value?.id === trackId, 'Track in complete picture');
+  check(!Object.hasOwn(track.value, 'bearing_measurement'), 'Bearing stays off the local Track');
   const query = full.assets.query({ filters: { aliases: ['Firefox Asset'] }, page_size: 1 });
   check(query.kind === 'available', 'Local query');
   try {
@@ -496,6 +510,16 @@ export async function updateFull() {
   check(
     observation.kind === 'response' && observation.response.kind === 'success',
     'Explicit HTTP Observation',
+  );
+  const sighting = observation.response.body.data.bearing_measurement;
+  check(
+    sighting?.state === 'value' &&
+      sighting.observed_at === sightingTime &&
+      sighting.time_status === 'known' &&
+      sighting.value.bearing === 0 &&
+      sighting.value.bearing_interval?.start === 350 &&
+      sighting.value.sensor_origin.position?.latitude === 52,
+    'Bearing Measurement through explicit HTTP',
   );
   const history = full.tracks.history({
     entity_id: trackId,

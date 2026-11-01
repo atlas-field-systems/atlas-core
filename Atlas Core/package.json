@@ -1,6 +1,6 @@
 {
   "name": "@atlas/core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -29,7 +29,7 @@
     "test:operator-package": "node --test test/operator-package.test.mjs"
   },
   "dependencies": {
-    "@atlas/protocol": "file:artifacts/atlas-protocol-0.5.0.tgz",
+    "@atlas/protocol": "file:artifacts/atlas-protocol-0.6.0.tgz",
     "@fastify/multipart": "10.1.6",
     "@fastify/websocket": "11.3.4",
     "better-sqlite3": "13.0.3",
@@ -46,8 +46,8 @@
   },
   "atlasBuild": {
     "protocol": {
-      "version": "0.5.0",
-      "sha256": "df1177f76c0efe0d3370bc47148f62fdfb89e25d0c031894e18f679967fda026"
+      "version": "0.6.0",
+      "sha256": "f794110f19adba2ee36fe073170419430d2fa23a8689122005ea256f6b9e36d2"
     },
     "sqlite": {
       "version": "3.53.4",

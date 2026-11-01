@@ -115,7 +115,7 @@ export const operator = { operator_id: requestId, name: 'Operator', edit_revisio
 export const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 export const health = {
   healthy: true,
-  protocol_version: '0.5.0',
+  protocol_version: '0.6.0',
   core_run_id: requestId,
   allocation_context: 'allocation context',
   allocation_expires_at: later,

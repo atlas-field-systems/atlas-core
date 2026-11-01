@@ -41,8 +41,8 @@ const name = process.env.ATLAS_OPERATOR_NPM_NAME ?? null;
 if (name !== null) assert.match(name, /^(?:@[a-z0-9._-]+\/)?[a-z0-9][a-z0-9._-]*$/);
 const metadata = ReleaseMetadata.parse({
   format: 1,
-  release: '0.5.0',
-  protocol: '0.5.0',
+  release: '0.6.0',
+  protocol: '0.6.0',
   databaseFormat: '6',
   platform: 'linux/amd64',
   node: '24.22.1',

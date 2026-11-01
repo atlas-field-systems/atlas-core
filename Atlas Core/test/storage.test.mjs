@@ -1028,7 +1028,7 @@ test('upload descriptor admission preserves ordinary headroom when content adds 
         1024,
         true,
       );
-      const context = { verifier: digest(credential), dataset, protocol: '0.5.0' },
+      const context = { verifier: digest(credential), dataset, protocol: '0.6.0' },
         attempt = uuid();
       const owner = await currentWriter();
       await rpc.call('prepare-upload', { context, attempt, owner }, 1024);
@@ -1111,7 +1111,7 @@ test('Object quota refusal preserves history with ample storage and with aggrega
           1024,
           true,
         );
-        const context = { verifier: digest(credential), dataset, protocol: '0.5.0' };
+        const context = { verifier: digest(credential), dataset, protocol: '0.6.0' };
         const call = async (name, request = {}) => {
           const response = await rpc.exchange(name, request, context, 1024);
           assert.equal(response.kind, 'success', JSON.stringify(response));
@@ -1249,7 +1249,7 @@ test(
         true,
       ).response,
     );
-    const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.5.0' };
+    const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.6.0' };
     const exchange = (name, request, reserved = false) =>
       send('exchange', { operation: { name, request }, context }, reserved);
     const writes = Array.from({ length: 32 }, () =>
@@ -1450,7 +1450,7 @@ test(
           ).type,
           'reply',
         );
-        const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.5.0' };
+        const context = { verifier: digest(credential), dataset: state.dataset, protocol: '0.6.0' };
         const exchange = (name, request, reserved = false) =>
           send('exchange', { operation: { name, request }, context }, reserved);
         for (let i = 0; i < 3; i++)
@@ -1870,7 +1870,7 @@ test('tiny HTTP requests coexist and required exchanges fit the reserved IPC cap
   );
   const reads = await Promise.all(Array.from({ length: 32 }, () => f.call('ListAssets', {})));
   for (const response of reads) assert.equal(ok(response).items[0].id, asset.id);
-  const context = { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.5.0' };
+  const context = { verifier: digest(f.apiKey), dataset: f.core.dataset, protocol: '0.6.0' };
   const pending = [];
   for (let i = 0; i < 15; i++)
     pending.push(f.core.rpc.exchange('ListAssets', {}, context, 1_048_576).catch((error) => error));

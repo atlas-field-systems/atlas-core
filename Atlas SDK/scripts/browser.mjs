@@ -51,8 +51,8 @@ try {
   assert.ok(packed.files.some((file) => file.path === 'dist/index.js'));
   assert.ok(packed.files.every((file) => !/^(src|test|node_modules)\//.test(file.path)));
   await copyFile(
-    join(root, 'artifacts/atlas-protocol-0.5.0.tgz'),
-    join(consumer, 'artifacts/atlas-protocol-0.5.0.tgz'),
+    join(root, 'artifacts/atlas-protocol-0.6.0.tgz'),
+    join(consumer, 'artifacts/atlas-protocol-0.6.0.tgz'),
   );
   await writeFile(
     join(consumer, 'package.json'),
@@ -61,7 +61,7 @@ try {
       type: 'module',
       dependencies: {
         '@atlas/sdk': `file:${packed.filename}`,
-        '@atlas/protocol': 'file:artifacts/atlas-protocol-0.5.0.tgz',
+        '@atlas/protocol': 'file:artifacts/atlas-protocol-0.6.0.tgz',
         typescript: manifest.devDependencies.typescript,
       },
     }),

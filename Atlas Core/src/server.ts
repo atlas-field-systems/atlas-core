@@ -477,7 +477,7 @@ async function initializeCore(options: ServerOptions, cleanup: (() => Promise<vo
           const media = incoming.headers.get('Accept');
           const document =
             media === 'text/html'
-              ? '<!doctype html><html lang="en"><meta charset="utf-8"><title>Atlas Protocol</title><h1>Atlas Protocol 0.5.0</h1><p>The OpenAPI reference is available at this URL with Accept: application/vnd.oai.openapi+json.</p></html>'
+              ? '<!doctype html><html lang="en"><meta charset="utf-8"><title>Atlas Protocol</title><h1>Atlas Protocol 0.6.0</h1><p>The OpenAPI reference is available at this URL with Accept: application/vnd.oai.openapi+json.</p></html>'
               : result.document;
           const body = Buffer.from(document);
           responseHeaders.set('Content-Type', media ?? result.media);

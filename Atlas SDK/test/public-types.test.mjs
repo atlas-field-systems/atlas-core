@@ -46,7 +46,7 @@ test(
   type RemoteAbandonment, type HistoryCloseResult, type ContactSelection, type RemoteLimits,
   type AssetReading, type ObservationReading, type AssetChanges, type ContentOptions, type UploadSource,
 } from '@atlas/sdk';
-import { NewId, Uuid, Sequence, Position, Timestamp, Counter } from '@atlas/protocol';
+import { NewId, Uuid, Sequence, Position, Timestamp, Counter, inputSections } from '@atlas/protocol';
 const client: HttpClient = createClient({ baseUrl: 'https://localhost', credentials: () => '', remote: { handles: 4, retainedBytes: 64000 } });
 const full: FullClient = createClient({ baseUrl: 'https://localhost', credentials: () => '', mode: 'full' });
 declare const options: ClientOptions;
@@ -70,6 +70,17 @@ asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse
 const localAsset = full.assets.get({ asset_id: id });
 if (localAsset.kind === 'available' && localAsset.value?.tags?.state === 'value') {
   const presets: ('simulated')[] = localAsset.value.tags.value.presets;
+}
+reporter.report({ report_id: newId, sequence: Sequence.parse('2'), generated_at: null, mode: 'current', sections: { bearing_measurement: { state: 'value', classification: 'dated_measurement', observed_at: at, value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, bearing: 0, elevation: null, bearing_interval: { start: 350, end: 10 } } } } });
+component(inputSections.bearing_measurement, { state: 'value', classification: 'dated_measurement', observed_at: at, value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, bearing: 0, elevation: null, bearing_interval: { start: 350, end: 10 } } });
+const reconciled = await reporter.reconcile();
+if (reconciled.kind === 'response' && reconciled.response.kind === 'success') {
+  const measured = reconciled.response.body.data.bearing_measurement;
+  if (measured?.state === 'value') {
+    const scalarStatus: 'known' | 'unknown' | 'uncertain' = measured.time_status;
+    const bearing: number | null = measured.value.bearing;
+    const arcStart: number | undefined = measured.value.bearing_interval?.start;
+  }
 }
 component(Position, { latitude: 51.5, longitude: -0.1 });
 component(commandCatalog.pause, { command: 'pause', scheduling: 'immediate', inputs: {} });
@@ -109,6 +120,14 @@ const failures: unknown[] = failure.errors;
       "asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: null, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['custom'] } } } });",
       "asset.update({ request_id: newId, tags: { presets: ['simulated'] } });",
       "reporter.report({ report_id: newId, sequence: Sequence.parse('1'), generated_at: null, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['simulated'] } } } });",
+      "reporter.report({ report_id: newId, sequence: Sequence.parse('2'), generated_at: null, mode: 'current', sections: { bearing_measurement: { state: 'value', classification: 'dated_measurement', observed_at: at, source_times: {}, value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, bearing: 0, elevation: null, bearing_interval: { start: 350, end: 10 } } } } });",
+      "reporter.report({ report_id: newId, sequence: Sequence.parse('2'), generated_at: null, mode: 'current', sections: { bearing_measurement: { state: 'value', classification: 'state_until_changed', observed_at: at, value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, bearing: 0, elevation: null, bearing_interval: { start: 350, end: 10 } } } } });",
+      "reporter.report({ report_id: newId, sequence: Sequence.parse('2'), generated_at: null, mode: 'current', sections: { bearing_measurement: { state: 'value', classification: 'dated_measurement', observed_at: at, value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, elevation: null, bearing_interval: { start: 350, end: 10 } } } } });",
+      "reporter.report({ report_id: newId, sequence: Sequence.parse('2'), generated_at: null, mode: 'current', sections: { bearing_measurement: { state: 'value', classification: 'dated_measurement', observed_at: at, value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, bearing: 0, elevation: null, bearing_interval: null } } } });",
+      "reporter.report({ report_id: newId, sequence: Sequence.parse('2'), generated_at: null, mode: 'current', sections: { bearing_measurement: { state: 'value', classification: 'dated_measurement', observed_at: at, time_status: 'known', value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, bearing: 0, elevation: null, bearing_interval: { start: 350, end: 10 } } } } });",
+      "asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('2'), generated_at: null, mode: 'current', sections: { bearing_measurement: { state: 'value', classification: 'dated_measurement', observed_at: at, value: { sensor_origin: { position: { latitude: 51, longitude: -1 }, altitude: null }, bearing: 0, elevation: null, bearing_interval: { start: 350, end: 10 } } } } });",
+      "if (localAsset.kind === 'available') localAsset.value?.bearing_measurement;",
+      "const localTrack = full.tracks.get({ track_id: id }); if (localTrack.kind === 'available') localTrack.value?.bearing_measurement;",
       "client.assets.history({ entity_id: id, query_id: newId, allocation_context: 'foreign' });",
       "client.tracks.history({ entity_id: id, query_id: newId, time_groups: ['local'] });",
       "client.assets.contact({ asset_id: id, process_generation: id, request_id: newId, mode: 'current', expected_process_generation: id });",

@@ -68,7 +68,7 @@ export async function fixture(t, overrides = {}) {
             Object.entries({
               Authorization: `Bearer ${apiKey}`,
               'Atlas-Dataset-ID': core.dataset,
-              'Atlas-Protocol-Version': '0.5.0',
+              'Atlas-Protocol-Version': '0.6.0',
               ...(body === undefined
                 ? {}
                 : { 'Content-Type': 'application/json', 'Content-Length': body.byteLength }),

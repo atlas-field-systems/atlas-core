@@ -195,7 +195,7 @@ test(
             headers: {
               Authorization: `Bearer ${credential}`,
               ...(dataset
-                ? { 'Atlas-Dataset-ID': dataset, 'Atlas-Protocol-Version': '0.5.0' }
+                ? { 'Atlas-Dataset-ID': dataset, 'Atlas-Protocol-Version': '0.6.0' }
                 : {}),
               ...(bytes
                 ? { 'Content-Type': 'application/json', 'Content-Length': bytes.length }
@@ -572,7 +572,7 @@ test(
           severity: 'INFO',
           event: 'export_fixture',
           component: 'runtime',
-          release: '0.5.0',
+          release: '0.6.0',
           count: 17,
         };
         await writeFile(join(logs, 'events.0.jsonl'), JSON.stringify(event) + '\ninvalid JSON\n');

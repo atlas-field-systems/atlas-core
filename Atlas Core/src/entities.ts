@@ -665,6 +665,15 @@ export class Entities {
       );
       changed = true;
     }
+    if (s.bearing_measurement && eligible(observation.bearing_measurement, report)) {
+      observation.bearing_measurement = this.evidence.sourced(
+        readSections.bearing_measurement,
+        s.bearing_measurement,
+        report,
+        'bearing_measurement',
+      );
+      changed = true;
+    }
     return changed;
   }
   reportObservation(tx: Transaction, request: RequestOf<'ReportObservation'>) {

@@ -319,6 +319,116 @@ test('report sections preserve omission and withdrawals and source queries retai
   success(await history.close());
 });
 
+test('direction-only Bearing Measurements survive lost replies and Restart without Track state or position history', async (t) => {
+  const f = await fixture(t);
+  const { client, reporting, http } = await publicClient(t, f);
+  const observation_id = uuid(),
+    publisher_id = uuid();
+  const source = registration();
+  source.capabilities = { commands: [] };
+  sent(await http.assets.register(source).send());
+  const { creation, reporter } = reporting.createObservation({
+    source_asset_id: source.asset_id,
+    request_id: uuid(),
+    observation_id,
+    publisher_id,
+  });
+  const created = sent(await creation.send());
+  const north = {
+    state: 'value',
+    classification: 'dated_measurement',
+    observed_at: '2026-10-21T12:00:00.0000001Z',
+    value: {
+      sensor_origin: {
+        position: { latitude: 51.50000000000001, longitude: -1 },
+        altitude: { metres: 0, reference: 'wgs84_ellipsoid' },
+      },
+      bearing: 0,
+      elevation: null,
+      bearing_interval: { start: 350, end: 10 },
+    },
+  };
+  const section = component(inputSections.bearing_measurement, north);
+  assert.deepEqual(section, north);
+  assert.equal(Object.hasOwn(section.value, 'elevation_interval'), false);
+  const withValue = (changes) => ({ ...north, value: { ...north.value, ...changes } });
+  const assetReporter = reporting.asset({
+    id: source.asset_id,
+    process_generation: source.process_generation,
+  });
+  const traffic = f.traffic.length;
+  for (const [name, invalid] of Object.entries({
+    'empty source times': { ...north, source_times: {} },
+    'state until changed': { ...north, classification: 'state_until_changed' },
+    'publisher time status': { ...north, time_status: 'known' },
+    'null interval': withValue({ bearing_interval: null }),
+    'undefined interval': withValue({ bearing_interval: undefined }),
+    'bearing outside arc': withValue({ bearing: 180 }),
+    'no usable angle': withValue({ bearing: null, bearing_interval: undefined }),
+    confidence: withValue({ confidence: 0.9 }),
+  }))
+    assert.throws(
+      () => reporter.report(reading(1, { bearing_measurement: invalid })),
+      { code: 'invalid_value' },
+      name,
+    );
+  assert.throws(
+    () => assetReporter.update({ request_id: uuid() }, reading(1, { bearing_measurement: north })),
+    { code: 'invalid_value' },
+  );
+  assert.equal(f.traffic.length, traffic);
+
+  const first = reading(1, { bearing_measurement: section });
+  const operation = reporter.report(first);
+  f.once('/messages/report_observation', ({ outgoing }) => outgoing.destroy());
+  assert.equal((await operation.send()).outcome.kind, 'unknown_outcome');
+  await f.restart();
+  success(await client.connect());
+  const retried = sent(await operation.send());
+  assert.equal(retried.evidence_disposition, 'duplicate');
+  const expected = {
+    ...north,
+    evidence: {
+      dataset_id: created.observation.dataset_id,
+      entity_id: observation_id,
+      origin: { kind: 'publisher', publisher_id },
+      report_id: first.report_id,
+      sequence: '1',
+      section: 'bearing_measurement',
+    },
+    time_status: 'known',
+  };
+  assert.deepEqual(retried.observation.bearing_measurement, expected);
+  assert.deepEqual(success(await reporter.reconcile()).bearing_measurement, expected);
+  const track = success(await reporter.recordedTrack());
+  assert.equal(track.id, created.track.id);
+  for (const field of ['bearing_measurement', 'telemetry', 'attitude', 'geometry'])
+    assert.equal(Object.hasOwn(track, field), false, field);
+  const history = http.observations.history({ entity_id: observation_id, query_id: uuid() });
+  assert.deepEqual(success(await history.next()).readings, []);
+  success(await history.close());
+
+  for (const alter of [
+    (changed) => (changed.time_status = { bearing: 'known' }),
+    (changed) => (changed.time_status = 'unknown'),
+    (changed) => (changed.source_times = {}),
+    (changed) => (changed.value.bearing = 180),
+  ]) {
+    f.once('/messages/get_observation', ({ body, forward }) => {
+      const response = JSON.parse(body);
+      alter(response.data.bearing_measurement);
+      forward(Buffer.from(JSON.stringify(response)));
+    });
+    assert.equal((await reporter.reconcile()).kind, 'failed');
+  }
+  f.once('/messages/get_track', ({ body, forward }) => {
+    const response = JSON.parse(body);
+    response.data.bearing_measurement = expected;
+    forward(Buffer.from(JSON.stringify(response)));
+  });
+  assert.equal((await reporter.recordedTrack()).kind, 'failed');
+});
+
 for (const [budget, limits] of [
   ['operation count', { preparedOperations: 1 }],
   ['prepared bytes', { preparedOperations: 64, preparedBytes: 16384 }],

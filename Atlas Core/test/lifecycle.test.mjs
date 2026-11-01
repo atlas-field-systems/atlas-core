@@ -336,7 +336,7 @@ test('transfer cleanup closes a prepared download that the caller never starts',
   const download = await transfers.download(descriptor.object_id, {
     verifier: digest(f.apiKey),
     dataset: f.core.dataset,
-    protocol: '0.5.0',
+    protocol: '0.6.0',
   });
   assert.equal(download.stream.readableDidRead, false);
   assert.ok(handles.size > 0, 'The download acquired a real file handle');

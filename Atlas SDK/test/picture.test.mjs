@@ -211,7 +211,7 @@ async function call(f, operation, data, credential = f.apiKey) {
     headers: {
       authorization: `Bearer ${credential}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.5.0',
+      'atlas-protocol-version': '0.6.0',
       'content-type': 'application/json',
     },
     body: JSON.stringify(data),
@@ -350,7 +350,7 @@ async function object(f, assetId) {
     headers: {
       authorization: `Bearer ${f.apiKey}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.5.0',
+      'atlas-protocol-version': '0.6.0',
     },
     body: form,
   });

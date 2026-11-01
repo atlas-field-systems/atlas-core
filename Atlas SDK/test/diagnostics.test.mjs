@@ -61,7 +61,7 @@ test('Summary correlates a real lost commit and deliberate retry without exposin
   assert.equal(attempts[1].bytes.observedTransport, null);
   assert.equal(success(await client.tasks.list({}).next()).data.items.length, 1);
   for (const event of events) {
-    assert.equal(event.release, '0.5.0');
+    assert.equal(event.release, '0.6.0');
     assert.equal(event.mode, 'http');
     assert.match(event.timestamp, /^\d{4}-\d\d-\d\dT.*Z$/);
     assert.match(event.instanceId, /^[0-9a-f-]{36}$/);

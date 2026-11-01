@@ -36,6 +36,7 @@ export {
   Telemetry,
   Attitude,
   Gimbal,
+  BearingMeasurement,
   Camera,
   CameraOptics,
   Capacity,

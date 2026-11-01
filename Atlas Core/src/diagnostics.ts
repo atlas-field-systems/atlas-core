@@ -46,7 +46,7 @@ export class Diagnostics {
       this.dropped++;
       return;
     }
-    const event = Event.safeParse({ ...input, at: new Date().toISOString(), release: '0.5.0' });
+    const event = Event.safeParse({ ...input, at: new Date().toISOString(), release: '0.6.0' });
     if (!event.success) {
       this.dropped++;
       return;

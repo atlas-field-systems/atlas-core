@@ -68,7 +68,7 @@ automatic downgrade, or translation between versions.
 and [execution evidence](execution-evidence.md) define the separate source envelopes.
 
 These pages own behavior, message fields, and bounds. The [package guide](package-usage.md)
-covers @atlas/protocol 0.5.0, inferred types, exact boundaries, and stock reference
+covers @atlas/protocol 0.6.0, inferred types, exact boundaries, and stock reference
 export. [Qualification](qualification.md) runs built-package checks and the independent
 fixture corpus. Core and SDK own separate qualification of their consuming workflows.
 Protocol-only checks establish neither server durability nor supported deployment capacity.

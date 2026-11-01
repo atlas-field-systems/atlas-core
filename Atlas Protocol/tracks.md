@@ -24,6 +24,8 @@ Mirror the Observation's `type` and every present `telemetry`, `attitude`, and
 `geometry` result, including classifications, errors, withdrawals, unknown values,
 and original quantity times. Initially absent optional sections stay absent.
 A source-free unknown Type remains source-free. Description and alias are not copied.
+[Bearing Measurement](components/bearing-measurement.md) stays on the Observation,
+though an accepted replacement still advances the version of both resources.
 Each sourced result's `evidence` references the original Observation report and section.
 Telemetry constituent identities retain the original Dataset, Observation, publisher,
 and quantity scope. Never substitute the Track ID or a fusion-processing identity.
