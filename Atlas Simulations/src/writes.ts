@@ -2,6 +2,7 @@ import type { Prepared } from '@atlas/sdk';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { Truth } from './truth.js';
+import { ExchangeFailure, refusalCode } from './sdk.js';
 export class Writes {
   private readonly active = new Set<Promise<void>>();
   private readonly owners = new Set<string>();
@@ -76,15 +77,16 @@ export class Writes {
               .parse(attempt.response.body);
             if (['storage_limit', 'resource_limit'].includes(error.error.code)) return;
           }
-          if (result.outcome.kind !== 'unknown_outcome')
-            throw new Error(
-              `Write ${identity} ${result.outcome.kind} ${z.object({ kind: z.literal('response'), response: z.object({ kind: z.literal('error'), body: z.object({ error: z.object({ code: z.string() }) }) }) }).safeParse(attempt).success ? JSON.stringify(attempt) : ''}`,
-            );
+          if (result.outcome.kind !== 'unknown_outcome') {
+            const code = refusalCode(attempt);
+            if (code !== undefined) throw new ExchangeFailure(code);
+            throw new Error(`Write ${identity} ${result.outcome.kind}`);
+          }
           if (
             attempt.kind === 'not_sent' &&
             ['dataset_invalidated', 'authorization_required', 'closed'].includes(attempt.code)
           )
-            throw new Error(`Write ${identity} ${attempt.code}`);
+            throw new ExchangeFailure(attempt.code);
           await delay(backoff);
           backoff = Math.min(2000, backoff * 2);
         }

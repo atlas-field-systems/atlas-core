@@ -168,9 +168,18 @@ export const Scenario = z
       if (a.action === 'fault' && a.id === 'core-reset' && i !== (s.timeline ?? []).length - 1)
         fail('Reset must be last');
     }
-    for (const e of s.expect?.tasks ?? [])
+    const expectedTasks = new Set<string>();
+    for (const e of s.expect?.tasks ?? []) {
       if (!assets.has(e.asset) || e.index >= (moves.get(e.asset) ?? 0))
         fail('Unknown expected Task');
+      const key = `${e.asset}/${e.index}`;
+      if (expectedTasks.has(key)) fail('Duplicate expected Task');
+      expectedTasks.add(key);
+    }
+    if (s.expect)
+      for (const [asset, count] of moves)
+        for (let index = 0; index < count; index++)
+          if (!expectedTasks.has(`${asset}/${index}`)) fail('Missing expected Task');
     for (const a of s.expect?.removed_assets ?? [])
       if (!assets.has(a)) fail('Unknown removed Asset');
     if ([s.timeline, s.deadline_seconds, s.expect].filter((v) => v !== undefined).length % 3)

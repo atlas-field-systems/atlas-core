@@ -130,6 +130,12 @@ export function checkEvidence(
   };
   const expect = input.scenario.expect;
   if (!expect) throw new Error('Missing eval expectations');
+  for (const binding of input.moves)
+    if (
+      expect.tasks.filter((e) => e.asset === binding.asset && e.index === binding.index).length !==
+      1
+    )
+      failures.tasks.push(`Task requires one expectation ${binding.asset}/${binding.index}`);
   for (const expected of expect.tasks) {
     const binding = input.moves.find(
       (m) => m.asset === expected.asset && m.index === expected.index,
@@ -137,8 +143,18 @@ export function checkEvidence(
     const task = binding && e.tasks.get(binding.id);
     if (!task || task.execution_state !== expected.state)
       failures.tasks.push(`Task ${expected.asset}/${expected.index} expected ${expected.state}`);
-    if (task && ['completed', 'cancelled'].includes(task.execution_state)) {
+    if (task) {
       const effects = e.physical.filter((p) => p.task === task.task_id);
+      if (
+        ['in_progress', 'paused', 'completed'].includes(task.execution_state) &&
+        effects.filter((p) => p.event === 'start').length !== 1
+      )
+        failures.tasks.push(`Task lacks exactly one physical start ${task.task_id}`);
+      if (
+        !['completed', 'cancelled', 'failed'].includes(task.execution_state) &&
+        effects.some((p) => p.event === 'arrive')
+      )
+        failures.tasks.push(`Nonterminal Task arrived ${task.task_id}`);
       if (
         task.execution_state === 'completed' &&
         effects.filter((p) => p.event === 'arrive').length !== 1

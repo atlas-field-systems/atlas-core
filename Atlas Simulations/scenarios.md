@@ -48,6 +48,8 @@ one file.
 `expect` holds `tasks`, `tracks`, and an optional `removed_assets` list of the Assets
 that a fault deletes. A `tasks` entry can name a nonterminal state for a Task that a
 fault strands.
+Every `move_to` action requires exactly one `expect.tasks` entry for its Asset and
+index. Missing or duplicate expectations are invalid input.
 
 A subject follows its route once at a fixed speed and stops at the last point. A
 route holds one to 1,000 points. The loader refuses more than 1,000 Asset/subject

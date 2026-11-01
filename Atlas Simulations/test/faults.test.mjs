@@ -27,6 +27,26 @@ for (const id of faultIds)
       const broken = structuredClone(receipt);
       faultControls[id](broken.observations);
       assert.notDeepEqual(verifyFault(broken), [], `Broken control must fail ${id}`);
+      if (id === 'queue-changed') {
+        const unrecovered = structuredClone(receipt);
+        unrecovered.observations[2] = { kind: 'not_sent', code: 'not_connected' };
+        assert.notDeepEqual(verifyFault(unrecovered), [], 'Fresh assigned read must recover');
+      }
+      if (id === 'asset-deleted') {
+        for (const slot of [3, 4]) {
+          const lostTask = structuredClone(receipt);
+          lostTask.observations[slot].execution_state = 'pending';
+          lostTask.observations[slot].execution_summary = null;
+          assert.notDeepEqual(verifyFault(lostTask), [], 'Deletion must retain an active Task');
+        }
+        const unrelated = structuredClone(receipt);
+        unrelated.observations[5].code = 'network';
+        assert.notDeepEqual(
+          verifyFault(unrelated),
+          [],
+          'Only the expected refusal can stop the Asset',
+        );
+      }
       t.diagnostic(`Fault control rejected ${id}`);
     }
   });
