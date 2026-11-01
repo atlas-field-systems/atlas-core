@@ -1,0 +1,35 @@
+# Geofeature messages
+
+> Retained current design for review. [Planning status](../../../../README.md#planning-status).
+
+Geofeature messages create and edit authored points, lines, and polygons.
+Creation requires Geometry and accepts permitted Description and [Type](../components/type.md#geofeature-type) values.
+It has no Asset enrollment or Observation publisher inputs.
+
+## Messages
+
+| Message | Expected user and purpose | Input | Observable result |
+| --- | --- | --- | --- |
+| `CreateGeofeature` | Operator app or import tool authors a point, line, or area for planning | Stable Geofeature and request IDs, required Geometry, and permitted initial description | Created Geofeature |
+| `ListGeofeatures` | Operator app browses authored geometry for display or Task selection | Bounded filters | Matching Geofeature views |
+| `GetGeofeature` | Operator app or Asset runtime reads geometry referenced by a Task | Geofeature ID | Current Geofeature view |
+| `GetGeofeatureByAlias` | Planning integration resolves a configured alias to a Geofeature | Geofeature alias | Matching Geofeature view |
+| `EditGeofeature` | Operator app or import tool revises geometry or its description | Geofeature ID, permitted edits to description and geometry, retry identity, and `expected_edit_revision` | Committed Geofeature. A geometry change advances its geometry revision |
+| `DeleteGeofeature` | Operator app removes authored geometry that is no longer needed | Geofeature ID and retry identity | Deletion or an explicit refusal under [reference guards](../structure.md#geometry-and-references) |
+| `GetGeofeatureObjects` | Operator app finds reference files associated with a point, line, or area | Geofeature ID and bounded query | Associated Object metadata |
+
+Inputs reuse the [permitted Entity components](../structure.md#component-composition).
+Geometry edits and Task references follow [Geometry and references](../structure.md#geometry-and-references).
+Saving a changed Geofeature does not prove that an Asset applied it.
+
+[Messaging index](../../shared/messages.md)
+
+## Concrete request fields
+
+Creation requires geofeature_id, request_id, geometry; optional alias, description,
+and type use authored Entity values. Edit requires geofeature_id, request_id,
+expected_edit_revision and nonempty `edits` of alias, description, type, geometry.
+Only alias and description permit null clearing. Create/edit data is the complete
+Geofeature. Single reads and deletes use geofeature_id; deletes add request_id.
+Alias lookup uses alias. Object queries use geofeature_id on the first page
+under [queries](../../shared/queries.md).

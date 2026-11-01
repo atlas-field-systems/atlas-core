@@ -1,0 +1,111 @@
+# Qualify the Atlas SDK
+
+> Retained current design for review. [Planning status](../../../../README.md#planning-status).
+
+Use Node 24.22.1 and npm 11.19.0. Build Core with the same Protocol artifact first.
+Keep mutable consumers, browser profiles, databases and logs outside the workspace.
+Run from Atlas SDK with a unique external root.
+
+```sh
+export ATLAS_TEST_ROOT="$(mktemp -d /var/tmp/atlas-sdk-tests.XXXXXX)"
+npm run verify:inputs
+npm run qualify
+npm run test:browser
+```
+
+`verify:inputs` checks pinned tools, lock entries, Core's matching Protocol hash,
+the packed artifact, and installed Protocol runtime and declaration bytes.
+`qualify` builds, runs all source suites, packs SDK, installs an external consumer,
+checks positive and negative inferred types, bundles every public export for
+browsers, and reruns public workflows through the installed root entry.
+`*.owner.test.mjs` runs only in source. Public type suites resolve the installed
+package when `ATLAS_SDK_ENTRY` is set. The unsupported `partial` mode check remains
+independent of positive and negative Full-mode checks.
+
+## Public workflow coverage
+
+Real HTTPS/WSS fixtures exercise discovery, exact Dataset/version refusal, prepared
+identities and shared evidence, lost replies, deliberate retries, cancellation,
+late original-Dataset success, key recovery, bounded ingestion, Restart and Reset.
+Reporting tests cover retained source identities, exact readings, sections and
+recorded Track attribution. Remote tests cover frozen history, repeated context,
+assigned instructions, contact proofs and process replacement. Transfer tests
+cover native multipart, byte-zero retry, content/reference validation, provisional
+streams, EOF digest verification and cleanup failures.
+
+Full tests cover all five resource kinds, atomic snapshot/feed publication, local
+reads without HTTP, frozen queries, journals/subscriptions, stale authorization,
+recovery, invalid frames and finite capacity. Integration tests combine the owners
+in both modes and check active-stream close, blocked admissions, concurrent close,
+lost release evidence, paused release traffic and failure aggregation. Internal
+suites retain allocation-owner timing, Session/socket cleanup, diagnostic bounds,
+and an isolated bounded-memory transfer check.
+
+Recovery tests verify missed writes and deletions reach existing subscriptions,
+then live updates resume. Real Core replay expiry invalidates old tokens and rebuilds.
+An operator/Asset workflow verifies task order, independent report identities,
+lost replies, cancellation refusal and completion across Restart.
+Mission simulations combine a direct-IP Asset, two gateway Assets, two operators,
+Pause/Resume, offline cancellation, key rotation, live Tracks and late result files.
+After building, run `node scripts/test.mjs --test-name-pattern='^mission '` to select them.
+
+The Node runner establishes a test CA before a fresh process starts; TLS validation
+stays enabled. A real HTTPS proxy can lose, delay or alter Core responses. Each
+passing fixture awaits clients, proxy jobs, sockets and Core workers before removal.
+Failed roots remain for inspection. Every Node run retains `sdk-evidence-*` with
+`results.tap` and `report.json` naming its entry, revision, command and exit.
+The external consumer retains `qualification.json` and the browser dependency graph.
+
+## Actual Firefox execution
+
+`test:browser` packs and installs another consumer, type-checks its browser JavaScript
+with strict DOM-only declarations, bundles all public exports, and runs Firefox
+through real Core HTTPS/WSS. Install the browser matching pinned Playwright 1.64.1.
+Set `PLAYWRIGHT_BROWSERS_PATH` for a task-local browser cache and
+`ATLAS_BROWSER_CERTUTIL` for NSS certutil when it is outside PATH.
+
+A fresh isolated Firefox profile first rejects the test issuer. The runner imports
+its CA into only that profile, then proves normal authenticated TLS. It preserves
+HTTP's zero-WebSocket check, CORS/correlation, wrong context/key/version refusals
+and retained values after Core Restart. Full then proves initial publication,
+authenticated WSS updates, zero-HTTP local reads, explicit Observation/history,
+stale authorization, changed-key recovery and awaited socket/client shutdown.
+Native Blob/File tests verify multipart order/media against Core, exact retry with
+one Object, streamed bytes and digest, reference retrieval, exposed content headers,
+and generic-stream refusal before opener or HTTP. Evidence records the actual
+artifact, browser version, trust database, wire observations and cleanup.
+
+## Accept qualification evidence
+
+Runners reject workspace roots and symlink aliases before creating fixtures.
+`qualify` records source and installed phases in the consumer's `qualification.json`;
+Firefox records its own report. Reports retain
+the tested Git revision and dirty state, SDK archive SHA-256, tool versions,
+command arguments and working directories, expected and actual exits, and closed
+logs capped at 16 MiB per stream outside deleted TLS fixtures. Expected negative
+type exits are explicit.
+Failures retain logs and a failed or incomplete report; they cannot produce PASS.
+
+Before accepting a handoff, supply both reports and the expected full commit:
+`npm run evidence:verify -- --revision <HEAD> <package-report> <browser-report>`.
+The verifier requires distinct stdout/stderr logs, the bundle graph, and Firefox's
+runtime, traffic and profile-trust files. It rejects dirty or mismatched source,
+changed or unclosed evidence, and failed or incomplete commands. This is local evidence,
+not cryptographic proof. CI runs both qualifications on PRs and pushes to main,
+and retains reports, TAP, logs and browser artifacts for seven days, never fixtures.
+
+CI checks all SDK source, scripts and tests with Protocol's pinned Prettier/config,
+and Core source, scripts and tests changed against a validated comparison base.
+Run `node ../scripts/format.mjs --base <full-ancestor-SHA>` from SDK; add `--write`
+to format. CI fetches full history: PRs use the merge base, pushes the previous
+commit, and manual runs require an explicit ancestor. Invalid bases fail closed.
+Legacy unchanged Core files remain outside this incremental formatter gate.
+
+## Limits of this evidence
+
+Browser bundling alone proves neither browser execution nor server compatibility.
+Chromium, WebKit, other platforms, sustained workload, container/release validation
+and power-loss durability are unrun here. See [Core qualification](core.md).
+Functional tmpfs Restart and bounded-memory checks establish no disk durability or
+supported retained-workload capacity. Independent full-branch review remains a
+separate gate.
