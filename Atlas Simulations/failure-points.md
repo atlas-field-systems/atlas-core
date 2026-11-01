@@ -15,7 +15,7 @@ The proxy sits between every client and Core.
 | ID | Injection | Required result |
 | --- | --- | --- |
 | `reply-lost` | Drop the reply after Core commits, for each write kind | `unknown_outcome`, then a retry with one durable effect |
-| `reply-delayed` | Hold a reply past the attempt deadline | The late reply updates the same operation with no second effect |
+| `reply-delayed` | Hold a reply past the attempt deadline | Timeout stays uncertain; retry the same operation with one effect. Separately cancel a wait and verify late success updates that operation |
 | `reply-altered` | Corrupt a response body | SDK refuses it and exposes no invalid value |
 | `connections-closed` | Close every open connection | Full recovers, the SDK replays no write by itself, and an Asset's retry of the same prepared operation makes one durable effect |
 | `version-mismatch` | Rewrite the Protocol version in discovery | SDK refuses it before ordinary work |
@@ -26,7 +26,7 @@ The proxy sits between every client and Core.
 | ID | Injection | Required result |
 | --- | --- | --- |
 | `core-restart` | `restart` under load | Tracks, Tasks, and history remain. Contact returns after check-in |
-| `core-kill` | Kill the container during writes | Accepted writes remain after `start`, and nothing unaccepted appears |
+| `core-kill` | Kill the container during writes | Accepted writes remain after `start`; uncertain writes may exist once |
 | `core-drain` | `stop` during writes | Readiness turns false, and every reply is a commit or a known refusal |
 | `core-reset` | `reset` then `start` after the [other checks](evals.md#run-an-eval), with Assets still running | Old clients stop with `dataset_invalidated`, and old IDs stay gone |
 
@@ -79,7 +79,7 @@ reaches each limit.
 | `sequence-conflict` | Send a new report at an occupied section sequence, then change the facts of an accepted `report_id` | `409 section_sequence_conflict`, then `409 report_identity_conflict`, and nothing commits |
 | `execution-conflict` | Send changed Task execution facts at an occupied sequence | `409 evidence_conflict`, and nothing commits |
 | `late-position` | Send an older unseen reading | History gains it, and current position stays |
-| `future-time` | Send a future-dated reading | Core marks it time-uncertain and never promotes it |
+| `future-time` | Send a future-dated reading | Higher-sequence `current` sections replace current values; source time stays uncertain forever, including after replay and Restart |
 | `tags-refused` | Send `tags` directly to Core in a registration and an authored update, then with an unknown preset and a duplicate | Core refuses each one, and the Asset's Tags do not change |
 | `tags-cleared` | Report `{presets: []}`, then send later reports that omit `tags` | The set stays empty, and omission never restores `simulated` |
 | `tags-history-only` | Send `{presets: []}` in a `history_only` report | The current set stays `simulated` |

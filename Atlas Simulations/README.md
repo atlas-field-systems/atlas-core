@@ -2,7 +2,7 @@
 
 **Atlas Simulations runs simulated Assets through the whole Atlas stack.** Simulated
 Assets register, read Tasks, move, detect subjects, and report through the SDK. Nothing
-flies. These pages define the intended behavior. No simulator code exists yet.
+flies. The shared runtime uses public packed packages and a real Core container. Qualification records the implemented and tested workflows.
 
 ## Two kinds of run
 

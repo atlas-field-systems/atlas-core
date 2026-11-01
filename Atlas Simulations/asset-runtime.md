@@ -82,11 +82,12 @@ does not divert the Asset. Protocol [leaves that choice to the Asset](../mission
 | Failure | Behavior |
 | --- | --- |
 | `unknown_outcome` | [Retry the same prepared operation](../Atlas%20SDK/requests.md#retry-deliberately) with capped backoff. Never repeat movement |
-| Core unreachable | Keep moving and keep retrying each write with capped backoff |
-| Core Restart | Keep executing and check in again. The `core_run_id` change starts fresh reads |
+| Core unreachable | Keep moving and retry with capped backoff within the bounded backlog; exhaustion fails the run visibly |
+| Core Restart | Keep executing and check in again. The `core_run_id` change starts fresh reads and renews known expired contact allocations |
 | Dataset invalidated | Stop this Asset's traffic and tell the Run. Never register again by itself |
 | API key rejected | Stop this Asset's traffic and tell the Run. Do not try another key |
-| Position or Observation report refused with `507 storage_limit` | Skip that report and continue with the next reading |
+| Position or Observation report refused with `507 storage_limit` | Skip that sampling attempt and continue. A refused attempt does not make an unknown durable outcome rejected |
+| Sampling report gets `429 resource_limit` during Core lifecycle work | Skip that sampling attempt with its actual outcome recorded; the next timer prepares a new reading |
 | Any other write refused | Stop this Asset's traffic and tell the Run |
 
 The Run decides what a stopped Asset means. In an interactive run, it stops the run

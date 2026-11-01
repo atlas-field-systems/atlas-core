@@ -1,0 +1,28 @@
+{
+  "assets": [
+    {
+      "alias": "Probe",
+      "position": {
+        "latitude": 51.5,
+        "longitude": -0.1
+      },
+      "cruise_speed": 10000,
+      "detection_radius": 0
+    }
+  ],
+  "subjects": [],
+  "deadline_seconds": 30,
+  "expect": {
+    "tasks": [],
+    "tracks": 0
+  },
+  "name": "report-replayed",
+  "timeline": [
+    {
+      "at_seconds": 1,
+      "action": "fault",
+      "id": "report-replayed",
+      "asset": "Probe"
+    }
+  ]
+}

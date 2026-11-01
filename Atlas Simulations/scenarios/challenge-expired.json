@@ -1,0 +1,28 @@
+{
+  "assets": [
+    {
+      "alias": "Probe",
+      "position": {
+        "latitude": 51.5,
+        "longitude": -0.1
+      },
+      "cruise_speed": 10000,
+      "detection_radius": 0
+    }
+  ],
+  "subjects": [],
+  "deadline_seconds": 180,
+  "expect": {
+    "tasks": [],
+    "tracks": 0
+  },
+  "name": "challenge-expired",
+  "timeline": [
+    {
+      "at_seconds": 1,
+      "action": "fault",
+      "id": "challenge-expired",
+      "asset": "Probe"
+    }
+  ]
+}

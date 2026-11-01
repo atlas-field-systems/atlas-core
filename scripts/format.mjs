@@ -25,7 +25,10 @@ async function collect(path) {
     else if (entry.isFile() && code.test(child)) sdk.push(child);
   }
 }
-for (const part of ['src', 'scripts', 'test']) await collect(`Atlas SDK/${part}`);
+for (const part of ['src', 'scripts', 'test']) {
+  await collect(`Atlas SDK/${part}`);
+  await collect(`Atlas Simulations/${part}`);
+}
 const core = [
   ...new Set([
     ...git('diff', '--name-only', '-z', '--diff-filter=ACMR', base, '--', 'Atlas Core').split('\0'),
@@ -34,7 +37,7 @@ const core = [
 ].filter((path) => /^Atlas Core\/(src|scripts|test)\//.test(path) && code.test(path));
 const paths = ['scripts/format.mjs', ...sdk.sort(), ...core.sort()];
 console.log(
-  `Format base ${base}: all ${sdk.length} SDK code files, ${core.length} changed Core code files`,
+  `Format base ${base}: all ${sdk.length} SDK and simulation code files, ${core.length} changed Core code files`,
 );
 const result = spawnSync(
   process.execPath,

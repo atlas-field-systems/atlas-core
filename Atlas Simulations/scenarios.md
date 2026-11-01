@@ -40,6 +40,7 @@ one file.
 | `name` | Yes | Scenario name, copied into the run record |
 | `assets` | Yes | One to 100 Assets, each with `alias`, `position`, `cruise_speed`, and `detection_radius` |
 | `subjects` | Yes | Up to 1,000 subjects, each with `alias`, `route`, and `speed`. The list can be empty |
+| `geofeatures` | No | Up to 1,000 named Points with `alias` and `position` |
 | `timeline` | Eval only | Up to 10,000 actions sorted by `at_seconds` |
 | `deadline_seconds` | Eval only | Longest eval duration, at most [3,600](continuous-integration.md#runner-limits) |
 | `expect` | Eval only | Hand-written results that [eval checks](evals.md#correctness-decides-pass-or-fail) compare |
@@ -49,7 +50,8 @@ that a fault deletes. A `tasks` entry can name a nonterminal state for a Task th
 fault strands.
 
 A subject follows its route once at a fixed speed and stops at the last point. A
-route holds one to 1,000 points.
+route holds one to 1,000 points. The loader refuses more than 1,000 Asset/subject
+pairs or 10,000 total route points with exit 2 before network work.
 
 ## Detection
 
@@ -71,7 +73,7 @@ Assets finish their first check-in.
 
 | Action | Extra fields | Effect |
 | --- | --- | --- |
-| `move_to` | `asset`, then `position` or `geofeature` | The operator client creates a queued Task |
+| `move_to` | `asset`, then `position` or `geofeature`, and optional Protocol `altitude` | The operator client creates a queued Task |
 | `pause` | `asset` | The operator client creates a Pause Task |
 | `resume` | `asset` | The operator client creates a Resume Task that expires in 30 seconds |
 | `cancel` | `asset`, `index` | The operator client requests cancellation of that Asset's Task at `index` |
