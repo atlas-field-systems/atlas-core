@@ -22,7 +22,7 @@ export class Peer {
         type: 'authenticate',
         request_id: id(),
         dataset_id: datasetId,
-        protocol_version: '0.4.0',
+        protocol_version: '0.5.0',
         api_key: secret,
       }),
     );

@@ -81,7 +81,7 @@ for (const boundary of ['authorization', 'between parts'])
       headers: {
         Authorization: `Bearer ${f.apiKey}`,
         'Atlas-Dataset-ID': f.core.dataset,
-        'Atlas-Protocol-Version': '0.4.0',
+        'Atlas-Protocol-Version': '0.5.0',
         'Content-Type': 'multipart/form-data; boundary=interrupted',
       },
     });
@@ -559,7 +559,7 @@ test(
             headers: {
               Authorization: `Bearer ${f.apiKey}`,
               'Atlas-Dataset-ID': f.core.dataset,
-              'Atlas-Protocol-Version': '0.4.0',
+              'Atlas-Protocol-Version': '0.5.0',
               ...(body === undefined
                 ? {}
                 : { 'Content-Type': contentType, 'Content-Length': body.length }),
@@ -633,7 +633,7 @@ test('revocation interrupts an idle multipart writer and releases its files and 
     headers: {
       Authorization: `Bearer ${key.secret}`,
       'Atlas-Dataset-ID': f.core.dataset,
-      'Atlas-Protocol-Version': '0.4.0',
+      'Atlas-Protocol-Version': '0.5.0',
       'Content-Type': 'multipart/form-data; boundary=idle',
     },
   });
@@ -726,7 +726,7 @@ test(
       return {
         Authorization: `Bearer ${f.apiKey}`,
         'Atlas-Dataset-ID': f.core.dataset,
-        'Atlas-Protocol-Version': '0.4.0',
+        'Atlas-Protocol-Version': '0.5.0',
       };
     }
     async function call(path, input) {

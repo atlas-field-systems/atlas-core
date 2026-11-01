@@ -10,7 +10,7 @@ export function runIdentityRegressions(p) {
         status: 200,
         headers: new Headers({
           'Atlas-Dataset-ID': data.dataset_id ?? s.id,
-          'Atlas-Protocol-Version': '0.4.0',
+          'Atlas-Protocol-Version': '0.5.0',
           'Content-Type': 'application/json',
         }),
         body: encode({ dataset_id: data.dataset_id ?? s.id, data, commit_cursor: 'cursor' }),
@@ -22,7 +22,7 @@ export function runIdentityRegressions(p) {
       encode({
         type: 'change_batch',
         dataset_id: image.dataset_id,
-        protocol_version: '0.4.0',
+        protocol_version: '0.5.0',
         data: {
           subscription_id: s.requestId,
           previous_cursor: 'before',

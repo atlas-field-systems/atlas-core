@@ -41,6 +41,7 @@ export const observation = {
   edit_revision: '0',
   publisher_id: processId,
   track_id: trackId,
+  source_asset_id: assetId,
   type: initial({ kind: null }),
 };
 export const track = {
@@ -49,7 +50,7 @@ export const track = {
   entity_type: 'track',
   version: '0',
   edit_revision: '0',
-  sources: [{ observation_id: observationId, publisher_id: processId }],
+  sources: [{ observation_id: observationId, publisher_id: processId, source_asset_id: assetId }],
   type: initial({ kind: null }),
 };
 export const geometry = { type: 'Point', coordinates: [0, 0] };
@@ -114,7 +115,7 @@ export const operator = { operator_id: requestId, name: 'Operator', edit_revisio
 export const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
 export const health = {
   healthy: true,
-  protocol_version: '0.4.0',
+  protocol_version: '0.5.0',
   core_run_id: requestId,
   allocation_context: 'allocation context',
   allocation_expires_at: later,
@@ -290,7 +291,7 @@ export const examples = {
     page({ ...object, metadata: { associations: [{ kind: 'asset', id: assetId }] } }),
   ],
   CreateObservation: [
-    { ...retry, ...observationRequest, publisher_id: processId },
+    { ...retry, ...observationRequest, publisher_id: processId, source_asset_id: assetId },
     { observation, track },
   ],
   ReportObservation: [

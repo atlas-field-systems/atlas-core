@@ -55,6 +55,8 @@ if (dynamic.mode === 'full') dynamic.picture.subscribe();
 const reporting: Reporting = client.reporting;
 const id = Uuid.parse('10000000-0000-4000-8000-000000000001');
 const newId = NewId.parse('10000000-0000-4000-8000-000000000002');
+const creation = reporting.createObservation({ request_id: newId, observation_id: newId, publisher_id: id, source_asset_id: id });
+const source: string = creation.creation.submission.facts.source_asset_id;
 const at = Timestamp.parse('2026-10-21T12:00:00Z');
 const view = client.observations.history({ entity_id: id, query_id: newId, time_groups: ['known'], source_time_from: at });
 const rows = view.context?.baseline_cursor;
@@ -102,6 +104,8 @@ const failures: unknown[] = failure.errors;
     const positive = compile();
     assert.equal(positive.status, 0, positive.stdout + positive.stderr);
     const invalid = [
+      'reporting.createObservation({ request_id: newId, observation_id: newId, publisher_id: id });',
+      'client.observations.create({ request_id: newId, observation_id: newId, publisher_id: id, source_asset_id: null });',
       "asset.update({ request_id: newId }, { report_id: newId, sequence: Sequence.parse('1'), generated_at: null, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['custom'] } } } });",
       "asset.update({ request_id: newId, tags: { presets: ['simulated'] } });",
       "reporter.report({ report_id: newId, sequence: Sequence.parse('1'), generated_at: null, mode: 'current', sections: { tags: { state: 'value', classification: 'state_until_changed', observed_at: null, value: { presets: ['simulated'] } } } });",

@@ -198,7 +198,7 @@ export async function exerciseCapacity(input: FaultInput): Promise<FaultReceipt>
           type: 'read_changes',
           request_id: id(),
           dataset_id: input.operator.input.datasetId,
-          protocol_version: '0.4.0',
+          protocol_version: '0.5.0',
           data: {
             from_cursor: Opaque.parse(cursor),
             max_message_bytes: 4194304,
@@ -289,7 +289,7 @@ export async function exerciseCapacity(input: FaultInput): Promise<FaultReceipt>
           type: 'subscribe_changes',
           request_id: id(),
           dataset_id: input.operator.input.datasetId,
-          protocol_version: '0.4.0',
+          protocol_version: '0.5.0',
           data: {
             subscription_id: id(),
             from_cursor: Opaque.parse(cursor),

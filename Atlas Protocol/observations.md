@@ -1,7 +1,7 @@
 # Observations
 
 An Observation is one publisher's ongoing record of one detected subject.
-Assets generate Observations. An integration or gateway can deliver them.
+Physical or digital Assets generate Observations. An integration or gateway can deliver them.
 Successive reports use the same Observation ID, distinct from its shared [Track](tracks.md).
 
 ## Identity and attribution
@@ -13,7 +13,7 @@ reinstallation names its existing ID and satisfies sequence recovery below.
 Display names do not establish continuity.
 A report naming another publisher is refused atomically. No automatic transfer exists.
 
-Creation records `source_asset_id` when the publisher represents an Asset.
+Creation requires `source_asset_id`, recording the physical or digital source Asset.
 Core validates that the named source Asset exists in the current Dataset at commit.
 Creation cannot name a deleted Asset, including during a racing deletion.
 Retain that fixed attribution after deletion. Existing Observations remain reportable
@@ -21,8 +21,8 @@ under their recorded publisher and current valid [API authority](identity.md#pri
 The source Asset need not remain live. A revoked key cannot report, but another
 currently valid key can deliver the same publisher's evidence.
 
-Deletion never transfers an Observation to a replacement Asset. Publishers without
-source Asset attribution omit `source_asset_id`. Never infer it from delivery paths.
+Deletion never transfers an Observation to a replacement Asset. A software feed can
+register a commandless Asset. Never infer its identity from delivery paths.
 The optional [publisher-local subject pair](entities.md#component-composition)
 distinguishes reused local IDs. Reconnect or replay does not create another record
 for the same continuing source subject.

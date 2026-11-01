@@ -54,7 +54,7 @@ export async function raw(input: FaultInput, path: string, facts: unknown) {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${input.core.credential.secret}`,
-      'Atlas-Protocol-Version': '0.4.0',
+      'Atlas-Protocol-Version': '0.5.0',
       'Atlas-Dataset-Id': input.operator.input.datasetId,
     },
     body: typeof facts === 'string' ? facts : JSON.stringify(facts),

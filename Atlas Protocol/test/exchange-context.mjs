@@ -34,7 +34,6 @@ export function runExchangeContext(p) {
     },
   });
   for (const [field, supplied, different] of [
-    ['source_asset_id', s.assetId, s.id],
     [
       'publisher_subject',
       { id: 'subject', lifetime_id: s.requestId },
@@ -65,6 +64,25 @@ export function runExchangeContext(p) {
       );
     });
   }
+  check('creation requires source Asset attribution before submission', () => {
+    const { source_asset_id: _source, ...withoutSource } = s.examples.CreateObservation[0];
+    assert(
+      p.exchanges.CreateObservation.request.schema.safeParse(s.examples.CreateObservation[0])
+        .success,
+      'The independently attributed creation must remain valid',
+    );
+    assert(
+      !p.exchanges.CreateObservation.request.schema.safeParse(withoutSource).success,
+      'Missing source Asset must be refused',
+    );
+    assert(
+      !p.exchanges.CreateObservation.request.schema.safeParse({
+        ...withoutSource,
+        source_asset_id: null,
+      }).success,
+      'Null source Asset must be refused',
+    );
+  });
   check('later Observation reports need not repeat creation attribution', () => {
     const [request, data] = s.examples.ReportObservation;
     http(

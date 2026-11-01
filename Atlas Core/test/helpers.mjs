@@ -8,6 +8,7 @@ import { defaults } from '../dist/settings.js';
 import { createCore } from '../dist/server.js';
 import { exchanges } from '@atlas/protocol';
 import { mutableRoot } from './paths.mjs';
+import assert from 'node:assert/strict';
 export { mutableRoot } from './paths.mjs';
 
 export const uuid = () => randomUUID();
@@ -67,7 +68,7 @@ export async function fixture(t, overrides = {}) {
             Object.entries({
               Authorization: `Bearer ${apiKey}`,
               'Atlas-Dataset-ID': core.dataset,
-              'Atlas-Protocol-Version': '0.4.0',
+              'Atlas-Protocol-Version': '0.5.0',
               ...(body === undefined
                 ? {}
                 : { 'Content-Type': 'application/json', 'Content-Length': body.byteLength }),
@@ -117,6 +118,7 @@ export async function fixture(t, overrides = {}) {
     await core.close();
     await rm(directory, { recursive: true, force: true });
   });
+  let sourceAsset;
   return {
     directory,
     certificate,
@@ -127,6 +129,16 @@ export async function fixture(t, overrides = {}) {
     http,
     call,
     seen,
+    sourceAssetId() {
+      sourceAsset ??= call('RegisterAsset', {
+        ...registration(),
+        capabilities: { commands: [] },
+      }).then((result) => {
+        assert.equal(result.status, 200, JSON.stringify(result.json));
+        return result.json.data.asset.id;
+      });
+      return sourceAsset;
+    },
     get core() {
       return core;
     },

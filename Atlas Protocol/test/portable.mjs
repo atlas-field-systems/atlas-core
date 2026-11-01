@@ -13,7 +13,7 @@ export function runPortable(p) {
   const responseHeaders = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.4.0',
+      'Atlas-Protocol-Version': '0.5.0',
       'Atlas-Request-ID': s.requestId,
       'Content-Type': 'application/json',
     });
@@ -40,7 +40,7 @@ export function runPortable(p) {
       const requestHeaders = new Headers({
         Authorization: `Bearer ${'A'.repeat(43)}`,
         'Atlas-Dataset-ID': s.id,
-        'Atlas-Protocol-Version': '0.4.0',
+        'Atlas-Protocol-Version': '0.5.0',
         'Content-Type': 'application/json',
       });
       const request = { method: binding.method, path: binding.path, headers: requestHeaders };
@@ -120,7 +120,7 @@ export function runPortable(p) {
     const frame = {
       type: 'change_batch',
       dataset_id: s.id,
-      protocol_version: '0.4.0',
+      protocol_version: '0.5.0',
       data: {
         subscription_id: s.requestId,
         previous_cursor: 'before',
@@ -165,7 +165,7 @@ export function runPortable(p) {
       const headers = new Headers({
         Authorization: `Bearer ${'A'.repeat(43)}`,
         'Atlas-Dataset-ID': s.id,
-        'Atlas-Protocol-Version': '0.4.0',
+        'Atlas-Protocol-Version': '0.5.0',
         'Content-Type': 'application/json',
       });
       const definition = p.exchanges.CreateGeofeature;
@@ -249,7 +249,7 @@ export function runPortable(p) {
     const frame = {
       type: 'gap',
       dataset_id: s.id,
-      protocol_version: '0.4.0',
+      protocol_version: '0.5.0',
       data: {
         subscription_id: s.requestId,
         reason: 'resource_limit',

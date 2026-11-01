@@ -158,7 +158,7 @@ test('atomic Dataset marker preserves setup, matching recovery regenerates proof
   await f.core.close();
   const retained = new Database(join(f.directory, 'core.sqlite'));
   try {
-    retained.prepare("UPDATE core_meta SET value='5' WHERE key='format'").run();
+    retained.prepare("UPDATE core_meta SET value='6' WHERE key='format'").run();
   } finally {
     retained.close();
   }
@@ -336,7 +336,7 @@ test('transfer cleanup closes a prepared download that the caller never starts',
   const download = await transfers.download(descriptor.object_id, {
     verifier: digest(f.apiKey),
     dataset: f.core.dataset,
-    protocol: '0.4.0',
+    protocol: '0.5.0',
   });
   assert.equal(download.stream.readableDidRead, false);
   assert.ok(handles.size > 0, 'The download acquired a real file handle');

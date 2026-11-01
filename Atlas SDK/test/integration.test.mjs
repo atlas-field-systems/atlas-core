@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fixture, uuid, secret, registration, task, barrier } from './harness.mjs';
-import { success, sent, reading, telemetry } from './public-helpers.mjs';
+import { success, sent, reading, telemetry, sourceAsset } from './public-helpers.mjs';
 const { createClient, ClientCloseError } = await import(
   process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
 );
@@ -55,6 +55,7 @@ for (const mode of ['http', 'full'])
     success(await gateway.connect());
     const publisher_id = uuid();
     const { creation, reporter } = writer.reporting.createObservation({
+      source_asset_id: await sourceAsset(writer.http),
       observation_id: uuid(),
       publisher_id,
       request_id: uuid(),

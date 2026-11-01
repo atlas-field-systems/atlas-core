@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { uuid } from './harness.mjs';
+import { uuid, registration } from './harness.mjs';
+export async function sourceAsset(http) {
+  const operation = http.assets.register({ ...registration(), capabilities: { commands: [] } });
+  try {
+    return sent(await operation.send()).asset.id;
+  } finally {
+    operation.close();
+  }
+}
 export function success(result) {
   assert.equal(result.kind, 'response', JSON.stringify(result));
   assert.equal(result.response.kind, 'success', JSON.stringify(result));

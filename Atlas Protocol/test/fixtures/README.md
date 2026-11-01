@@ -3,7 +3,7 @@
 `acceptance.json` records 130 contract-derived cases, with 53 expected accepts
 and 77 expected rejects. Expectations come from the cited baseline documents,
 not a schema library or an implementation run. `independent-cases.json` preserves
-44 additional independently supplied expectations for exact scalars and geometry.
+47 additional independently supplied expectations for exact scalars and geometry.
 Both corpora run through the built public package in Node and the browser page.
 
 ## Case format

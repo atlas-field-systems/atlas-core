@@ -192,7 +192,7 @@ test('one bounded non-JSON path owns real upload retries and shared effect evide
             headers: {
               Authorization: `Bearer ${lease.credential}`,
               'Atlas-Dataset-ID': lease.datasetId,
-              'Atlas-Protocol-Version': '0.4.0',
+              'Atlas-Protocol-Version': '0.5.0',
               'Atlas-Attempt-ID': lease.attemptId,
             },
           });

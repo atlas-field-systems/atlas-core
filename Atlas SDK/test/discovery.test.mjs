@@ -57,7 +57,7 @@ for (const code of ['protocol_mismatch', 'dataset_mismatch']) {
     const running = operation.start();
     assert.equal(await committed.promise, 200);
     const refuseDiscovery = ({ headers, forward }) => {
-      const version = code === 'protocol_mismatch' ? '0.5.0' : '0.4.0';
+      const version = code === 'protocol_mismatch' ? '0.5.0' : '0.5.0';
       forward(
         Buffer.from(
           JSON.stringify({
@@ -162,7 +162,7 @@ test('real Core admission refusal during discovery does not claim a Protocol mis
         headers: {
           Authorization: `Bearer ${f.apiKey}`,
           'Atlas-Dataset-ID': f.datasetId,
-          'Atlas-Protocol-Version': '0.4.0',
+          'Atlas-Protocol-Version': '0.5.0',
           'Content-Type': 'application/json',
           'Transfer-Encoding': 'chunked',
         },

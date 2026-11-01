@@ -6,7 +6,7 @@ export function runResponseRegressions(p) {
   const headers = () =>
     new Headers({
       'Atlas-Dataset-ID': s.id,
-      'Atlas-Protocol-Version': '0.4.0',
+      'Atlas-Protocol-Version': '0.5.0',
       'Content-Type': 'application/json',
     });
   const reply = (name, data, request, extra = {}) =>
@@ -30,14 +30,14 @@ export function runResponseRegressions(p) {
   const frame = (type, data) => ({
     type,
     dataset_id: s.id,
-    protocol_version: '0.4.0',
+    protocol_version: '0.5.0',
     request_id: s.requestId,
     data,
   });
   const batch = (geometry) => ({
     type: 'change_batch',
     dataset_id: s.id,
-    protocol_version: '0.4.0',
+    protocol_version: '0.5.0',
     data: {
       subscription_id: s.requestId,
       previous_cursor: 'before',
@@ -264,7 +264,13 @@ export function runResponseRegressions(p) {
               observation: { ...s.observation, publisher_id: s.id },
               track: {
                 ...s.track,
-                sources: [{ observation_id: s.observationId, publisher_id: s.id }],
+                sources: [
+                  {
+                    observation_id: s.observationId,
+                    publisher_id: s.id,
+                    source_asset_id: s.assetId,
+                  },
+                ],
               },
             },
             request,
@@ -273,22 +279,20 @@ export function runResponseRegressions(p) {
       );
     });
   }
-  check('creation preserves supplied source Asset and omission policy', () => {
+  check('creation preserves required source Asset attribution', () => {
     const request = { ...s.examples.CreateObservation[0], source_asset_id: s.assetId };
     const result = (source) => ({
-      observation: { ...s.observation, ...(source ? { source_asset_id: source } : {}) },
+      observation: { ...s.observation, source_asset_id: source },
       track: {
         ...s.track,
-        sources: [{ ...s.track.sources[0], ...(source ? { source_asset_id: source } : {}) }],
+        sources: [{ ...s.track.sources[0], source_asset_id: source }],
       },
     });
     reply('CreateObservation', result(s.assetId), request);
     refuses(() => reply('CreateObservation', result(s.id), request), 'invalid_http');
-    refuses(() => reply('CreateObservation', result(), request), 'invalid_http');
-    refuses(
-      () => reply('CreateObservation', result(s.assetId), s.examples.CreateObservation[0]),
-      'invalid_http',
-    );
+    refuses(() => reply('CreateObservation', result(), request), 'invalid_value');
+    const { source_asset_id: _source, ...withoutSource } = request;
+    refuses(() => reply('CreateObservation', result(s.assetId), withoutSource), 'invalid_value');
   });
   for (const name of ['ReportTaskExecution', 'ReportTaskResults'])
     check(`${name} matches evidence Asset and Task`, () => {

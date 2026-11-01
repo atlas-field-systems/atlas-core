@@ -121,7 +121,7 @@ const CreateObservation = z
     observation_id: NewId,
     ...retry,
     publisher_id: Uuid,
-    source_asset_id: Uuid.exactOptional(),
+    source_asset_id: Uuid,
     publisher_subject: PublisherSubject.exactOptional(),
     alias: Alias.exactOptional(),
     description: Description.exactOptional(),

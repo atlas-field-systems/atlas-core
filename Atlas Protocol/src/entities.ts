@@ -120,7 +120,7 @@ const ObservationDefinition = z
     description: Description.exactOptional(),
     publisher_id: Uuid,
     track_id: Uuid,
-    source_asset_id: Uuid.exactOptional(),
+    source_asset_id: Uuid,
     publisher_subject: PublisherSubject.exactOptional(),
     type: readSections.type,
     ...commonReported,
@@ -152,7 +152,7 @@ const ObservationDefinition = z
   }, 'Observation evidence scope differs')
   .meta({ id: 'Observation' });
 export const TrackSource = z
-  .strictObject({ observation_id: Uuid, publisher_id: Uuid, source_asset_id: Uuid.exactOptional() })
+  .strictObject({ observation_id: Uuid, publisher_id: Uuid, source_asset_id: Uuid })
   .meta({ id: 'TrackSource' });
 const TrackDefinition = z
   .strictObject({

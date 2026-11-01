@@ -15,7 +15,7 @@ test('all 66 routes match the independent inventory and stock exported schemas',
   assert.equal(document.openapi, '3.1.0');
   assert.equal(document.paths['/messages/subscribe_changes'], undefined);
   assert.equal(document.paths['/messages/unsubscribe_changes'], undefined);
-  assert.equal(document.info.version, '0.4.0');
+  assert.equal(document.info.version, '0.5.0');
   assert.equal(Object.keys(document.paths).length, 66);
   const ajv = new Ajv2020({
     strict: false,
@@ -97,7 +97,7 @@ test('all 66 routes match the independent inventory and stock exported schemas',
     ['SubscribeChanges', 'subscribe_changes', 'subscribed'],
     ['UnsubscribeChanges', 'unsubscribe_changes', 'unsubscribed'],
   ]) {
-    const context = { dataset_id: id, protocol_version: '0.4.0', request_id: requestId };
+    const context = { dataset_id: id, protocol_version: '0.5.0', request_id: requestId };
     const request = { type, ...context, data: wssExamples[name][0] };
     const response = { type: replyType, ...context, data: wssExamples[name][1] };
     assert.equal(clientFrame(request), true, ajv.errorsText(clientFrame.errors));

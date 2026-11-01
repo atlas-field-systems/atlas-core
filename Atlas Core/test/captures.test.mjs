@@ -33,7 +33,7 @@ async function local(t, temporary = {}) {
   const context = {
     verifier: digest(key.secret),
     dataset: engine.store.dataset,
-    protocol: '0.4.0',
+    protocol: '0.5.0',
   };
   const call = async (name, request = {}) =>
     (await engine.execute({ name, request }, context)).body.data;
@@ -41,7 +41,13 @@ async function local(t, temporary = {}) {
     await engine.close();
     await rm(directory, { recursive: true, force: true });
   });
-  return { engine, directory, context, key, call };
+  let sourceAsset;
+  const sourceAssetId = () =>
+    (sourceAsset ??= call('RegisterAsset', {
+      ...registration(),
+      capabilities: { commands: [] },
+    }).then((result) => result.asset.id));
+  return { engine, directory, context, key, call, sourceAssetId };
 }
 async function building(engine, kind) {
   const deadline = performance.now() + 5000;
@@ -59,6 +65,7 @@ async function historyView(f) {
     publisher = uuid(),
     origin = { kind: 'publisher', publisher_id: publisher };
   await f.call('CreateObservation', {
+    source_asset_id: await f.sourceAssetId(),
     request_id: uuid(),
     observation_id: observation,
     publisher_id: publisher,
@@ -90,6 +97,7 @@ for (const kind of ['snapshot', 'history'])
       publisher = uuid(),
       origin = { kind: 'publisher', publisher_id: publisher };
     await f.call('CreateObservation', {
+      source_asset_id: await f.sourceAssetId(),
       request_id: uuid(),
       observation_id: observation,
       publisher_id: publisher,
@@ -201,6 +209,7 @@ for (const kind of ['snapshot', 'history']) {
         f.engine.provision({ api_key_id: uuid(), request_id: uuid(), secret: administrator });
       const entity = uuid();
       await f.call('CreateObservation', {
+        source_asset_id: await f.sourceAssetId(),
         request_id: uuid(),
         observation_id: entity,
         publisher_id: uuid(),
@@ -258,6 +267,7 @@ for (const kind of ['snapshot', 'history']) {
     const entity = uuid(),
       origin = { kind: 'publisher', publisher_id: uuid() };
     await f.call('CreateObservation', {
+      source_asset_id: await f.sourceAssetId(),
       request_id: uuid(),
       observation_id: entity,
       publisher_id: origin.publisher_id,
@@ -327,6 +337,7 @@ test('history selections stream the executed SQL without a native sorter or scan
   const entity = uuid(),
     origin = { kind: 'publisher', publisher_id: uuid() };
   await f.call('CreateObservation', {
+    source_asset_id: await f.sourceAssetId(),
     request_id: uuid(),
     observation_id: entity,
     publisher_id: origin.publisher_id,
@@ -457,6 +468,7 @@ test('single-status history selections seek past the other retained status', asy
     const entity = uuid(),
       origin = { kind: 'publisher', publisher_id: uuid() };
     await f.call('CreateObservation', {
+      source_asset_id: await f.sourceAssetId(),
       request_id: uuid(),
       observation_id: entity,
       publisher_id: origin.publisher_id,
@@ -995,6 +1007,7 @@ test(
       publisher = uuid(),
       origin = { kind: 'publisher', publisher_id: publisher };
     await f.call('CreateObservation', {
+      source_asset_id: await f.sourceAssetId(),
       request_id: uuid(),
       observation_id: observation,
       publisher_id: publisher,
@@ -1100,6 +1113,7 @@ test('concurrent capture reservations respect aggregate bytes and retain failed 
     publisher = uuid(),
     origin = { kind: 'publisher', publisher_id: publisher };
   await h.call('CreateObservation', {
+    source_asset_id: await h.sourceAssetId(),
     request_id: uuid(),
     observation_id: observation,
     publisher_id: publisher,
@@ -1337,7 +1351,7 @@ for (const transport of ['HTTP', 'WSS'])
         const control = async (frame) => {
           const response = once(socket, 'message', { signal: AbortSignal.timeout(10000) });
           socket.send(
-            writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.4.0' }),
+            writeWssClient({ ...frame, dataset_id: f.core.dataset, protocol_version: '0.5.0' }),
             { binary: false },
           );
           const [bytes] = await response;

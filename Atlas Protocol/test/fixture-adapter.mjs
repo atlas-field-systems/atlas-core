@@ -11,6 +11,7 @@ function schemas(p) {
     NewUuid: p.NewId,
     AssetReport: p.AssetReport,
     ObservationReport: p.ObservationReport,
+    CreateObservation: p.exchanges.CreateObservation.request.schema,
     AssetDescription: p.AssetDescription,
     AssetType: p.AssetType,
     Capabilities: p.Capabilities,

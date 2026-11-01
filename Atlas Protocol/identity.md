@@ -24,10 +24,10 @@ original report evidence identity. It does not create a new reporting source.
 
 ## Entity identity
 
-Entity IDs are immutable and unique across Entity types within the Dataset.
+Entity and Observation IDs are immutable and share one unique space within the Dataset.
 Deleted Asset and Geofeature IDs remain reserved until Reset. Observations and
-Tracks retain their IDs until Reset. Optional Entity aliases are unique across
-all Entity types under the alias comparison below. Preserve the submitted spelling.
+Tracks retain their IDs until Reset. Optional Entity and Observation aliases are unique
+across these resources under the alias comparison below. Preserve the submitted spelling.
 Deleting an Entity releases its alias, without permitting reuse of its ID.
 
 Alias equality uses Unicode default full case folding, then exact string equality.

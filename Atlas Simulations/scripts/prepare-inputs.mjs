@@ -14,10 +14,10 @@ npm(['--prefix', '../Atlas SDK', 'run', 'build']);
 await mkdir(new URL('../artifacts/', import.meta.url), { recursive: true });
 npm(['pack', '../Atlas SDK', '--ignore-scripts', '--pack-destination', 'artifacts']);
 await copyFile(
-  new URL('../../Atlas Core/artifacts/atlas-protocol-0.4.0.tgz', import.meta.url),
-  new URL('../artifacts/atlas-protocol-0.4.0.tgz', import.meta.url),
+  new URL('../../Atlas Core/artifacts/atlas-protocol-0.5.0.tgz', import.meta.url),
+  new URL('../artifacts/atlas-protocol-0.5.0.tgz', import.meta.url),
 );
-const bytes = await readFile(new URL('../artifacts/atlas-sdk-0.4.0.tgz', import.meta.url));
+const bytes = await readFile(new URL('../artifacts/atlas-sdk-0.5.0.tgz', import.meta.url));
 await writeFile(
   new URL('../artifacts/sdk-sha256', import.meta.url),
   createHash('sha256').update(bytes).digest('hex') + '\n',

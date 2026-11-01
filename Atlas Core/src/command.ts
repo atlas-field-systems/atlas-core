@@ -268,7 +268,7 @@ export function failure(error: unknown): CommandResult {
       severity: 'ERROR',
       event: 'command_failed',
       component: 'lifecycle',
-      release: '0.4.0',
+      release: '0.5.0',
       ok: false,
       code: classify(error),
       ...faultFrames(error),
@@ -290,7 +290,7 @@ function completed(data: unknown, exitCode: 0 | 130): CommandResult {
       severity: 'INFO',
       event: 'command_completed',
       component: 'lifecycle',
-      release: '0.4.0',
+      release: '0.5.0',
       ok: true,
       data,
     },
@@ -427,5 +427,5 @@ export async function perform(input: Invocation, signal?: AbortSignal): Promise<
   }
 }
 export function versionText(release: ReleaseMetadata | undefined) {
-  return `atlas-core 0.4.0\nCore 0.4.0; Protocol 0.4.0; database format 5\n${release ? `Image ${release.image}; ${release.platform}; package ${release.npmName ?? 'private qualification fixture'}` : 'Source build; release image metadata unavailable'}\n`;
+  return `atlas-core 0.5.0\nCore 0.5.0; Protocol 0.5.0; database format 6\n${release ? `Image ${release.image}; ${release.platform}; package ${release.npmName ?? 'private qualification fixture'}` : 'Source build; release image metadata unavailable'}\n`;
 }
