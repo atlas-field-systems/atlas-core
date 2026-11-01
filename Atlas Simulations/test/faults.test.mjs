@@ -27,6 +27,11 @@ for (const id of faultIds)
       const broken = structuredClone(receipt);
       faultControls[id](broken.observations);
       assert.notDeepEqual(verifyFault(broken), [], `Broken control must fail ${id}`);
+      if (id === 'queue-changed') {
+        const unrecovered = structuredClone(receipt);
+        unrecovered.observations[2] = { kind: 'not_sent', code: 'not_connected' };
+        assert.notDeepEqual(verifyFault(unrecovered), [], 'Fresh assigned read must recover');
+      }
       t.diagnostic(`Fault control rejected ${id}`);
     }
   });

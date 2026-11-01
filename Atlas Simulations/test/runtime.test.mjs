@@ -140,6 +140,9 @@ test(
       mutate(i, e);
       assert.equal(checkEvidence(i, e)[name].kind, 'failed', name);
     }
+    const uncovered = structuredClone(input);
+    uncovered.scenario.expect.tasks.pop();
+    assert.equal(checkEvidence(uncovered, decode(capture.evidence)).tasks.kind, 'failed');
     const skippedHead = decode(structuredClone(capture.evidence));
     const firstStart = skippedHead.physical.find(
       (p) => p.event === 'start' && p.asset === 'Drone 1',

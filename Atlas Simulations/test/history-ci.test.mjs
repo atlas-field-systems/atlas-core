@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, link, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { compareRecords, compareHistory } from '../dist/history.js';
@@ -65,6 +65,38 @@ test('history compares newest ten main medians, marks hashes and only correctnes
   assert.equal(failed.status, 1, failed.stderr);
   assert.match(failed.stdout, /73.33%/);
   assert.equal(compareRecords([right], 'unknown', 'feature')[0].before, 'missing');
+});
+test('history streams archives beyond both lifetime entry limits and preserves selection', async () => {
+  const root = await mkdtemp(join(process.env.ATLAS_TEST_ROOT, 'large-history-'));
+  const append = async (slot, count) => {
+    const directory = join(root, `archive-${slot}`);
+    await mkdir(directory);
+    const seed = join(directory, '0.json');
+    await writeFile(seed, JSON.stringify(record('main', slot + 1)));
+    for (let i = 1; i < count; i++) await link(seed, join(directory, `${i}.json`));
+  };
+  await append(0, 10001);
+  await saveRecord(root, record('feature', 13));
+  const first = await compareHistory(root, 'main', 'feature');
+  assert.equal(first[0].measurements.durationMs.before, 10);
+  assert.equal(first[0].measurements.durationMs.after, 130);
+  for (let i = 1; i < 10; i++) await append(i, 10000);
+  const result = await compareHistory(root, 'main', 'feature');
+  assert.equal(result[0].measurements.durationMs.before, 55);
+  assert.equal(result[0].measurements.durationMs.after, 130);
+});
+test('streaming history refuses oversized records, symlinks and excessive nesting', async () => {
+  for (const kind of ['oversized', 'symlink', 'depth']) {
+    const root = await mkdtemp(join(process.env.ATLAS_TEST_ROOT, 'unsafe-history-'));
+    if (kind === 'oversized') await writeFile(join(root, 'large.json'), ' '.repeat(262145));
+    if (kind === 'symlink') await symlink('/dev/null', join(root, 'link'));
+    if (kind === 'depth') {
+      let path = root;
+      for (let i = 0; i < 17; i++) { path = join(path, 'child'); await mkdir(path); }
+    }
+    await assert.rejects(compareHistory(root, 'main', 'feature'),
+      kind === 'oversized' ? /Record exceeds/ : kind === 'symlink' ? /symlink/ : /depth/);
+  }
 });
 test('record writes are append-only and unwritable history fails', async () => {
   const root = await mkdtemp(join(process.env.ATLAS_TEST_ROOT, 'records-'));

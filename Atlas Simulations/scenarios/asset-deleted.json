@@ -6,14 +6,20 @@
         "latitude": 51.5,
         "longitude": -0.1
       },
-      "cruise_speed": 10000,
+      "cruise_speed": 20,
       "detection_radius": 0
     }
   ],
   "subjects": [],
   "deadline_seconds": 180,
   "expect": {
-    "tasks": [],
+    "tasks": [
+      {
+        "asset": "Probe",
+        "index": 0,
+        "state": "in_progress"
+      }
+    ],
     "tracks": 0,
     "removed_assets": [
       "Probe"
@@ -22,7 +28,16 @@
   "name": "asset-deleted",
   "timeline": [
     {
-      "at_seconds": 1,
+      "at_seconds": 0,
+      "action": "move_to",
+      "asset": "Probe",
+      "position": {
+        "latitude": 51.6,
+        "longitude": -0.1
+      }
+    },
+    {
+      "at_seconds": 3,
       "action": "fault",
       "id": "asset-deleted",
       "asset": "Probe"
