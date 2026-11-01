@@ -1,7 +1,8 @@
 # Entities and reported sections
 
-An Entity has one immutable `id` and `entity_type`, exactly `asset`, `observation`,
-`track`, or `geofeature`. Resource [Type](components/type.md) is descriptive data.
+An Entity has one immutable `id` and `entity_type`, exactly `asset`, `track`, or
+`geofeature`. An Observation is a separate resource using the shared identity fields
+and reported components below. Resource [Type](components/type.md) is descriptive data.
 Identity allocation, aliases, deletion, and Dataset lifetime follow [Identity](identity.md).
 
 ## Component composition
@@ -12,10 +13,10 @@ Core advances `version` on every public image change and `edit_revision` on auth
 Optional `alias` and [`description`](components/description.md) are authored metadata.
 Neither is null or generated when absent. Other fields are exactly the following.
 
-| Entity | Required fields beyond the common fields | Optional fields |
+| Resource | Required fields beyond the common fields | Optional fields |
 | --- | --- | --- |
 | Asset | Authored `type`, `capabilities`; UUID `process_generation`; reported `status`; `communications`; `heartbeat`; read-only `task_queue`, `task_control` | Reported [`tags`](components/tags.md), `telemetry`, `attitude`, `power`, `camera`, `camera_optics`, `gimbal` |
-| Observation | UUID `publisher_id`; reported `type`; UUID `track_id` under the default policy | Immutable UUID `source_asset_id`; immutable `publisher_subject`; reported `telemetry`, `attitude`, `geometry` |
+| Observation | Immutable UUID `source_asset_id`; UUID `publisher_id`; reported `type`; UUID `track_id` under the default policy | Immutable `publisher_subject`; reported `telemetry`, `attitude`, `geometry` |
 | Track | Reported `type`; read-only `sources` | Reported `telemetry`, `attitude`, `geometry` |
 | Geofeature | Authored `type`, `geometry`; counter string `geometry_revision`, initially `"0"` | None |
 
@@ -23,7 +24,7 @@ Neither is null or generated when absent. Other fields are exactly the following
 128 Unicode scalar values, and UUID `lifetime_id`. The pair distinguishes reuse
 of a publisher-local number. It is not the Observation ID.
 Track `sources` is a nonempty unique-by-Observation array of objects containing
-UUID `observation_id`, UUID `publisher_id`, and optional recorded UUID `source_asset_id`.
+UUID `observation_id`, UUID `publisher_id`, and recorded UUID `source_asset_id`.
 Initially it has exactly one source under the [default policy](tracks.md#default-policy).
 
 Asset `communications` contains derived `health` and reported `capacity` as defined

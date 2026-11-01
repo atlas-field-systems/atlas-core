@@ -6,7 +6,7 @@ const { component, commandCatalog } = await import(
   process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
 );
 import { fixture, uuid, registration, barrier } from './harness.mjs';
-import { publicClient, success, sent, reading, telemetry } from './public-helpers.mjs';
+import { publicClient, success, sent, reading, telemetry, sourceAsset } from './public-helpers.mjs';
 
 test('component construction preserves exact values, null and omission and refuses hostile constructed values', () => {
   const position = { latitude: 51.50000000000001, longitude: -0.1 };
@@ -50,6 +50,7 @@ test('report helpers retain one Observation, report, reading and Core Track acro
   const f = await fixture(t);
   const { reporting, http } = await publicClient(t, f);
   const input = {
+    source_asset_id: await sourceAsset(http),
     observation_id: uuid(),
     request_id: uuid(),
     publisher_id: uuid(),
@@ -111,7 +112,12 @@ test('report helpers retain one Observation, report, reading and Core Track acro
 test('stale reporting reads return Dataset refusals before and after Reset discovery', async (t) => {
   const f = await fixture(t);
   const { client, reporting, http } = await publicClient(t, f);
-  const input = { observation_id: uuid(), publisher_id: uuid(), request_id: uuid() };
+  const input = {
+    observation_id: uuid(),
+    publisher_id: uuid(),
+    request_id: uuid(),
+    source_asset_id: await sourceAsset(http),
+  };
   const { creation, reporter } = reporting.createObservation(input);
   const created = sent(await creation.send());
   assert.equal(success(await reporter.reconcile()).id, input.observation_id);
@@ -193,8 +199,9 @@ test('Asset helper preserves registration identity, revision conditions, omitted
 
 test('report wait cancellation retains the bounded attempt and late shared evidence', async (t) => {
   const f = await fixture(t);
-  const { reporting } = await publicClient(t, f);
+  const { reporting, http } = await publicClient(t, f);
   const { reporter, creation } = reporting.createObservation({
+    source_asset_id: await sourceAsset(http),
     observation_id: uuid(),
     request_id: uuid(),
     publisher_id: uuid(),
@@ -233,9 +240,24 @@ test('report sections preserve omission and withdrawals and source queries retai
   const f = await fixture(t);
   const { reporting, http } = await publicClient(t, f);
   const source = registration();
+  source.capabilities = { commands: [] };
   sent(await http.assets.register(source).send());
   const publisher_id = uuid(),
     observation_id = uuid();
+  const traffic = f.traffic.length;
+  for (const source_asset_id of [undefined, null]) {
+    assert.throws(
+      () =>
+        reporting.createObservation({
+          request_id: uuid(),
+          observation_id,
+          publisher_id,
+          ...(source_asset_id === undefined ? {} : { source_asset_id }),
+        }),
+      { code: 'invalid_value' },
+    );
+  }
+  assert.equal(f.traffic.length, traffic);
   const { creation, reporter } = reporting.createObservation({
     request_id: uuid(),
     observation_id,
@@ -307,6 +329,7 @@ for (const [budget, limits] of [
     const publisher_id = uuid(),
       observation_id = uuid();
     const { creation, reporter } = reporting.createObservation({
+      source_asset_id: await sourceAsset(http),
       request_id: uuid(),
       publisher_id,
       observation_id,

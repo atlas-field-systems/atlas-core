@@ -129,7 +129,9 @@ test('Track source and Entity Object readers enforce known parent selections', (
     refuses(() => reply('GetTrackObservations', { ...request, [key]: [s.id] }, page(item)));
     refuses(() => reply('GetTrackObservations', { ...request, [key]: [] }, page(item)));
   }
-  refuses(() => reply('GetTrackObservations', request, page(s.observation)));
+  refuses(() =>
+    reply('GetTrackObservations', request, page({ ...s.observation, source_asset_id: s.id })),
+  );
   for (const family of ['Asset', 'Observation', 'Track', 'Geofeature']) {
     const name = `Get${family}Objects`,
       [query, data] = s.examples[name];

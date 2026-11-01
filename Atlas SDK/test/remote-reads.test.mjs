@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fixture, uuid, registration, task, barrier } from './harness.mjs';
-import { publicClient, success, sent, reading, telemetry } from './public-helpers.mjs';
+import { publicClient, success, sent, reading, telemetry, sourceAsset } from './public-helpers.mjs';
 
 async function observation(t, f) {
   const owned = await publicClient(t, f);
   const publisher_id = uuid(),
     observation_id = uuid();
   const { reporter, creation } = owned.reporting.createObservation({
+    source_asset_id: await sourceAsset(owned.http),
     request_id: uuid(),
     publisher_id,
     observation_id,

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, uuid, secret, registration, task, barrier } from './harness.mjs';
+import { sourceAsset } from './public-helpers.mjs';
 
 function success(result) {
   assert.equal(result.kind, 'response', JSON.stringify(result));
@@ -465,6 +466,7 @@ test('typed resource clients use public HTTP and preserve exact counters and cle
     (
       await client.observations
         .create({
+          source_asset_id: await sourceAsset(client.http),
           request_id: uuid(),
           observation_id: uuid(),
           publisher_id: uuid(),

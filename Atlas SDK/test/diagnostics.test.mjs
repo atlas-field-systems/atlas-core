@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fixture, registration, task, uuid, secret, barrier } from './harness.mjs';
+import { sourceAsset } from './public-helpers.mjs';
 
 function success(result) {
   assert.equal(result.kind, 'response', JSON.stringify(result));
@@ -60,7 +61,7 @@ test('Summary correlates a real lost commit and deliberate retry without exposin
   assert.equal(attempts[1].bytes.observedTransport, null);
   assert.equal(success(await client.tasks.list({}).next()).data.items.length, 1);
   for (const event of events) {
-    assert.equal(event.release, '0.4.0');
+    assert.equal(event.release, '0.5.0');
     assert.equal(event.mode, 'http');
     assert.match(event.timestamp, /^\d{4}-\d\d-\d\dT.*Z$/);
     assert.match(event.instanceId, /^[0-9a-f-]{36}$/);
@@ -199,7 +200,12 @@ test('Summary reports real read and report aggregates once after 30 seconds, the
   const created = success(
     (
       await client.observations
-        .create({ request_id: uuid(), observation_id: uuid(), publisher_id: uuid() })
+        .create({
+          request_id: uuid(),
+          observation_id: uuid(),
+          publisher_id: uuid(),
+          source_asset_id: await sourceAsset(client.http),
+        })
         .send()
     ).attempt,
   ).data;

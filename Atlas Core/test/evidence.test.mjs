@@ -170,6 +170,7 @@ test('Observation creation bounds the complete image and rolls back its pair, ev
     resourceImageBytes: 65536,
     limits: { ...defaults.limits, max_message_bytes: 212992 },
   });
+  const sourceAssetId = await f.sourceAssetId();
   const make = (description) => {
     const observation = uuid(),
       publisher = uuid(),
@@ -178,6 +179,7 @@ test('Observation creation bounds the complete image and rolls back its pair, ev
       request_id: uuid(),
       observation_id: observation,
       publisher_id: publisher,
+      source_asset_id: sourceAssetId,
       description: { name: 'boundary', description },
       report: report(f.core.dataset, observation, origin, 1, {
         geometry: {
@@ -263,6 +265,7 @@ test('independent evidence admission, frozen history, exact times, structural re
     telemetry: p2,
   });
   const creation = {
+    source_asset_id: await f.sourceAssetId(),
     request_id: uuid(),
     observation_id: observationId,
     publisher_id: publisher,
@@ -407,7 +410,12 @@ test('nanosecond order preserves spelling and future classification stays uncert
   const f = await fixture(t);
   const origin = { kind: 'publisher', publisher_id: uuid() },
     entity = uuid();
-  const create = { observation_id: entity, publisher_id: origin.publisher_id, request_id: uuid() };
+  const create = {
+    source_asset_id: await f.sourceAssetId(),
+    observation_id: entity,
+    publisher_id: origin.publisher_id,
+    request_id: uuid(),
+  };
   ok(await f.call('CreateObservation', create));
   const times = [
     '2026-10-21T12:00:00.0000002Z',
@@ -455,6 +463,7 @@ test('nanosecond order preserves spelling and future classification stays uncert
 test('Unicode Entity identity, tombstones and continued publisher evidence after Asset deletion', async (t) => {
   const f = await fixture(t);
   const r = registration('Σ');
+  r.capabilities = { commands: [] };
   const asset = ok(await f.call('RegisterAsset', r)).asset;
   assert.equal(ok(await f.call('GetAssetByAlias', { alias: 'ς' })).id, asset.id);
   const collision = await f.call('CreateGeofeature', {
@@ -466,15 +475,48 @@ test('Unicode Entity identity, tombstones and continued publisher evidence after
   assert.equal(collision.json.error.code, 'identity_conflict');
   const publisher = uuid(),
     entity = uuid();
-  const pair = ok(
-    await f.call('CreateObservation', {
-      observation_id: entity,
-      request_id: uuid(),
-      publisher_id: publisher,
-      source_asset_id: asset.id,
-    }),
+  const creation = {
+    observation_id: entity,
+    request_id: uuid(),
+    publisher_id: publisher,
+    source_asset_id: asset.id,
+  };
+  for (const source of [undefined, null, uuid()]) {
+    const refused = await f.call('CreateObservation', { ...creation, source_asset_id: source });
+    assert.equal(
+      refused.json.error.code,
+      typeof source === 'string' ? 'asset_not_found' : 'invalid_request',
+    );
+  }
+  const pair = ok(await f.call('CreateObservation', creation));
+  assert.equal(pair.observation.source_asset_id, asset.id);
+  assert.deepEqual(pair.track.sources, [
+    { observation_id: entity, publisher_id: publisher, source_asset_id: asset.id },
+  ]);
+  assert.equal(
+    (
+      await f.call('CreateObservation', {
+        ...creation,
+        request_id: uuid(),
+        observation_id: uuid(),
+        source_asset_id: pair.track.id,
+      })
+    ).json.error.code,
+    'asset_not_found',
   );
-  ok(await f.call('DeleteAsset', { asset_id: asset.id, request_id: uuid() }));
+  const racingId = uuid();
+  const [deleted, racing] = await Promise.all([
+    f.call('DeleteAsset', { asset_id: asset.id, request_id: uuid() }),
+    f.call('CreateObservation', { ...creation, request_id: uuid(), observation_id: racingId }),
+  ]);
+  ok(deleted);
+  if (racing.status === 200) {
+    assert.equal(ok(racing).observation.source_asset_id, asset.id);
+  } else {
+    assert.equal(racing.json.error.code, 'asset_not_found');
+    assert.equal((await f.call('GetObservation', { observation_id: racingId })).status, 404);
+  }
+  assert.deepEqual(ok(await f.call('CreateObservation', creation)), pair);
   assert.equal((await f.call('RegisterAsset', r)).json.error.code, 'asset_not_found');
   assert.equal(
     (
@@ -498,6 +540,13 @@ test('Unicode Entity identity, tombstones and continued publisher evidence after
   );
   assert.equal(result.track.id, pair.track.id);
   assert.equal(result.track.type.state, 'withdrawn');
+  assert.equal(result.observation.source_asset_id, asset.id);
+  assert.deepEqual(result.track.sources, pair.track.sources);
+  await f.restart();
+  assert.deepEqual(
+    ok(await f.call('GetObservation', { observation_id: entity })),
+    result.observation,
+  );
 });
 test('current time status survives wall-clock passage, carry-forward, new clients, fusion and Restart', async (t) => {
   const f = await fixture(t);
@@ -568,6 +617,7 @@ test('current time status survives wall-clock passage, carry-forward, new client
     },
   });
   const creation = {
+    source_asset_id: await f.sourceAssetId(),
     request_id: uuid(),
     observation_id: observationId,
     publisher_id: publisher.publisher_id,
@@ -792,6 +842,7 @@ test('component quantity timing survives reads and Restart while replacement rem
   };
   const pair = ok(
     await f.call('CreateObservation', {
+      source_asset_id: await f.sourceAssetId(),
       observation_id: observation,
       publisher_id: publisher,
       request_id: uuid(),
@@ -935,6 +986,7 @@ test('history-only first admission keeps a future reading uncertain when later s
   const origin = { kind: 'publisher', publisher_id: publisher };
   const pair = ok(
     await f.call('CreateObservation', {
+      source_asset_id: await f.sourceAssetId(),
       observation_id: entity,
       publisher_id: publisher,
       request_id: uuid(),
@@ -1079,6 +1131,7 @@ test('HTTP refuses publisher time_status without evidence or retry effects and p
     [
       'CreateObservation',
       {
+        source_asset_id: await f.sourceAssetId(),
         observation_id: entity,
         publisher_id: publisher,
         request_id: uuid(),
@@ -1144,12 +1197,12 @@ test('startup refuses legacy evidence without retained quantity status', async (
 });
 
 test('incompatible database formats are refused before old evidence can be interpreted', async (t) => {
-  for (const format of ['1', '2', '3', '4']) {
+  for (const format of ['1', '2', '3', '4', '5']) {
     const f = await fixture(t);
     await f.core.close();
     const db = new Database(join(f.directory, 'core.sqlite'));
     try {
-      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '5');
+      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '6');
       db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
     } finally {
       db.close();

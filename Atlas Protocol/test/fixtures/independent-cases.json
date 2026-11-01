@@ -371,6 +371,31 @@
       "rationale": "subnormal triangle keeps nonzero area",
       "raw_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[5e-324,0],[0,5e-324],[0,0]]]}",
       "retained_json": "{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[5e-324,0],[0,5e-324],[0,0]]]}"
+    },
+    {
+      "id": "independent-45",
+      "schema_name": "CreateObservation",
+      "contract": "Atlas Protocol/observations.md",
+      "expected": "accept",
+      "rationale": "digital source Asset identity is separate from publisher",
+      "raw_json": "{\"request_id\":\"11111111-1111-4111-8111-111111111111\",\"observation_id\":\"22222222-2222-4222-8222-222222222222\",\"publisher_id\":\"33333333-3333-4333-8333-333333333333\",\"source_asset_id\":\"44444444-4444-4444-8444-444444444444\"}",
+      "retained_json": "{\"observation_id\":\"22222222-2222-4222-8222-222222222222\",\"request_id\":\"11111111-1111-4111-8111-111111111111\",\"publisher_id\":\"33333333-3333-4333-8333-333333333333\",\"source_asset_id\":\"44444444-4444-4444-8444-444444444444\"}"
+    },
+    {
+      "id": "independent-46",
+      "schema_name": "CreateObservation",
+      "contract": "Atlas Protocol/observations.md",
+      "expected": "reject",
+      "rationale": "source Asset attribution cannot be omitted",
+      "raw_json": "{\"request_id\":\"11111111-1111-4111-8111-111111111111\",\"observation_id\":\"22222222-2222-4222-8222-222222222222\",\"publisher_id\":\"33333333-3333-4333-8333-333333333333\"}"
+    },
+    {
+      "id": "independent-47",
+      "schema_name": "CreateObservation",
+      "contract": "Atlas Protocol/observations.md",
+      "expected": "reject",
+      "rationale": "null cannot stand for a source Asset",
+      "raw_json": "{\"request_id\":\"11111111-1111-4111-8111-111111111111\",\"observation_id\":\"22222222-2222-4222-8222-222222222222\",\"publisher_id\":\"33333333-3333-4333-8333-333333333333\",\"source_asset_id\":null}"
     }
   ]
 }

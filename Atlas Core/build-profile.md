@@ -73,7 +73,7 @@ immutable reference, then verifies the resolved image again. Without a reference
 it requires a preloaded image. Tags and guessed repositories are never accepted.
 
 `ATLAS_OPERATOR_NPM_NAME` remains an explicit release input. Omitted, the artifact
-is private `@atlas/core-operator-qualification` version 0.4.0 with null publication
+is private `@atlas/core-operator-qualification` version 0.5.0 with null publication
 identity. No script publishes. Named builds require clean source. Metadata records
 source revision and tree, dirty status, Core, Protocol, database format, Node, npm,
 platform, and image identity. `ATLAS_OPERATOR_OUT` selects an absolute artifact directory.
@@ -115,6 +115,8 @@ are refused before interpreting images. Asset-reported Tags introduce Protocol
 0.4.0 while retaining database format 4 because the new section is optional.
 Resource image consolidation now requires private database format 5 without changing
 Protocol 0.4.0. Formats 1 through 4 require a fresh installation and are refused intact.
+Protocol 0.5.0 requires source Asset attribution for every Observation. Its Core uses
+format 6 and refuses formats 1 through 5 rather than inventing source identities.
 The supported [update command](lifecycle.md#commands) resets operational data
 before changing software and retains credentials and operator profiles. Use that
 path for upgrades and downgrades; older readers cannot parse retained tagged

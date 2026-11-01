@@ -28,7 +28,7 @@ export async function runHttp(config) {
     );
     check(client.state.kind === 'ready', 'Discovery must make the client ready');
     check(client.state.datasetId === config.datasetId, 'Exact discovered Dataset');
-    check(discovery.response.body.data.protocol_version === '0.4.0', 'Exact Protocol version');
+    check(discovery.response.body.data.protocol_version === '0.5.0', 'Exact Protocol version');
     check(discovery.response.body.dataset_id === config.datasetId, 'Discovery body context');
     contexts.push(discovery.context);
     const prepared = client.operators.create({
@@ -345,6 +345,7 @@ export async function startFull(config) {
     const observationId = NewId.parse(crypto.randomUUID());
     const publisherId = NewId.parse(crypto.randomUUID());
     const creation = admin.reporting.createObservation({
+      source_asset_id: assetId,
       request_id: NewId.parse(crypto.randomUUID()),
       observation_id: observationId,
       publisher_id: publisherId,

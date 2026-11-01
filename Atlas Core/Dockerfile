@@ -7,7 +7,7 @@ COPY artifacts/npm-11.19.0.tgz artifacts/npm-11.19.0.tgz
 RUN node scripts/prepare-build.mjs --verify && npm install --global --offline --ignore-scripts --no-audit --no-fund /app/artifacts/npm-11.19.0.tgz && test "$(npm --version)" = "11.19.0"
 
 FROM toolchain AS build
-COPY artifacts/atlas-protocol-0.4.0.tgz artifacts/atlas-protocol-0.4.0.tgz
+COPY artifacts/atlas-protocol-0.5.0.tgz artifacts/atlas-protocol-0.5.0.tgz
 RUN npm ci --include=dev --ignore-scripts --no-audit --no-fund
 COPY tsconfig.json ./
 COPY scripts/verify-inputs.mjs scripts/verify-inputs.mjs
@@ -20,8 +20,8 @@ RUN npm run build
 
 FROM toolchain AS runtime
 ARG ATLAS_SOURCE_REVISION
-LABEL org.opencontainers.image.revision=${ATLAS_SOURCE_REVISION} org.opencontainers.image.version=0.4.0
-COPY artifacts/atlas-protocol-0.4.0.tgz artifacts/atlas-protocol-0.4.0.tgz
+LABEL org.opencontainers.image.revision=${ATLAS_SOURCE_REVISION} org.opencontainers.image.version=0.5.0
+COPY artifacts/atlas-protocol-0.5.0.tgz artifacts/atlas-protocol-0.5.0.tgz
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
 COPY --from=build /app/dist dist
 COPY --from=build /app/artifacts/build-inputs.json artifacts/build-inputs.json

@@ -19,8 +19,8 @@ external radio traffic while preserving original public evidence and retry facts
 | Term | Meaning |
 | --- | --- |
 | Dataset | One operational data lifetime, ending at Reset |
-| Entity | An Asset, Observation, Track, or Geofeature with a stable identity |
-| Asset | A system that reports state and can execute supported Commands |
+| Entity | An Asset, Track, or Geofeature with a stable identity |
+| Asset | A physical or digital system that reports state and can execute its supported Commands |
 | Observation | One publisher's ongoing record of a detected subject |
 | Track | Atlas's shared target identity and state, built from Observations |
 | Fusion policy | Decides Observation-to-Track associations and Track state |
@@ -68,7 +68,7 @@ automatic downgrade, or translation between versions.
 and [execution evidence](execution-evidence.md) define the separate source envelopes.
 
 These pages own behavior, message fields, and bounds. The [package guide](package-usage.md)
-covers @atlas/protocol 0.4.0, inferred types, exact boundaries, and stock reference
+covers @atlas/protocol 0.5.0, inferred types, exact boundaries, and stock reference
 export. [Qualification](qualification.md) runs built-package checks and the independent
 fixture corpus. Core and SDK own separate qualification of their consuming workflows.
 Protocol-only checks establish neither server durability nor supported deployment capacity.

@@ -20,7 +20,7 @@ import type { Identity } from './identity.js';
 import type { Temporary } from './temporary.js';
 
 const ImageRow = z.object({ image: z.string() });
-const EntityRow = z.object({
+const IdentityRow = z.object({
   kind: z.enum(['asset', 'observation', 'track', 'geofeature']),
   alive: z.number(),
 });
@@ -29,7 +29,7 @@ const ContactData = z.object({
   deadline: z.number(),
   consumed: z.string().nullable(),
 });
-type Entity = Asset | Observation | Track | Geofeature;
+type ResourceImage = Asset | Observation | Track | Geofeature;
 export class Entities {
   private readonly contact = new Map<Uuid, number>();
   constructor(
@@ -48,7 +48,7 @@ export class Entities {
       CREATE TABLE IF NOT EXISTS entity_process_retries(request TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS entity_registrations(id TEXT PRIMARY KEY,asset TEXT NOT NULL UNIQUE) STRICT;`);
   }
-  private allocate(id: Uuid, kind: Entity['entity_type'], alias?: string): void {
+  private allocate(id: Uuid, kind: ResourceImage['entity_type'], alias?: string): void {
     if (this.store.db.prepare('SELECT id FROM entity_identity WHERE id=?').get(id))
       refuse('identity_conflict');
     if (
@@ -62,7 +62,7 @@ export class Entities {
       .prepare('INSERT INTO entity_identity VALUES(?,?,1,?)')
       .run(id, kind, alias === undefined ? null : caseFold(alias));
   }
-  private rename(image: Entity): void {
+  private rename(image: ResourceImage): void {
     const folded = image.alias === undefined ? null : caseFold(image.alias);
     if (
       folded !== null &&
@@ -75,19 +75,19 @@ export class Entities {
       .prepare('UPDATE entity_identity SET alias_fold=? WHERE id=?')
       .run(folded, image.id);
   }
-  private live(id: Uuid, kind: Entity['entity_type']): void {
+  private live(id: Uuid, kind: ResourceImage['entity_type']): void {
     const row = this.store.db.prepare('SELECT kind,alive FROM entity_identity WHERE id=?').get(id);
-    if (!row || EntityRow.parse(row).kind !== kind || !EntityRow.parse(row).alive)
+    if (!row || IdentityRow.parse(row).kind !== kind || !IdentityRow.parse(row).alive)
       refuse(kind === 'asset' ? 'asset_not_found' : 'entity_not_found');
   }
-  known(id: Uuid, kind: Entity['entity_type']): boolean {
+  known(id: Uuid, kind: ResourceImage['entity_type']): boolean {
     const row = this.store.db.prepare('SELECT kind,alive FROM entity_identity WHERE id=?').get(id);
-    return row !== undefined && EntityRow.parse(row).kind === kind;
+    return row !== undefined && IdentityRow.parse(row).kind === kind;
   }
-  isLive(id: Uuid, kind: Entity['entity_type']): boolean {
+  isLive(id: Uuid, kind: ResourceImage['entity_type']): boolean {
     const row = this.store.db.prepare('SELECT kind,alive FROM entity_identity WHERE id=?').get(id);
     if (row === undefined) return false;
-    const identity = EntityRow.parse(row);
+    const identity = IdentityRow.parse(row);
     return identity.kind === kind && identity.alive !== 0;
   }
   asset(id: Uuid): Asset {
@@ -131,7 +131,7 @@ export class Entities {
       ),
     );
   }
-  byAlias(kind: Entity['entity_type'], alias: string): Uuid {
+  byAlias(kind: ResourceImage['entity_type'], alias: string): Uuid {
     const row = this.store.db
       .prepare('SELECT id FROM entity_identity WHERE kind=? AND alive=1 AND alias_fold=?')
       .get(kind, caseFold(alias));
@@ -554,7 +554,7 @@ export class Entities {
         ...(request.report ? { evidence_disposition: 'duplicate' as const } : {}),
       };
     }
-    if (request.source_asset_id !== undefined) this.asset(request.source_asset_id);
+    this.asset(request.source_asset_id);
     const subject =
       request.publisher_subject === undefined
         ? null
@@ -577,9 +577,7 @@ export class Entities {
       edit_revision: zero,
       publisher_id: request.publisher_id,
       track_id: trackId,
-      ...(request.source_asset_id === undefined
-        ? {}
-        : { source_asset_id: request.source_asset_id }),
+      source_asset_id: request.source_asset_id,
       ...(request.publisher_subject === undefined
         ? {}
         : { publisher_subject: request.publisher_subject }),

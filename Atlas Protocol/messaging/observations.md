@@ -47,8 +47,8 @@ survives Asset deletion; new creation cannot name a deleted source Asset.
 
 ## Concrete request and result fields
 
-Create requires observation_id, request_id, publisher_id. Optional source_asset_id,
-publisher_subject, alias, description and report follow Entity composition.
+Create requires observation_id, request_id, publisher_id and source_asset_id.
+Optional publisher_subject, alias, description and report follow shared composition.
 ReportObservation requires observation_id, publisher_id and report. Report Dataset,
 Entity, and publisher must match the addressed facts. Create and report data is
 `{observation, track, evidence_disposition?}`. Report requires accepted or duplicate

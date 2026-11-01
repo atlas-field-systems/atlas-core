@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createHash } from 'node:crypto';
 import { fixture, uuid, secret, registration, task, barrier } from './harness.mjs';
-import { publicClient, sent, reading, telemetry } from './public-helpers.mjs';
+import { publicClient, sent, reading, telemetry, sourceAsset } from './public-helpers.mjs';
 const { createClient, ClientCloseError } = await import(
   process.env.ATLAS_SDK_ENTRY ?? '../dist/index.js'
 );
@@ -211,7 +211,7 @@ async function call(f, operation, data, credential = f.apiKey) {
     headers: {
       authorization: `Bearer ${credential}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.4.0',
+      'atlas-protocol-version': '0.5.0',
       'content-type': 'application/json',
     },
     body: JSON.stringify(data),
@@ -305,10 +305,11 @@ test('Full Task Objects include the deduplicated ready union of declarations and
   refreshed.close();
 });
 
-async function observation(f) {
+async function observation(f, source_asset_id) {
   const observation_id = uuid(),
     publisher_id = uuid();
   return call(f, 'create_observation', {
+    source_asset_id,
     request_id: uuid(),
     observation_id,
     publisher_id,
@@ -349,7 +350,7 @@ async function object(f, assetId) {
     headers: {
       authorization: `Bearer ${f.apiKey}`,
       'atlas-dataset-id': f.datasetId,
-      'atlas-protocol-version': '0.4.0',
+      'atlas-protocol-version': '0.5.0',
     },
     body: form,
   });
@@ -378,7 +379,7 @@ test(
       ).attempt,
     ).data;
     const created = success((await admin.tasks.create(task(asset.id)).send()).attempt);
-    const pair = await observation(f);
+    const pair = await observation(f, asset.id);
     const uploaded = await object(f, asset.id);
     const reached = barrier(),
       release = barrier();
@@ -1475,6 +1476,7 @@ test('constant picture and pruned journal stay synchronized after many commits w
   const publisher_id = uuid(),
     observation_id = uuid();
   const { creation, reporter } = writer.reporting.createObservation({
+    source_asset_id: await sourceAsset(writer.http),
     request_id: uuid(),
     publisher_id,
     observation_id,

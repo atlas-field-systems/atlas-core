@@ -149,7 +149,7 @@ export async function exerciseProcess(input: FaultInput): Promise<FaultReceipt> 
           'content-type': 'application/json',
           'content-length': bytes.length,
           authorization: `Bearer ${runtime.identity.secret}`,
-          'atlas-protocol-version': '0.4.0',
+          'atlas-protocol-version': '0.5.0',
           'atlas-dataset-id': input.operator.input.datasetId,
         },
       });

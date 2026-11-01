@@ -14,9 +14,7 @@ export function fuseOneToOne(observation: FusionObservation): DerivedTrack {
       {
         observation_id: observation.id,
         publisher_id: observation.publisher_id,
-        ...(observation.source_asset_id === undefined
-          ? {}
-          : { source_asset_id: observation.source_asset_id }),
+        source_asset_id: observation.source_asset_id,
       },
     ],
     type: observation.type,
