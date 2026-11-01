@@ -59,9 +59,10 @@ jobs:
       matrix:
         group: [missions, ip, core-process, capacity, credentials, tasks, evidence]
     env:
-      ATLAS_TEST_ROOT: ${{ runner.temp }}/atlas-simulations
       ATLAS_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
     steps:
+      - name: Set external eval path
+        run: echo "ATLAS_TEST_ROOT=$RUNNER_TEMP/atlas-simulations" >> "$GITHUB_ENV"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
@@ -273,9 +274,11 @@ jobs:
       ATLAS_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
       JOB_RESULTS: ${{ toJSON(needs) }}
       IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
-      RECORD_DIRECTORY: ${{ runner.temp }}/records
-      ATLAS_EVAL_HISTORY: ${{ runner.temp }}/history
     steps:
+      - name: Set external record paths
+        run: |
+          echo "RECORD_DIRECTORY=$RUNNER_TEMP/records" >> "$GITHUB_ENV"
+          echo "ATLAS_EVAL_HISTORY=$RUNNER_TEMP/history" >> "$GITHUB_ENV"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
@@ -300,7 +303,7 @@ jobs:
             git archive FETCH_HEAD | tar -xf - -C "$ATLAS_EVAL_HISTORY"
           fi
           mkdir -p "$ATLAS_EVAL_HISTORY/current"
-          find "$RECORD_DIRECTORY" -path '*/records/*.json' -type f -exec cp '{}' "$ATLAS_EVAL_HISTORY/current/" ';'
+          find "$RECORD_DIRECTORY" -mindepth 3 -maxdepth 3 -path '*/records/*.json' -type f -exec cp '{}' "$ATLAS_EVAL_HISTORY/current/" ';'
       - name: Aggregate correctness and compare measurements
         if: always()
         working-directory: Atlas Simulations
