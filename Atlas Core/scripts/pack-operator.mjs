@@ -43,7 +43,7 @@ const metadata = ReleaseMetadata.parse({
   format: 1,
   release: '0.4.0',
   protocol: '0.4.0',
-  databaseFormat: '4',
+  databaseFormat: '5',
   platform: 'linux/amd64',
   node: '24.22.1',
   npm: '11.19.0',

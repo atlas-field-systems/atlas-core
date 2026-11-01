@@ -35,6 +35,80 @@ const ok = (r) => {
   assert.equal(r.status, 200, JSON.stringify(r.json));
   return r.json.data;
 };
+test('four primary resource tables retain typed views and source associations across Restart', async (t) => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration('Source'))).asset;
+  const observationId = uuid();
+  const pair = ok(
+    await f.call('CreateObservation', {
+      request_id: uuid(),
+      observation_id: observationId,
+      publisher_id: uuid(),
+      source_asset_id: asset.id,
+    }),
+  );
+  const featureId = uuid();
+  ok(
+    await f.call('CreateGeofeature', {
+      request_id: uuid(),
+      geofeature_id: featureId,
+      geometry: { type: 'Point', coordinates: [0, 0] },
+    }),
+  );
+  const database = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  try {
+    const names = database
+      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all()
+      .map((row) => row.name);
+    for (const name of ['entities', 'observations', 'tasks', 'objects'])
+      assert.ok(names.includes(name), name);
+    for (const name of [
+      'entity_assets',
+      'entity_tracks',
+      'entity_geofeatures',
+      'entity_observations',
+      'task_images',
+      'object_images',
+    ])
+      assert.equal(names.includes(name), false, name);
+    assert.deepEqual(database.prepare('SELECT kind,id FROM entities ORDER BY kind').all(), [
+      { kind: 'asset', id: asset.id },
+      { kind: 'geofeature', id: featureId },
+      { kind: 'track', id: pair.track.id },
+    ]);
+    assert.deepEqual(database.prepare('SELECT track,observation FROM entity_track_sources').all(), [
+      { track: pair.track.id, observation: observationId },
+    ]);
+  } finally {
+    database.close();
+  }
+  for (const name of ['GetAsset', 'GetGeofeature']) {
+    const field = name === 'GetAsset' ? 'asset_id' : 'geofeature_id';
+    assert.equal((await f.call(name, { [field]: pair.track.id })).status, 404);
+  }
+  await f.restart();
+  for (const [name, expected] of [
+    ['ListAssets', asset.id],
+    ['ListTracks', pair.track.id],
+    ['ListGeofeatures', featureId],
+  ]) {
+    assert.deepEqual(
+      ok(await f.call(name, {})).items.map((image) => image.id),
+      [expected],
+    );
+  }
+  assert.deepEqual(
+    ok(await f.call('GetTrackObservations', { track_id: pair.track.id })).items.map(
+      (image) => image.id,
+    ),
+    [observationId],
+  );
+  assert.equal(
+    ok(await f.call('GetObservation', { observation_id: observationId })).track_id,
+    pair.track.id,
+  );
+});
 test('assigned retries stay read-only at the ceiling and new reads admit bounded cleanup', async (t) => {
   const directory = await mkdtemp(join(mutableRoot, 'assigned-cleanup-'));
   const settings = {
@@ -576,7 +650,8 @@ test(
     try {
       assert.deepEqual(
         JSON.parse(
-          reader.prepare('SELECT image FROM entity_assets WHERE id=?').get(asset.id).image,
+          reader.prepare("SELECT image FROM entities WHERE kind='asset' AND id=?").get(asset.id)
+            .image,
         ),
         degraded,
       );
@@ -779,7 +854,7 @@ test('real worker restart refuses contact transition at the hard ceiling and rec
   const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
   t.after(() => db.close());
   const retained = () => ({
-    image: db.prepare('SELECT image FROM entity_assets WHERE id=?').get(asset.id).image,
+    image: db.prepare("SELECT image FROM entities WHERE kind='asset' AND id=?").get(asset.id).image,
     sequence: db.prepare("SELECT value FROM core_meta WHERE key='sequence'").get().value,
   });
   const before = retained();
@@ -1192,7 +1267,9 @@ test(
       const deadline = Date.now() + 5000;
       while (committed < writes.length && Date.now() < deadline) {
         Atomics.wait(pause, 0, 0, 20);
-        committed = db.prepare('SELECT count(*) AS count FROM entity_geofeatures').get().count;
+        committed = db
+          .prepare("SELECT count(*) AS count FROM entities WHERE kind='geofeature'")
+          .get().count;
       }
     } finally {
       db.close();

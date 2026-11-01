@@ -8,6 +8,11 @@ Core stores accepted Asset and Observation sections with their source and orderi
 facts. Track results and associations remain distinct from that source evidence.
 Public resource images are built from these committed facts.
 
+The four primary tables are `entities`, `observations`, `tasks`, and `objects`.
+Entities holds Asset, Track, and Geofeature images with a kind discriminator.
+Private identity, association, evidence, retry, execution, and upload tables retain
+their existing constraints. Consolidation changes no public operation or commit rule.
+
 ## One commit boundary
 
 Under one transaction, recheck authorization, Dataset, revisions, retry identity,

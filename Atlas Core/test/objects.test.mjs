@@ -130,7 +130,7 @@ for (const boundary of ['authorization', 'between parts'])
     await f.core.close();
     assert.ok((await receiving) instanceof Error);
     assert.equal(f.core.rpc.worker.threadId, -1);
-    assert.equal(db.prepare('SELECT count(*) AS count FROM object_images').get().count, 0);
+    assert.equal(db.prepare('SELECT count(*) AS count FROM objects').get().count, 0);
     assert.equal(
       db.prepare("SELECT value FROM core_meta WHERE key='sequence'").get().value,
       cursor,
@@ -247,7 +247,7 @@ for (const reverse of [false, true])
           .get(),
         { count: 1, bytes: 1024 },
       );
-      assert.equal(db.prepare('SELECT count(*) AS count FROM object_images').get().count, 1);
+      assert.equal(db.prepare('SELECT count(*) AS count FROM objects').get().count, 1);
     } finally {
       db.close();
     }
@@ -273,7 +273,7 @@ for (const reverse of [false, true])
     const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
     t.after(() => db.close());
     const published = () => ({
-      objects: db.prepare('SELECT * FROM object_images ORDER BY id').all(),
+      objects: db.prepare('SELECT * FROM objects ORDER BY id').all(),
       attempts: db
         .prepare("SELECT * FROM object_attempts WHERE state<>'reclaimed' ORDER BY id")
         .all(),

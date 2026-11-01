@@ -27,23 +27,22 @@ export class Objects {
     private readonly reference: (association: Association) => void,
   ) {
     store.db
-      .exec(`CREATE TABLE IF NOT EXISTS object_images(id TEXT PRIMARY KEY,image TEXT NOT NULL,deleted INTEGER NOT NULL,path TEXT NOT NULL,fault INTEGER NOT NULL) STRICT;
+      .exec(`CREATE TABLE IF NOT EXISTS objects(id TEXT PRIMARY KEY,image TEXT NOT NULL,deleted INTEGER NOT NULL,path TEXT NOT NULL,fault INTEGER NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS object_holds(task TEXT NOT NULL,object TEXT NOT NULL,PRIMARY KEY(task,object)) STRICT;
       CREATE TABLE IF NOT EXISTS object_attempts(id TEXT PRIMARY KEY,object_id TEXT NOT NULL,descriptor TEXT NOT NULL,owner TEXT NOT NULL,state TEXT NOT NULL,staging TEXT NOT NULL,installed TEXT NOT NULL,bytes INTEGER NOT NULL,key_id TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS object_progress(attempt TEXT PRIMARY KEY,written INTEGER NOT NULL) STRICT;`);
   }
   get(objectId: Uuid): ObjectImage {
     const row = this.store.db
-      .prepare('SELECT image FROM object_images WHERE id=? AND deleted=0')
+      .prepare('SELECT image FROM objects WHERE id=? AND deleted=0')
       .get(objectId);
     if (!row) refuse('entity_not_found');
     return ObjectImage.parse(JSON.parse(Image.parse(row).image));
   }
   private ended(objectId: Uuid): boolean {
     return (
-      this.store.db
-        .prepare('SELECT id FROM object_images WHERE id=? AND deleted=1')
-        .get(objectId) !== undefined
+      this.store.db.prepare('SELECT id FROM objects WHERE id=? AND deleted=1').get(objectId) !==
+      undefined
     );
   }
   declare(task: Uuid, object: Uuid, required: boolean): void {
@@ -134,7 +133,7 @@ export class Objects {
   retry(tx: Transaction, request: UploadDescriptor): ObjectImage | undefined {
     if (this.ended(request.object_id)) refuse('identity_conflict');
     if (tx.retry('UploadObject', request.request_id, request)) return this.get(request.object_id);
-    if (this.store.db.prepare('SELECT id FROM object_images WHERE id=?').get(request.object_id))
+    if (this.store.db.prepare('SELECT id FROM objects WHERE id=?').get(request.object_id))
       refuse('identity_conflict');
     return undefined;
   }
@@ -167,7 +166,7 @@ export class Objects {
       metadata: request.metadata,
     };
     this.store.db
-      .prepare('INSERT INTO object_images VALUES(?,?,0,?,0)')
+      .prepare('INSERT INTO objects VALUES(?,?,0,?,0)')
       .run(image.object_id, JSON.stringify(image), attempt.installed);
     this.store.db
       .prepare("UPDATE object_attempts SET state='published' WHERE id=?")
@@ -192,7 +191,7 @@ export class Objects {
   abandon(attemptId: Uuid): void {
     const attempt = this.attempt(attemptId);
     if (attempt.state === 'published') return;
-    if (this.store.db.prepare('SELECT id FROM object_images WHERE path=?').get(attempt.installed))
+    if (this.store.db.prepare('SELECT id FROM objects WHERE path=?').get(attempt.installed))
       refuse('integrity_fault');
     this.store.db.prepare("UPDATE object_attempts SET state='abandoned' WHERE id=?").run(attemptId);
   }
@@ -249,7 +248,7 @@ export class Objects {
     image.version = next(image.version);
     image.edit_revision = next(image.edit_revision);
     this.store.db
-      .prepare('UPDATE object_images SET image=? WHERE id=?')
+      .prepare('UPDATE objects SET image=? WHERE id=?')
       .run(JSON.stringify(image), image.object_id);
     tx.change({
       kind: 'put',
@@ -270,7 +269,7 @@ export class Objects {
         .get(image.object_id)
     )
       refuse('object_held');
-    this.store.db.prepare('UPDATE object_images SET deleted=1 WHERE id=?').run(image.object_id);
+    this.store.db.prepare('UPDATE objects SET deleted=1 WHERE id=?').run(image.object_id);
     tx.change({
       kind: 'delete',
       resource_kind: 'object',
@@ -284,19 +283,16 @@ export class Objects {
     const image = this.get(objectId);
     const row = z
       .object({ path: z.string() })
-      .parse(this.store.db.prepare('SELECT path FROM object_images WHERE id=?').get(objectId));
+      .parse(this.store.db.prepare('SELECT path FROM objects WHERE id=?').get(objectId));
     return { image, path: row.path };
   }
   integrity(objectId: Uuid, fault: boolean): void {
-    this.store.db
-      .prepare('UPDATE object_images SET fault=? WHERE id=?')
-      .run(fault ? 1 : 0, objectId);
+    this.store.db.prepare('UPDATE objects SET fault=? WHERE id=?').run(fault ? 1 : 0, objectId);
   }
   get degraded(): boolean {
     return (
-      this.store.db
-        .prepare('SELECT id FROM object_images WHERE fault=1 AND deleted=0 LIMIT 1')
-        .get() !== undefined
+      this.store.db.prepare('SELECT id FROM objects WHERE fault=1 AND deleted=0 LIMIT 1').get() !==
+      undefined
     );
   }
   usage(): { bytes: number; uploads: number } {
@@ -311,30 +307,30 @@ export class Objects {
   }
   list(after: string, limit: number): ObjectImage[] {
     return this.store.db
-      .prepare('SELECT image FROM object_images WHERE deleted=0 AND id>? ORDER BY id LIMIT ?')
+      .prepare('SELECT image FROM objects WHERE deleted=0 AND id>? ORDER BY id LIMIT ?')
       .all(after, limit)
       .map((row) => ObjectImage.parse(JSON.parse(Image.parse(row).image)));
   }
   *picture(source: Database.Database): Generator<ObjectImage> {
     for (const row of source
-      .prepare('SELECT image FROM object_images WHERE deleted=0 ORDER BY id')
+      .prepare('SELECT image FROM objects WHERE deleted=0 ORDER BY id')
       .iterate())
       yield ObjectImage.parse(JSON.parse(Image.parse(row).image));
   }
   clearDataset(): void {
     this.store.db.exec(
-      'DELETE FROM object_images; DELETE FROM object_holds; DELETE FROM object_attempts; DELETE FROM object_progress',
+      'DELETE FROM objects; DELETE FROM object_holds; DELETE FROM object_attempts; DELETE FROM object_progress',
     );
   }
   retired(): { object: Uuid; path: string }[] {
     return this.store.db
-      .prepare("SELECT id AS object,path FROM object_images WHERE deleted=1 AND path<>'' LIMIT 32")
+      .prepare("SELECT id AS object,path FROM objects WHERE deleted=1 AND path<>'' LIMIT 32")
       .all()
       .map((row) => z.object({ object: Uuid, path: z.string() }).parse(row));
   }
   reclaimed(object: Uuid): void {
     const row = this.store.db
-      .prepare('SELECT path FROM object_images WHERE id=? AND deleted=1')
+      .prepare('SELECT path FROM objects WHERE id=? AND deleted=1')
       .get(object);
     if (!row) refuse('integrity_fault');
     const path = z.object({ path: z.string() }).parse(row).path;
@@ -343,6 +339,6 @@ export class Objects {
         "UPDATE object_attempts SET state='reclaimed',bytes=0 WHERE installed=? AND state='published'",
       )
       .run(path);
-    this.store.db.prepare("UPDATE object_images SET path='' WHERE id=? AND deleted=1").run(object);
+    this.store.db.prepare("UPDATE objects SET path='' WHERE id=? AND deleted=1").run(object);
   }
 }

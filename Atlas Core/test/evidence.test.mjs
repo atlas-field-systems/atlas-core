@@ -136,8 +136,9 @@ test('Observation creation bounds the complete image and rolls back its pair, ev
     Object.fromEntries(
       [
         'entity_identity',
-        'entity_observations',
-        'entity_tracks',
+        'observations',
+        'entities',
+        'entity_track_sources',
         'evidence_reports',
         'evidence_sections',
         'evidence_readings',
@@ -1059,12 +1060,12 @@ test('startup refuses legacy evidence without retained quantity status', async (
 });
 
 test('incompatible database formats are refused before old evidence can be interpreted', async (t) => {
-  for (const format of ['1', '2', '3']) {
+  for (const format of ['1', '2', '3', '4']) {
     const f = await fixture(t);
     await f.core.close();
     const db = new Database(join(f.directory, 'core.sqlite'));
     try {
-      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '4');
+      assert.equal(db.prepare("SELECT value FROM core_meta WHERE key='format'").get().value, '5');
       db.prepare("UPDATE core_meta SET value=? WHERE key='format'").run(format);
     } finally {
       db.close();

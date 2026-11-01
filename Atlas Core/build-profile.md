@@ -113,6 +113,8 @@ startup refuses its evidence format rather than inventing admission facts. Use a
 fresh installation for 0.3.0 with private database format 4. Formats 1 through 3
 are refused before interpreting images. Asset-reported Tags introduce Protocol
 0.4.0 while retaining database format 4 because the new section is optional.
+Resource image consolidation now requires private database format 5 without changing
+Protocol 0.4.0. Formats 1 through 4 require a fresh installation and are refused intact.
 The supported [update command](lifecycle.md#commands) resets operational data
 before changing software and retains credentials and operator profiles. Use that
 path for upgrades and downgrades; older readers cannot parse retained tagged
