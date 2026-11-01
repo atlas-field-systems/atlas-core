@@ -7,7 +7,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { cpus, release, totalmem } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { AssetRuntime } from './asset.js';
+import { AssetRuntime, type RuntimeStop } from './asset.js';
+import { isDeepStrictEqual } from 'node:util';
 import { checkEvidence, collectEvidence } from './checks.js';
 import { storageBytes } from './measurements.js';
 import { Core } from './core.js';
@@ -20,7 +21,7 @@ import { Proxy } from './proxy.js';
 import type { CleanupEvidence, RunRecord } from './records.js';
 import { passed, saveRecord, unrun } from './records.js';
 import type { Scenario } from './scenario.js';
-import { id, success } from './sdk.js';
+import { id, isAuthorizationFailure, success } from './sdk.js';
 import { Truth } from './truth.js';
 import { Shutdown } from './shutdown.js';
 import { World } from './world.js';
@@ -49,7 +50,17 @@ export async function evaluate(input: {
     installationBytes: null,
   };
   let stopWorld: (() => void) | undefined;
-  let fatal: unknown;
+  const assetFailures = new Map<string, unknown>();
+  const expectedStops = new Map<string, RuntimeStop>();
+  const checkAssetFailures = () => {
+    for (const [alias, error] of assetFailures) {
+      const expected = expectedStops.get(alias);
+      if (!expected || expected.error !== error) throw error;
+      const runtime = runtimes.find((a) => a.alias === alias);
+      if (!runtime || !isDeepStrictEqual(runtime.input.world.get(alias), expected.world))
+        throw new Error(`Stopped Asset moved ${alias}`);
+    }
+  };
   let proxy: Proxy | undefined;
   const receipts: FaultReceipt[] = [];
   let receiptBytes = 0;
@@ -107,7 +118,11 @@ export async function evaluate(input: {
         world,
         truth,
         fatal: (e) => {
-          fatal ??= e;
+          if (
+            !assetFailures.has(config.alias) ||
+            isAuthorizationFailure(assetFailures.get(config.alias))
+          )
+            assetFailures.set(config.alias, e);
         },
       });
       runtimes.push(runtime);
@@ -135,31 +150,43 @@ export async function evaluate(input: {
         ])
       : AbortSignal.timeout(Math.ceil(input.scenario.deadline_seconds * 1000));
     for (const action of timeline) {
+      checkAssetFailures();
       while (performance.now() - origin < action.at_seconds * 1000) {
         if (input.signal?.aborted) throw new Error('Run interrupted');
-        if (fatal) throw fatal;
+        checkAssetFailures();
         if (performance.now() > deadline) throw new Error('Scenario deadline');
         await delay(50);
       }
+      checkAssetFailures();
       if (action.action === 'fault' && action.id === 'core-reset') {
         finalReset = action;
         continue;
       }
       if (action.action === 'fault') {
-        const underLoad = ['core-restart', 'core-kill'].includes(action.id);
+        const underLoad = ['core-restart', 'core-kill', 'asset-deleted'].includes(action.id);
         if (!underLoad) for (const runtime of runtimes) runtime.hooks.networkHoldUntil = Infinity;
         if (!underLoad) for (const runtime of runtimes) await runtime.writes.drain();
         try {
-          await retainReceipt(
-            await exerciseFault({
-              action,
-              core,
-              operator,
-              assets: runtimes,
-              proxy,
-              signal: scenarioSignal,
-            }),
-          );
+          const receipt = await exerciseFault({
+            action,
+            core,
+            operator,
+            assets: runtimes,
+            proxy,
+            signal: scenarioSignal,
+          });
+          await retainReceipt(receipt);
+          if (action.id === 'asset-deleted') {
+            const reasons = verifyFault(receipt);
+            if (reasons.length) throw new Error(reasons.join('; '));
+            const runtime =
+              action.asset === undefined
+                ? runtimes[0]
+                : runtimes.find((a) => a.alias === action.asset);
+            const stopped = runtime?.stopState();
+            if (!runtime || !stopped) throw new Error('Deleted Asset did not stop');
+            expectedStops.set(runtime.alias, stopped);
+          }
         } finally {
           for (const runtime of runtimes) runtime.hooks.networkHoldUntil = 0;
         }
@@ -168,14 +195,18 @@ export async function evaluate(input: {
     let heldSince: number | undefined;
     for (;;) {
       if (input.signal?.aborted) throw new Error('Run interrupted');
-      if (fatal) throw fatal;
+      checkAssetFailures();
       if (performance.now() > deadline) throw new Error('Scenario deadline');
       let matches = true,
         nonterminal = false;
-      for (const expected of input.scenario.expect.tasks) {
+      for (const move of operator.moves) {
+        const expected = input.scenario.expect.tasks.find(
+          (e) => e.asset === move.asset && e.index === move.index,
+        );
+        if (!expected) throw new Error(`Missing expected Task ${move.asset}/${move.index}`);
         const task = success(
           await registrar.tasks.get({
-            task_id: operator.move(expected.asset, expected.index).id,
+            task_id: move.id,
           }),
         );
         matches &&= task.execution_state === expected.state;
@@ -192,7 +223,7 @@ export async function evaluate(input: {
       await delay(100);
     }
     for (const runtime of runtimes) await runtime.park();
-    if (fatal) throw fatal;
+    checkAssetFailures();
     await operator.writes.drain();
     await truth.boundary();
     const verification = {
@@ -325,7 +356,11 @@ export async function evaluate(input: {
         storage = await storageBytes(core.installation);
       });
   }
-  if (fatal && !failures.includes(errorText(fatal))) failures.push(errorText(fatal));
+  for (const [alias, error] of assetFailures) {
+    const expected = expectedStops.get(alias);
+    if ((!expected || expected.error !== error) && !failures.includes(errorText(error)))
+      failures.push(errorText(error));
+  }
   const elapsedCpu = process.cpuUsage(cpu);
   const settings = await readFile(new URL('../settings/eval.json', import.meta.url));
   const image = await readFile(

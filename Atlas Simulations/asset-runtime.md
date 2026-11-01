@@ -93,5 +93,7 @@ does not divert the Asset. Protocol [leaves that choice to the Asset](../mission
 The Run decides what a stopped Asset means. In an interactive run, it stops the run
 and exits 1. In an eval, an active [failure point](failure-points.md) can expect that
 stop, and the check records it. Any other stop fails the eval.
+For `asset-deleted`, the injector verifies an active Move To, its retained Task, and
+an authorization stop. The eval checks that World position stays fixed for 15 seconds.
 
 [Next: scenarios](scenarios.md)

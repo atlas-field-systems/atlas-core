@@ -150,6 +150,7 @@ test(
     assert.ok(firstStart);
     skippedHead.physical = skippedHead.physical.filter((p) => p !== firstStart);
     assert.equal(checkEvidence(input, skippedHead).order.kind, 'failed');
+    assert.equal(checkEvidence(input, skippedHead).tasks.kind, 'failed');
     const worldless = decode(structuredClone(capture.evidence));
     worldless.world = [];
     assert.equal(checkEvidence(input, worldless).positions.kind, 'failed');
@@ -395,3 +396,52 @@ test(
     assert.equal(record.verdict, 'passed', JSON.stringify(record));
   },
 );
+
+for (const defect of [
+  'ignored-refusal',
+  'unrelated-error',
+  'late-unrelated-error',
+  'movement-after-stop',
+])
+  test(`active deletion rejects ${defect}`, { timeout: 45000 }, async () => {
+    const { AssetRuntime } = await import('../dist/asset.js');
+    const { ExchangeFailure } = await import('../dist/sdk.js');
+    const { SdkError } = await import('@atlas/sdk');
+    const original = AssetRuntime.prototype.fail;
+    let injected = false;
+    AssetRuntime.prototype.fail = function (error) {
+      if (
+        !(error instanceof ExchangeFailure || error instanceof SdkError) ||
+        !['unauthorized', 'authorization_required'].includes(error.code)
+      )
+        return original.call(this, error);
+      injected = true;
+      if (defect === 'ignored-refusal') return;
+      original.call(
+        this,
+        defect === 'unrelated-error' ? new Error('Unrelated runtime failure') : error,
+      );
+      if (defect === 'late-unrelated-error')
+        original.call(this, new Error('Late unrelated failure'));
+      if (defect === 'movement-after-stop')
+        this.input.world.move(this.alias, { latitude: 52, longitude: 0 }, 100, 1);
+    };
+    try {
+      const record = await evaluate(await loadScenario('scenarios/asset-deleted.json'));
+      assert.ok(injected);
+      assert.equal(record.verdict, 'failed', JSON.stringify(record));
+      assert.equal(record.cleanup.coreExit, 'verified');
+      assert.match(
+        record.failures.join(' '),
+        defect === 'ignored-refusal'
+          ? /Deleted Asset did not stop/
+          : defect === 'unrelated-error'
+            ? /Unrelated runtime failure/
+            : defect === 'late-unrelated-error'
+              ? /Late unrelated failure/
+              : /Stopped Asset moved/,
+      );
+    } finally {
+      AssetRuntime.prototype.fail = original;
+    }
+  });

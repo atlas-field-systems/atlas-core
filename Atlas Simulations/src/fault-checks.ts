@@ -243,9 +243,21 @@ export function verifyFault(receipt: FaultReceipt): string[] {
         Asset.parse(o[2]).task_queue,
       ), 'Stale reorder changed queue');
       break;
-    case 'asset-deleted':
-      require(!ok(submission.parse(o[1]).attempt), 'Deleted Asset admitted evidence');
+    case 'asset-deleted': {
+      require(ok(submission.parse(o[0]).attempt), 'Asset deletion failed');
+      require(['unauthorized', 'authorization_required'].includes(
+        error(submission.parse(o[1]).attempt) ?? '',
+      ), 'Deleted Asset admitted evidence');
+      const before = Task.parse(o[3]),
+        after = Task.parse(o[4]);
+      require(before.command === 'move_to' &&
+        before.execution_state === 'in_progress' &&
+        before.asset_id === Asset.parse(o[2]).id, 'Deletion did not interrupt an active Move To');
+      require(isDeepStrictEqual(before, after), 'Deletion changed the retained Task');
+      require(z.object({ code: z.enum(['unauthorized', 'authorization_required']) }).safeParse(o[5])
+        .success, 'Deleted runtime did not stop on its authorization refusal');
       break;
+    }
     case 'future-time': {
       require(ok(submission.parse(o[0]).attempt), 'Future measurement was refused');
       const after = Asset.parse(o[2]);
@@ -377,6 +389,7 @@ export function verifyFault(receipt: FaultReceipt): string[] {
     }
     case 'queue-changed':
       require(error(o[1]) === 'queue_changed', 'Paged read survived changed queue');
+      require(ok(o[2]), 'Fresh assigned read did not recover');
       break;
     case 'resume-expired':
     case 'resume-superseded': {

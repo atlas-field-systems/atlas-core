@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises';
+import { opendir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readRecord, type RunRecord } from './records.js';
 export type Comparison = {
@@ -89,14 +89,12 @@ export async function compareHistory(
   right: string,
 ): Promise<Comparison[]> {
   const records: RunRecord[] = [];
-  let count = 0;
-  async function visit(path: string): Promise<void> {
-    const entries = await readdir(path, { withFileTypes: true });
-    if (entries.length > 10000) throw new Error('History directory capacity');
-    for (const item of entries) {
-      if (++count > 100000) throw new Error('History entry capacity');
+  async function visit(path: string, depth = 0): Promise<void> {
+    if (depth > 16) throw new Error('History directory depth');
+    const entries = await opendir(path, { bufferSize: 32 });
+    for await (const item of entries) {
       if (item.isSymbolicLink()) throw new Error('History symlink refused');
-      if (item.isDirectory() && item.name !== '.git') await visit(join(path, item.name));
+      if (item.isDirectory() && item.name !== '.git') await visit(join(path, item.name), depth + 1);
       else if (item.isFile() && item.name.endsWith('.json')) {
         const record = await readRecord(join(path, item.name));
         if (

@@ -92,10 +92,15 @@ test('streaming history refuses oversized records, symlinks and excessive nestin
     if (kind === 'symlink') await symlink('/dev/null', join(root, 'link'));
     if (kind === 'depth') {
       let path = root;
-      for (let i = 0; i < 17; i++) { path = join(path, 'child'); await mkdir(path); }
+      for (let i = 0; i < 17; i++) {
+        path = join(path, 'child');
+        await mkdir(path);
+      }
     }
-    await assert.rejects(compareHistory(root, 'main', 'feature'),
-      kind === 'oversized' ? /Record exceeds/ : kind === 'symlink' ? /symlink/ : /depth/);
+    await assert.rejects(
+      compareHistory(root, 'main', 'feature'),
+      kind === 'oversized' ? /Record exceeds/ : kind === 'symlink' ? /symlink/ : /depth/,
+    );
   }
 });
 test('record writes are append-only and unwritable history fails', async () => {

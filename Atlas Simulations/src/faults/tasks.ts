@@ -1,6 +1,6 @@
 import { wait } from './common.js';
 import { Counter, Timestamp } from '@atlas/protocol';
-import { id, success } from '../sdk.js';
+import { id, isAuthorizationFailure, success } from '../sdk.js';
 import type { FaultInput, FaultReceipt } from './common.js';
 import { asset, observed, receipt } from './common.js';
 export async function exerciseTasks(input: FaultInput): Promise<FaultReceipt> {
@@ -278,17 +278,40 @@ export async function exerciseTasks(input: FaultInput): Promise<FaultReceipt> {
     }
     case 'asset-deleted': {
       const snapshot = await before();
+      const execution = runtime.execution;
+      if (execution.kind !== 'moving') throw new Error('Deletion requires an active Move To');
+      const task_id = execution.move.taskId;
+      const taskBefore = success(await input.operator.input.reader.tasks.get({ task_id }));
+      if (taskBefore.execution_state !== 'in_progress') throw new Error('Move To not in progress');
+      if (runtime.stopState()) throw new Error('Asset stopped before deletion');
       const op = input.operator.client.assets.delete({ request_id: id(), asset_id });
       try {
-        const result = await op.send();
         const report = runtime.preparePosition();
         try {
+          const result = await op.send();
+          success(result.attempt);
+          const refusal = await observed(report, runtime);
+          const deadline = performance.now() + 5000;
+          let stopped = runtime.stopState();
+          while (!stopped) {
+            if (performance.now() >= deadline) throw new Error('Deleted Asset did not stop');
+            await wait(input, 20);
+            stopped = runtime.stopState();
+          }
+          if (!isAuthorizationFailure(stopped.error)) throw stopped.error;
           return receipt(
             input.action.id,
             'http',
             op.submission.identity,
             '/messages/delete_asset',
-            [result, await observed(report, runtime), snapshot],
+            [
+              result,
+              refusal,
+              snapshot,
+              taskBefore,
+              success(await input.operator.input.reader.tasks.get({ task_id })),
+              { code: stopped.error.code, world: stopped.world },
+            ],
           );
         } finally {
           report.close();

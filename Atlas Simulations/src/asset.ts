@@ -16,7 +16,7 @@ import { createClient } from '@atlas/sdk';
 import { randomBytes } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Scenario } from './scenario.js';
-import { id, success } from './sdk.js';
+import { id, isAuthorizationFailure, success } from './sdk.js';
 import { Truth } from './truth.js';
 import { World } from './world.js';
 import { Writes } from './writes.js';
@@ -29,6 +29,10 @@ export type QueuedExecution =
   | { kind: 'idle' }
   | { kind: 'moving' | 'paused'; move: Move }
   | { kind: 'reporting-terminal'; move: Move; outcome: 'completed' | 'cancelled' | 'failed' };
+export type RuntimeStop = {
+  error: unknown;
+  world: { position: Position; altitude: Altitude | null };
+};
 export class AssetRuntime {
   readonly identity = {
     asset_id: id(),
@@ -71,7 +75,10 @@ export class AssetRuntime {
   };
   private lastMovement = performance.now();
   private timer: NodeJS.Timeout | undefined;
-  private failure: unknown;
+  private failure: RuntimeStop | undefined;
+  stopState(): RuntimeStop | undefined {
+    return this.failure;
+  }
   readonly writes: Writes;
   constructor(
     readonly input: {
@@ -180,8 +187,19 @@ export class AssetRuntime {
     this.loop(1000, () => this.detect());
   }
   private fail(error: unknown): void {
-    if (this.failure) return;
-    this.failure = error;
+    if (this.failure) {
+      if (isAuthorizationFailure(this.failure.error) && !isAuthorizationFailure(error))
+        this.input.fatal(error);
+      return;
+    }
+    const world = this.input.world.get(this.alias);
+    this.failure = {
+      error,
+      world: {
+        position: { ...world.position },
+        altitude: world.altitude === null ? null : { ...world.altitude },
+      },
+    };
     this.parked = true;
     this.input.fatal(error);
   }

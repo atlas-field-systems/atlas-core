@@ -75,7 +75,8 @@ artifacts for seven days, along with logs and failure evidence.
 
 The file path is `SCENARIO/UTC-TIME-SHORT-SHA-RUN-ATTEMPT.json`, with GitHub's run ID
 and attempt number, so paths cannot clash. Nothing edits or deletes a record, and a
-failed run also adds one.
+failed run also adds one. Comparison streams the archive with bounded directory
+buffers, 16 nested directories, and retained results. Traversal time grows with history.
 
 ## Compare versions
 

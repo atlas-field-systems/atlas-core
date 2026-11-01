@@ -16,15 +16,15 @@ test('scenario parser rejects malformed, oversized and unknown input before netw
     await assert.rejects(loadScenario(path));
   }
   const valid = JSON.parse(await readFile('scenarios/road-inspection.json', 'utf8'));
-  for (const [name, mutate, reason] of [
-    ['missing', (s) => s.expect.tasks.pop(), /Missing expected Task/],
-    ['duplicate', (s) => s.expect.tasks.push({ ...s.expect.tasks[0] }), /Duplicate expected Task/],
+  for (const [name, mutate] of [
+    ['missing', (s) => s.expect.tasks.pop()],
+    ['duplicate', (s) => s.expect.tasks.push({ ...s.expect.tasks[0] })],
   ]) {
     const scenario = structuredClone(valid);
     mutate(scenario);
     const path = join(directory, `${name}.json`);
     await writeFile(path, JSON.stringify(scenario));
-    await assert.rejects(loadScenario(path), reason);
+    await assert.rejects(loadScenario(path), { code: 'invalid_value' });
   }
   assert.equal(CheckResults.safeParse({}).success, false);
 });
