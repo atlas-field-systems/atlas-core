@@ -132,7 +132,8 @@ test('publisher rejects oversized, traversing, invalid and inconsistent records 
   assert.doesNotMatch(workflow, /cancel-in-progress: true/);
 });
 test('CI aggregator rejects failed, cancelled and missing groups and permits only fork publish skip', async () => {
-  const root = await mkdtemp(join(process.env.ATLAS_TEST_ROOT, 'aggregation-'));
+  const root = join(await mkdtemp(join(process.env.ATLAS_TEST_ROOT, 'aggregation-')), 'records');
+  await mkdir(root);
   const scenarios = await Promise.all(
     (await readdir('scenarios'))
       .filter((n) => n.endsWith('.json'))
@@ -158,6 +159,18 @@ test('CI aggregator rejects failed, cancelled and missing groups and permits onl
     eval: { result: 'success' },
     publish: { result: 'success' },
   };
+  const history = join(root, '..', 'history');
+  await mkdir(join(history, 'current'), { recursive: true });
+  const workflow = await readFile('../.github/workflows/simulations.yml', 'utf8');
+  const copyCommand = workflow.split('\n').find((line) => line.trimStart().startsWith('find '));
+  assert.ok(copyCommand, 'The workflow must copy current run records');
+  const copied = spawnSync('bash', ['-e', '-c', copyCommand], {
+    env: { ...process.env, RECORD_DIRECTORY: root, ATLAS_EVAL_HISTORY: history },
+    encoding: 'utf8',
+  });
+  assert.equal(copied.status, 0, copied.stderr);
+  assert.equal((await readdir(join(history, 'current'))).length, scenarios.length);
+  assert.equal((await compareHistory(history, 'main', 'a'.repeat(40))).length, scenarios.length);
   assert.deepEqual(await aggregate(root, needs, false), []);
   for (const result of ['failure', 'cancelled', 'skipped'])
     assert.ok((await aggregate(root, { ...needs, eval: { result } }, false)).length);
