@@ -27,6 +27,8 @@ jobs:
       - run: npm --prefix 'Atlas Simulations' run inputs:prepare
       - run: npm --prefix 'Atlas Simulations' ci --ignore-scripts --no-audit --no-fund
       - run: npm --prefix 'Atlas Simulations' run build
+      - name: Verify Docker readiness before qualification
+        run: time timeout 10s sudo -n docker info --format '{{.ServerVersion}}'
       - name: Qualify runtime and broken controls
         env:
           ATLAS_TEST_ROOT: ${{ runner.temp }}/simulation-tests
@@ -78,6 +80,8 @@ jobs:
           tar -xf "$RUNNER_TEMP/built/built.tar"
           docker load -i "$RUNNER_TEMP/built/core-image.tar"
           npm install --global --offline --ignore-scripts --no-audit --no-fund 'Atlas Core/artifacts/npm-11.19.0.tgz'
+      - name: Verify Docker readiness before evals
+        run: time timeout 10s sudo -n docker info --format '{{.ServerVersion}}'
       - run: npm --prefix 'Atlas Simulations' run verify:inputs
       - name: Run group
         working-directory: Atlas Simulations
