@@ -31,9 +31,19 @@ SQLite behind ordinary modules. One browser-safe Protocol package owns runtime
 schemas and inferred types and exports portable OpenAPI through qualified stock
 tooling. Core mechanisms and SDK workflows remain ordinary handwritten code.
 
+## Product authority
+
+The [central Atlas charter](https://github.com/atlas-field-systems/atlas/blob/main/CHARTER.md)
+and [product stories](https://github.com/atlas-field-systems/atlas) own intended
+product behavior. Protocol specifies exact shared contracts; Core and SDK implement
+them. This repository documents the current implementation, not proof that every
+charter capability already exists. Reconcile differences explicitly; do not import
+old restrictions into the product or duplicate the central stories here.
+
 ## Read in this order
 
-Start with the [operating environment](operating-environment.md) for deployment
+Read the central charter and relevant story first, then the
+[operating environment](operating-environment.md) for deployment
 requirements. The [mission example](mission-example.md) shows how an operator,
 Atlas Mission, Core, and external Assets work together within the initial scope.
 

@@ -1,6 +1,18 @@
 # Working on Atlas
 
-Read the [overview](README.md) and the owning layer before changing behavior.
+Read the [Atlas product charter](https://github.com/atlas-field-systems/atlas/blob/main/CHARTER.md)
+and the relevant [product story](https://github.com/atlas-field-systems/atlas) before
+changing behavior, then the [overview](README.md) and owning layer here.
+
+The approved central stories own intended product behavior; Protocol defines exact
+shared contracts implementing it; Core and SDK own their mechanisms. Link to those
+stories instead of copying them. Identify conflicts with older local documentation
+and reconcile them through explicitly scoped contract/implementation changes.
+Do not silently restore historical restrictions or claim intended capabilities exist.
+
+Use the central repository's merged main branch unless a review explicitly names a
+proposed revision. An unmerged proposal is not approved behavior. If the central
+source cannot be read, report the gap rather than inventing its rules.
 
 ## Documentation first
 
