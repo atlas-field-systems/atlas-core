@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, symlink, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, symlink, writeFile, readFile, rm } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -62,7 +62,7 @@ void [asset, track, feature, task, object, operation, remote, observation, http]
     await writeFile(join(root, 'consumer.ts'), common);
     const positive = compile();
     assert.equal(positive.status, 0, positive.stdout + positive.stderr);
-    for (const line of [
+    const invalid = [
       'full.tasks.get({ asset_id: id });',
       'full.assets.query({ page_token: "foreign" });',
       'full.tasks.query({ filters: { states: ["unrecognized"] } });',
@@ -70,13 +70,23 @@ void [asset, track, feature, task, object, operation, remote, observation, http]
       'full.tasks.byAlias({ alias: "missing" });',
       'http.picture.subscribe();',
       'createClient({ baseUrl: "https://localhost", credentials: () => "", mode: "partial" });',
-    ]) {
-      await writeFile(join(root, 'consumer.ts'), common + line);
-      const negative = compile();
-      assert.notEqual(negative.status, 0, line);
-      assert.match(negative.stdout, /consumer\.ts\(\d+,\d+\): error TS/);
-      assert.ok(!negative.stdout.includes('TS2307'), negative.stdout);
+    ];
+    const files = [];
+    for (const [index, line] of invalid.entries()) {
+      const name = `negative-${index}.ts`;
+      files.push(name);
+      await writeFile(join(root, name), common + line);
     }
+    const config = JSON.parse(await readFile(join(root, 'tsconfig.json'), 'utf8'));
+    await writeFile(join(root, 'tsconfig.json'), JSON.stringify({ ...config, files }));
+    const negative = compile();
+    assert.notEqual(negative.status, 0);
+    for (const name of files)
+      assert.ok(
+        negative.stdout.includes(`${name}(`),
+        `Missing independent diagnostic for ${name}: ${negative.stdout}`,
+      );
+    assert.ok(!negative.stdout.includes('TS2307'), negative.stdout);
     await rm(root, { recursive: true, force: true });
   },
 );
