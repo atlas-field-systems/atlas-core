@@ -12,6 +12,90 @@ const ok = (result) => {
   return result.json.data;
 };
 const limits = { max_message_bytes: 4194304, max_json_values: 262144, max_changes: 1000 };
+test('one-to-one policy keeps Core identity and authored Track metadata separate from source sections', async (t) => {
+  const f = await fixture(t);
+  const asset = ok(await f.call('RegisterAsset', registration())).asset;
+  const observationId = uuid(),
+    publisherId = uuid();
+  const pair = ok(
+    await f.call('CreateObservation', {
+      request_id: uuid(),
+      observation_id: observationId,
+      publisher_id: publisherId,
+      source_asset_id: asset.id,
+      alias: 'Observation alias',
+      description: { name: 'Source description' },
+    }),
+  );
+  assert.notEqual(pair.track.id, observationId);
+  const initial = {
+    dataset_id: f.core.dataset,
+    id: pair.track.id,
+    entity_type: 'track',
+    version: '0',
+    edit_revision: '0',
+    sources: [
+      { observation_id: observationId, publisher_id: publisherId, source_asset_id: asset.id },
+    ],
+    type: {
+      state: 'value',
+      classification: 'state_until_changed',
+      observed_at: null,
+      evidence: null,
+      time_status: { kind: 'unknown' },
+      value: { kind: null },
+    },
+  };
+  assert.deepEqual(pair.track, initial);
+  ok(
+    await f.call('EditTrack', {
+      request_id: uuid(),
+      track_id: pair.track.id,
+      expected_edit_revision: '0',
+      edits: { alias: 'Authored Track alias', description: { name: 'Authored Track description' } },
+    }),
+  );
+  const origin = { kind: 'publisher', publisher_id: publisherId };
+  const reading = report(f.core.dataset, observationId, origin, 1, {
+    type: { state: 'withdrawn', classification: 'state_until_changed', observed_at: null },
+  });
+  const submission = { observation_id: observationId, publisher_id: publisherId, report: reading };
+  const expected = {
+    ...initial,
+    version: '2',
+    edit_revision: '1',
+    alias: 'Authored Track alias',
+    description: { name: 'Authored Track description' },
+    type: {
+      state: 'withdrawn',
+      classification: 'state_until_changed',
+      observed_at: null,
+      time_status: 'unknown',
+      evidence: {
+        dataset_id: f.core.dataset,
+        entity_id: observationId,
+        origin,
+        report_id: reading.report_id,
+        sequence: '1',
+        section: 'type',
+      },
+    },
+  };
+  assert.deepEqual(ok(await f.call('ReportObservation', submission)).track, expected);
+  const replay = ok(await f.call('ReportObservation', submission));
+  assert.equal(replay.evidence_disposition, 'duplicate');
+  assert.deepEqual(replay.track, expected);
+  await f.restart();
+  assert.deepEqual(ok(await f.call('GetTrack', { track_id: pair.track.id })), expected);
+  const database = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
+  try {
+    assert.deepEqual(database.prepare('SELECT track,observation FROM entity_track_sources').all(), [
+      { track: pair.track.id, observation: observationId },
+    ]);
+  } finally {
+    database.close();
+  }
+});
 test('duplicate Asset wrappers bind original facts privately across Restart and storage refusal', async (t) => {
   const f = await fixture(t, {
     storageBytes: 32 * 1024 * 1024,
