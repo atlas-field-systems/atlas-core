@@ -13,6 +13,7 @@ import {
 import type { AssetReport, ObservationReport, RequestOf } from '@atlas/protocol';
 import { credentialFacts, id, instant, next, now, zero } from './exact.js';
 import { Evidence, eligible } from './evidence.js';
+import { fuseOneToOne } from './fusion.js';
 import { Refusal, refuse } from './fault.js';
 import type { Store, Transaction } from './database.js';
 import type { Identity } from './identity.js';
@@ -595,7 +596,7 @@ export class Entities {
     };
     if (request.report) this.observationReport(tx, observation, request.report);
     const image = this.parseObservation(observation);
-    const track = this.fuse(image);
+    const track = this.trackImage(image);
     this.store.db
       .prepare('INSERT INTO observations VALUES(?,?,?,?)')
       .run(image.id, JSON.stringify(image), image.publisher_id, subject);
@@ -613,7 +614,7 @@ export class Entities {
       ...(request.report ? { evidence_disposition: 'accepted' as const } : {}),
     };
   }
-  private fuse(observation: Observation, old?: Track): Track {
+  private trackImage(observation: Observation, old?: Track): Track {
     return {
       dataset_id: observation.dataset_id,
       id: observation.track_id,
@@ -622,19 +623,7 @@ export class Entities {
       edit_revision: old?.edit_revision ?? zero,
       ...(old?.alias === undefined ? {} : { alias: old.alias }),
       ...(old?.description === undefined ? {} : { description: old.description }),
-      sources: [
-        {
-          observation_id: observation.id,
-          publisher_id: observation.publisher_id,
-          ...(observation.source_asset_id === undefined
-            ? {}
-            : { source_asset_id: observation.source_asset_id }),
-        },
-      ],
-      type: observation.type,
-      ...(observation.telemetry === undefined ? {} : { telemetry: observation.telemetry }),
-      ...(observation.attitude === undefined ? {} : { attitude: observation.attitude }),
-      ...(observation.geometry === undefined ? {} : { geometry: observation.geometry }),
+      ...fuseOneToOne(observation),
     };
   }
   private observationReport(
@@ -689,7 +678,7 @@ export class Entities {
     if (this.observationReport(tx, observation, request.report)) {
       observation.version = next(observation.version);
       this.saveObservation(observation);
-      track = this.saveTrack(tx, this.fuse(observation, track));
+      track = this.saveTrack(tx, this.trackImage(observation, track));
     }
     return { observation, track, evidence_disposition: 'accepted' as const };
   }
