@@ -9,6 +9,9 @@ SDK provides the browser-safe TypeScript client with HTTP by default, opt-in Ful
 synchronization, reporting, remote history and verified file transfers. Functional
 checks are separate from the unrun sustained-workload and power-loss qualification.
 
+The next-version [planning docs](docs/README.md) are organized by system.
+They are separate from the existing implementation references below.
+
 ## Three layers, one contract
 
 | Layer              | Owns                                                            | Does not own                                    |

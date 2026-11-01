@@ -1,0 +1,694 @@
+[
+  {
+    "file": "reference/current-design/implementation/contributing.md",
+    "source": "AGENTS.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "80ffc25789c5d8d2acaa7d00c7a40855135a400f7e865c1a6f637e503ebfc0f2"
+  },
+  {
+    "file": "reference/current-design/implementation/current-project.md",
+    "source": "README.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6a5c2a892ad2b5a16f1d6d1f41f33da34f33967931fb250e697dda838face17d"
+  },
+  {
+    "file": "reference/current-design/examples/mission.md",
+    "source": "mission-example.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "686f47f50dbdd3f96cc8f88a7bdb16ef7ec1d1f49f9d83e07e7180d64971dd6e"
+  },
+  {
+    "file": "reference/current-design/support/operating-environment.md",
+    "source": "operating-environment.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e5961940cb54280cbbeac42f1aa07c8bb6d4b579fa2320921c7e5a70a0971558"
+  },
+  {
+    "file": "reference/current-design/implementation/core-overview.md",
+    "source": "Atlas Core/README.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "a8a5b3735c5a62e7d25d8a5f443086edc30b71179ba1a84b3a9c8ef9b29adbd7"
+  },
+  {
+    "file": "reference/current-design/implementation/build-profile.md",
+    "source": "Atlas Core/build-profile.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "f54508fe3596b07fceab9313a6a0b20aef7e7f4e1b569767c30ddb3307099cd4"
+  },
+  {
+    "file": "reference/current-design/support/command-line.md",
+    "source": "Atlas Core/command-line.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "7a8fdd786ef3d8ab34131abf864c00c8587fe8632a3fdfd3c9c9924a458239cb"
+  },
+  {
+    "file": "reference/current-design/implementation/database.md",
+    "source": "Atlas Core/database.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "f6d0f6570e7704b66ef79c0206c24ce3609fd2470d360a12e41186647eb6cffe"
+  },
+  {
+    "file": "reference/current-design/support/core-diagnostics.md",
+    "source": "Atlas Core/diagnostics.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "c5e02906ca6afb1d7b367a421e15f08670bf04037263d79f616ac87341ae5734"
+  },
+  {
+    "file": "reference/current-design/entities/tracks/fusion.md",
+    "source": "Atlas Core/fusion.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "04a8000a5f75ba1fe02a593b918667b033247cdbde6d9c8f42c0099d00f7cb86"
+  },
+  {
+    "file": "reference/current-design/support/lifecycle.md",
+    "source": "Atlas Core/lifecycle.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "152ee7a3044f9a1bc5f9c393e1ff6bca3093479c0c675eb3f0023c6eac487d93"
+  },
+  {
+    "file": "reference/current-design/support/server-limits.md",
+    "source": "Atlas Core/limits.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "9247bc049cb3f2f7793e23b44a52e92904e82c27f24975e6db6376c61935f020"
+  },
+  {
+    "file": "reference/current-design/implementation/qualification/protocol-boundaries.md",
+    "source": "Atlas Core/protocol-qualification.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "44c164eedd164a0968a93986c7fd407104b223b8004b84f284542f3d6e85eb83"
+  },
+  {
+    "file": "reference/current-design/implementation/qualification/core.md",
+    "source": "Atlas Core/qualification.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e3f166e290fa31df6c5083bd330a52fd78a4ad208bf4e121c79b88e6cc032943"
+  },
+  {
+    "file": "reference/current-design/support/readiness.md",
+    "source": "Atlas Core/readiness.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "c6b1ae1594f1e71c6c5c10c56f1921adef027ee20226560c0804b496df9a693b"
+  },
+  {
+    "file": "reference/current-design/shared/storage.md",
+    "source": "Atlas Core/storage.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e4910da33b010488383aeb835524f5064a5630d9ed259dd0921fe2c1e9cf7e53",
+    "extracted_sections": [
+      {
+        "section": "## Publishing files\n",
+        "end": "## Retention and capacity\n",
+        "pointer": "## Publishing files\n\nSee [Object publication](../objects/publication.md).\n\n"
+      }
+    ]
+  },
+  {
+    "file": "reference/current-design/tasks/assigned-read-storage.md",
+    "source": "Atlas Core/task-reads.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6826e72a462c66351d3dd5ba95a35f721a372644e31d4d499e7db1cd9130f3ac"
+  },
+  {
+    "file": "reference/current-design/implementation/qualification/workload.md",
+    "source": "Atlas Core/workload-qualification.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "89870090c1e46bf0a33ef618956198386cd4d599a8ae216f36220fb923f6338e"
+  },
+  {
+    "file": "reference/current-design/implementation/protocol-overview.md",
+    "source": "Atlas Protocol/README.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "b9d17c792158169ceba16a04137c3acd9f8a1833ca30b189bdacc315e298c4ad"
+  },
+  {
+    "file": "reference/current-design/tasks/commands.md",
+    "source": "Atlas Protocol/command-catalog.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "52127faa0b9b0da21e3761dcc211713cc5467d7faa497caac641ec7e824b1bf8"
+  },
+  {
+    "file": "reference/current-design/entities/components/README.md",
+    "source": "Atlas Protocol/components/README.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "1be3cd30a08723d82dde388686a25c152485669b8d8db43df5db108348ebdb21"
+  },
+  {
+    "file": "reference/current-design/entities/components/attitude.md",
+    "source": "Atlas Protocol/components/attitude.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6cbbf1e7257db6cd5663624e24edc45501c3454af5e1d5f8dbabefef62b8af29"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/camera-optics.md",
+    "source": "Atlas Protocol/components/camera-optics.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "f8f7bc552ea75c8607010d3d123034f96407d5e437b7119750ea860acfd5cafa"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/camera.md",
+    "source": "Atlas Protocol/components/camera.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "0d3cef906370f34da5db30debda05901ae3530591657b374872d38825e92874d"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/capabilities.md",
+    "source": "Atlas Protocol/components/capabilities.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "dfb91a92ff1501049e7ae5cd34a275dfef6800ec24575c3b317d780111c4bba7"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/communications.md",
+    "source": "Atlas Protocol/components/communications.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "f74d063d8edd17e9fbe84dee657127f1d6a4dbce977af65ddf90fd60e4bae14a"
+  },
+  {
+    "file": "reference/current-design/entities/components/description.md",
+    "source": "Atlas Protocol/components/description.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "4be5997409b8c07d6c241f8133a727e1f75676449ff1cffc224ce96b20e0e3cd"
+  },
+  {
+    "file": "reference/current-design/entities/geofeatures/geometry.md",
+    "source": "Atlas Protocol/components/geometry.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "549b1faec1ac0d94840f3c557198829453c88614bc104f46e646973f0e4da9b6"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/gimbal.md",
+    "source": "Atlas Protocol/components/gimbal.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "eda4233abb56dcf92774afd92634a916338ad89d07af4e9a6c5ef54977b1506e"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/heartbeat.md",
+    "source": "Atlas Protocol/components/heartbeat.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "f3d7423aedbf632d3ebb42667eb1701a95d6f83b69f44ab628c024936247708a"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/power.md",
+    "source": "Atlas Protocol/components/power.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6db84cdc0df53407454b708e312ae767ddb9d00213a051d115f4256cd92ebc62"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/status.md",
+    "source": "Atlas Protocol/components/status.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "076a38cdf1bbe347cf36144ce60a3de09d633678587999c392366891886f1fa4"
+  },
+  {
+    "file": "reference/current-design/entities/assets/components/tags.md",
+    "source": "Atlas Protocol/components/tags.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "1c5009c25ad5ee0afd17309f4f4210c0cbcea0b104a3c41aeb5927293d656357"
+  },
+  {
+    "file": "reference/current-design/entities/components/telemetry.md",
+    "source": "Atlas Protocol/components/telemetry.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6dfecea29b63bed1107f8921327505b617021eaf5370a613ab7121279176aeba"
+  },
+  {
+    "file": "reference/current-design/entities/components/type.md",
+    "source": "Atlas Protocol/components/type.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "75c2cb3db16b821fd5edf2f4671a1c63555993e6c276dae07b9305f882fea8b0",
+    "extracted_sections": [
+      {
+        "section": "## Geofeature type\n",
+        "end": "Invalid because a security camera",
+        "pointer": "## Geofeature type\n\nSee [Geofeature purpose](../geofeatures/type.md).\n\n"
+      }
+    ]
+  },
+  {
+    "file": "reference/current-design/entities/assets/contact.md",
+    "source": "Atlas Protocol/contact.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "46a7e6738c7bb3b6bd11a4c72e4f551a5a4ec36c2e009b062660b5d8c10af863"
+  },
+  {
+    "file": "reference/current-design/entities/structure.md",
+    "source": "Atlas Protocol/entities.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "1eaaaa10a4e5f20192591f3d3754f95b813571c1bba8a197c2fd5beda267a3bb",
+    "extracted_sections": [
+      {
+        "section": "## Geometry and references\n",
+        "end": "## Spatial conventions\n",
+        "pointer": "## Geometry and references\n\nSee [Geofeature references](geofeatures/references.md).\n\n"
+      }
+    ]
+  },
+  {
+    "file": "reference/current-design/shared/errors.md",
+    "source": "Atlas Protocol/errors.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "33ffbc4e4982cfe60d7e2368cda03300be3f65f2da1685cee82002f3c4df5f7c"
+  },
+  {
+    "file": "reference/current-design/tasks/execution-evidence.md",
+    "source": "Atlas Protocol/execution-evidence.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "3dfb8c4dfccbf83a9e75ad15d848cc6b40237a2162820d88390096c9088bcf24"
+  },
+  {
+    "file": "reference/current-design/entities/history/queries.md",
+    "source": "Atlas Protocol/history-queries.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "50cfc18f3bd908bc4d9969f124fc656af68612df8e48fda115654c003b1c5e6f"
+  },
+  {
+    "file": "reference/current-design/shared/http/binding.md",
+    "source": "Atlas Protocol/http-binding.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "7bd64f95aabab0b6887d0deb0afe94abcdd95ec36e9353d1f2a52dbc15fb3b7c"
+  },
+  {
+    "file": "reference/current-design/shared/http/correlation.md",
+    "source": "Atlas Protocol/http-correlation.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "bc91f2f64833707799cdaaed2a5f59c82da43de11b9a20eb6e434fef48198870"
+  },
+  {
+    "file": "reference/current-design/support/identity.md",
+    "source": "Atlas Protocol/identity.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e31f52ec15802def74ad19110f592dd74ad0285664077ea0e73464975b1002c7"
+  },
+  {
+    "file": "reference/current-design/shared/message-limits.md",
+    "source": "Atlas Protocol/limits.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "da9124ee1f568f4cdc091aa8f2dda51f651da665b6b93f892a2b0c3f586b66a1"
+  },
+  {
+    "file": "reference/current-design/shared/messages.md",
+    "source": "Atlas Protocol/messaging.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "939b3a905d9ac7464e383d8039718edaea440faf83e6a0f26f75d4eac20bd6c8"
+  },
+  {
+    "file": "reference/current-design/support/messages.md",
+    "source": "Atlas Protocol/messaging/administration.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "0050c7b93fcecf8d150194be1208f7795ca911879d8d9dfc3916ac39ef300456"
+  },
+  {
+    "file": "reference/current-design/entities/assets/messages.md",
+    "source": "Atlas Protocol/messaging/assets.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "f9a807c986a858e05ec74889b55adb267d9894e598e5190ed7f1f6458dd64478"
+  },
+  {
+    "file": "reference/current-design/entities/geofeatures/messages.md",
+    "source": "Atlas Protocol/messaging/geofeatures.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "269fb3d67c8bac052a21da2efa0fdee92accf90cd8af13cccc55cf2e49f752d1"
+  },
+  {
+    "file": "reference/current-design/entities/history/messages.md",
+    "source": "Atlas Protocol/messaging/history.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6dbe6596f3f817c1f877cc6343d528dd13d35e32b6b7885a86e88dc42825322c"
+  },
+  {
+    "file": "reference/current-design/objects/messages.md",
+    "source": "Atlas Protocol/messaging/objects.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "225fccb974a979c59f4cd0b906338467b68043fca748a805e10d73a5bbc30897"
+  },
+  {
+    "file": "reference/current-design/entities/observations/messages.md",
+    "source": "Atlas Protocol/messaging/observations.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "9d6c3ee7dfc0d15f04b88ffdb8434700febf95a0d14f3d43076a4a17f8eb3178"
+  },
+  {
+    "file": "reference/current-design/tasks/messages.md",
+    "source": "Atlas Protocol/messaging/tasks.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "8a739aa2a2120725ec8b7d8f334116ba39ee0aef35c93d2fe5199fc50e6a3031"
+  },
+  {
+    "file": "reference/current-design/entities/tracks/messages.md",
+    "source": "Atlas Protocol/messaging/tracks.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "dc6048632411c90e756bb683de881373cd8e25d16f4917a4c8902934f7e91ba5"
+  },
+  {
+    "file": "reference/current-design/entities/history/positions.md",
+    "source": "Atlas Protocol/movement-history.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6175ef0da53c59bd8909be30b252e82306934ab0e78764d8724fdf496f5ee855"
+  },
+  {
+    "file": "reference/current-design/objects/objects.md",
+    "source": "Atlas Protocol/objects.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "159eafab0bd282d0d9a0c072ae112575c38ba46c4aa62a20636c23572ea8c5a1"
+  },
+  {
+    "file": "reference/current-design/entities/observations/observations.md",
+    "source": "Atlas Protocol/observations.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "a2c9fa7007df19a0c513d7c379394be9e25a91a1fcbdce9fe35d7b97c829f387"
+  },
+  {
+    "file": "reference/current-design/support/operators.md",
+    "source": "Atlas Protocol/operators.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "eefc1956796c9d5f2453e77854db0efbd6e1ed0bf8c70f74beb33d341fbf3ea4"
+  },
+  {
+    "file": "reference/current-design/implementation/protocol-package.md",
+    "source": "Atlas Protocol/package-usage.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "6865a6fc87bd5bf619a71c5db9a9c37acf64e4ebaecc177bb2dbf2fe06e11b64"
+  },
+  {
+    "file": "reference/current-design/implementation/qualification/protocol.md",
+    "source": "Atlas Protocol/qualification.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "4f229a94c79aed80a8c7bd63024a10c5bf6eb6140aa9147d6db11303f2552f97"
+  },
+  {
+    "file": "reference/current-design/shared/queries.md",
+    "source": "Atlas Protocol/queries.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e6612732967337e39e9f95ebd5eb517cae2f176b08a9142cacbf9f3187fa464e"
+  },
+  {
+    "file": "reference/current-design/entities/reporting/evidence.md",
+    "source": "Atlas Protocol/report-evidence.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "5350d24f2599ac24065b969fb54a9dd23486b5cb23aa13685ee51c3d0bcd8590"
+  },
+  {
+    "file": "reference/current-design/entities/reporting/format.md",
+    "source": "Atlas Protocol/report-format.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "16777d36a77d4afef04cbe64fd9cf6097e2ce5299e9241d2a08dc36035e65131"
+  },
+  {
+    "file": "reference/current-design/entities/reporting/reports.md",
+    "source": "Atlas Protocol/reports.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "9e4d37c1cdc22ebe46aa68d4a40f5f6e09aa15d382c58c3cdbb30f85c05a1b39"
+  },
+  {
+    "file": "reference/current-design/implementation/schema-profile.md",
+    "source": "Atlas Protocol/schema-profile.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "2d14db6bb2a98db1e6cd593fcd0f6a269fee95b4a273f076cb53e69237352ef6"
+  },
+  {
+    "file": "reference/current-design/shared/synchronization/messages.md",
+    "source": "Atlas Protocol/synchronization-messages.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "859e95cacd747faa6ebe335a182f1c58101a8e7f95a11f5ab9721298db787e85"
+  },
+  {
+    "file": "reference/current-design/shared/synchronization/contract.md",
+    "source": "Atlas Protocol/synchronization.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "0e77f63a1f35d6ff2d57e6cee78fce97116b865ee23588089d77a3109e0a6245"
+  },
+  {
+    "file": "reference/current-design/tasks/controls.md",
+    "source": "Atlas Protocol/task-controls.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e9e91faaa109b5213c3b9486c744a145574700f69cba5b392df61c0fe02ff7f0"
+  },
+  {
+    "file": "reference/current-design/tasks/read-format.md",
+    "source": "Atlas Protocol/task-format.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "46bcb7e4bef86bfbb01c1a44ec65f7e455c370a04decdc55710e3b0c2c6c7cf4"
+  },
+  {
+    "file": "reference/current-design/tasks/tasks.md",
+    "source": "Atlas Protocol/tasks.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e6355e18ec0ead5fb45875d0bbe6ab7e9ff82c7316c13328c34104e8668c2d95"
+  },
+  {
+    "file": "reference/current-design/shared/temporary-reads.md",
+    "source": "Atlas Protocol/temporary-reads.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "b22a9e19ef7593dbfc163884df065e4b00ce51fc08a11d3517182a3c295d29cc"
+  },
+  {
+    "file": "reference/current-design/entities/tracks/tracks.md",
+    "source": "Atlas Protocol/tracks.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "e9e88f0d30d5cbdee86023f221e32d5641c240457b87f40459b1cdc60beb547f"
+  },
+  {
+    "file": "reference/current-design/shared/http/wire.md",
+    "source": "Atlas Protocol/wire.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "de880925ea4f61d78b12d803f85806f7a90e744b17d6ceb4c40d14a0ecb02d0b"
+  },
+  {
+    "file": "reference/current-design/implementation/sdk-overview.md",
+    "source": "Atlas SDK/README.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "aa30b2e9a582fe0681006aa810716fd60f94d0d2a142efed33ae02be3fb09fe7"
+  },
+  {
+    "file": "reference/current-design/support/authorization-recovery.md",
+    "source": "Atlas SDK/authorization.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "1b10b916e84fec917e1286cd346664ceb3075340e084c8aa604725dcd0e5b216"
+  },
+  {
+    "file": "reference/current-design/support/sdk-diagnostics.md",
+    "source": "Atlas SDK/diagnostics.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "96643f6c1741e8bc457e9d9c76bcbd76fcc3161d899e550b51f4939af78e47a0"
+  },
+  {
+    "file": "reference/current-design/implementation/sdk-package.md",
+    "source": "Atlas SDK/package-usage.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "c96a60ed3d21bed3cc158238c9b8a39656526efc8ca35f3f2339f64df3dcd803"
+  },
+  {
+    "file": "reference/current-design/shared/synchronization/client-picture.md",
+    "source": "Atlas SDK/picture.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "f794e1a058007bc9dac46f053adb4ee21d157da93511a6e4924e30cc26d4156d"
+  },
+  {
+    "file": "reference/current-design/implementation/qualification/sdk.md",
+    "source": "Atlas SDK/qualification.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "a72e44453dc5f0a6772ae31ad40ba7ed32acac79a81e57f933af58b9d8f2433a"
+  },
+  {
+    "file": "reference/current-design/shared/requests.md",
+    "source": "Atlas SDK/requests.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "82d126d8362f201424b03a401008ef2ac129c7533636f2d5a9f46ad8c99d5076"
+  },
+  {
+    "file": "reference/current-design/simulations/README.md",
+    "source": "Atlas Simulations/README.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "8dce411f8d004442513a399e9c105907d73e876193e61ccdf934d17a4978f0b1"
+  },
+  {
+    "file": "reference/current-design/simulations/asset-runtime.md",
+    "source": "Atlas Simulations/asset-runtime.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "31ef1cd39fb3f019ff41b3346225de239cb1239e1fe0b34de58dc9afe68e03a4"
+  },
+  {
+    "file": "reference/current-design/simulations/continuous-integration.md",
+    "source": "Atlas Simulations/continuous-integration.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "035ccb5cdd45a2fcb2247a2ae67340f461cb3b0a9d1c62e75f94c2046a86bab8"
+  },
+  {
+    "file": "reference/current-design/simulations/evals.md",
+    "source": "Atlas Simulations/evals.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "76364305bd9389bd2caef37681cfd80c13f1375603772a5979dff8bd99db1015"
+  },
+  {
+    "file": "reference/current-design/simulations/failure-points.md",
+    "source": "Atlas Simulations/failure-points.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "940d9d74823ab94bbdd06586065d7b26098bb604e8d15d994a73141670718bf3"
+  },
+  {
+    "file": "reference/current-design/simulations/interactive.md",
+    "source": "Atlas Simulations/interactive.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "ccaea968aaa2822ef59444594c5c3441b335ee526a9db7539e7bac527e90d74c"
+  },
+  {
+    "file": "reference/current-design/simulations/qualification.md",
+    "source": "Atlas Simulations/qualification.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "bb7f385684c392e082a2b4604eedea5b40d131aca54b93c177b41a2af4521eef"
+  },
+  {
+    "file": "reference/current-design/simulations/scenarios.md",
+    "source": "Atlas Simulations/scenarios.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "sha256": "ec4c89b651ded2d8eb64778952c33ec66b1b9fb03ba52250e1ddc0328f0b0e4f"
+  },
+  {
+    "file": "reference/earlier-plugin-design/host.md",
+    "source": "Atlas Core/plugins.md",
+    "revision": "30a3f9958c6eb6aa953596d413b12c3a3d3fb02e",
+    "status": "historical-review",
+    "sha256": "013f36f4655fa1cdcc77690d36519d6a2afe03f70d3f57b1fe5d0b6dd4814805"
+  },
+  {
+    "file": "reference/earlier-plugin-design/runtime.md",
+    "source": "Atlas Core/plugin-runtime.md",
+    "revision": "30a3f9958c6eb6aa953596d413b12c3a3d3fb02e",
+    "status": "historical-review",
+    "sha256": "fe9bd033ff62e590b00c71754b14b087c58d79f42ea44dc1d8487c2358f951bc"
+  },
+  {
+    "file": "reference/earlier-plugin-design/manager-recovery.md",
+    "source": "Atlas Core/manager-recovery.md",
+    "revision": "30a3f9958c6eb6aa953596d413b12c3a3d3fb02e",
+    "status": "historical-review",
+    "sha256": "78a376c2592fbf07156afcbffe4d6984b950db25d4323d82f1969f2423c60e4f"
+  },
+  {
+    "file": "reference/earlier-plugin-design/operations.md",
+    "source": "Atlas Protocol/operations.md",
+    "revision": "30a3f9958c6eb6aa953596d413b12c3a3d3fb02e",
+    "status": "historical-review",
+    "sha256": "3972799142119dd12f55225028da4de2ccf8824bb8f505c9bdd07ac678f2335a"
+  },
+  {
+    "file": "reference/earlier-plugin-design/messages.md",
+    "source": "Atlas Protocol/messaging/plugins.md",
+    "revision": "30a3f9958c6eb6aa953596d413b12c3a3d3fb02e",
+    "status": "historical-review",
+    "sha256": "51887cff7d6d7b8028cf48cd73eb56c85432a90712dd7e1f0d2f114a8b22e31d"
+  },
+  {
+    "file": "reference/current-design/entities/geofeatures/references.md",
+    "source": "Atlas Protocol/entities.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "section": "## Geometry and references\n",
+    "end": "## Spatial conventions\n",
+    "sha256": "ad53bdfa9e9e55b492254eed769945400768069ceda88685cdd5322c933773ff"
+  },
+  {
+    "file": "reference/current-design/entities/geofeatures/type.md",
+    "source": "Atlas Protocol/components/type.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "section": "## Geofeature type\n",
+    "end": "Invalid because a security camera",
+    "sha256": "55c435522e8cf5494128adca0b4b1b8d620293d40fdc477a05de144e442013b6"
+  },
+  {
+    "file": "reference/current-design/objects/publication.md",
+    "source": "Atlas Core/storage.md",
+    "revision": "4bb27b1e1407425444e01471523347fb16255912",
+    "status": "current-design-review",
+    "section": "## Publishing files\n",
+    "end": "## Retention and capacity\n",
+    "sha256": "16e2cacac0e6880c17f5d0616b301a5b99b9790cba24e62338254c57dcee35bc"
+  }
+]
