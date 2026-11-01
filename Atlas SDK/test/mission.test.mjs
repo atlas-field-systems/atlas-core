@@ -508,7 +508,14 @@ for (const schedule of schedules)
       await f.restart();
       const originalDataset = north.datasetId;
       for (const client of new Set([lead, watch, direct.client, gateway]))
-        success(await client.connect());
+        if (client.mode === 'http') success(await client.connect());
+      await until(
+        () =>
+          full.state.kind === 'ready' &&
+          full.state.health.core_run_id !== oldInstructions.context.core_run_id &&
+          full.picture.status.kind === 'synchronized',
+        'Full operator recovers the new Core run after Restart',
+      );
       assert.equal(f.datasetId, originalDataset);
       assert.equal(north.gate, 'paused');
       for (const source of sources)
