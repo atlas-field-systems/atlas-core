@@ -158,7 +158,7 @@ test('atomic Dataset marker preserves setup, matching recovery regenerates proof
   await f.core.close();
   const retained = new Database(join(f.directory, 'core.sqlite'));
   try {
-    retained.prepare("UPDATE core_meta SET value='4' WHERE key='format'").run();
+    retained.prepare("UPDATE core_meta SET value='5' WHERE key='format'").run();
   } finally {
     retained.close();
   }
@@ -571,7 +571,7 @@ for (const phase of ['prepare-upload', 'installed'])
       assert.deepEqual(await readdir(join(f.directory, 'objects', 'installed')), []);
       const db = new Database(join(f.directory, 'core.sqlite'), { readonly: true });
       try {
-        assert.equal(db.prepare('SELECT count(*) AS count FROM object_images').get().count, 0);
+        assert.equal(db.prepare('SELECT count(*) AS count FROM objects').get().count, 0);
         assert.equal(
           db.prepare("SELECT count(*) AS count FROM object_attempts WHERE state<>'reclaimed'").get()
             .count,

@@ -12,7 +12,7 @@ export const ReleaseMetadata = z.strictObject({
   format: z.literal(1),
   release: z.literal('0.4.0'),
   protocol: z.literal('0.4.0'),
-  databaseFormat: z.literal('4'),
+  databaseFormat: z.literal('5'),
   platform: z.literal('linux/amd64'),
   node: z.literal('24.22.1'),
   npm: z.literal('11.19.0'),

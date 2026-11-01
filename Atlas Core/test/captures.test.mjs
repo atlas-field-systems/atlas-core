@@ -809,7 +809,7 @@ test('failed pressure expiry retains charges, refuses pages, and can retry clean
   const due = performance.now() + 15_001;
   t.mock.method(performance, 'now', () => due);
   f.engine.store.db.exec(
-    "CREATE TRIGGER refuse_contact BEFORE UPDATE ON entity_assets BEGIN SELECT RAISE(ABORT,'contact_write_failed'); END",
+    "CREATE TRIGGER refuse_contact BEFORE UPDATE ON entities WHEN NEW.kind='asset' BEGIN SELECT RAISE(ABORT,'contact_write_failed'); END",
   );
   const checkpoints = f.engine.store.metrics.checkpoints;
   await assert.rejects(

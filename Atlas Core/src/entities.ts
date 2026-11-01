@@ -39,10 +39,10 @@ export class Entities {
   ) {
     store.db
       .exec(`CREATE TABLE IF NOT EXISTS entity_identity(id TEXT PRIMARY KEY,kind TEXT NOT NULL,alive INTEGER NOT NULL,alias_fold TEXT UNIQUE) STRICT;
-      CREATE TABLE IF NOT EXISTS entity_assets(id TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
-      CREATE TABLE IF NOT EXISTS entity_observations(id TEXT PRIMARY KEY,image TEXT NOT NULL,publisher TEXT NOT NULL,subject TEXT,UNIQUE(publisher,subject)) STRICT;
-      CREATE TABLE IF NOT EXISTS entity_tracks(id TEXT PRIMARY KEY,image TEXT NOT NULL,observation TEXT NOT NULL UNIQUE) STRICT;
-      CREATE TABLE IF NOT EXISTS entity_geofeatures(id TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
+      CREATE TABLE IF NOT EXISTS entities(id TEXT PRIMARY KEY,kind TEXT NOT NULL CHECK(kind IN ('asset','track','geofeature')),image TEXT NOT NULL) STRICT;
+      CREATE INDEX IF NOT EXISTS entities_kind_id ON entities(kind,id);
+      CREATE TABLE IF NOT EXISTS observations(id TEXT PRIMARY KEY,image TEXT NOT NULL,publisher TEXT NOT NULL,subject TEXT,UNIQUE(publisher,subject)) STRICT;
+      CREATE TABLE IF NOT EXISTS entity_track_sources(track TEXT PRIMARY KEY,observation TEXT NOT NULL UNIQUE) STRICT;
       CREATE TABLE IF NOT EXISTS entity_generations(asset TEXT NOT NULL,generation TEXT NOT NULL,PRIMARY KEY(asset,generation)) STRICT;
       CREATE TABLE IF NOT EXISTS entity_process_retries(request TEXT PRIMARY KEY,image TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS entity_registrations(id TEXT PRIMARY KEY,asset TEXT NOT NULL UNIQUE) STRICT;`);
@@ -93,8 +93,9 @@ export class Entities {
     this.live(id, 'asset');
     return Asset.parse(
       JSON.parse(
-        ImageRow.parse(this.store.db.prepare('SELECT image FROM entity_assets WHERE id=?').get(id))
-          .image,
+        ImageRow.parse(
+          this.store.db.prepare("SELECT image FROM entities WHERE kind='asset' AND id=?").get(id),
+        ).image,
       ),
     );
   }
@@ -102,9 +103,8 @@ export class Entities {
     this.live(id, 'observation');
     return Observation.parse(
       JSON.parse(
-        ImageRow.parse(
-          this.store.db.prepare('SELECT image FROM entity_observations WHERE id=?').get(id),
-        ).image,
+        ImageRow.parse(this.store.db.prepare('SELECT image FROM observations WHERE id=?').get(id))
+          .image,
       ),
     );
   }
@@ -112,8 +112,9 @@ export class Entities {
     this.live(id, 'track');
     return Track.parse(
       JSON.parse(
-        ImageRow.parse(this.store.db.prepare('SELECT image FROM entity_tracks WHERE id=?').get(id))
-          .image,
+        ImageRow.parse(
+          this.store.db.prepare("SELECT image FROM entities WHERE kind='track' AND id=?").get(id),
+        ).image,
       ),
     );
   }
@@ -122,7 +123,9 @@ export class Entities {
     return Geofeature.parse(
       JSON.parse(
         ImageRow.parse(
-          this.store.db.prepare('SELECT image FROM entity_geofeatures WHERE id=?').get(id),
+          this.store.db
+            .prepare("SELECT image FROM entities WHERE kind='geofeature' AND id=?")
+            .get(id),
         ).image,
       ),
     );
@@ -143,7 +146,7 @@ export class Entities {
       refuse('resource_limit');
     this.rename(image);
     this.store.db
-      .prepare('UPDATE entity_assets SET image=? WHERE id=?')
+      .prepare("UPDATE entities SET image=? WHERE kind='asset' AND id=?")
       .run(JSON.stringify(image), image.id);
     tx.change({
       kind: 'put',
@@ -164,7 +167,7 @@ export class Entities {
     const image = this.parseObservation(value);
     this.rename(image);
     this.store.db
-      .prepare('UPDATE entity_observations SET image=? WHERE id=?')
+      .prepare('UPDATE observations SET image=? WHERE id=?')
       .run(JSON.stringify(image), image.id);
     return image;
   }
@@ -172,7 +175,7 @@ export class Entities {
     const image = Track.parse(value);
     this.rename(image);
     this.store.db
-      .prepare('UPDATE entity_tracks SET image=? WHERE id=?')
+      .prepare("UPDATE entities SET image=? WHERE kind='track' AND id=?")
       .run(JSON.stringify(image), image.id);
     tx.change({
       kind: 'put',
@@ -187,7 +190,7 @@ export class Entities {
     const image = Geofeature.parse(value);
     this.rename(image);
     this.store.db
-      .prepare('UPDATE entity_geofeatures SET image=? WHERE id=?')
+      .prepare("UPDATE entities SET image=? WHERE kind='geofeature' AND id=?")
       .run(JSON.stringify(image), image.id);
     tx.change({
       kind: 'put',
@@ -248,7 +251,7 @@ export class Entities {
       task_control: { revision: zero, requested: null, confirmed: null },
     };
     this.store.db
-      .prepare('INSERT INTO entity_assets VALUES(?,?)')
+      .prepare("INSERT INTO entities VALUES(?,'asset',?)")
       .run(asset.id, JSON.stringify(asset));
     this.store.db
       .prepare('INSERT INTO entity_generations VALUES(?,?)')
@@ -558,7 +561,7 @@ export class Entities {
     if (
       subject !== null &&
       this.store.db
-        .prepare('SELECT id FROM entity_observations WHERE publisher=? AND subject=?')
+        .prepare('SELECT id FROM observations WHERE publisher=? AND subject=?')
         .get(request.publisher_id, subject)
     )
       refuse('identity_conflict');
@@ -594,11 +597,14 @@ export class Entities {
     const image = this.parseObservation(observation);
     const track = this.fuse(image);
     this.store.db
-      .prepare('INSERT INTO entity_observations VALUES(?,?,?,?)')
+      .prepare('INSERT INTO observations VALUES(?,?,?,?)')
       .run(image.id, JSON.stringify(image), image.publisher_id, subject);
     this.store.db
-      .prepare('INSERT INTO entity_tracks VALUES(?,?,?)')
-      .run(track.id, JSON.stringify(track), observation.id);
+      .prepare("INSERT INTO entities VALUES(?,'track',?)")
+      .run(track.id, JSON.stringify(track));
+    this.store.db
+      .prepare('INSERT INTO entity_track_sources VALUES(?,?)')
+      .run(track.id, observation.id);
     this.saveTrack(tx, track);
     tx.remember('CreateObservation', request.request_id, request);
     return {
@@ -732,7 +738,7 @@ export class Entities {
       ...(request.description === undefined ? {} : { description: request.description }),
     };
     this.store.db
-      .prepare('INSERT INTO entity_geofeatures VALUES(?,?)')
+      .prepare("INSERT INTO entities VALUES(?,'geofeature',?)")
       .run(image.id, JSON.stringify(image));
     tx.remember('CreateGeofeature', request.request_id, request);
     return this.saveGeofeature(tx, image);
@@ -806,14 +812,14 @@ export class Entities {
   assets(after: string, limit: number): Asset[] {
     return this.store.db
       .prepare(
-        'SELECT a.image FROM entity_assets a JOIN entity_identity i ON i.id=a.id WHERE i.alive=1 AND a.id>? ORDER BY a.id LIMIT ?',
+        "SELECT a.image FROM entities a JOIN entity_identity i ON i.id=a.id WHERE a.kind='asset' AND i.alive=1 AND a.id>? ORDER BY a.id LIMIT ?",
       )
       .all(after, limit)
       .map((row) => Asset.parse(JSON.parse(ImageRow.parse(row).image)));
   }
   observations(after: string, limit: number): Observation[] {
     return this.store.db
-      .prepare('SELECT image FROM entity_observations WHERE id>? ORDER BY id LIMIT ?')
+      .prepare('SELECT image FROM observations WHERE id>? ORDER BY id LIMIT ?')
       .all(after, limit)
       .map((row) => Observation.parse(JSON.parse(ImageRow.parse(row).image)));
   }
@@ -821,21 +827,21 @@ export class Entities {
     this.track(track);
     return this.store.db
       .prepare(
-        'SELECT o.image FROM entity_tracks t JOIN entity_observations o ON o.id=t.observation WHERE t.id=? AND o.id>? ORDER BY o.id LIMIT ?',
+        'SELECT o.image FROM entity_track_sources t JOIN observations o ON o.id=t.observation WHERE t.track=? AND o.id>? ORDER BY o.id LIMIT ?',
       )
       .all(track, after, limit)
       .map((row) => Observation.parse(JSON.parse(ImageRow.parse(row).image)));
   }
   tracks(after: string, limit: number): Track[] {
     return this.store.db
-      .prepare('SELECT image FROM entity_tracks WHERE id>? ORDER BY id LIMIT ?')
+      .prepare("SELECT image FROM entities WHERE kind='track' AND id>? ORDER BY id LIMIT ?")
       .all(after, limit)
       .map((row) => Track.parse(JSON.parse(ImageRow.parse(row).image)));
   }
   geofeatures(after: string, limit: number): Geofeature[] {
     return this.store.db
       .prepare(
-        'SELECT a.image FROM entity_geofeatures a JOIN entity_identity i ON i.id=a.id WHERE i.alive=1 AND a.id>? ORDER BY a.id LIMIT ?',
+        "SELECT a.image FROM entities a JOIN entity_identity i ON i.id=a.id WHERE a.kind='geofeature' AND i.alive=1 AND a.id>? ORDER BY a.id LIMIT ?",
       )
       .all(after, limit)
       .map((row) => Geofeature.parse(JSON.parse(ImageRow.parse(row).image)));
@@ -843,17 +849,19 @@ export class Entities {
   *picture(source: Database.Database): Generator<Asset | Track | Geofeature> {
     for (const row of source
       .prepare(
-        'SELECT a.image FROM entity_assets a JOIN entity_identity i ON i.id=a.id WHERE i.alive=1 ORDER BY a.id',
+        "SELECT a.image FROM entities a JOIN entity_identity i ON i.id=a.id WHERE a.kind='asset' AND i.alive=1 ORDER BY a.id",
       )
       .iterate())
       yield Asset.parse(JSON.parse(ImageRow.parse(row).image));
     for (const row of source
       .prepare(
-        'SELECT a.image FROM entity_geofeatures a JOIN entity_identity i ON i.id=a.id WHERE i.alive=1 ORDER BY a.id',
+        "SELECT a.image FROM entities a JOIN entity_identity i ON i.id=a.id WHERE a.kind='geofeature' AND i.alive=1 ORDER BY a.id",
       )
       .iterate())
       yield Geofeature.parse(JSON.parse(ImageRow.parse(row).image));
-    for (const row of source.prepare('SELECT image FROM entity_tracks ORDER BY id').iterate())
+    for (const row of source
+      .prepare("SELECT image FROM entities WHERE kind='track' ORDER BY id")
+      .iterate())
       yield Track.parse(JSON.parse(ImageRow.parse(row).image));
   }
   sourceForHistory(
@@ -874,7 +882,7 @@ export class Entities {
   }
   clearDataset(): void {
     this.store.db.exec(
-      'DELETE FROM entity_process_retries; DELETE FROM entity_registrations; DELETE FROM entity_generations; DELETE FROM entity_tracks; DELETE FROM entity_observations; DELETE FROM entity_assets; DELETE FROM entity_geofeatures; DELETE FROM entity_identity',
+      'DELETE FROM entity_process_retries; DELETE FROM entity_registrations; DELETE FROM entity_generations; DELETE FROM entity_track_sources; DELETE FROM observations; DELETE FROM entities; DELETE FROM entity_identity',
     );
     this.contact.clear();
   }

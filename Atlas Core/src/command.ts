@@ -427,5 +427,5 @@ export async function perform(input: Invocation, signal?: AbortSignal): Promise<
   }
 }
 export function versionText(release: ReleaseMetadata | undefined) {
-  return `atlas-core 0.4.0\nCore 0.4.0; Protocol 0.4.0; database format 4\n${release ? `Image ${release.image}; ${release.platform}; package ${release.npmName ?? 'private qualification fixture'}` : 'Source build; release image metadata unavailable'}\n`;
+  return `atlas-core 0.4.0\nCore 0.4.0; Protocol 0.4.0; database format 5\n${release ? `Image ${release.image}; ${release.platform}; package ${release.npmName ?? 'private qualification fixture'}` : 'Source build; release image metadata unavailable'}\n`;
 }
