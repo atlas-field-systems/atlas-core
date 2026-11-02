@@ -14,9 +14,9 @@ control its lifecycle and settings. Protocol remains independent of these choice
 
 Operators and independent integrations connect over adequate IP using the SDK or
 public HTTP API with credentials. Gateway software, constrained-radio transport, and the operator UI are separate
-projects. Closing the UI does not stop Core. The [operating environment](../operating-environment.md) assumes
-host internet access while allowing interruptions on field links. Local Core work
-does not require a cloud service.
+projects. Closing the UI does not stop Core. The [operating environment](../operating-environment.md)
+allows internet-hosted and field installations. Local IP access to a field Core
+does not require internet or a cloud service. Field links can still be interrupted.
 
 The [command-line interface](command-line.md) supplies direct commands and a guided
 Ink interface. The npm name remains a release input; private qualification tarballs

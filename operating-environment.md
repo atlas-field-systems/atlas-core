@@ -1,14 +1,16 @@
 # Operating environment
 
-This page defines the deployment requirements around Atlas. Protocol, Core, and SDK
-pages own the detailed behavior.
+This page defines deployment requirements for the current Core and SDK baseline.
+The [central environment](https://github.com/atlas-field-systems/atlas/blob/main/environment.md)
+provides project-wide context. Protocol, Core, and SDK pages own detailed behavior.
 
 ## Expected deployment
 
 - Operators normally use a separate Atlas UI project. The UI stays separate from
   Core and Protocol and reaches Core through the SDK. See [system boundaries](README.md#three-layers-one-contract).
-- The Core host has internet access. This does not imply reliable connectivity
-  between Core, clients, gateways, and Assets.
+- Clients need IP connectivity to Core's endpoint. A field installation can use
+  local IP access without internet. Connectivity between Core, clients, gateways,
+  and Assets can still fail.
 - Host placement and local administration depend on the deployment.
 - SDK clients run on computers with Raspberry Pi 5-class or better compute,
   adequate power, and good Wi-Fi or equivalent IP connectivity. External gateways
