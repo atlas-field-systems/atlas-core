@@ -1,18 +1,21 @@
 # Working on Atlas
 
 Read the [Atlas product charter](https://github.com/atlas-field-systems/atlas/blob/main/CHARTER.md)
-and the relevant [product story](https://github.com/atlas-field-systems/atlas) before
-changing behavior, then the [overview](README.md) and owning layer here.
+and [operating environment](https://github.com/atlas-field-systems/atlas/blob/main/environment.md)
+for context before changing behavior, then the [overview](README.md) and owning layer here.
 
-The approved central stories own intended product behavior; Protocol defines exact
-shared contracts implementing it; Core and SDK own their mechanisms. Link to those
-stories instead of copying them. Identify conflicts with older local documentation
-and reconcile them through explicitly scoped contract/implementation changes.
-Do not silently restore historical restrictions or claim intended capabilities exist.
+The charter owns purpose and operating context. Subsystem docs own their behavior.
+Protocol defines exact shared contracts; Core owns server mechanisms; SDK owns
+client behavior. For planned subsystem changes, read [subsystem planning](docs/README.md)
+and the affected story, then update the owning definition before implementing it.
+Identify conflicts with the central context or current contracts and reconcile them
+explicitly. Do not silently restore historical restrictions or claim intended
+capabilities exist.
 
 Use the central repository's merged main branch unless a review explicitly names a
-proposed revision. An unmerged proposal is not approved behavior. If the central
-source cannot be read, report the gap rather than inventing its rules.
+proposed revision. An unmerged proposal is not approved behavior. Merging a document
+does not approve behavior it labels as proposed. If the central source cannot be
+read, report the gap rather than inventing its rules.
 
 ## Documentation first
 

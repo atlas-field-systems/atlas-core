@@ -34,15 +34,18 @@ tooling. Core mechanisms and SDK workflows remain ordinary handwritten code.
 ## Product authority
 
 The [central Atlas charter](https://github.com/atlas-field-systems/atlas/blob/main/CHARTER.md)
-and [product stories](https://github.com/atlas-field-systems/atlas) own intended
-product behavior. Protocol specifies exact shared contracts; Core and SDK implement
-them. This repository documents the current implementation, not proof that every
-charter capability already exists. Reconcile differences explicitly; do not import
-old restrictions into the product or duplicate the central stories here.
+owns purpose, operating context, and end-to-end usage examples.
+Subsystem documentation owns its behavior. Protocol specifies exact shared
+contracts; Core and SDK define their server and client behavior.
+
+[Subsystem planning](docs/README.md) preserves selected decisions, proposals, and
+open questions separately from the current implementation references below.
+Plans are not proof of available capabilities. Reconcile differences explicitly
+before implementing a plan or changing a contract.
 
 ## Read in this order
 
-Read the central charter and relevant story first, then the
+Read the central charter for context, then the
 [operating environment](operating-environment.md) for deployment
 requirements. The [mission example](mission-example.md) shows how an operator,
 Atlas Mission, Core, and external Assets work together within the initial scope.
